@@ -111,3 +111,9 @@ dist
 
 # TernJS port file
 .tern-port
+
+# IDE
+.idea/
+
+# runtime data
+data/
