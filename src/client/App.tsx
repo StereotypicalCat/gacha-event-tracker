@@ -5,6 +5,7 @@ import { EventDetail } from "./components/EventDetail.tsx";
 import { EventRow, type RowEvent } from "./components/EventRow.tsx";
 import { NextUp } from "./components/NextUp.tsx";
 import { Timeline } from "./components/Timeline.tsx";
+import { Welcome } from "./components/Welcome.tsx";
 import { useCompletions } from "./state/useCompletions.ts";
 import { usePrefs } from "./state/usePrefs.ts";
 import { clockFor, DAY, endingSoonestFirst, formatRemaining } from "../shared/time.ts";
@@ -87,6 +88,25 @@ export function App() {
             {state.message}
           </p>
         </div>
+      </Shell>
+    );
+  }
+
+  // First run: ask which games before showing a calendar full of ones they
+  // don't play. Stored as hiddenGames (the inverse) so a game added later shows
+  // up by default rather than staying invisible.
+  if (!prefs.onboarded) {
+    return (
+      <Shell>
+        <Welcome
+          available={games}
+          onConfirm={(chosen) =>
+            update({
+              onboarded: true,
+              hiddenGames: games.filter((g) => !chosen.includes(g)),
+            })
+          }
+        />
       </Shell>
     );
   }

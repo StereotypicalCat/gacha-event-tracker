@@ -10,6 +10,8 @@ export interface Prefs {
   showCompleted: boolean;
   /** False until the reader confirms or changes the guessed region. */
   regionConfirmed: boolean;
+  /** False until the reader has picked their games on first run. */
+  onboarded: boolean;
 }
 
 function defaults(): Prefs {
@@ -18,6 +20,7 @@ function defaults(): Prefs {
     hiddenGames: [],
     showCompleted: true,
     regionConfirmed: false,
+    onboarded: false,
   };
 }
 
