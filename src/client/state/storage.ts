@@ -11,7 +11,13 @@
 const NS = "gacha-tracker:v1";
 
 export const KEYS = {
+  /**
+   * Superseded by `progress`, which carries a status rather than using
+   * membership to mean "done". Read once to migrate; never written, never
+   * deleted — see useProgress.
+   */
   completions: `${NS}:completions`,
+  progress: `${NS}:progress`,
   ignored: `${NS}:ignored`,
   prefs: `${NS}:prefs`,
 } as const;
