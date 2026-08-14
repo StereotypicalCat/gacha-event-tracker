@@ -3,12 +3,28 @@ import type { SourceHealth } from "../../shared/feed.ts";
 
 export const REPO_URL = "https://github.com/StereotypicalCat/gacha-event-tracker";
 
+/** Display name and homepage for a source host. */
+const SITES: Record<string, { name: string; url: string }> = {
+  "game8.co": { name: "Game8", url: "https://game8.co" },
+  "endfield.wiki.gg": { name: "wiki.gg", url: "https://wiki.gg" },
+};
+
+function siteFor(url: string): { name: string; url: string } {
+  try {
+    const host = new URL(url).host;
+    return SITES[host] ?? { name: host, url: `https://${host}` };
+  } catch {
+    return { name: url, url };
+  }
+}
+
 /**
  * Credit, disclaimer, and where the code lives.
  *
- * This sits at the foot of the page rather than behind an "About" link: the
- * people whose work this depends on should be visible on the same screen as
- * the data, not one navigation step away from it.
+ * Everything here is derived from the feed rather than written down, so adding
+ * a source or a game credits the right people automatically. A hardcoded list
+ * silently goes stale the moment someone adds the seventh source, and the one
+ * thing a credit must not be is out of date.
  */
 export function Colophon({
   sources,
@@ -17,7 +33,15 @@ export function Colophon({
   sources: SourceHealth[];
   staleCount: number;
 }) {
-  const games = [...new Set(sources.map((s) => s.game))];
+  const games = [...new Set(sources.map((s) => s.game))].map(gameMeta);
+  const studios = [...new Set(games.map((g) => g.studio))];
+
+  const sites = [...new Map(sources.map((s) => {
+    const site = siteFor(s.url);
+    return [site.name, site] as const;
+  })).values()];
+
+  const named = [...sites.map((s) => s.name), ...studios];
 
   return (
     <footer className="border-t border-hairline px-4 pb-12 pt-6 text-xs leading-relaxed text-faint">
@@ -36,23 +60,34 @@ export function Colophon({
       <div className="mt-5">
         <p className="eyebrow">With thanks to</p>
         <p className="mt-1.5">
-          <a
-            href="https://game8.co"
-            target="_blank"
-            rel="noreferrer noopener"
-            className="text-muted underline decoration-hairline underline-offset-2 transition-colors duration-150 hover:text-ink hover:decoration-near"
-          >
-            Game8
-          </a>
+          {sites.map((site, i) => (
+            <span key={site.name}>
+              {i > 0 && (i === sites.length - 1 ? " and " : ", ")}
+              <a
+                href={site.url}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="text-muted underline decoration-hairline underline-offset-2 transition-colors duration-150 hover:text-ink hover:decoration-near"
+              >
+                {site.name}
+              </a>
+            </span>
+          ))}
           {", whose editors compile and maintain the event calendars this reads from. The schedules are their work; this page only rearranges them."}
         </p>
         <p className="mt-2">
-          And to HoYoverse, Kuro Games, Hypergryph and Hotta Studio, who make the
-          games worth keeping track of —{" "}
-          {games.map((g, i) => (
-            <span key={g}>
+          And to{" "}
+          {studios.map((studio, i) => (
+            <span key={studio}>
+              {i > 0 && (i === studios.length - 1 ? " and " : ", ")}
+              {studio}
+            </span>
+          ))}
+          , who make the games worth keeping track of —{" "}
+          {games.map((game, i) => (
+            <span key={game.id}>
               {i > 0 && ", "}
-              <span style={{ color: gameMeta(g).hue }}>{gameMeta(g).name}</span>
+              <span style={{ color: game.hue }}>{game.name}</span>
             </span>
           ))}
           {"."}
@@ -62,10 +97,10 @@ export function Colophon({
       <div className="mt-5 border-t border-hairline pt-4">
         <p>
           <strong className="font-semibold text-muted">Not affiliated</strong>{" "}
-          with Game8, HoYoverse, Kuro Games, Hypergryph, Hotta Studio, or any
-          other publisher or source named here. This is an unofficial fan-made
-          tool, not endorsed by or connected to any of them. All game names,
-          event names and trademarks belong to their respective owners.
+          with {named.join(", ")}, or any other publisher or source named here.
+          This is an unofficial fan-made tool, not endorsed by or connected to
+          any of them. All game names, event names and trademarks belong to their
+          respective owners.
         </p>
         <p className="mt-2">
           Event dates can be wrong or go out of date. Treat the source page as
