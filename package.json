@@ -10,8 +10,9 @@
     "build:css": "bunx @tailwindcss/cli -i src/client/styles.css -o public/styles.css --minify",
     "build:js": "bun build src/client/main.tsx --outfile public/main.js --minify",
     "build": "bun run build:feed && bun run build:css && bun run build:js && bun run build:static",
-    "dev": "bun run build && bunx serve public -l 3000",
-    "build:static": "cp index.html public/index.html && cp src/client/sw.js public/sw.js && cp src/client/manifest.webmanifest public/manifest.webmanifest && cp src/client/icon.svg public/icon.svg"
+    "dev": "bun run build && bun run serve.ts",
+    "build:static": "cp index.html public/index.html && cp src/client/sw.js public/sw.js && cp src/client/manifest.webmanifest public/manifest.webmanifest && cp src/client/icon.svg public/icon.svg",
+    "serve": "bun run serve.ts"
   },
   "dependencies": {
     "react": "^19.2.8",

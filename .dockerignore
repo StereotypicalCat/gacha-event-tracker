@@ -1,0 +1,12 @@
+.git
+.github
+.gitlab-ci.yml
+node_modules
+public
+data
+*.sqlite
+.idea
+docs
+.claude
+README.md
+CLAUDE.md

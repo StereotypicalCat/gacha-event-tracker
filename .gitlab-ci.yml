@@ -1,0 +1,127 @@
+# Event Clock CI/CD
+#
+# Quality gates run on every push; the image is built only when they pass, and
+# published only from the default branch. Nothing here reaches the network for
+# source data — the build parses checked-in fixtures, so CI is hermetic and a
+# wiki being down never turns the pipeline red.
+
+stages:
+  - check
+  - build
+  - publish
+
+default:
+  image: oven/bun:1.3-alpine
+  interruptible: true
+  cache:
+    key:
+      files:
+        - bun.lock
+    paths:
+      - node_modules/
+
+variables:
+  # Full history is not needed; a shallow clone is faster.
+  GIT_DEPTH: "20"
+  IMAGE: $CI_REGISTRY_IMAGE
+
+.bun-deps: &bun-deps
+  before_script:
+    - bun install --frozen-lockfile
+
+# ---- check -----------------------------------------------------------------
+
+typecheck:
+  stage: check
+  <<: *bun-deps
+  script:
+    - bun run typecheck
+
+test:
+  stage: check
+  <<: *bun-deps
+  script:
+    - bun test
+  # Tests are offline by design: no fixture is re-fetched, so a red build always
+  # means the code changed, never that a source was unreachable.
+
+feed:
+  stage: check
+  <<: *bun-deps
+  script:
+    - bun run build:feed
+    # A source that silently stops yielding events is the failure mode this
+    # pipeline exists to catch, so assert the feed is not empty or truncated.
+    - |
+      bun -e '
+        const feed = await Bun.file("public/data/events.v1.json").json();
+        const games = new Set(feed.events.map((e) => e.game));
+        console.log(`${feed.events.length} events across ${games.size} games`);
+        if (feed.events.length < 20) {
+          throw new Error(`feed collapsed to ${feed.events.length} events`);
+        }
+        const undated = feed.events.filter((e) => !e.startsAt);
+        if (undated.length > 0) throw new Error("events without a start date");
+      '
+  artifacts:
+    paths:
+      - public/data/events.v1.json
+    expire_in: 1 week
+
+# ---- build -----------------------------------------------------------------
+
+site:
+  stage: build
+  <<: *bun-deps
+  needs: [typecheck, test]
+  script:
+    - bun run build
+  artifacts:
+    paths:
+      - public/
+    expire_in: 1 week
+
+container:
+  stage: build
+  needs: [typecheck, test]
+  image: docker:27
+  services:
+    - docker:27-dind
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+  script:
+    - docker build --pull -t "$IMAGE:$CI_COMMIT_SHORT_SHA" .
+    - docker push "$IMAGE:$CI_COMMIT_SHORT_SHA"
+  rules:
+    # Building an image for every branch fills the registry; do it where the
+    # artefact could actually be deployed.
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+# ---- publish ---------------------------------------------------------------
+
+tag-latest:
+  stage: publish
+  needs: [container]
+  image: docker:27
+  services:
+    - docker:27-dind
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+  script:
+    - docker pull "$IMAGE:$CI_COMMIT_SHORT_SHA"
+    - docker tag "$IMAGE:$CI_COMMIT_SHORT_SHA" "$IMAGE:latest"
+    - docker push "$IMAGE:latest"
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+pages:
+  stage: publish
+  needs: [site]
+  script:
+    - mv public .public && mv .public public
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

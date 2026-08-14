@@ -28,11 +28,20 @@ against real parsed data, and it produces exactly the shape the server will serv
 
 ```bash
 bun install
-bun run build      # parse fixtures → feed, then compile CSS and JS
-bunx serve public  # or any static file server
+bun run dev        # build, then serve on :3000
 ```
 
 Then open <http://localhost:3000>.
+
+Or with Docker:
+
+```bash
+docker build -t event-clock .
+docker run --rm -p 3000:3000 event-clock
+```
+
+The image build runs typecheck and tests, and parses only checked-in fixtures — no network, so it is
+reproducible and a wiki being down never breaks it.
 
 ## Commands
 
@@ -136,6 +145,13 @@ so iteration never re-fetches. Every event links back to its source.
 | `docs/ARCHITECTURE.md` | Process shape, routes, deployment |
 | `docs/DATA-MODEL.md` | Event schema, SQLite tables, client storage |
 | `docs/INGESTION.md` | Parser/adapter/merge layers, pipeline stages, review gate |
+
+## CI
+
+`.gitlab-ci.yml` runs typecheck, tests and a feed sanity check on every push, then builds and
+publishes a container image from the default branch. The feed job fails if the event count collapses
+— a source that quietly stops yielding events is the failure mode a parser-only pipeline is most
+prone to, and nothing else surfaces it.
 
 ## Licence
 
