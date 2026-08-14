@@ -84,6 +84,52 @@ export function parseMonthDayRange(
 }
 
 /**
+ * "Aug. 14, 2026 - Aug. 24, 2026" → both instants.
+ *
+ * Distinct from parseMonthDayRange, where the single stated year belongs to the
+ * end. Here both sides carry their own year, so nothing has to be inferred.
+ * Trailing prose after the range is ignored.
+ */
+export function parseFullRange(
+  input: string,
+): { start: ParsedInstant; end: ParsedInstant } | null {
+  const re =
+    /([A-Za-z]+)\.?\s+(\d{1,2}),\s*(\d{4})\s*[-–—]\s*([A-Za-z]+)\.?\s+(\d{1,2}),\s*(\d{4})/;
+  const m = re.exec(input);
+  if (!m) return null;
+
+  const startMonth = monthNumber(m[1] ?? "");
+  const endMonth = monthNumber(m[4] ?? "");
+  if (startMonth === null || endMonth === null) return null;
+
+  const startIso = iso(Number(m[3]), startMonth, Number(m[2]));
+  const endIso = iso(Number(m[6]), endMonth, Number(m[5]));
+  if (startIso === null || endIso === null) return null;
+
+  return {
+    start: { iso: startIso, precision: "day" },
+    end: { iso: endIso, precision: "day" },
+  };
+}
+
+/**
+ * A range whose start is a real date but whose end is not: "July 10, 2026 -
+ * Permanent", "Jul. 24, 2026 - End of 4.6", or a lone start date.
+ *
+ * Returns a null end rather than inventing one. These are common and correct —
+ * the source genuinely has not announced an end — and the UI renders them
+ * distinctly from an event ending far in the future.
+ *
+ * Deliberately the last parser tried, because it is the most permissive.
+ */
+export function parseOpenRange(
+  input: string,
+): { start: ParsedInstant; end: null } | null {
+  const start = parseMonthDayYear(input);
+  return start === null ? null : { start, end: null };
+}
+
+/**
  * "2021/01/16 04:00 - 2021/01/31 03:59" → both instants, exact precision.
  * Trailing prose after the range (e.g. "Currently Unavailable") is ignored.
  *
