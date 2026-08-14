@@ -6,12 +6,35 @@ import { EventRow, type RowEvent } from "./components/EventRow.tsx";
 import { NextUp } from "./components/NextUp.tsx";
 import { Timeline } from "./components/Timeline.tsx";
 import { Welcome } from "./components/Welcome.tsx";
+import { Colophon } from "./components/Colophon.tsx";
 import { useCompletions } from "./state/useCompletions.ts";
 import { usePrefs } from "./state/usePrefs.ts";
 import { clockFor, DAY, endingSoonestFirst, formatRemaining } from "../shared/time.ts";
 import type { GameId } from "../shared/schema.ts";
 
 type View = "soon" | "calendar";
+
+/**
+ * Connection state. Offline is not an error here — the service worker serves
+ * the last feed it saw and countdowns run off the local clock — but it does
+ * change what the reader can trust, so it is surfaced rather than hidden.
+ */
+function useOnline(): boolean {
+  const [online, setOnline] = useState(() =>
+    typeof navigator === "undefined" ? true : navigator.onLine,
+  );
+  useEffect(() => {
+    const up = () => setOnline(true);
+    const down = () => setOnline(false);
+    window.addEventListener("online", up);
+    window.addEventListener("offline", down);
+    return () => {
+      window.removeEventListener("online", up);
+      window.removeEventListener("offline", down);
+    };
+  }, []);
+  return online;
+}
 
 /** Ticks once a second so countdowns stay honest without re-fetching. */
 function useNow(intervalMs = 1000): number {
@@ -28,6 +51,7 @@ export function App() {
   const [view, setView] = useState<View>("soon");
   const [openId, setOpenId] = useState<string | null>(null);
   const now = useNow();
+  const online = useOnline();
   const { prefs, update, toggleGame } = usePrefs();
   const { completions, toggle, merge } = useCompletions();
 
@@ -122,8 +146,14 @@ export function App() {
           <p className="font-display text-[0.9375rem] font-bold tracking-[0.02em]">
             EVENT<span className="text-near">CLOCK</span>
           </p>
-          <p className="mt-0.5 text-xs text-faint">
+          <p className="mt-0.5 flex items-center gap-1.5 text-xs text-faint">
             {live.length} live · {upcoming.length} upcoming
+            {!online && (
+              <span className="inline-flex items-center gap-1 text-soon">
+                <span aria-hidden className="size-1.5 rounded-full bg-soon" />
+                offline
+              </span>
+            )}
           </p>
         </div>
 
@@ -219,19 +249,17 @@ export function App() {
         onImport={(file) => void importProgress(file, merge)}
       />
 
-      <footer className="px-4 pb-10 pt-2 text-xs leading-relaxed text-faint">
-        <p>
-          Dates come from community wikis and are shown in your local time. Every
-          event links to its source — check there before the last hours.
+      {!online && (
+        <p className="border-t border-hairline px-4 py-3 text-xs leading-relaxed text-soon">
+          You're offline. These are the events last downloaded
+          {" "}
+          {formatRemaining(now - Date.parse(state.feed.generatedAt))} ago, and
+          countdowns are still running. Anything rescheduled since then won't
+          show until you reconnect.
         </p>
-        {staleSources.length > 0 && (
-          <p className="mt-2 text-soon">
-            {staleSources.length} source
-            {staleSources.length > 1 ? "s have" : " has"} not refreshed in over two
-            days. Some end dates may have moved.
-          </p>
-        )}
-      </footer>
+      )}
+
+      <Colophon sources={state.feed.sources} staleCount={staleSources.length} />
 
       {openRow !== null && (
         <EventDetail
