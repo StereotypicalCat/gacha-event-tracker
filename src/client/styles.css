@@ -113,6 +113,110 @@ body {
   }
 }
 
+/* ---- Event rows -------------------------------------------------------- */
+/*
+ * Hover should feel instant. Everything here is fast (110–160ms) and eased out,
+ * so the row responds on the way in and settles on the way out — a slow
+ * symmetric fade is what makes an interface feel laggy even at 60fps.
+ *
+ * All hover states are behind `hover: hover` so a tap on a touch device does
+ * not leave a row stuck in its hover appearance.
+ */
+.event-row {
+  --row-bg: transparent;
+  background: var(--row-bg);
+  transition: background-color 130ms ease-out;
+}
+.event-row.is-complete {
+  opacity: 0.4;
+}
+
+.row-rail {
+  background: var(--hue);
+  opacity: 0.55;
+  transform: scaleY(0.82);
+  transform-origin: center;
+  transition:
+    transform 160ms cubic-bezier(0.2, 0.7, 0.3, 1),
+    opacity 130ms ease-out,
+    box-shadow 160ms ease-out;
+}
+
+.row-title,
+.row-count,
+.row-summary {
+  transition: color 130ms ease-out;
+}
+
+.row-check {
+  transition:
+    border-color 130ms ease-out,
+    color 130ms ease-out,
+    transform 120ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+@media (hover: hover) {
+  .event-row:hover {
+    --row-bg: color-mix(in srgb, var(--color-raised) 62%, transparent);
+  }
+  .event-row:hover .row-rail {
+    opacity: 1;
+    transform: scaleY(1);
+    box-shadow: 0 0 10px -2px var(--hue);
+  }
+  /* The meter is the signature element, so it is the thing that visibly
+     wakes up: live ticks gain a little light under the cursor. */
+  .event-row:hover .meter-tick[data-live="true"] {
+    filter: brightness(1.28) saturate(1.08);
+  }
+  .event-row:hover .row-summary {
+    color: var(--color-ink);
+  }
+  .event-row:hover .row-check {
+    border-color: var(--color-faint);
+    color: var(--color-muted);
+  }
+  .row-check:hover {
+    transform: scale(1.08);
+    border-color: var(--color-muted);
+    color: var(--color-ink);
+  }
+}
+
+/* Press feedback lands on both mouse and touch — the tactile half of
+   "responsive". */
+.event-row:active {
+  --row-bg: color-mix(in srgb, var(--color-raised) 82%, transparent);
+  transition-duration: 40ms;
+}
+.row-check:active {
+  transform: scale(0.9);
+  transition-duration: 60ms;
+}
+
+.meter-tick {
+  transition:
+    background-color 240ms ease,
+    filter 130ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .event-row,
+  .row-rail,
+  .row-title,
+  .row-count,
+  .row-summary,
+  .row-check,
+  .meter-tick {
+    transition: none;
+  }
+  .row-check:hover,
+  .row-check:active,
+  .event-row:hover .row-rail {
+    transform: none;
+  }
+}
+
 /* Focus ring: visible, and never removed. */
 :where(a, button, [tabindex]):focus-visible {
   outline: 2px solid var(--color-near);

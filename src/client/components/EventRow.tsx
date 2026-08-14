@@ -28,78 +28,93 @@ export function EventRow({ row, completed, onToggle, onOpen }: EventRowProps) {
 
   return (
     <li
-      className={`group relative flex gap-3 border-b border-hairline/70 px-4 py-3.5 transition-opacity ${
-        completed ? "opacity-40" : ""
+      className={`event-row relative border-b border-hairline/70 ${
+        completed ? "is-complete" : ""
       }`}
+      style={{ ["--hue" as string]: game.hue }}
     >
-      {/* Game identity: a hue stripe, never an urgency colour. */}
-      <span
-        aria-hidden
-        className="mt-1 w-[3px] shrink-0 rounded-full"
-        style={{ background: game.hue }}
-      />
-
-      <div className="min-w-0 flex-1">
-        <div className="flex items-baseline justify-between gap-3">
-          <button
-            type="button"
-            onClick={() => onOpen(event.id)}
-            className="min-w-0 text-left"
-          >
-            <span
-              className="eyebrow block truncate"
-              style={{ color: game.hue }}
-            >
-              {game.short}
-            </span>
-            <span
-              className={`block truncate text-[0.9375rem] font-medium leading-snug ${
-                completed ? "line-through decoration-faint" : ""
-              }`}
-            >
-              {event.title}
-            </span>
-          </button>
-
-          <span
-            className="tnum shrink-0 font-display text-sm font-semibold tabular-nums"
-            style={{ color: clock.msRemaining === null ? "var(--color-faint)" : heat }}
-          >
-            {countdown}
-          </span>
-        </div>
-
-        <div className="mt-2.5">
-          <Meter
-            progress={clock.upcoming ? 1 : clock.progress}
-            urgency={clock.urgency}
-            label={`${event.title}: ${countdown}`}
-          />
-        </div>
-      </div>
-
+      {/* The whole row opens the event. A single full-bleed target gives a
+          generous tap area on mobile and one unambiguous hover region — the
+          content above it is pointer-transparent so clicks fall through. */}
       <button
         type="button"
-        onClick={() => onToggle(event.id)}
-        aria-pressed={completed}
-        aria-label={completed ? `Mark ${event.title} not done` : `Mark ${event.title} done`}
-        className={`mt-0.5 grid size-7 shrink-0 place-items-center self-center rounded-md border transition-colors ${
-          completed
-            ? "border-transparent bg-near/20 text-near"
-            : "border-hairline text-faint hover:border-faint hover:text-muted"
-        }`}
+        onClick={() => onOpen(event.id)}
+        className="absolute inset-0 z-0 cursor-pointer"
       >
-        <svg viewBox="0 0 16 16" className="size-3.5" aria-hidden>
-          <path
-            d="M2.5 8.5l3.5 3.5 7.5-8"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <span className="sr-only">View {event.title} details</span>
       </button>
+
+      <div className="pointer-events-none relative z-10 flex gap-3 px-4 py-3.5">
+        {/* Game identity rail. Grows on hover — the cheapest possible signal
+            that this row is live under the cursor. */}
+        <span aria-hidden className="row-rail mt-0.5 w-[3px] shrink-0 rounded-full" />
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline justify-between gap-3">
+            <div className="min-w-0">
+              <span className="eyebrow block truncate" style={{ color: game.hue }}>
+                {game.short}
+              </span>
+              <span
+                className={`row-title block truncate text-[0.9375rem] font-medium leading-snug ${
+                  completed ? "line-through decoration-faint" : ""
+                }`}
+              >
+                {event.title}
+              </span>
+            </div>
+
+            <span
+              className="tnum row-count shrink-0 font-display text-sm font-semibold"
+              style={{
+                color: clock.msRemaining === null ? "var(--color-faint)" : heat,
+              }}
+            >
+              {countdown}
+            </span>
+          </div>
+
+          {event.summary !== null && (
+            <p className="row-summary mt-1 line-clamp-2 text-[0.8125rem] leading-snug text-muted">
+              {event.summary}
+            </p>
+          )}
+
+          <div className="mt-2.5">
+            <Meter
+              progress={clock.upcoming ? 1 : clock.progress}
+              urgency={clock.urgency}
+              label={`${event.title}: ${countdown}`}
+            />
+          </div>
+        </div>
+
+        {/* Sits above the row target so ticking done never opens the sheet. */}
+        <button
+          type="button"
+          onClick={() => onToggle(event.id)}
+          aria-pressed={completed}
+          aria-label={
+            completed ? `Mark ${event.title} not done` : `Mark ${event.title} done`
+          }
+          className={`row-check pointer-events-auto relative z-20 grid size-7 shrink-0 cursor-pointer place-items-center self-center rounded-md border ${
+            completed
+              ? "border-transparent bg-near/20 text-near"
+              : "border-hairline text-faint"
+          }`}
+        >
+          <svg viewBox="0 0 16 16" className="size-3.5" aria-hidden>
+            <path
+              d="M2.5 8.5l3.5 3.5 7.5-8"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      </div>
     </li>
   );
 }
