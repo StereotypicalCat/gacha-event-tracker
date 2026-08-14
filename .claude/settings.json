@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(bun test:*)",
+      "Bash(bun run:*)",
+      "Bash(bun install)",
+      "Bash(bun add:*)",
+      "Bash(bun build:*)",
+      "Bash(bun x tsc:*)",
+      "Bash(bunx tsc:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(ls:*)",
+      "Bash(rg:*)",
+      "Bash(sqlite3 *.sqlite \".schema\")",
+      "Bash(sqlite3 *.sqlite \"SELECT *\")"
+    ],
+    "ask": [
+      "Bash(bun run ingest:*)",
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(curl:*)",
+      "WebFetch"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Bash(rm -rf:*)"
+    ]
+  },
+  "env": {
+    "INGEST_ENABLED": "false"
+  }
+}
