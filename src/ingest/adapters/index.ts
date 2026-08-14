@@ -27,6 +27,24 @@ const SOURCES: SourceSpec[] = [
     parserId: "game8",
   },
   {
+    id: "hsr-game8-events",
+    game: "hsr",
+    url: "https://game8.co/games/Honkai-Star-Rail/archives/408749",
+    parserId: "game8",
+  },
+  {
+    id: "wuwa-game8-events",
+    game: "wuwa",
+    url: "https://game8.co/games/Wuthering-Waves/archives/453473",
+    parserId: "game8",
+  },
+  {
+    id: "zzz-game8-events",
+    game: "zzz",
+    url: "https://game8.co/games/Zenless-Zone-Zero/archives/457176",
+    parserId: "game8",
+  },
+  {
     id: "nte-game8-events",
     game: "nte",
     url: "https://game8.co/games/Neverness-to-Everness/archives/592073",

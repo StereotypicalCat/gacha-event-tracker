@@ -4,8 +4,10 @@ import {
   type GachaEvent,
 } from "../../shared/schema.ts";
 import {
+  parseFullRange,
   parseMonthDayRange,
   parseMonthDayYear,
+  parseOpenRange,
   parseSlashDateTimeRange,
   type ParsedInstant,
 } from "../dates.ts";
@@ -34,8 +36,11 @@ import type { SourceParser } from "./types.ts";
 const INCLUDED_SECTIONS = [
   /current events/i,
   /upcoming events/i,
-  /^recurring events$/i,
+  /recurring events/i,
   /events? schedule/i,
+  /featured events/i,
+  /list of events/i,
+  /ongoing events/i,
 ];
 
 /**
@@ -57,7 +62,10 @@ const RANGE_LABEL = /^(availability period|event period|duration|period|dates)$/
 
 /** Column-table header matchers. */
 const COL_TITLE = /^(.*\b)?events?$/i;
-const COL_RANGE = /^(duration|dates?|period|availability period|schedule)$/i;
+const COL_RANGE =
+  /^(event |all )?(duration|dates?|event date|period|availability period|schedule)$/i;
+const COL_START = /^start$/i;
+const COL_END = /^end$/i;
 const COL_SUMMARY = /^(event )?(details?|description|overview)$/i;
 
 interface Candidate {
@@ -106,6 +114,12 @@ export function parseGame8EventsPage(
     }
 
     if (!sectionIncluded || node.kind !== "table") continue;
+
+    const fromStartEnd = readStartEndTable(node.headers, node.rows);
+    if (fromStartEnd.length > 0) {
+      candidates.push(...fromStartEnd);
+      continue;
+    }
 
     const fromColumns = readColumnTable(node.rows);
     if (fromColumns.length > 0) {
@@ -203,10 +217,60 @@ function readColumnTable(rows: string[][]): Candidate[] {
   return out;
 }
 
+/**
+ * Try every known range shape, most specific first. `parseOpenRange` is last
+ * because it is the most permissive — it accepts any leading full date and
+ * reports no end.
+ */
+/**
+ * Shape 4: a `Event | Duration | Start | End` table where the event name spans
+ * two rows and each row carries one labelled boundary:
+ *
+ *   | Summer Waves Rolls In | Start | July 29, 2026      |
+ *   |                       | End   | September 7, 2026  |
+ *
+ * The rowspan is invisible to a flat cell reader, so the shape is recovered
+ * from cell counts: a row that introduces a title, then a continuation row.
+ */
+function readStartEndTable(headers: string[], rows: string[][]): Candidate[] {
+  if (!headers.some((h) => COL_START.test(h)) || !headers.some((h) => COL_END.test(h))) {
+    return [];
+  }
+
+  const out: Candidate[] = [];
+  for (const row of rows) {
+    const cells = row.map((c) => c.trim());
+
+    // [title, "Start", date] — begins an event.
+    if (cells.length >= 3 && COL_START.test(cells[1] ?? "")) {
+      const title = cells[0] ?? "";
+      const start = parseMonthDayYear(cells[2] ?? "");
+      if (title.length > 0 && start !== null) {
+        out.push({ title, summary: null, start, end: null });
+      }
+      continue;
+    }
+
+    // ["End", date] — completes the event opened above.
+    if (cells.length >= 2 && COL_END.test(cells[0] ?? "")) {
+      const current = out.at(-1);
+      if (current !== undefined && current.end === null) {
+        current.end = parseMonthDayYear(cells[1] ?? "");
+      }
+    }
+  }
+  return out;
+}
+
 function parseRange(
   value: string,
-): { start: ParsedInstant; end: ParsedInstant } | null {
-  return parseSlashDateTimeRange(value) ?? parseMonthDayRange(value);
+): { start: ParsedInstant; end: ParsedInstant | null } | null {
+  return (
+    parseSlashDateTimeRange(value) ??
+    parseFullRange(value) ??
+    parseMonthDayRange(value) ??
+    parseOpenRange(value)
+  );
 }
 
 /**

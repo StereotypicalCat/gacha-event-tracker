@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { genshinGame8, nteGame8 } from "../../src/ingest/adapters/index.ts";
+import { adapterById } from "../../src/ingest/adapters/index.ts";
 import type { Adapter } from "../../src/ingest/adapters/types.ts";
 import { inferType } from "../../src/ingest/parsers/game8.ts";
 import { GachaEvent, type EventType } from "../../src/shared/schema.ts";
@@ -10,15 +10,21 @@ import { GachaEvent, type EventType } from "../../src/shared/schema.ts";
  */
 const NOW = "2026-08-14T00:00:00.000Z";
 
+function adapter(id: string): Adapter {
+  const found = adapterById(id);
+  if (found === undefined) throw new Error(`no adapter '${id}'`);
+  return found;
+}
+
+const genshinGame8 = adapter("genshin-game8-events");
+const nteGame8 = adapter("nte-game8-events");
+
 const CASES: Array<{ adapter: Adapter; fixture: string }> = [
-  {
-    adapter: genshinGame8,
-    fixture: "fixtures/genshin/game8-events-2026-08-14",
-  },
-  {
-    adapter: nteGame8,
-    fixture: "fixtures/nte/game8-events-2026-08-14",
-  },
+  { adapter: genshinGame8, fixture: "fixtures/genshin/game8-events-2026-08-14" },
+  { adapter: nteGame8, fixture: "fixtures/nte/game8-events-2026-08-14" },
+  { adapter: adapter("hsr-game8-events"), fixture: "fixtures/hsr/game8-events-2026-08-14" },
+  { adapter: adapter("wuwa-game8-events"), fixture: "fixtures/wuwa/game8-events-2026-08-14" },
+  { adapter: adapter("zzz-game8-events"), fixture: "fixtures/zzz/game8-events-2026-08-14" },
 ];
 
 async function runAdapter(adapter: Adapter, fixture: string) {
@@ -159,5 +165,43 @@ describe("inferType", () => {
   ];
   test.each(cases)("%s → %s", (title, expected) => {
     expect(inferType(title)).toBe(expected);
+  });
+});
+
+describe("new source shapes", () => {
+  test("zzz recovers events from rowspan Start/End rows", async () => {
+    // The event name spans two rows, so a flat cell reader sees
+    // [title, "Start", date] then ["End", date]. Losing the pairing would
+    // silently halve the calendar.
+    const events = await runAdapter(
+      adapter("zzz-game8-events"),
+      "fixtures/zzz/game8-events-2026-08-14",
+    );
+    const summer = events.find((e) => e.title === "Summer Waves Rolls In");
+    expect(summer?.startsAt).toBe("2026-07-29T00:00:00.000Z");
+    expect(summer?.endsAt).toBe("2026-09-07T00:00:00.000Z");
+    expect(events.every((e) => e.endsAt !== null)).toBe(true);
+  });
+
+  test("hsr keeps events whose end is not announced", async () => {
+    // "Jul. 24, 2026 - End of 4.6" has a real start and no knowable end.
+    // Publishing it with a guessed end would be the worst possible outcome.
+    const events = await runAdapter(
+      adapter("hsr-game8-events"),
+      "fixtures/hsr/game8-events-2026-08-14",
+    );
+    const open = events.filter((e) => e.endsAt === null);
+    expect(open.length).toBeGreaterThan(0);
+    for (const e of open) expect(e.endPrecision).toBe("unknown");
+  });
+
+  test("wuwa parses ranges carrying a year on both sides", async () => {
+    const events = await runAdapter(
+      adapter("wuwa-game8-events"),
+      "fixtures/wuwa/game8-events-2026-08-14",
+    );
+    const jade = events.find((e) => e.title === "In Search of Lost Jade");
+    expect(jade?.startsAt).toBe("2026-07-30T00:00:00.000Z");
+    expect(jade?.endsAt).toBe("2026-08-13T00:00:00.000Z");
   });
 });
