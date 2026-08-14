@@ -1,2 +1,121 @@
-# gacha-event-tracker
-A web application to give an overview over what events are going on, and when they end,
+# Event Clock
+
+Live and upcoming events across your gacha games, sorted by what expires next.
+
+You play three or four gacha games. Each has its own calendar, none of them talk to each other, and
+the only question that actually matters — *what runs out first?* — takes four browser tabs to
+answer. This does it in one screen.
+
+No account. No login. Your completed events are saved in your browser and never leave your device.
+
+## Status
+
+Early. The parsing pipeline and the interface work end to end against checked-in fixtures; the
+server, database and scheduler are specified but not built.
+
+| Piece | State |
+|---|---|
+| Event schema, date parsing, Game8 parser | Built, tested |
+| Genshin Impact and Neverness to Everness sources | Built, tested |
+| Cross-source merge and conflict detection | Built, tested |
+| Web interface | Built |
+| Bun server, SQLite, refresh scheduler, review queue | Specified in `docs/`, not built |
+
+Today the feed is generated offline from fixtures. That is deliberate: it let the interface be built
+against real parsed data, and it produces exactly the shape the server will serve.
+
+## Try it
+
+```bash
+bun install
+bun run build      # parse fixtures → feed, then compile CSS and JS
+bunx serve public  # or any static file server
+```
+
+Then open <http://localhost:3000>.
+
+## Commands
+
+```bash
+bun test                  # full suite, offline, no network
+bun run typecheck         # tsc --noEmit
+bun run build             # feed + css + js + html into public/
+bun run build:feed        # regenerate public/data/events.v1.json from fixtures
+
+# Run one source against its fixture and print what it yields
+bun run parse genshin-game8-events fixtures/genshin/game8-events-2026-08-14.html
+bun run parse nte-game8-events     fixtures/nte/game8-events-2026-08-14.html --json
+```
+
+## How it works
+
+```
+game wikis ──► fetch ──► parse ──► merge ──► validate ──► gate ──► feed ──► browser
+                          │          │                     │                  │
+                    per-site      per-game            hold anything    localStorage:
+                     parser      corroboration        uncertain for      what you've
+                                 and conflicts        human review        finished
+```
+
+**Parsers are deterministic code.** There is no LLM anywhere in the pipeline — no API key, no
+inference, no per-run cost. A source that cannot be parsed reliably does not get an adapter, rather
+than getting a model that guesses at it.
+
+**Three layers, so sources multiply cheaply.** A *parser* understands one site template (one Game8
+parser serves every Game8 page). An *adapter* binds a URL and a game to a parser. *Merge* reconciles
+several sources for the same game. Adding a source for a site already covered is one registry entry.
+
+**Nothing is guessed.** Every date function returns null rather than inventing a missing year or
+end date. An event whose end is unannounced is published with no end and rendered distinctly — never
+filled in with a plausible-looking date.
+
+That last rule is the whole product. A missing event sends you to a wiki; a confidently wrong end
+date makes you miss content. Given the choice, this ships nothing rather than a guess.
+
+## Games
+
+| Game | Source | Notes |
+|---|---|---|
+| Genshin Impact | Game8 | 9 events |
+| Neverness to Everness | Game8 | 13 events |
+| Arknights: Endfield | — | No source yet, see below |
+
+**Endfield has no adapter on purpose.** Its Game8 page carries no usable dates: every duration reads
+"Permanently Available", and the schedule is an image grid showing `07/16` with no year and no end
+date. Supporting it would mean inventing both. It needs a different source.
+
+Honkai: Star Rail, Zenless Zone Zero, Wuthering Waves and Arknights are defined in the schema and
+awaiting sources.
+
+## Adding a source
+
+1. Check `robots.txt` and the site's terms. If automated access is forbidden, stop — find another
+   source.
+2. Capture the page once into `fixtures/<game>/<source>-<YYYY-MM-DD>.html`.
+3. Reuse an existing parser if the site is already covered; otherwise write one implementing
+   `SourceParser`.
+4. Add an entry to `SOURCES` in `src/ingest/adapters/index.ts`.
+5. Write the expected output and a test. Then check a few events against the live page by hand — a
+   passing test only proves the parser agrees with a file you wrote yourself.
+
+Full walkthrough in `docs/INGESTION.md`, or run the `add-game-source` skill.
+
+## Conduct
+
+Sources are community wikis, treated as a guest would: `robots.txt` honoured, a descriptive
+`User-Agent`, one request per source per six hours, conditional requests, and raw snapshots cached
+so iteration never re-fetches. Every event links back to its source.
+
+## Documentation
+
+| Document | Covers |
+|---|---|
+| `CLAUDE.md` | Working agreements, domain rules, conventions |
+| `docs/PRD.md` | What this is, who for, what's out of scope |
+| `docs/ARCHITECTURE.md` | Process shape, routes, deployment |
+| `docs/DATA-MODEL.md` | Event schema, SQLite tables, client storage |
+| `docs/INGESTION.md` | Parser/adapter/merge layers, pipeline stages, review gate |
+
+## Licence
+
+Not yet chosen. Event data belongs to the sources it came from and is linked back on every event.
