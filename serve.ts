@@ -10,7 +10,8 @@
 import { resolve } from "node:path";
 
 const PORT = Number(process.env.PORT ?? 3000);
-const ROOT = "public";
+/** Overridable so tests can point at a fixture tree instead of the build. */
+const ROOT = process.env.PUBLIC_DIR ?? "public";
 const ROOT_DIR = resolve(ROOT);
 
 /** Long-lived for fingerprint-free assets is wrong; keep it short and revalidate. */
