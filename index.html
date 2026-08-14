@@ -10,6 +10,22 @@
       content="Live and upcoming events across your gacha games, sorted by what ends soonest."
     />
     <meta name="theme-color" content="#12141c" />
+
+    <!--
+      This page is already dark. Two signals, because they cover different
+      readers:
+
+      color-scheme tells the browser (and well-behaved extensions) that a dark
+      rendering is intended, so form controls and scrollbars come out dark and
+      nothing tries to synthesise a light theme.
+
+      darkreader-lock is Dark Reader's documented opt-out. Without it Dark
+      Reader inverts an already-dark palette, which wrecks the urgency ramp —
+      the colours in this UI carry meaning, so having them re-mapped is not a
+      cosmetic problem.
+    -->
+    <meta name="color-scheme" content="dark" />
+    <meta name="darkreader-lock" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
