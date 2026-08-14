@@ -117,3 +117,6 @@ dist
 
 # runtime data
 data/
+
+# build output
+public/
