@@ -10,3 +10,14 @@ createRoot(root).render(
     <App />
   </StrictMode>,
 );
+
+// Offline support. Registered after render so it never delays first paint, and
+// guarded because file:// and older browsers have no service worker at all.
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  window.addEventListener("load", () => {
+    void navigator.serviceWorker.register("/sw.js").catch(() => {
+      // An unavailable worker costs offline support, nothing else. The app
+      // works exactly as before.
+    });
+  });
+}

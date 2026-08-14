@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Event Clock">
+  <rect width="64" height="64" rx="14" fill="#12141C"/>
+  <g>
+    <rect x="10" y="26" width="5" height="12" rx="1.5" fill="#FF4D6A"/>
+    <rect x="17" y="26" width="5" height="12" rx="1.5" fill="#FF4D6A"/>
+    <rect x="24" y="26" width="5" height="12" rx="1.5" fill="#E8B33C"/>
+    <rect x="31" y="26" width="5" height="12" rx="1.5" fill="#E8B33C"/>
+    <rect x="38" y="26" width="5" height="12" rx="1.5" fill="#2C3145"/>
+    <rect x="45" y="26" width="5" height="12" rx="1.5" fill="#2C3145"/>
+  </g>
+</svg>

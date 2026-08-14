@@ -1,0 +1,19 @@
+{
+  "name": "Event Clock",
+  "short_name": "Event Clock",
+  "description": "Live and upcoming gacha events, sorted by what expires next.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#12141c",
+  "theme_color": "#12141c",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
