@@ -196,10 +196,18 @@ malformed row surfaces at the boundary rather than deep in the UI.
 Namespaced, versioned, and small. Nothing here ever goes to the server.
 
 ```ts
-"gacha-tracker:v1:completions"  // { [eventId]: { completedAt: string } }
-"gacha-tracker:v1:prefs"        // { region, hiddenGames[], hiddenTypes[], showCompleted }
-"gacha-tracker:v1:feedCache"    // { fetchedAt, events }  — offline fallback
+"gacha-tracker:v1:completions"  // { [eventId]: { at: string } }  — "I finished this"
+"gacha-tracker:v1:ignored"      // { [eventId]: { at: string } }  — "stop showing me this"
+"gacha-tracker:v1:prefs"        // { region, hiddenGames[], showCompleted, showIgnored,
+                                //   regionConfirmed, onboarded }
 ```
+
+Completions and ignores are the same shape and share one implementation
+(`useMarkSet`), but stay in separate stores because they mean different things: a completed event is
+dimmed and still counted, an ignored one disappears from both views.
+
+Offline caching is the service worker's job, not localStorage's — it caches the feed response
+itself, so there is no second copy of the events to keep in sync.
 
 The `v1` segment is the migration hook. On boot, the client checks for keys at older versions and
 migrates them forward before reading. **Never delete an old-version key until the migration has
@@ -213,14 +221,16 @@ old key.
   "format": "gacha-tracker-export",
   "version": 1,
   "exportedAt": "2026-08-14T12:00:00.000Z",
-  "completions": { "genshin:windblume-festival:2026-03-14": { "completedAt": "..." } },
-  "prefs": { "region": "europe", "hiddenGames": [] }
+  "completions": { "genshin:windblume-festival:2026-03-14": { "at": "..." } },
+  "ignored": { "zzz:some-event-i-skip:2026-08-19": { "at": "..." } },
+  "prefs": { "region": "europe", "hiddenGames": [], "onboarded": true }
 }
 ```
 
-Import **merges**: a completion present in either the file or the current device stays completed.
-Import never removes a completion. Losing a user's marks to a bad import is unrecoverable, so the
-merge is deliberately one-directional.
+Import **merges** both sets: a mark present in either the file or the current device survives, and
+import never removes one. Losing a user's marks to a bad import is unrecoverable, so the merge is
+deliberately one-directional. A file whose `format` is unrecognised is refused outright rather than
+partly applied.
 
 ## Schema versioning
 

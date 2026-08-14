@@ -35,8 +35,12 @@ only schema edit a new game should require. If it needs more, that is a finding 
 Fetch the source page **once** and save the raw HTML:
 
 ```
-fixtures/<game>/<source-id>-<YYYY-MM-DD>.html
+fixtures/<game>/<site>-events-<YYYY-MM-DD>.html
 ```
+
+The `<site>` prefix is load-bearing: `build-feed` picks fixtures by site within the game directory,
+so a game with two sources whose files share a prefix will hand one site's page to the other's
+parser.
 
 Everything after this point works offline against that file. Do not re-fetch while iterating on the
 parser.
@@ -77,16 +81,18 @@ report that you did this.
   `parserId`, and optionally `priority` (higher wins when sources disagree).
 - Insert the matching `sources` row: id, game, url, parser_id, priority, `min_interval_ms`.
 
-## 7. First run
+## 7. Rebuild the feed
 
 ```
-INGEST_ENABLED=true bun run ingest --source <source-id> --dry-run
+bun run build:feed     # regenerates public/data/events.v1.json
+bun run dev            # build and serve on :3000
 ```
 
-Inspect what it *would* publish before letting it write. Then run for real and check the review
-queue at `http://127.0.0.1:$ADMIN_PORT/review` — a new source commonly lands events in quarantine
-on its first pass, because nothing corroborates it yet. That is the gate working, not a bug.
-Review and approve them.
+Check the event count and any conflicts the merge reports. A game with two sources will surface
+disagreements — those are the gate working, not a bug.
+
+The scheduler, quarantine table and `/review` queue described in `docs/INGESTION.md` are **not built
+yet**; today the feed is generated offline from fixtures.
 
 ## Checklist
 

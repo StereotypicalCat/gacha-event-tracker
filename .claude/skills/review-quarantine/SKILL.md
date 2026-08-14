@@ -5,6 +5,11 @@ description: Work through the quarantined-event queue — triage held events by 
 
 # Reviewing the quarantine queue
 
+> **Not built yet.** The quarantine table, the `/review` route and the ingest scheduler are specified
+> in `docs/INGESTION.md` but do not exist in the tree. Today the closest equivalent is the conflict
+> list `bun run build:feed` prints when two sources disagree. Use this skill once the pipeline lands;
+> until then, treat it as the spec for what that review flow should do.
+
 Held events are candidates the pipeline declined to publish. Working the queue is both a data task
 (get these events onto the calendar) and a diagnostic one (**a growing queue means something
 upstream broke**).

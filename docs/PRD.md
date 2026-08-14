@@ -83,6 +83,29 @@ Because there are no accounts, moving between devices is manual: download a JSON
 IDs and preferences, upload it elsewhere. Import merges rather than replaces, and never removes a
 completion the user already has.
 
+**F8 — First-run game picker.**
+Before any events are shown, the reader picks which games they play. A calendar full of games they
+don't play is worse than an empty one — it buries the thing they came for. Nothing is preselected
+and the button stays disabled until something is chosen; guessing on their behalf and hoping they
+notice is worse than asking. The choice is stored as *hidden* games, the inverse, so a game added
+later appears by default rather than staying invisible forever.
+
+**F9 — Ignore an event.**
+Distinct from completing one. "Done" keeps an event visible and counted; "not interested" removes it
+from both views entirely. Ignored events stay recoverable: a count and a reveal toggle appear in
+settings once there is something to reveal.
+
+**F10 — Works offline.**
+The reader's question is answered entirely by data already on the device, and countdowns run off the
+local clock, so losing signal should not lose the app. A service worker caches the shell and serves
+the last feed it downloaded. Offline is disclosed in the header and above the footer — see F7; stale
+data must never be presented as current.
+
+**F11 — Credit and disclaimer.**
+The sources that compile these calendars, and the studios that make the games, are named on the same
+screen as the data rather than one navigation step away. The page states plainly that it is
+unofficial and unaffiliated, and that the source page is the authority when the two disagree.
+
 **F7 — Freshness disclosure.**
 The footer shows when the feed was last updated, per game. If a game's data is more than 48 hours
 stale, its lane carries a warning badge. Never present stale data as current — the whole value
@@ -91,7 +114,8 @@ proposition is trust in the dates.
 ## Out of scope for v1
 
 Accounts and sync; push notifications; per-event checklists or progress tracking; in-game resource
-or pull tracking; user-submitted events; mobile apps; localization beyond English.
+or pull tracking; user-submitted events; native mobile apps (the web app installs to a home screen,
+which is enough); localization beyond English.
 
 ## Success criteria
 
@@ -119,6 +143,8 @@ product exists to prevent.
 
 - Does the calendar need a month/grid view, or is the timeline enough? (Assumption: timeline is
   enough for v1; revisit after use.)
+- Should an ignored event still count toward the "N live" header total? (Assumption: no — ignoring
+  means gone.)
 - Should events the user has hidden by game filter still count toward "ends soonest"?
   (Assumption: no — the filter is global.)
 - Is 6 hours the right refresh cadence? (Assumption: yes; events are announced days ahead, so

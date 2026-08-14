@@ -24,8 +24,8 @@ Fetch the page exactly once.
 
 **3. Decide whether an existing parser covers it.**
 
-Parsers live in `src/ingest/parsers/` and are keyed by *site*, not game — one Game8 parser serves
-every Game8 page. Check `PARSERS` first:
+Parsers live in `src/ingest/parsers/` and are keyed by *site*, not game. Two exist: `game8`
+(six sources) and `wikigg` (wiki.gg MediaWiki `mp-event` templates). Check `PARSERS` first:
 
 - **Existing parser handles it** → add one entry to `SOURCES` in `adapters/index.ts`. No new
   parsing code. This is the common case and should be the first thing you try.
@@ -33,6 +33,10 @@ every Game8 page. Check `PARSERS` first:
   `parsers/index.ts`, then add the source.
 - **Undatable source** (no year, no end date, image-grid schedule) → **stop and report.** There is
   no LLM fallback in this pipeline by design. Suggest a different source.
+
+**Check every table before concluding a page is undatable.** Endfield was written off on a pass that
+only inspected its `Duration` rows; its real events were in a table further down, and a second
+source (wiki.gg) turned out to publish ISO timestamps with per-region timers.
 
 **4. Implement the parser (only if step 3 says you need one).**
 
@@ -48,9 +52,13 @@ every Game8 page. Check `PARSERS` first:
   - An unstated end is `endsAt: null` + `endPrecision: "unknown"`. **Never compute a plausible end
     from typical patch length.** This is the failure mode that makes the product worthless.
 
-**5. Write the test.** `fixtures/<game>/<source-id>-<YYYY-MM-DD>.expected.json` holds the exact
-expected `GachaEvent[]`. The test runs `parse` + `normalize` against the fixture with a pinned
-`ctx.now` and asserts deep equality.
+**5. Write the test.** `fixtures/<game>/<site>-events-<YYYY-MM-DD>.expected.json` holds the exact
+expected `GachaEvent[]`. Add the source to `CASES` in `test/adapters/game8.test.ts`; the shared
+assertions (schema, determinism, no backwards intervals, 180-day cap, unique IDs) then apply for
+free. Regenerate the expected file with `bun run parse <id> <fixture> --json`.
+
+**Fixture names matter**: `build-feed` selects by `<site>-*` within the game directory, so a game
+with two sources needs distinct site prefixes.
 
 **6. Verify.** Run `bun test` and confirm it passes with no network. Then hand-check three or four
 events against the live page and state in your report that you did — a green test against an

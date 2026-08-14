@@ -7,9 +7,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 A web app that aggregates live and upcoming events across popular gacha games, plots them on a
 calendar, sorts them by end date, and lets a user mark events completed.
 
-**Status: first vertical slice.** The schema, the Game8 parser, and two working adapters (Genshin
-Impact, Neverness to Everness) exist and are tested. The server, database, and UI do not exist yet —
-`docs/` specifies them.
+**Status: working app, no live refresh.** Schema, two parsers, seven sources across six games, the
+full interface, offline support, a static server, a Docker image and CI all exist and are tested.
+The SQLite layer, the refresh scheduler and the review queue are specified in `docs/` but not built,
+so the feed is generated offline from checked-in fixtures.
 
 ## Three constraints that shape everything
 
@@ -39,17 +40,25 @@ parsing library — Bun covers all four. `tsconfig.json` runs `strict` plus
 
 ```bash
 bun install
-bun test                      # full suite, offline, no network
+bun test                      # full suite, offline, no network, no build needed
 bun run typecheck             # tsc --noEmit
+bun run dev                   # build then serve on :3000
+bun run build                 # feed + css + js + static into public/
 
-# Run an adapter against a checked-in fixture (offline, free)
+# Run one source against its fixture (offline, free)
 bun run parse genshin-game8-events fixtures/genshin/game8-events-2026-08-14.html
-bun run parse nte-game8-events     fixtures/nte/game8-events-2026-08-14.html --json
+bun run parse endfield-wikigg-events fixtures/endfield/wikigg-events-2026-08-15.html --json
 
 # Single test file / single test
 bun test test/dates.test.ts
 bun test --test-name-pattern "year-less"
+
+# Hosting under a subpath (GitHub Pages)
+BASE_PATH=/gacha-event-tracker/ bun run build
 ```
+
+**Tests must never need build output.** They run before `bun run build` in CI; anything reading
+`public/` must create its own fixture tree instead.
 
 `bun run parse ... --json` is also how `.expected.json` fixtures are regenerated after an
 intentional parser change. Regenerating them makes the test self-consistent, not correct — always
@@ -58,19 +67,18 @@ re-verify a sample against the live page afterward.
 ## Current state of the code
 
 ```
-src/shared/schema.ts          Zod GachaEvent, GameId, slugify, eventId   ← the contract
-src/ingest/html.ts            flat-table HTML reader (no dependency)
-src/ingest/dates.ts           three date formats, null rather than guess
-src/ingest/adapters/
-  types.ts                    Adapter interface, ParseContext
-  game8.ts                    shared Game8 parser — handles 2 table shapes
-  index.ts                    adapter registry
-scripts/parse-fixture.ts      offline adapter runner
-test/                         37 tests
-fixtures/<game>/              raw HTML + .expected.json per source
+src/shared/       schema.ts (the contract), time.ts, games.ts, feed.ts
+src/ingest/       html.ts, dates.ts (six formats), merge.ts
+  parsers/        game8.ts, wikigg.ts — keyed by SITE, not game
+  adapters/       index.ts — SOURCES registry binding url+game+parser
+src/client/       React app, service worker, manifest
+scripts/          build-feed.ts, parse-fixture.ts (both offline)
+serve.ts          static server + /api/health
+test/             112 tests
+fixtures/<game>/  raw HTML + .expected.json per source
 ```
 
-Not yet built: `src/server/**`, `src/client/**`, the SQLite layer, the scheduler, the review UI.
+Not yet built: the SQLite layer, the ingest scheduler, the review UI.
 
 ## Domain rules that are not obvious from the code
 
@@ -96,13 +104,16 @@ These come from how gacha games actually schedule things, and they cause most bu
 - **Skip, never guess.** Every function in `dates.ts` returns `null` rather than inferring a missing
   year, month, or end. `readColumnTable` drops a row it cannot date. An omitted event is a
   recoverable disappointment; a confidently wrong date is the failure this product exists to prevent.
-- **Game8 has no single template.** Three shapes are known so far, and a page may mix them:
-  1. Label/value detail tables (`Event Start` / `Event End`) — Genshin.
-  2. Column tables (`Event | Duration | Event Details | Rewards`) — NTE.
-  3. Image-grid schedules with a bare `MM/DD` and no end — unsupportable, yields nothing by design.
-  4. Combined cells that fold label, range and blurb together
-     (`Period: 08/09/26 - 08/30/26 During the event...`) — Arknights: Endfield.
-  Before assuming a new Game8 page will work, dump its structure and check which shape it uses.
+- **Parsers are keyed by site, not game.** One `game8` parser serves six sources; `wikigg` serves
+  one. Adding a source for a known site is one `SOURCES` entry; a new site is a parser module.
+- **Game8 has no single template.** Five shapes are known and a page may mix them: label/value
+  detail tables, column tables, image-grid schedules (unsupportable), combined label+range+blurb
+  cells, and rowspan Start/End pairs. Full table in `docs/INGESTION.md`. Before assuming a new
+  Game8 page will work, dump its structure and check **every** table — Endfield was written off as
+  undatable on a pass that only inspected its `Duration` rows, and its real events were further
+  down the page.
+- **Prefer a source that states machine-readable times.** wiki.gg emits ISO timestamps with a timer
+  per server region, which is the only reason `regionEnds` carries real data anywhere.
 - **Silent drops are the dangerous failure.** A date format the parser does not recognise makes
   events vanish with no error. Abbreviated months (`Apr. 29 - May 13, 2026`) are supported for
   exactly this reason. When adding a source, compare the parser's event count against an

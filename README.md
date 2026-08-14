@@ -10,16 +10,19 @@ No account. No login. Your completed events are saved in your browser and never 
 
 ## Status
 
-Early. The parsing pipeline and the interface work end to end against checked-in fixtures; the
-server, database and scheduler are specified but not built.
+Early, but usable. The parsing pipeline and the interface work end to end against checked-in
+fixtures, and the whole thing builds, serves, containerises and deploys. The database, refresh
+scheduler and review queue are specified but not built, so the feed is generated offline rather than
+refreshing itself.
 
 | Piece | State |
 |---|---|
 | Event schema, date parsing, Game8 parser | Built, tested |
 | Six game sources | Built, tested |
 | Cross-source merge and conflict detection | Built, tested |
-| Web interface, offline support | Built |
-| Bun server, SQLite, refresh scheduler, review queue | Specified in `docs/`, not built |
+| Web interface, offline support, first-run picker | Built |
+| Static server, Docker image, GitHub + GitLab CI | Built |
+| SQLite, refresh scheduler, review queue | Specified in `docs/`, not built |
 
 Today the feed is generated offline from fixtures. That is deliberate: it let the interface be built
 against real parsed data, and it produces exactly the shape the server will serve.

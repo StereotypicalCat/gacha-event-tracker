@@ -57,29 +57,48 @@ src/
     scheduler.ts        timer + jitter + per-source lock          [not built]
     pipeline.ts         the 6 stages, orchestration only          [not built]
     html.ts             flat-table HTML reader (no dependency)    ✓ built
-    dates.ts            deterministic date parsing                ✓ built
+    dates.ts            six deterministic date formats            ✓ built
+    merge.ts            cross-source dedupe, corroboration        ✓ built
     validate.ts         zod parse + calendar sanity rules         [not built]
     reconcile.ts        diff vs published, confidence, conflicts  [not built]
+    parsers/
+      types.ts          SourceParser interface                    ✓ built
+      game8.ts          game8.co article calendars                ✓ built
+      wikigg.ts         wiki.gg mp-event templates                ✓ built
+      index.ts          parser registry                           ✓ built
     adapters/
       types.ts          Adapter interface, ParseContext           ✓ built
-      game8.ts          shared Game8 parser (2 table shapes)      ✓ built
-      index.ts          registry: adapter id → Adapter            ✓ built
+      index.ts          SOURCES registry, parseGame()             ✓ built
   shared/
     schema.ts           zod schemas — the contract, both sides    ✓ built
-    time.ts             region reset math, duration formatting    [not built]
-  client/
-    main.tsx
-    App.tsx
-    views/
-      Timeline.tsx      F1
-      EndingSoon.tsx    F2
-      EventDetail.tsx
+    time.ts             clocks, urgency, region resets, captions  ✓ built
+    games.ts            per-game name and hue                     ✓ built
+    feed.ts             the /api/events.json wire contract        ✓ built
+  client/                                                         ✓ all built
+    main.tsx            render + service worker registration
+    App.tsx             shell, views, filters, onboarding gate
+    api.ts              typed feed fetch, schemaVersion refusal
+    sw.js               offline: shell cache, feed fallback
+    manifest.webmanifest, icon.svg
+    components/
+      NextUp.tsx        the hero countdown          (PRD F1)
+      EventRow.tsx      row + meter + caption       (F2, F3)
+      Meter.tsx         the depletion meter
+      Legend.tsx        what the bars and colours mean
+      Timeline.tsx      calendar lanes              (F1)
+      EventDetail.tsx   detail sheet, ignore action (F9)
+      Controls.tsx      games, region, export/import(F4, F5, F6)
+      Welcome.tsx       first-run game picker       (F8)
+      Colophon.tsx      credit, disclaimer, repo link
     state/
-      completions.ts    localStorage read/write + export/import
-      prefs.ts          region, filters
-    api.ts              typed fetch of /api/events
+      storage.ts        namespaced, versioned localStorage
+      useMarkSet.ts     completions and ignores (same shape)
+      usePrefs.ts       region, filters, onboarding flags
+serve.ts                static server + /api/health              ✓ built
+scripts/
+  build-feed.ts         fixtures → public/data/events.v1.json     ✓ built
+  parse-fixture.ts      run one adapter offline                   ✓ built
 fixtures/<game>/        checked-in raw HTML + expected parse output
-docs/
 ```
 
 ## Request paths
@@ -137,12 +156,39 @@ PORT=3000
 ADMIN_PORT=3001            # bound to 127.0.0.1
 DATABASE_PATH=./data/events.sqlite
 INGEST_INTERVAL_MS=21600000
-INGEST_ENABLED=true        # false for local UI work — never hits the network or the API
+INGEST_ENABLED=true        # false for local UI work — never touches the network
 CONFIDENCE_THRESHOLD=0.8
+BASE_PATH=/               # trailing slash; set when hosting under a subpath
 ```
 
 `INGEST_ENABLED=false` is the default for local development. Frontend work should run against a
 seeded SQLite file and cost nothing.
+
+### Today
+
+`serve.ts` serves `public/` plus `/api/health`, and the feed is generated offline from fixtures by
+`bun run build:feed`. It emits exactly the shape `/api/events.json` will, so the real server slots in
+without the client changing. Reads are confined to `public/` by resolving the path and checking it
+stays inside the root — string-matching `..` is not enough, because encodings and URL normalisation
+both change what the string looks like.
+
+`Dockerfile` builds and serves this; the image runs typecheck and tests during build, ships no source
+or toolchain, and runs unprivileged. `.github/workflows/ci.yml` and `.gitlab-ci.yml` run the same
+gates and publish it.
+
+### Hosting under a subpath
+
+Assets resolve against a `<base href>` substituted at build time, the feed URL resolves against
+`document.baseURI` so deep links work, and the service worker derives its paths from its own
+registration scope. `BASE_PATH=/gacha-event-tracker/ bun run build` for GitHub Pages; without it a
+subpath deploy 404s on every asset.
+
+### Offline
+
+The service worker caches the shell and webfonts (cache-first) and the feed (network-first, falling
+back to the last copy seen). Countdowns run off the device clock, so the app stays useful with no
+network. Offline state is surfaced in the header and above the footer — stale data must never be
+presented as current.
 
 ## Deliberate non-choices
 

@@ -41,6 +41,33 @@ Consequences worth internalising:
 - A game may have any number of sources. `parseGame(game, documents, now)` runs them all and
   merges.
 
+### Parsers in the tree
+
+| Parser | Site | Sources using it |
+|---|---|---|
+| `game8` | game8.co article calendars | Genshin, Star Rail, Wuthering Waves, ZZZ, Endfield, NTE |
+| `wikigg` | wiki.gg MediaWiki `mp-event` templates | Endfield |
+
+`wikigg` is the better shape by a distance: it emits ISO timestamps with one timer per server
+region, so its events carry exact precision and real `regionEnds`. Prefer a source like that over a
+prose wiki when both exist, and give it a higher `priority`.
+
+### Date formats understood
+
+All live in `src/ingest/dates.ts`, each returning null rather than inferring anything:
+
+| Function | Shape | Seen on |
+|---|---|---|
+| `parseMonthDayYear` | `August 12, 2026` | Genshin detail rows |
+| `parseMonthDayRange` | `August 12 - September 21, 2026` (year on the end only) | Genshin, NTE |
+| `parseFullRange` | `Aug. 14, 2026 - Aug. 24, 2026` (a year each side) | Star Rail, Wuthering Waves |
+| `parseShortSlashRange` | `08/09/26 - 08/30/26` | Endfield |
+| `parseSlashDateTimeRange` | `2021/01/16 04:00 - 2021/01/31 03:59` | Genshin past events |
+| `parseOpenRange` | `Jul. 24, 2026 - End of 4.6`, `July 10, 2026 - Permanent` | Star Rail, Wuthering Waves |
+
+`parseOpenRange` is tried last because it is the most permissive — it accepts any leading full date
+and reports no end.
+
 ### The parser interface
 
 ```ts
@@ -87,7 +114,7 @@ produced it.
 | Dates without a year, or no end date at all | **Unsupportable** — yields nothing rather than guessing |
 | Free-form prose with no table structure | Find a different source |
 
-Game8 uses at least three page templates and a game's page may use any of them:
+Game8 uses at least four page templates and a game's page may use any of them:
 
 1. **Label/value detail tables** — `Event Start` / `Event End` rows under a per-event `h3`, full
    dates with year. *(Genshin Impact)*
@@ -96,8 +123,10 @@ Game8 uses at least three page templates and a game's page may use any of them:
 3. **Image-grid schedules** — a bare `MM/DD`, no year, no end date. **Unsupportable.**
 4. **Combined cells** — one cell holding label, range and blurb
    (`Period: 08/09/26 - 08/30/26 During the event...`). *(Arknights: Endfield)*
+5. **Rowspan Start/End pairs** — the event name spans two rows, so a flat cell reader sees
+   `[title, "Start", date]` then `["End", date]`. *(Zenless Zone Zero)*
 
-Shapes 1, 2 and 4 are handled. Before assuming a new Game8 page will work, dump its heading/table
+Shapes 1, 2, 4 and 5 are handled. Before assuming a new Game8 page will work, dump its heading/table
 structure and check which shape it uses — and check **every** table, not just the obvious one.
 Endfield was written off as undatable on a first pass that only inspected its `Duration` rows; its
 two real events were in a table further down.
