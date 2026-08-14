@@ -2,26 +2,42 @@ import { useEffect } from "react";
 import { gameMeta } from "../../shared/games.ts";
 import { formatAbsolute, formatRemaining } from "../../shared/time.ts";
 import type { RowEvent } from "./EventRow.tsx";
+import { pressure, pressureReason, type Effort } from "../../shared/effort.ts";
+import type { Status } from "../state/useProgress.ts";
+import { ProgressControls } from "./ProgressControls.tsx";
 import { Meter, URGENCY_COLOR } from "./Meter.tsx";
 
 export function EventDetail({
   row,
   completed,
   ignored,
+  status,
+  effort,
+  note,
   onToggle,
   onIgnore,
+  onStatus,
+  onEffort,
+  onNote,
   onClose,
 }: {
   row: RowEvent;
   completed: boolean;
   ignored: boolean;
+  status: Status | undefined;
+  effort: Effort | undefined;
+  note: string;
   onToggle: (id: string) => void;
   onIgnore: (id: string) => void;
+  onStatus: (id: string, s: Status | undefined) => void;
+  onEffort: (id: string, e: Effort | undefined) => void;
+  onNote: (id: string, n: string) => void;
   onClose: () => void;
 }) {
   const { event, clock } = row;
   const game = gameMeta(event.game);
   const heat = URGENCY_COLOR[clock.urgency];
+  const risk = status === "done" ? "fine" : pressure(effort, clock.msRemaining);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -84,6 +100,32 @@ export function EventDetail({
           </Field>
           <Field label="Type">{event.type}</Field>
         </dl>
+
+        {risk !== "fine" && effort !== undefined && clock.msRemaining !== null && (
+          <p
+            className="mt-4 rounded-lg border px-3 py-2 text-xs leading-relaxed"
+            style={{
+              borderColor:
+                risk === "unlikely"
+                  ? "color-mix(in srgb, var(--color-critical) 40%, transparent)"
+                  : "color-mix(in srgb, var(--color-soon) 40%, transparent)",
+              color:
+                risk === "unlikely" ? "var(--color-critical)" : "var(--color-soon)",
+            }}
+          >
+            {pressureReason(effort, clock.msRemaining)} It is a rough guide, not a
+            verdict — you know your own schedule.
+          </p>
+        )}
+
+        <ProgressControls
+          status={status}
+          effort={effort}
+          note={note}
+          onStatus={(s) => onStatus(event.id, s)}
+          onEffort={(e) => onEffort(event.id, e)}
+          onNote={(n) => onNote(event.id, n)}
+        />
 
         {event.endPrecision === "day" && event.endsAt !== null && (
           <p className="mt-3 text-xs leading-relaxed text-faint">

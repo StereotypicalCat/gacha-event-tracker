@@ -11,6 +11,7 @@ import { Legend } from "./components/Legend.tsx";
 import { Toast } from "./components/Toast.tsx";
 import { KEYS } from "./state/storage.ts";
 import { useMarkSet } from "./state/useMarkSet.ts";
+import { useProgress } from "./state/useProgress.ts";
 import { usePrefs } from "./state/usePrefs.ts";
 import { clockFor, DAY, endingSoonestFirst, formatRemaining } from "../shared/time.ts";
 import type { GameId } from "../shared/schema.ts";
@@ -59,16 +60,18 @@ export function App() {
   const now = useNow();
   const online = useOnline();
   const { prefs, update, toggleGame } = usePrefs();
-  const completed = useMarkSet(KEYS.completions);
   const ignored = useMarkSet(KEYS.ignored);
+  const prog = useProgress();
+  // "Completed" is now one status among several; the rest of the UI still asks
+  // this question a lot, so keep a cheap shorthand.
+  const isDone = (id: string) => prog.progress[id]?.status === "done";
 
   const toggleIgnored = (id: string, title: string) => {
     const wasIgnored = ignored.marks[id] !== undefined;
     ignored.toggle(id);
     setLastIgnored(wasIgnored ? null : { id, title });
   };
-  const completions = completed.marks;
-  const toggle = completed.toggle;
+  const toggle = prog.cycleStatus;
 
   useEffect(() => {
     const ac = new AbortController();
@@ -107,9 +110,9 @@ export function App() {
         // Ignored events are gone from both views unless deliberately revealed
         // — that is the whole point of ignoring one.
         .filter((r) => prefs.showIgnored || ignored.marks[r.event.id] === undefined)
-        .filter((r) => prefs.showCompleted || completions[r.event.id] === undefined)
+        .filter((r) => prefs.showCompleted || !isDone(r.event.id))
         .sort(endingSoonestFirst),
-    [allRows, prefs.hiddenGames, prefs.showCompleted, prefs.showIgnored, completions, ignored.marks],
+    [allRows, prefs.hiddenGames, prefs.showCompleted, prefs.showIgnored, prog.progress, ignored.marks],
   );
 
   const live = visible.filter((r) => r.clock.live);
@@ -221,7 +224,9 @@ export function App() {
                 <EventRow
                   key={row.event.id}
                   row={row}
-                  completed={completions[row.event.id] !== undefined}
+                  completed={isDone(row.event.id)}
+                  status={prog.progress[row.event.id]?.status}
+                  effort={prog.progress[row.event.id]?.effort}
                   ignored={ignored.marks[row.event.id] !== undefined}
                   onToggle={toggle}
                   onRestore={(id) => ignored.toggle(id)}
@@ -237,7 +242,9 @@ export function App() {
                 <EventRow
                   key={row.event.id}
                   row={row}
-                  completed={completions[row.event.id] !== undefined}
+                  completed={isDone(row.event.id)}
+                  status={prog.progress[row.event.id]?.status}
+                  effort={prog.progress[row.event.id]?.effort}
                   ignored={ignored.marks[row.event.id] !== undefined}
                   onToggle={toggle}
                   onRestore={(id) => ignored.toggle(id)}
@@ -259,7 +266,7 @@ export function App() {
           rows={visible}
           now={now}
           onOpen={setOpenId}
-          completions={completions}
+          completions={prog.progress}
         />
       )}
 
@@ -269,10 +276,8 @@ export function App() {
         onToggleGame={toggleGame}
         onUpdate={update}
         ignoredCount={Object.keys(ignored.marks).length}
-        onExport={() => exportProgress(completions, ignored.marks, prefs)}
-        onImport={(file) =>
-          void importProgress(file, completed.merge, ignored.merge)
-        }
+        onExport={() => exportProgress(prog.progress, ignored.marks, prefs)}
+        onImport={(file) => void importProgress(file, prog.merge, ignored.merge)}
       />
 
       {!online && (
@@ -302,8 +307,14 @@ export function App() {
       {openRow !== null && (
         <EventDetail
           row={openRow}
-          completed={completions[openRow.event.id] !== undefined}
+          completed={isDone(openRow.event.id)}
           ignored={ignored.marks[openRow.event.id] !== undefined}
+          status={prog.progress[openRow.event.id]?.status}
+          effort={prog.progress[openRow.event.id]?.effort}
+          note={prog.progress[openRow.event.id]?.note ?? ""}
+          onStatus={prog.setStatus}
+          onEffort={prog.setEffort}
+          onNote={prog.setNote}
           onIgnore={(id) => toggleIgnored(id, openRow.event.title)}
           onToggle={toggle}
           onClose={() => setOpenId(null)}
@@ -345,7 +356,7 @@ function Section({
 }
 
 function exportProgress(
-  completions: Record<string, { at: string }>,
+  progress: Record<string, unknown>,
   ignored: Record<string, { at: string }>,
   prefs: unknown,
 ) {
@@ -356,7 +367,7 @@ function exportProgress(
           format: "gacha-tracker-export",
           version: 1,
           exportedAt: new Date().toISOString(),
-          completions,
+          progress,
           ignored,
           prefs,
         },
@@ -376,13 +387,14 @@ function exportProgress(
 
 async function importProgress(
   file: File,
-  mergeCompleted: (c: Record<string, { at: string }>) => void,
+  mergeProgress: (c: Record<string, { at: string }>) => void,
   mergeIgnored: (c: Record<string, { at: string }>) => void,
 ) {
   try {
     const parsed: unknown = JSON.parse(await file.text());
     const data = parsed as {
       format?: string;
+      progress?: unknown;
       completions?: unknown;
       ignored?: unknown;
     };
@@ -394,9 +406,19 @@ async function importProgress(
       typeof v === "object" && v !== null
         ? (v as Record<string, { at: string }>)
         : null;
-    const c = asMarks(data.completions);
+    // Accept exports from before progress replaced completions: membership
+    // there meant "done", so map it forward rather than dropping it.
+    const p = asMarks(data.progress);
+    const legacy = asMarks(data.completions);
     const i = asMarks(data.ignored);
-    if (c !== null) mergeCompleted(c);
+    if (p !== null) mergeProgress(p);
+    else if (legacy !== null) {
+      mergeProgress(
+        Object.fromEntries(
+          Object.entries(legacy).map(([id, m]) => [id, { ...m, status: "done" }]),
+        ),
+      );
+    }
     if (i !== null) mergeIgnored(i);
   } catch {
     alert("That file couldn't be read. Export a fresh copy and try again.");

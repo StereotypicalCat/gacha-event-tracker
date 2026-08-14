@@ -5,6 +5,8 @@ import {
   windowCaption,
   type EventClock,
 } from "../../shared/time.ts";
+import { EFFORT, pressure, type Effort } from "../../shared/effort.ts";
+import type { Status } from "../state/useProgress.ts";
 import { Meter, URGENCY_COLOR } from "./Meter.tsx";
 
 export interface RowEvent {
@@ -15,6 +17,8 @@ export interface RowEvent {
 interface EventRowProps {
   row: RowEvent;
   completed: boolean;
+  status?: Status | undefined;
+  effort?: Effort | undefined;
   /** Only ever true when the reader has chosen to reveal ignored events. */
   ignored?: boolean | undefined;
   onToggle: (id: string) => void;
@@ -25,6 +29,8 @@ interface EventRowProps {
 export function EventRow({
   row,
   completed,
+  status,
+  effort,
   ignored = false,
   onToggle,
   onRestore,
@@ -35,6 +41,9 @@ export function EventRow({
   const heat = URGENCY_COLOR[clock.urgency];
 
   const caption = windowCaption(clock, Date.now());
+  // Only ever a warning when the reader gave an estimate — inferring one to
+  // justify the warning would be inventing their input.
+  const risk = status === "done" ? "fine" : pressure(effort, clock.msRemaining);
 
   const countdown = clock.upcoming
     ? `starts in ${formatRemaining(clock.startsMs - Date.now())}`
@@ -94,6 +103,38 @@ export function EventRow({
               {countdown}
             </span>
           </div>
+
+          {(status === "doing" || effort !== undefined || risk !== "fine") && (
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              {status === "doing" && (
+                <span className="rounded-[3px] bg-near/15 px-1.5 py-px text-[0.625rem] font-medium text-near">
+                  doing
+                </span>
+              )}
+              {effort !== undefined && (
+                <span className="rounded-[3px] bg-hairline px-1.5 py-px text-[0.625rem] text-muted">
+                  {EFFORT[effort].label.toLowerCase()}
+                </span>
+              )}
+              {risk !== "fine" && (
+                <span
+                  className="rounded-[3px] px-1.5 py-px text-[0.625rem] font-medium"
+                  style={{
+                    background:
+                      risk === "unlikely"
+                        ? "color-mix(in srgb, var(--color-critical) 18%, transparent)"
+                        : "color-mix(in srgb, var(--color-soon) 18%, transparent)",
+                    color:
+                      risk === "unlikely"
+                        ? "var(--color-critical)"
+                        : "var(--color-soon)",
+                  }}
+                >
+                  {risk === "unlikely" ? "running out of time" : "tight"}
+                </span>
+              )}
+            </div>
+          )}
 
           {event.summary !== null && (
             <p className="row-summary mt-1 line-clamp-2 text-[0.8125rem] leading-snug text-muted">
