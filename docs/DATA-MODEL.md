@@ -196,15 +196,44 @@ malformed row surfaces at the boundary rather than deep in the UI.
 Namespaced, versioned, and small. Nothing here ever goes to the server.
 
 ```ts
-"gacha-tracker:v1:completions"  // { [eventId]: { at: string } }  — "I finished this"
-"gacha-tracker:v1:ignored"      // { [eventId]: { at: string } }  — "stop showing me this"
+"gacha-tracker:v1:progress"     // { [eventId]: { status?, effort?, note?, at } }
+"gacha-tracker:v1:ignored"      // { [eventId]: { at } }  — "stop showing me this"
 "gacha-tracker:v1:prefs"        // { region, hiddenGames[], showCompleted, showIgnored,
                                 //   regionConfirmed, onboarded }
+"gacha-tracker:v1:completions"  // SUPERSEDED — read once to migrate, never written
 ```
 
-Completions and ignores are the same shape and share one implementation
-(`useMarkSet`), but stay in separate stores because they mean different things: a completed event is
-dimmed and still counted, an ignored one disappears from both views.
+`progress` is everything the reader says about an event themselves:
+
+| Field | Values | Meaning |
+|---|---|---|
+| `status` | `"doing"` \| `"done"` \| absent | Where they are with it |
+| `effort` | `"quick"` \| `"short"` \| `"long"` \| `"grind"` \| absent | How much work they reckon it is |
+| `note` | free text | Anything worth remembering |
+
+An entry with none of the three set is deleted rather than kept, so the store stays a set of things
+the reader actually said something about.
+
+**`effort` is load-bearing, not decorative.** Combined with the time remaining it answers "can I
+still finish this?" — the same two days is comfortable for a `quick` event and hopeless for a
+`grind`. See `src/shared/effort.ts`; the runway heuristic assumes about an hour of play a day, is
+stated as a guess in the UI, and never hides or reorders anything.
+
+**An event with no recorded effort never gets a warning.** Inferring an estimate in order to warn
+about it would be fabricating the reader's own input.
+
+Ignores stay in a separate store because they mean something different: a done event is dimmed and
+still counted, an ignored one disappears from both views.
+
+### Migration from `completions`
+
+`completions` used membership to mean "done", which cannot express "started". `progress` replaces it
+and is seeded from it once, on first load, mapping each entry to `status: "done"`.
+
+**The old key is never written to and never deleted.** Someone who last opened the app six months
+ago still has their marks under it, these live only in the browser, and nothing else holds a copy to
+restore from. Exports produced before the change are still accepted on import and mapped forward the
+same way.
 
 Offline caching is the service worker's job, not localStorage's — it caches the feed response
 itself, so there is no second copy of the events to keep in sync.
@@ -221,7 +250,10 @@ old key.
   "format": "gacha-tracker-export",
   "version": 1,
   "exportedAt": "2026-08-14T12:00:00.000Z",
-  "completions": { "genshin:windblume-festival:2026-03-14": { "at": "..." } },
+  "progress": {
+    "genshin:windblume-festival:2026-03-14": { "status": "done", "at": "..." },
+    "hsr:garden-of-plenty:2026-08-14": { "status": "doing", "effort": "grind", "at": "..." }
+  },
   "ignored": { "zzz:some-event-i-skip:2026-08-19": { "at": "..." } },
   "prefs": { "region": "europe", "hiddenGames": [], "onboarded": true }
 }

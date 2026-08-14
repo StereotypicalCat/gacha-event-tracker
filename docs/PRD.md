@@ -83,6 +83,19 @@ Because there are no accounts, moving between devices is manual: download a JSON
 IDs and preferences, upload it elsewhere. Import merges rather than replaces, and never removes a
 completion the user already has.
 
+**F12 — Record your own progress and effort.**
+Three states, not two: untouched, doing it, done. Plus an optional effort estimate — quick, short,
+long, grind — and a free-text note.
+
+Effort is not decoration. Combined with the time remaining it answers the question the calendar
+can't: *can I still finish this?* The same two days is comfortable for a quick event and hopeless
+for a grind, so an event carrying an effort estimate gets a "tight" or "running out of time" flag
+when the remaining time no longer covers it.
+
+The heuristic assumes about an hour of play a day and says so. It never hides or reorders anything —
+it adds a flag the reader can ignore. **An event with no recorded effort never gets a warning**,
+because inferring an estimate in order to warn about it would be fabricating their input.
+
 **F8 — First-run game picker.**
 Before any events are shown, the reader picks which games they play. A calendar full of games they
 don't play is worse than an empty one — it buries the thing they came for. Nothing is preselected

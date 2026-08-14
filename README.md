@@ -6,7 +6,8 @@ You play three or four gacha games. Each has its own calendar, none of them talk
 the only question that actually matters — *what runs out first?* — takes four browser tabs to
 answer. This does it in one screen.
 
-No account. No login. Your completed events are saved in your browser and never leave your device.
+No account. No login. What you've finished, what you're partway through, and how much work you
+reckon each event is are saved in your browser and never leave your device.
 
 ## Status
 
