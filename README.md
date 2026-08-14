@@ -82,13 +82,18 @@ date makes you miss content. Given the choice, this ships nothing rather than a 
 | Wuthering Waves | Game8 | 10 |
 | Zenless Zone Zero | Game8 | 12 |
 | Neverness to Everness | Game8 | 13 |
-| Arknights: Endfield | Game8 | 2 |
+| Arknights: Endfield | Game8 + wiki.gg | 6 |
 
 Game8 uses a different page template for almost every game — label/value detail tables, column
 tables, rowspan Start/End pairs — and four different date formats between them. One parser handles
 all of it; each game costs a registry entry.
 
-Endfield yields only two events because most of its page genuinely has no dates — every `Duration`
+Endfield is the first game with two sources. wiki.gg publishes machine-readable ISO timestamps with
+one timer per server region, so its events carry exact times and per-region ends — it outranks Game8
+and wins when they disagree. Merge caught two real disagreements between them, each 70 hours apart on
+the end date; those are flagged rather than averaged.
+
+Its Game8 page yields only two events because most of it genuinely has no dates — every `Duration`
 row reads "Permanently Available" and its version grid shows `07/16` with no year. The two dated
 events hide in a combined cell (`Period: 08/09/26 - 08/30/26 During the event...`), which is where
 the `MM/DD/YY` parser earns its place.

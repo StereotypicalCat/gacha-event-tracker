@@ -51,6 +51,15 @@ const SOURCES: SourceSpec[] = [
     parserId: "game8",
   },
   {
+    id: "endfield-wikigg-events",
+    game: "endfield",
+    url: "https://endfield.wiki.gg/wiki/Event",
+    parserId: "wikigg",
+    // Exact timestamps and per-region ends beat Game8's day-precision prose,
+    // so this source wins when the two disagree.
+    priority: 10,
+  },
+  {
     id: "nte-game8-events",
     game: "nte",
     url: "https://game8.co/games/Neverness-to-Everness/archives/592073",

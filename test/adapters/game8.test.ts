@@ -26,6 +26,7 @@ const CASES: Array<{ adapter: Adapter; fixture: string }> = [
   { adapter: adapter("wuwa-game8-events"), fixture: "fixtures/wuwa/game8-events-2026-08-14" },
   { adapter: adapter("zzz-game8-events"), fixture: "fixtures/zzz/game8-events-2026-08-14" },
   { adapter: adapter("endfield-game8-events"), fixture: "fixtures/endfield/game8-events-2026-08-14" },
+  { adapter: adapter("endfield-wikigg-events"), fixture: "fixtures/endfield/wikigg-events-2026-08-14" },
 ];
 
 async function runAdapter(adapter: Adapter, fixture: string) {
@@ -222,5 +223,36 @@ describe("endfield", () => {
     // The prose after the dates becomes the blurb, without the label.
     expect(rooted?.summary).not.toBeNull();
     expect(rooted?.summary).not.toMatch(/^Period:/);
+  });
+});
+
+describe("wiki.gg parser", () => {
+  test("reads exact per-region timers", async () => {
+    // The first source that states region-scoped ends. Asia and the Americas
+    // differ by hours, which is precisely what regionEnds exists to carry.
+    const events = await runAdapter(
+      adapter("endfield-wikigg-events"),
+      "fixtures/endfield/wikigg-events-2026-08-14",
+    );
+    expect(events).toHaveLength(6);
+
+    const heat = events.find((e) => e.title === "HEAT RAGE! MEGA ARENA!");
+    expect(heat?.startPrecision).toBe("exact");
+    expect(heat?.regionScoped).toBe(true);
+    expect(heat?.regionEnds?.asia).toBe("2026-08-12T20:00:00.000Z");
+    expect(heat?.regionEnds?.america).toBe("2026-08-13T09:00:00.000Z");
+    // endsAt is the fallback for a region the source did not list, so it takes
+    // the earliest — never promise more time than some region actually gets.
+    expect(heat?.endsAt).toBe("2026-08-12T20:00:00.000Z");
+  });
+
+  test("links each event to its own wiki page", async () => {
+    const events = await runAdapter(
+      adapter("endfield-wikigg-events"),
+      "fixtures/endfield/wikigg-events-2026-08-14",
+    );
+    for (const e of events) {
+      expect(e.sourceUrl).toStartWith("https://endfield.wiki.gg/wiki/");
+    }
   });
 });

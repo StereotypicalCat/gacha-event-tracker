@@ -14,13 +14,20 @@ import type { GachaEvent, GameId } from "../src/shared/schema.ts";
 
 const OUT = "public/data/events.v1.json";
 
-/** Newest fixture per adapter. */
+/**
+ * Newest fixture for one *source*, not one game.
+ *
+ * A game can have several sources, and fixtures are named `<site>-events-<date>`
+ * against adapter ids of `<game>-<site>-events`. Globbing by game alone hands
+ * one site's page to another site's parser.
+ */
 async function latestFixture(adapterId: string, game: GameId) {
-  const glob = new Bun.Glob(`fixtures/${game}/*.html`);
-  const files = [...glob.scanSync(".")].sort();
+  const site = adapterId.replace(`${game}-`, "").replace(/-events$/, "");
+  const pattern = `fixtures/${game}/${site}-*.html`;
+  const files = [...new Bun.Glob(pattern).scanSync(".")].sort();
   const file = files.at(-1);
   if (file === undefined) {
-    throw new Error(`no fixture found for ${adapterId} (fixtures/${game}/*.html)`);
+    throw new Error(`no fixture found for ${adapterId} (${pattern})`);
   }
   return { file, html: await Bun.file(file).text() };
 }

@@ -123,10 +123,34 @@ function isSameEvent(
   toleranceHours: number,
 ): boolean {
   if (a.id === b.id) return true;
-  if (titleSimilarity(a.title, b.title) < titleThreshold) return false;
+
+  // Overlap alone misses a source that appends a qualifier: "Bedazzling
+  // Dawnstar" vs "Bedazzling Dawnstar Sign-In" scores 0.67, well under any
+  // safe threshold, yet is plainly one event.
+  const similar =
+    titleSimilarity(a.title, b.title) >= titleThreshold ||
+    titleExtends(a.title, b.title);
+  if (!similar) return false;
+
   // Similar titles are not enough — reruns reuse names. Require the start dates
   // to be close before treating two entries as one event.
   return hoursBetween(a.startsAt, b.startsAt) <= toleranceHours;
+}
+
+/**
+ * True when one title is the other with words appended — the shape a source
+ * qualifier actually takes ("Bedazzling Dawnstar" → "… Sign-In").
+ *
+ * Deliberately a prefix test, not a subset test. Subset matching would also
+ * fuse "Gold Clash" with "Gold Rush Clash Royale", which are different events.
+ * Two words is the floor: a one-word title would swallow half the calendar.
+ */
+export function titleExtends(a: string, b: string): boolean {
+  const ta = tokenList(a);
+  const tb = tokenList(b);
+  const [small, large] = ta.length <= tb.length ? [ta, tb] : [tb, ta];
+  if (small.length < 2 || small.length === large.length) return false;
+  return small.every((word, i) => large[i] === word);
 }
 
 function findConflict(
@@ -163,12 +187,14 @@ export function titleSimilarity(a: string, b: string): number {
   return (2 * shared) / (ta.size + tb.size);
 }
 
+function tokenList(title: string): string[] {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 0);
+}
+
 function tokens(title: string): Set<string> {
-  return new Set(
-    title
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, " ")
-      .split(/\s+/)
-      .filter((w) => w.length > 0),
-  );
+  return new Set(tokenList(title));
 }

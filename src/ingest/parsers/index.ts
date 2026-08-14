@@ -1,4 +1,5 @@
 import { game8Parser } from "./game8.ts";
+import { wikiGgParser } from "./wikigg.ts";
 import type { SourceParser } from "./types.ts";
 
 /**
@@ -6,7 +7,7 @@ import type { SourceParser } from "./types.ts";
  * an entry in `adapters/index.ts`; adding a new *site* means a parser module
  * here and one line below.
  */
-export const PARSERS: SourceParser[] = [game8Parser];
+export const PARSERS: SourceParser[] = [game8Parser, wikiGgParser];
 
 export function parserById(id: string): SourceParser | undefined {
   return PARSERS.find((p) => p.id === id);
@@ -14,3 +15,4 @@ export function parserById(id: string): SourceParser | undefined {
 
 export type { SourceParser } from "./types.ts";
 export { game8Parser } from "./game8.ts";
+export { wikiGgParser } from "./wikigg.ts";

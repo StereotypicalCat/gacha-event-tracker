@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { mergeEvents, titleSimilarity } from "../src/ingest/merge.ts";
+import {
+  mergeEvents,
+  titleExtends,
+  titleSimilarity,
+} from "../src/ingest/merge.ts";
 import type { GachaEvent } from "../src/shared/schema.ts";
 
 const NOW = "2026-08-14T00:00:00.000Z";
@@ -132,5 +136,58 @@ describe("titleSimilarity", () => {
 
   test("unrelated titles score low", () => {
     expect(titleSimilarity("Gold Clash", "Fishing Frenzy")).toBeLessThan(0.3);
+  });
+});
+
+describe("titleExtends", () => {
+  test("matches a title with an appended qualifier", () => {
+    // Real case: Game8 says "Bedazzling Dawnstar Sign-In", wiki.gg says
+    // "Bedazzling Dawnstar". Token overlap scores 0.67 — under any safe
+    // threshold — but it is plainly one event.
+    expect(titleExtends("Bedazzling Dawnstar", "Bedazzling Dawnstar Sign-In")).toBe(true);
+  });
+
+  test("refuses a single shared word", () => {
+    // A one-word title would otherwise swallow everything containing it.
+    expect(titleExtends("Rerun", "Overflowing Abundance Rerun")).toBe(false);
+  });
+
+  test("refuses a shared-word subset that is not a prefix", () => {
+    // Subset matching would fuse these; they are different events.
+    expect(titleExtends("Gold Clash", "Gold Rush Clash Royale")).toBe(false);
+  });
+
+  test("refuses two titles of equal length", () => {
+    expect(titleExtends("Gold Clash", "Gold Rush")).toBe(false);
+  });
+});
+
+describe("merging two sources for one game", () => {
+  test("collapses an appended-qualifier duplicate and flags the date gap", () => {
+    const g8 = event({
+      id: "endfield:bedazzling-dawnstar-sign-in:2026-08-09",
+      game: "endfield",
+      title: "Bedazzling Dawnstar Sign-In",
+      startsAt: "2026-08-09T00:00:00.000Z",
+      endsAt: "2026-08-30T00:00:00.000Z",
+      sourceId: "endfield-game8-events",
+      confidence: 0.85,
+    });
+    const wiki = event({
+      id: "endfield:bedazzling-dawnstar:2026-08-09",
+      game: "endfield",
+      title: "Bedazzling Dawnstar",
+      startsAt: "2026-08-09T04:00:00.000Z",
+      endsAt: "2026-09-01T22:00:00.000Z",
+      sourceId: "endfield-wikigg-events",
+      confidence: 0.95,
+    });
+    const { events, conflicts } = mergeEvents([[g8], [wiki]]);
+    expect(events).toHaveLength(1);
+    // The better-sourced copy wins, and the disagreement is surfaced rather
+    // than averaged into a date neither source states.
+    expect(events[0]?.sourceId).toBe("endfield-wikigg-events");
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0]?.field).toBe("endsAt");
   });
 });
