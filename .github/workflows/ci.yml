@@ -131,6 +131,12 @@ jobs:
           name: site
           path: public
       - uses: actions/configure-pages@v5
+        with:
+          # Turn Pages on rather than requiring someone to click through
+          # repository settings first. Needs the pages: write permission above.
+          # If this still fails, Pages is unavailable for the repository —
+          # private repos on the free plan cannot use it; delete this job.
+          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public
