@@ -1,0 +1,274 @@
+import {
+  eventId,
+  type EventType,
+  type GachaEvent,
+} from "../../shared/schema.ts";
+import {
+  parseMonthDayRange,
+  parseMonthDayYear,
+  parseSlashDateTimeRange,
+  type ParsedInstant,
+} from "../dates.ts";
+import { assertFlatTables, scanDocument } from "../html.ts";
+import type { ParseContext } from "../adapters/types.ts";
+import type { SourceParser } from "./types.ts";
+
+/**
+ * Shared parsing for Game8 event-calendar pages.
+ *
+ * Game8 does not use one template. Across games there are (at least) three:
+ *
+ *  1. Label/value detail tables — `Event Start` / `Event End` rows under a
+ *     per-event `h3`. Full dates with year. (Genshin Impact)
+ *  2. Column tables — `Event | Duration | Event Details | Rewards`, one row per
+ *     event, under a section heading. (Neverness to Everness)
+ *  3. Image-grid schedules with a bare `MM/DD` and no end date. Unsupportable
+ *     without inventing a year and an end, so it yields nothing. (Endfield)
+ *
+ * Shapes 1 and 2 are both handled here; a page may contain either or both.
+ * Anything undated is skipped rather than guessed — see docs/PRD.md § Quality
+ * bar.
+ */
+
+/** Section headings whose events belong on the calendar. */
+const INCLUDED_SECTIONS = [
+  /current events/i,
+  /upcoming events/i,
+  /^recurring events$/i,
+  /events? schedule/i,
+];
+
+/**
+ * Sections deliberately skipped. Permanent events have no end and are not
+ * time-boxed; past events are over and would bury what is live.
+ */
+const EXCLUDED_SECTIONS = [
+  /permanent events/i,
+  /past events/i,
+  /previous events/i,
+  /ended events/i,
+];
+
+/** Label/value rows carrying a single boundary instant. */
+const START_LABEL = /^(event|test run|banner)\s+start$/i;
+const END_LABEL = /^(event|test run|banner)\s+end$/i;
+/** Label/value rows carrying a whole range in one cell. */
+const RANGE_LABEL = /^(availability period|event period|duration|period|dates)$/i;
+
+/** Column-table header matchers. */
+const COL_TITLE = /^(.*\b)?events?$/i;
+const COL_RANGE = /^(duration|dates?|period|availability period|schedule)$/i;
+const COL_SUMMARY = /^(event )?(details?|description|overview)$/i;
+
+interface Candidate {
+  title: string;
+  summary: string | null;
+  start: ParsedInstant;
+  end: ParsedInstant | null;
+}
+
+export function parseGame8EventsPage(
+  html: string,
+  ctx: ParseContext,
+): GachaEvent[] {
+  // The table reader assumes flat tables. Assert rather than mis-parse silently.
+  if (!assertFlatTables(html)) {
+    throw new Error(
+      `${ctx.sourceId}: source contains nested tables; the flat-table reader cannot parse it safely`,
+    );
+  }
+
+  const nodes = scanDocument(html);
+  const candidates: Candidate[] = [];
+
+  let sectionIncluded = false;
+  let currentTitle: string | null = null;
+
+  for (const node of nodes) {
+    // Sections are marked by h2 on some pages and h3 on others, so inclusion is
+    // tracked at whichever level actually names the section. A heading matching
+    // neither list leaves the current state alone — it is an event name.
+    if (node.kind === "h2" || node.kind === "h3") {
+      const heading = node.text;
+      if (EXCLUDED_SECTIONS.some((re) => re.test(heading))) {
+        sectionIncluded = false;
+        currentTitle = null;
+      } else if (INCLUDED_SECTIONS.some((re) => re.test(heading))) {
+        sectionIncluded = true;
+        currentTitle = null;
+      } else {
+        currentTitle = heading;
+      }
+      continue;
+    }
+
+    if (!sectionIncluded) continue;
+
+    const fromColumns = readColumnTable(node.rows);
+    if (fromColumns.length > 0) {
+      candidates.push(...fromColumns);
+      continue;
+    }
+
+    if (currentTitle === null) continue;
+    const dates = readLabelledDates(node.pairs);
+    if (dates === null) continue;
+
+    candidates.push({ title: currentTitle, summary: null, ...dates });
+    // One dated table per heading; ignore follow-on reward tables until the
+    // next heading.
+    currentTitle = null;
+  }
+
+  return dedupe(candidates.map((c) => toEvent(c, ctx)));
+}
+
+/** Shape 1: `Event Start` / `Event End` / `Availability Period` rows. */
+function readLabelledDates(
+  pairs: Array<{ label: string; value: string }>,
+): { start: ParsedInstant; end: ParsedInstant | null } | null {
+  let start: ParsedInstant | null = null;
+  let end: ParsedInstant | null = null;
+
+  for (const { label, value } of pairs) {
+    if (RANGE_LABEL.test(label)) {
+      const range = parseRange(value);
+      if (range) return range;
+      // "Permanently Available", "TBD" — not an error, just not datable.
+      continue;
+    }
+    if (START_LABEL.test(label)) start ??= parseMonthDayYear(value);
+    if (END_LABEL.test(label)) end ??= parseMonthDayYear(value);
+  }
+
+  return start === null ? null : { start, end };
+}
+
+/** Shape 2: one row per event, with a title column and a range column. */
+function readColumnTable(rows: string[][]): Candidate[] {
+  if (rows.length < 2) return [];
+  const header = rows[0];
+  if (header === undefined) return [];
+
+  const titleIdx = header.findIndex((h) => COL_TITLE.test(h));
+  const rangeIdx = header.findIndex((h) => COL_RANGE.test(h));
+  if (titleIdx === -1 || rangeIdx === -1) return [];
+
+  const summaryIdx = header.findIndex((h) => COL_SUMMARY.test(h));
+
+  const out: Candidate[] = [];
+  for (const row of rows.slice(1)) {
+    const title = row[titleIdx]?.trim();
+    const rangeCell = row[rangeIdx];
+    if (!title || rangeCell === undefined) continue;
+
+    const range = parseRange(rangeCell);
+    // A row we cannot date is skipped, not guessed. This is also what keeps
+    // year-less summary tables ("08/12 - 08/24") from producing events.
+    if (range === null) continue;
+
+    const summaryCell = summaryIdx === -1 ? undefined : row[summaryIdx];
+    const summary =
+      summaryCell && summaryCell.length > 0 ? summaryCell.slice(0, 500) : null;
+
+    out.push({ title, summary, start: range.start, end: range.end });
+  }
+  return out;
+}
+
+function parseRange(
+  value: string,
+): { start: ParsedInstant; end: ParsedInstant } | null {
+  return parseSlashDateTimeRange(value) ?? parseMonthDayRange(value);
+}
+
+/**
+ * Type is inferred from the title by keyword. This is presentation metadata
+ * used for filtering, not a date, so a conservative "other" default beats a
+ * confident mislabel.
+ */
+export function inferType(title: string): EventType {
+  const t = title.toLowerCase();
+  if (/\brerun\b/.test(t)) return "rerun";
+  if (/\b(banner|wish|warp|convene|gacha)\b/.test(t)) return "banner";
+  if (/\b(login|log-in|sign-in|check-in|daily bonus)\b/.test(t)) return "login";
+  if (/\b(challenge|trial|onslaught|abyss|tower|test runs?|clash|combat)\b/.test(t))
+    return "challenge";
+  if (/\b(shop|exchange|store)\b/.test(t)) return "shop";
+  if (/\bmaintenance\b/.test(t)) return "maintenance";
+  if (/\b(story|chapter|quest|act)\b/.test(t)) return "story";
+  return "other";
+}
+
+function toEvent(c: Candidate, ctx: ParseContext): GachaEvent {
+  // Confidence reflects how much the source actually pinned down. Day precision
+  // and unknown ends are legitimate and common, but they are weaker evidence
+  // than an exact range and the gate should be able to see that.
+  let confidence = 0.95;
+  if (c.start.precision === "day") confidence -= 0.05;
+  if (c.end === null) confidence -= 0.15;
+  else if (c.end.precision === "day") confidence -= 0.05;
+
+  return {
+    id: eventId(ctx.game, c.title, c.start.iso),
+    game: ctx.game,
+    title: c.title,
+    type: inferType(c.title),
+    summary: c.summary,
+    startsAt: c.start.iso,
+    startPrecision: c.start.precision,
+    endsAt: c.end?.iso ?? null,
+    endPrecision: c.end?.precision ?? "unknown",
+    // Game8 does not state whether an end follows per-region reset, so these
+    // are recorded as global rather than guessing a region split. A source that
+    // does state it should populate these properly.
+    regionScoped: false,
+    regionEnds: null,
+    sourceUrl: ctx.sourceUrl,
+    sourceId: ctx.sourceId,
+    status: "published",
+    confidence: Math.round(confidence * 100) / 100,
+    extractionMethod: "parser",
+    version: 1,
+    firstSeenAt: ctx.now,
+    updatedAt: ctx.now,
+  };
+}
+
+/** Same event listed in two shapes on one page — keep the better-dated one. */
+function dedupe(events: GachaEvent[]): GachaEvent[] {
+  const byId = new Map<string, GachaEvent>();
+  for (const e of events) {
+    const existing = byId.get(e.id);
+    if (existing === undefined || e.confidence > existing.confidence) {
+      byId.set(e.id, e);
+    }
+  }
+  return [...byId.values()].sort((a, b) =>
+    a.startsAt === b.startsAt
+      ? a.id.localeCompare(b.id)
+      : a.startsAt.localeCompare(b.startsAt),
+  );
+}
+
+/**
+ * Game8 as a pluggable source parser. Registered in `parsers/index.ts`; bound
+ * to concrete URLs by the adapters in `adapters/index.ts`.
+ */
+export const game8Parser: SourceParser = {
+  id: "game8",
+  label: "Game8",
+  canParse(html: string): boolean {
+    // Structural markers, not content: if Game8 redesigns, this goes false and
+    // the run fails loudly instead of quietly returning zero events.
+    //
+    // Quote style varies between Game8 pages — the Genshin page emits
+    // class="a-table", the NTE page class='a-table' — so match either. Every
+    // regex in html.ts is attribute-agnostic for the same reason.
+    return (
+      /class=['"][^'"]*a-table/.test(html) &&
+      /class=['"][^'"]*a-header--3/.test(html)
+    );
+  },
+  parse: parseGame8EventsPage,
+};
