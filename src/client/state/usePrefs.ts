@@ -8,6 +8,8 @@ export interface Prefs {
   /** Games the reader has switched off. Stored as hidden so a newly added game shows up by default. */
   hiddenGames: GameId[];
   showCompleted: boolean;
+  /** Reveal events the reader has ignored, so they can be restored. */
+  showIgnored: boolean;
   /** False until the reader confirms or changes the guessed region. */
   regionConfirmed: boolean;
   /** False until the reader has picked their games on first run. */
@@ -19,6 +21,7 @@ function defaults(): Prefs {
     region: guessRegion(),
     hiddenGames: [],
     showCompleted: true,
+    showIgnored: false,
     regionConfirmed: false,
     onboarded: false,
   };

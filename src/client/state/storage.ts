@@ -12,6 +12,7 @@ const NS = "gacha-tracker:v1";
 
 export const KEYS = {
   completions: `${NS}:completions`,
+  ignored: `${NS}:ignored`,
   prefs: `${NS}:prefs`,
 } as const;
 

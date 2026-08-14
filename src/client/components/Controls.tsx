@@ -13,6 +13,7 @@ export function Controls({
   prefs,
   onToggleGame,
   onUpdate,
+  ignoredCount,
   onExport,
   onImport,
 }: {
@@ -20,6 +21,7 @@ export function Controls({
   prefs: Prefs;
   onToggleGame: (g: GameId) => void;
   onUpdate: (p: Partial<Prefs>) => void;
+  ignoredCount: number;
   onExport: () => void;
   onImport: (file: File) => void;
 }) {
@@ -73,15 +75,30 @@ export function Controls({
           </div>
         </div>
 
-        <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-muted">
-          <input
-            type="checkbox"
-            checked={prefs.showCompleted}
-            onChange={(e) => onUpdate({ showCompleted: e.target.checked })}
-            className="size-4 accent-[var(--color-near)]"
-          />
-          Show events I've finished
-        </label>
+        <div className="flex flex-col gap-2">
+          <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-muted">
+            <input
+              type="checkbox"
+              checked={prefs.showCompleted}
+              onChange={(e) => onUpdate({ showCompleted: e.target.checked })}
+              className="size-4 accent-[var(--color-near)]"
+            />
+            Show events I've finished
+          </label>
+
+          {ignoredCount > 0 && (
+            <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-muted">
+              <input
+                type="checkbox"
+                checked={prefs.showIgnored}
+                onChange={(e) => onUpdate({ showIgnored: e.target.checked })}
+                className="size-4 accent-[var(--color-near)]"
+              />
+              Show the {ignoredCount} event{ignoredCount > 1 ? "s" : ""} I'm
+              ignoring
+            </label>
+          )}
+        </div>
       </div>
 
       <div className="mt-6 border-t border-hairline pt-4">

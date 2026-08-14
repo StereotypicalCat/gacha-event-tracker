@@ -8,7 +8,8 @@ import { Timeline } from "./components/Timeline.tsx";
 import { Welcome } from "./components/Welcome.tsx";
 import { Colophon } from "./components/Colophon.tsx";
 import { Legend } from "./components/Legend.tsx";
-import { useCompletions } from "./state/useCompletions.ts";
+import { KEYS } from "./state/storage.ts";
+import { useMarkSet } from "./state/useMarkSet.ts";
 import { usePrefs } from "./state/usePrefs.ts";
 import { clockFor, DAY, endingSoonestFirst, formatRemaining } from "../shared/time.ts";
 import type { GameId } from "../shared/schema.ts";
@@ -54,7 +55,10 @@ export function App() {
   const now = useNow();
   const online = useOnline();
   const { prefs, update, toggleGame } = usePrefs();
-  const { completions, toggle, merge } = useCompletions();
+  const completed = useMarkSet(KEYS.completions);
+  const ignored = useMarkSet(KEYS.ignored);
+  const completions = completed.marks;
+  const toggle = completed.toggle;
 
   useEffect(() => {
     const ac = new AbortController();
@@ -90,9 +94,12 @@ export function App() {
       allRows
         .filter((r) => !prefs.hiddenGames.includes(r.event.game))
         .filter((r) => !r.clock.ended)
+        // Ignored events are gone from both views unless deliberately revealed
+        // — that is the whole point of ignoring one.
+        .filter((r) => prefs.showIgnored || ignored.marks[r.event.id] === undefined)
         .filter((r) => prefs.showCompleted || completions[r.event.id] === undefined)
         .sort(endingSoonestFirst),
-    [allRows, prefs.hiddenGames, prefs.showCompleted, completions],
+    [allRows, prefs.hiddenGames, prefs.showCompleted, prefs.showIgnored, completions, ignored.marks],
   );
 
   const live = visible.filter((r) => r.clock.live);
@@ -247,8 +254,11 @@ export function App() {
         prefs={prefs}
         onToggleGame={toggleGame}
         onUpdate={update}
-        onExport={() => exportProgress(completions, prefs)}
-        onImport={(file) => void importProgress(file, merge)}
+        ignoredCount={Object.keys(ignored.marks).length}
+        onExport={() => exportProgress(completions, ignored.marks, prefs)}
+        onImport={(file) =>
+          void importProgress(file, completed.merge, ignored.merge)
+        }
       />
 
       {!online && (
@@ -267,6 +277,8 @@ export function App() {
         <EventDetail
           row={openRow}
           completed={completions[openRow.event.id] !== undefined}
+          ignored={ignored.marks[openRow.event.id] !== undefined}
+          onIgnore={ignored.toggle}
           onToggle={toggle}
           onClose={() => setOpenId(null)}
         />
@@ -307,7 +319,8 @@ function Section({
 }
 
 function exportProgress(
-  completions: Record<string, { completedAt: string }>,
+  completions: Record<string, { at: string }>,
+  ignored: Record<string, { at: string }>,
   prefs: unknown,
 ) {
   const blob = new Blob(
@@ -318,6 +331,7 @@ function exportProgress(
           version: 1,
           exportedAt: new Date().toISOString(),
           completions,
+          ignored,
           prefs,
         },
         null,
@@ -336,18 +350,28 @@ function exportProgress(
 
 async function importProgress(
   file: File,
-  merge: (c: Record<string, { completedAt: string }>) => void,
+  mergeCompleted: (c: Record<string, { at: string }>) => void,
+  mergeIgnored: (c: Record<string, { at: string }>) => void,
 ) {
   try {
     const parsed: unknown = JSON.parse(await file.text());
-    const data = parsed as { format?: string; completions?: unknown };
+    const data = parsed as {
+      format?: string;
+      completions?: unknown;
+      ignored?: unknown;
+    };
     if (data.format !== "gacha-tracker-export") {
       alert("That file isn't an Event Clock export.");
       return;
     }
-    if (typeof data.completions === "object" && data.completions !== null) {
-      merge(data.completions as Record<string, { completedAt: string }>);
-    }
+    const asMarks = (v: unknown) =>
+      typeof v === "object" && v !== null
+        ? (v as Record<string, { at: string }>)
+        : null;
+    const c = asMarks(data.completions);
+    const i = asMarks(data.ignored);
+    if (c !== null) mergeCompleted(c);
+    if (i !== null) mergeIgnored(i);
   } catch {
     alert("That file couldn't be read. Export a fresh copy and try again.");
   }

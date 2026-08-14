@@ -7,12 +7,16 @@ import { Meter, URGENCY_COLOR } from "./Meter.tsx";
 export function EventDetail({
   row,
   completed,
+  ignored,
   onToggle,
+  onIgnore,
   onClose,
 }: {
   row: RowEvent;
   completed: boolean;
+  ignored: boolean;
   onToggle: (id: string) => void;
+  onIgnore: (id: string) => void;
   onClose: () => void;
 }) {
   const { event, clock } = row;
@@ -109,6 +113,21 @@ export function EventDetail({
             Source
           </a>
         </div>
+
+        {/* Ignoring is not completing. "Done" keeps an event visible and
+            counted; "not interested" removes it from both views entirely. */}
+        <button
+          type="button"
+          onClick={() => {
+            onIgnore(event.id);
+            if (!ignored) onClose();
+          }}
+          className="mt-3 w-full rounded-lg px-4 py-2 text-xs text-faint transition-colors hover:text-muted"
+        >
+          {ignored
+            ? "Stop ignoring this event"
+            : "Not interested — hide this event"}
+        </button>
       </div>
     </div>
   );
