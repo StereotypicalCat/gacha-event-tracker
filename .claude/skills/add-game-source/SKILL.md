@@ -47,9 +47,9 @@ Delegate to the **adapter-author** agent, or do it inline for a simple table sou
 requirements are the same:
 
 - `parse` is pure over its input — no network, no `Date.now()`. Time comes from `ctx.now`.
-- Prefer a deterministic parser. Use `llm` strategy only when the markup genuinely cannot be parsed
-  reliably, and say why.
-- `normalize` handles source-timezone → UTC, region reset offsets, and ID construction.
+- Reuse an existing parser from `src/ingest/parsers/` if the site is already covered — most new
+  sources are a single entry in `SOURCES`, with no new parsing code.
+- Source-timezone → UTC, region offsets, and ID construction happen in the parser's event builder.
 
 **The three domain rules that break new adapters**, from `CLAUDE.md`:
 
@@ -73,8 +73,9 @@ report that you did this.
 
 ## 6. Wire it up
 
-- Register the adapter in `src/ingest/adapters/index.ts`.
-- Insert the `sources` row: id, game, url, strategy, `min_interval_ms` (default 6h).
+- Add a `SourceSpec` entry to `SOURCES` in `src/ingest/adapters/index.ts`: id, game, url,
+  `parserId`, and optionally `priority` (higher wins when sources disagree).
+- Insert the matching `sources` row: id, game, url, parser_id, priority, `min_interval_ms`.
 
 ## 7. First run
 
@@ -84,8 +85,8 @@ INGEST_ENABLED=true bun run ingest --source <source-id> --dry-run
 
 Inspect what it *would* publish before letting it write. Then run for real and check the review
 queue at `http://127.0.0.1:$ADMIN_PORT/review` — a new source commonly lands events in quarantine
-on its first pass, because nothing corroborates it yet and LLM-extracted events start at 0.70
-confidence. That is the gate working, not a bug. Review and approve them.
+on its first pass, because nothing corroborates it yet. That is the gate working, not a bug.
+Review and approve them.
 
 ## Checklist
 
@@ -96,7 +97,7 @@ confidence. That is the gate working, not a bug. Review and approve them.
 - [ ] Timestamps UTC; `regionScoped` correct; unstated ends are `null`
 - [ ] Expected-output file + passing test, offline
 - [ ] Manually spot-checked against the live page
-- [ ] Registered in the adapter index and `sources`
+- [ ] Registered in `SOURCES` and the `sources` table
 - [ ] Dry run inspected, then real run, then quarantine reviewed
 
 ## When something does not fit

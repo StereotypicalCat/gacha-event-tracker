@@ -1,6 +1,6 @@
 ---
 name: adapter-author
-description: Writes or repairs a single game's ingestion adapter — capture a fixture, choose parser vs LLM strategy, implement parse/normalize, and prove it with a test. Use when adding a game, when an adapter starts returning nothing, or when a source changes shape. Handles one adapter per invocation.
+description: Adds or repairs one ingestion source — capture a fixture, reuse or write a parser, register the source, and prove it with a test. Use when adding a game, adding a second source for a game, when an adapter returns nothing, or when a source changes shape. Handles one source per invocation.
 tools: Read, Write, Edit, Bash, Grep, Glob, WebFetch
 model: sonnet
 ---
@@ -22,23 +22,24 @@ and report — do not write the adapter. This is a hard gate, not a preference.
 `fixtures/<game>/<source-id>-<YYYY-MM-DD>.html`. Every later step works against this file, offline.
 Fetch the page exactly once.
 
-**3. Choose a strategy, and justify it.**
+**3. Decide whether an existing parser covers it.**
 
-| What you see in the fixture | Strategy |
-|---|---|
-| A JSON endpoint, or an HTML table with stable headers | `parser` |
-| Prose announcements, inconsistent markup, dates in sentences | `llm` |
-| Stable-looking markup you do not fully trust | `parser_then_llm` |
+Parsers live in `src/ingest/parsers/` and are keyed by *site*, not game — one Game8 parser serves
+every Game8 page. Check `PARSERS` first:
 
-Default to `parser`. It is free, deterministic, and testable. Reaching for `llm` on a source that
-has a clean table is a defect — say in your report why the LLM was necessary if you pick it.
+- **Existing parser handles it** → add one entry to `SOURCES` in `adapters/index.ts`. No new
+  parsing code. This is the common case and should be the first thing you try.
+- **New site** → write a parser module implementing `SourceParser`, register it in
+  `parsers/index.ts`, then add the source.
+- **Undatable source** (no year, no end date, image-grid schedule) → **stop and report.** There is
+  no LLM fallback in this pipeline by design. Suggest a different source.
 
-**4. Implement `src/ingest/adapters/<game>.ts`.**
+**4. Implement the parser (only if step 3 says you need one).**
 
 - `parse` must be **pure**: no network, no `Date.now()`, no randomness. Time comes from `ctx.now`.
   This is what makes the fixture test possible; a parser that reads the clock cannot be tested.
-- `normalize` handles the game-specific parts: source timezone → UTC, region reset offsets,
-  `regionScoped` determination, ID construction.
+- Implement `canParse` as a *structural* check, and do not over-fit it. Game8's own pages differ in
+  attribute quote style, so `class="a-table"` would falsely reject half of them.
 - Get the domain rules right — they are in `CLAUDE.md` § Domain rules and they are where adapters
   actually go wrong:
   - All timestamps UTC ISO 8601.
