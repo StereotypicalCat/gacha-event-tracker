@@ -16,7 +16,7 @@ server, database and scheduler are specified but not built.
 | Piece | State |
 |---|---|
 | Event schema, date parsing, Game8 parser | Built, tested |
-| Five game sources (Genshin, Star Rail, Wuthering Waves, ZZZ, NTE) | Built, tested |
+| Six game sources | Built, tested |
 | Cross-source merge and conflict detection | Built, tested |
 | Web interface, offline support | Built |
 | Bun server, SQLite, refresh scheduler, review queue | Specified in `docs/`, not built |
@@ -82,15 +82,16 @@ date makes you miss content. Given the choice, this ships nothing rather than a 
 | Wuthering Waves | Game8 | 10 |
 | Zenless Zone Zero | Game8 | 12 |
 | Neverness to Everness | Game8 | 13 |
-| Arknights: Endfield | — | No usable source, see below |
+| Arknights: Endfield | Game8 | 2 |
 
 Game8 uses a different page template for almost every game — label/value detail tables, column
 tables, rowspan Start/End pairs — and four different date formats between them. One parser handles
 all of it; each game costs a registry entry.
 
-**Endfield has no adapter on purpose.** Its Game8 page carries no usable dates: every duration reads
-"Permanently Available", and the schedule is an image grid showing `07/16` with no year and no end
-date. Supporting it would mean inventing both. It needs a different source.
+Endfield yields only two events because most of its page genuinely has no dates — every `Duration`
+row reads "Permanently Available" and its version grid shows `07/16` with no year. The two dated
+events hide in a combined cell (`Period: 08/09/26 - 08/30/26 During the event...`), which is where
+the `MM/DD/YY` parser earns its place.
 
 Arknights is defined in the schema and awaiting a source.
 

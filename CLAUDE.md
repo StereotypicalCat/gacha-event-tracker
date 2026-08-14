@@ -99,8 +99,9 @@ These come from how gacha games actually schedule things, and they cause most bu
 - **Game8 has no single template.** Three shapes are known so far, and a page may mix them:
   1. Label/value detail tables (`Event Start` / `Event End`) — Genshin.
   2. Column tables (`Event | Duration | Event Details | Rewards`) — NTE.
-  3. Image-grid schedules with a bare `MM/DD` and no end — Arknights: Endfield. **Unsupportable**;
-     yields nothing by design.
+  3. Image-grid schedules with a bare `MM/DD` and no end — unsupportable, yields nothing by design.
+  4. Combined cells that fold label, range and blurb together
+     (`Period: 08/09/26 - 08/30/26 During the event...`) — Arknights: Endfield.
   Before assuming a new Game8 page will work, dump its structure and check which shape it uses.
 - **Silent drops are the dangerous failure.** A date format the parser does not recognise makes
   events vanish with no error. Abbreviated months (`Apr. 29 - May 13, 2026`) are supported for

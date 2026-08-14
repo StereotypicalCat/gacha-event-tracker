@@ -94,10 +94,13 @@ Game8 uses at least three page templates and a game's page may use any of them:
 2. **Column tables** — `Event | Duration | Event Details | Rewards`, one row per event, under a
    section heading. *(Neverness to Everness)*
 3. **Image-grid schedules** — a bare `MM/DD`, no year, no end date. **Unsupportable.**
-   *(Arknights: Endfield)*
+4. **Combined cells** — one cell holding label, range and blurb
+   (`Period: 08/09/26 - 08/30/26 During the event...`). *(Arknights: Endfield)*
 
-Shapes 1 and 2 are handled. Before assuming a new Game8 page will work, dump its heading/table
-structure and check which shape it uses.
+Shapes 1, 2 and 4 are handled. Before assuming a new Game8 page will work, dump its heading/table
+structure and check which shape it uses — and check **every** table, not just the obvious one.
+Endfield was written off as undatable on a first pass that only inspected its `Duration` rows; its
+two real events were in a table further down.
 
 ## Stage 1 — fetch
 

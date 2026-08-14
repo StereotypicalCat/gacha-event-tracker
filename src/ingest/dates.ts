@@ -113,6 +113,41 @@ export function parseFullRange(
 }
 
 /**
+ * "08/09/26 - 08/30/26" → both instants. Also accepts a four-digit year.
+ *
+ * Month-first ordering is not assumed lightly: Game8 writes long dates
+ * US-style ("August 12, 2026"), and Endfield's own version grid reads 01/22,
+ * 04/17, 07/16 for versions 1.0, 1.2 and 1.4 — chronological only if the month
+ * comes first. A day-first reading would make 04/17 an invalid month.
+ *
+ * Two-digit years pivot at 70: 26 → 2026. The validator's sanity window
+ * (start within [now-2y, now+1y]) catches anything this gets wrong.
+ */
+export function parseShortSlashRange(
+  input: string,
+): { start: ParsedInstant; end: ParsedInstant } | null {
+  const re =
+    /(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s*[-–—]\s*(\d{1,2})\/(\d{1,2})\/(\d{2,4})/;
+  const m = re.exec(input);
+  if (!m) return null;
+
+  const year = (raw: string) => {
+    const n = Number(raw);
+    return raw.length <= 2 ? (n < 70 ? 2000 + n : 1900 + n) : n;
+  };
+  const n = (i: number) => Number(m[i]);
+
+  const startIso = iso(year(m[3] ?? ""), n(1), n(2));
+  const endIso = iso(year(m[6] ?? ""), n(4), n(5));
+  if (startIso === null || endIso === null) return null;
+
+  return {
+    start: { iso: startIso, precision: "day" },
+    end: { iso: endIso, precision: "day" },
+  };
+}
+
+/**
  * A range whose start is a real date but whose end is not: "July 10, 2026 -
  * Permanent", "Jul. 24, 2026 - End of 4.6", or a lone start date.
  *

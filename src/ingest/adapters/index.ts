@@ -45,6 +45,12 @@ const SOURCES: SourceSpec[] = [
     parserId: "game8",
   },
   {
+    id: "endfield-game8-events",
+    game: "endfield",
+    url: "https://game8.co/games/Arknights-Endfield/archives/535443",
+    parserId: "game8",
+  },
+  {
     id: "nte-game8-events",
     game: "nte",
     url: "https://game8.co/games/Neverness-to-Everness/archives/592073",

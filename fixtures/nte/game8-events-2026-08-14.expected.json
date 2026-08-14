@@ -235,7 +235,7 @@
     "game": "nte",
     "title": "Warren Lucky Flip",
     "type": "other",
-    "summary": "Complete daily quests to earn card flips.",
+    "summary": null,
     "startsAt": "2026-08-05T00:00:00.000Z",
     "startPrecision": "day",
     "endsAt": "2026-08-19T00:00:00.000Z",

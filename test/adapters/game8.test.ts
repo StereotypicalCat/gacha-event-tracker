@@ -25,6 +25,7 @@ const CASES: Array<{ adapter: Adapter; fixture: string }> = [
   { adapter: adapter("hsr-game8-events"), fixture: "fixtures/hsr/game8-events-2026-08-14" },
   { adapter: adapter("wuwa-game8-events"), fixture: "fixtures/wuwa/game8-events-2026-08-14" },
   { adapter: adapter("zzz-game8-events"), fixture: "fixtures/zzz/game8-events-2026-08-14" },
+  { adapter: adapter("endfield-game8-events"), fixture: "fixtures/endfield/game8-events-2026-08-14" },
 ];
 
 async function runAdapter(adapter: Adapter, fixture: string) {
@@ -203,5 +204,23 @@ describe("new source shapes", () => {
     const jade = events.find((e) => e.title === "In Search of Lost Jade");
     expect(jade?.startsAt).toBe("2026-07-30T00:00:00.000Z");
     expect(jade?.endsAt).toBe("2026-08-13T00:00:00.000Z");
+  });
+});
+
+describe("endfield", () => {
+  test("reads MM/DD/YY ranges from a combined schedule cell", async () => {
+    // This page hides its only dated events in an "Event | Schedule & Summary"
+    // table, where one cell holds the label, the range and the blurb.
+    const events = await runAdapter(
+      adapter("endfield-game8-events"),
+      "fixtures/endfield/game8-events-2026-08-14",
+    );
+    expect(events).toHaveLength(2);
+    const rooted = events.find((e) => e.title === "The Rooted Realm");
+    expect(rooted?.startsAt).toBe("2026-08-09T00:00:00.000Z");
+    expect(rooted?.endsAt).toBe("2026-08-30T00:00:00.000Z");
+    // The prose after the dates becomes the blurb, without the label.
+    expect(rooted?.summary).not.toBeNull();
+    expect(rooted?.summary).not.toMatch(/^Period:/);
   });
 });

@@ -8,6 +8,7 @@ import {
   parseMonthDayRange,
   parseMonthDayYear,
   parseOpenRange,
+  parseShortSlashRange,
   parseSlashDateTimeRange,
   type ParsedInstant,
 } from "../dates.ts";
@@ -63,7 +64,7 @@ const RANGE_LABEL = /^(availability period|event period|duration|period|dates)$/
 /** Column-table header matchers. */
 const COL_TITLE = /^(.*\b)?events?$/i;
 const COL_RANGE =
-  /^(event |all )?(duration|dates?|event date|period|availability period|schedule)$/i;
+  /^(event |all )?(duration|dates?|event date|period|availability period|schedule)( ?& ?summary| and summary)?$/i;
 const COL_START = /^start$/i;
 const COL_END = /^end$/i;
 const COL_SUMMARY = /^(event )?(details?|description|overview)$/i;
@@ -159,7 +160,7 @@ function summaryAfter(nodes: DocNode[], from: number): string | null {
     if (node === undefined) break;
     if (node.kind !== "p") break;
     if (node.isButton || node.text.length === 0) continue;
-    return node.text.slice(0, 500);
+    return isRequirementOnly(node.text) ? null : node.text.slice(0, 500);
   }
   return null;
 }
@@ -208,9 +209,15 @@ function readColumnTable(rows: string[][]): Candidate[] {
     // year-less summary tables ("08/12 - 08/24") from producing events.
     if (range === null) continue;
 
-    const summaryCell = summaryIdx === -1 ? undefined : row[summaryIdx];
+    // Some templates fold the schedule and the blurb into one cell
+    // ("Period: 08/09/26 - 08/30/26 During the event, gather..."). With no
+    // separate column, recover the prose from what follows the dates.
+    const summaryCell =
+      summaryIdx === -1 ? proseAfterDates(rangeCell) : row[summaryIdx];
     const summary =
-      summaryCell && summaryCell.length > 0 ? summaryCell.slice(0, 500) : null;
+      summaryCell && summaryCell.length > 0 && !isRequirementOnly(summaryCell)
+        ? summaryCell.slice(0, 500)
+        : null;
 
     out.push({ title, summary, start: range.start, end: range.end });
   }
@@ -262,12 +269,58 @@ function readStartEndTable(headers: string[], rows: string[][]): Candidate[] {
   return out;
 }
 
+/**
+ * One date, in any shape this parser understands.
+ */
+const ONE_DATE =
+  String.raw`(?:\d{1,2}/\d{1,2}/\d{2,4}|[A-Za-z]+\.?\s+\d{1,2}(?:,\s*\d{4})?)`;
+
+/**
+ * A leading range, whose end may be a date or a stated non-date such as
+ * "Permanent" or "End of 4.6". Those words are listed rather than matched
+ * loosely, so a real description is never mistaken for a range end.
+ */
+const RANGE_PREFIX = new RegExp(
+  String.raw`^\s*` +
+    ONE_DATE +
+    String.raw`(?:\s*[-\u2013\u2014]\s*(?:` +
+    ONE_DATE +
+    String.raw`|permanent|tbd|ongoing|end of [\d.]+))?\s*`,
+  "i",
+);
+
+/**
+ * Prose that only states how to qualify for an event, not what it is.
+ *
+ * Several templates put unlock conditions where a description would go
+ * ("Reach Union Level 8", "Unlocked by default"). Showing that as the summary
+ * fills the slot with something that never answers "what is this event?", so
+ * it is dropped in favour of no summary at all.
+ */
+function isRequirementOnly(text: string): boolean {
+  return /^(reach|unlock|unlocks|unlocked|require|requires|required|complete|completing|clear|clearing|obtain|available|becomes available|must |need |finish)\b/i.test(
+    text.trim(),
+  );
+}
+
+/** Strip a leading label and date range, leaving any description behind it. */
+function proseAfterDates(cell: string): string | null {
+  const rest = cell
+    .replace(/^\s*(period|duration|schedule|dates?)\s*[:：]\s*/i, "")
+    .replace(RANGE_PREFIX, "")
+    .trim();
+  // Too short to be a description — probably leftover punctuation.
+  if (rest.length < 12) return null;
+  return isRequirementOnly(rest) ? null : rest;
+}
+
 function parseRange(
   value: string,
 ): { start: ParsedInstant; end: ParsedInstant | null } | null {
   return (
     parseSlashDateTimeRange(value) ??
     parseFullRange(value) ??
+    parseShortSlashRange(value) ??
     parseMonthDayRange(value) ??
     parseOpenRange(value)
   );
