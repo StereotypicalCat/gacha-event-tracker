@@ -7,6 +7,12 @@ import { URGENCY_COLOR } from "./Meter.tsx";
 const DAY_WIDTH = 13; // px per day — dense enough to see a patch cycle at once
 
 /**
+ * A sliver of time before now, so the "now" rule reads as a line in the view
+ * rather than merging with the border.
+ */
+const HALF_DAY_LEAD = 12 * 60 * 60 * 1000;
+
+/**
  * One lane per game, bars spanning start→end, today pinned as a rule.
  *
  * The quiet view. The ending-soon list carries the page's boldness, so this
@@ -32,9 +38,12 @@ export function Timeline({
     );
   }
 
-  const starts = rows.map((r) => r.clock.startsMs);
   const ends = rows.map((r) => r.clock.endsMs ?? r.clock.startsMs + 14 * DAY);
-  const min = Math.min(...starts, now) - 2 * DAY;
+  // The window opens at now. Events that began earlier are clipped at the left
+  // edge rather than pushing the view back weeks — what already happened is not
+  // what the reader is here for, and starting at the earliest start buries
+  // today off-screen.
+  const min = now - HALF_DAY_LEAD;
   const max = Math.max(...ends, now) + 2 * DAY;
   const totalDays = Math.ceil((max - min) / DAY);
   const width = totalDays * DAY_WIDTH;
@@ -81,8 +90,11 @@ export function Timeline({
                 </p>
                 <div className="relative h-auto space-y-1">
                   {events.map(({ event, clock }) => {
-                    const left = x(clock.startsMs);
                     const unknownEnd = clock.endsMs === null;
+                    // Already running when the view opens: clip to the edge and
+                    // say so, the same way an unknown end frays on the right.
+                    const clippedStart = clock.startsMs < min;
+                    const left = Math.max(x(clock.startsMs), 0);
                     const right = x(clock.endsMs ?? clock.startsMs + 14 * DAY);
                     const done = completions[event.id] !== undefined;
                     return (
@@ -98,12 +110,14 @@ export function Timeline({
                           marginLeft: left,
                           width: Math.max(right - left, 22),
                           background: `color-mix(in srgb, ${game.hue} 22%, var(--color-surface))`,
-                          borderLeft: `2px solid ${game.hue}`,
-                          // A frayed right edge says the end is unannounced —
-                          // visually distinct from an event ending far away.
-                          maskImage: unknownEnd
-                            ? "linear-gradient(90deg, #000 60%, transparent 100%)"
-                            : undefined,
+                          // No start edge to draw when the bar begins before
+                          // the view does.
+                          borderLeft: clippedStart
+                            ? undefined
+                            : `2px solid ${game.hue}`,
+                          // Frayed right = end unannounced; faded left = started
+                          // before now. Both are honest about what is not shown.
+                          maskImage: edgeMask(clippedStart, unknownEnd),
                           color: "var(--color-ink)",
                         }}
                       >
@@ -126,18 +140,36 @@ export function Timeline({
   );
 }
 
+/**
+ * Fade a bar's edge where the truth extends past what is drawn: the left when
+ * the event began before the view opens, the right when its end is unannounced.
+ */
+function edgeMask(clippedStart: boolean, unknownEnd: boolean): string | undefined {
+  if (clippedStart && unknownEnd) {
+    return "linear-gradient(90deg, transparent 0%, #000 14%, #000 60%, transparent 100%)";
+  }
+  if (clippedStart) return "linear-gradient(90deg, transparent 0%, #000 14%)";
+  if (unknownEnd) return "linear-gradient(90deg, #000 60%, transparent 100%)";
+  return undefined;
+}
+
 function monthBoundaries(min: number, max: number) {
-  const out: Array<{ ms: number; label: string }> = [];
+  const short = (ms: number) =>
+    new Date(ms).toLocaleDateString(undefined, { month: "short" });
+
+  // The window opens mid-month, so the first real boundary can be weeks away.
+  // Label the left edge with the current month or the opening stretch has no
+  // date context at all.
+  const out: Array<{ ms: number; label: string }> = [
+    { ms: min, label: short(min) },
+  ];
+
   const d = new Date(min);
   d.setUTCDate(1);
   d.setUTCHours(0, 0, 0, 0);
+  d.setUTCMonth(d.getUTCMonth() + 1);
   while (d.getTime() <= max) {
-    if (d.getTime() >= min) {
-      out.push({
-        ms: d.getTime(),
-        label: d.toLocaleDateString(undefined, { month: "short" }),
-      });
-    }
+    out.push({ ms: d.getTime(), label: short(d.getTime()) });
     d.setUTCMonth(d.getUTCMonth() + 1);
   }
   return out;
