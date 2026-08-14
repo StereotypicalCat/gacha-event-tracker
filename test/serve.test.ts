@@ -33,19 +33,32 @@ beforeAll(async () => {
   proc = Bun.spawn(["bun", "run", "serve.ts"], {
     env: { ...process.env, PORT: String(port), PUBLIC_DIR: root },
     stdout: "ignore",
-    stderr: "ignore",
+    stderr: "pipe",
   });
 
-  for (let i = 0; i < 60; i += 1) {
+  // Bail as soon as the process dies rather than retrying against a corpse:
+  // a missing serve.ts otherwise shows up only as "a hook timed out", which
+  // says nothing about the cause.
+  for (let i = 0; i < 40; i += 1) {
+    if (proc.exitCode !== null) {
+      const stderr = proc.stderr;
+      const why =
+        stderr instanceof ReadableStream
+          ? await new Response(stderr).text()
+          : "(no stderr captured)";
+      throw new Error(
+        `serve.ts exited with ${proc.exitCode} before listening:\n${why.slice(0, 500)}`,
+      );
+    }
     try {
       await fetch(`${base}/api/health`);
       return;
     } catch {
-      await Bun.sleep(100);
+      await Bun.sleep(50);
     }
   }
-  throw new Error("server did not start");
-});
+  throw new Error(`server did not listen on ${base} within 2s`);
+}, 10_000);
 
 afterAll(async () => {
   proc.kill();

@@ -153,8 +153,14 @@ so iteration never re-fetches. Every event links back to its source.
 
 Both `.github/workflows/ci.yml` and `.gitlab-ci.yml` run the same gates on every push — typecheck,
 tests, and a feed sanity check — then build and publish a container image from the default branch.
-GitHub Actions additionally deploys to Pages, enabling it on first run. Pages is unavailable for
-private repositories on the free plan — delete the `pages` job if that applies.
+GitHub Actions can also deploy to Pages, but that needs two one-time steps it cannot do for itself —
+the default `GITHUB_TOKEN` is not allowed to create a Pages site:
+
+1. **Settings → Pages → Source: GitHub Actions.**
+2. **Settings → Secrets and variables → Actions → Variables:** add `DEPLOY_PAGES` = `true`.
+
+Until then the `pages` job is skipped and the pipeline stays green. Pages is unavailable for private
+repositories on the free plan.
 
 The feed job fails if the event count collapses. A source that quietly stops yielding events is the
 failure mode a parser-only pipeline is most prone to, and nothing else would surface it. Everything

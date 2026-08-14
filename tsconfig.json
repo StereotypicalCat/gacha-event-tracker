@@ -16,5 +16,5 @@
     "jsx": "react-jsx",
     "verbatimModuleSyntax": true
   },
-  "include": ["src", "test", "scripts"]
+  "include": ["src", "test", "scripts", "serve.ts"]
 }

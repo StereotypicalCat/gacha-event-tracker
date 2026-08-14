@@ -12,7 +12,7 @@ WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 
-COPY tsconfig.json index.html ./
+COPY tsconfig.json index.html serve.ts ./
 COPY src ./src
 COPY scripts ./scripts
 COPY fixtures ./fixtures
