@@ -15,11 +15,21 @@ export interface RowEvent {
 interface EventRowProps {
   row: RowEvent;
   completed: boolean;
+  /** Only ever true when the reader has chosen to reveal ignored events. */
+  ignored?: boolean | undefined;
   onToggle: (id: string) => void;
+  onRestore?: ((id: string) => void) | undefined;
   onOpen: (id: string) => void;
 }
 
-export function EventRow({ row, completed, onToggle, onOpen }: EventRowProps) {
+export function EventRow({
+  row,
+  completed,
+  ignored = false,
+  onToggle,
+  onRestore,
+  onOpen,
+}: EventRowProps) {
   const { event, clock } = row;
   const game = gameMeta(event.game);
   const heat = URGENCY_COLOR[clock.urgency];
@@ -58,8 +68,13 @@ export function EventRow({ row, completed, onToggle, onOpen }: EventRowProps) {
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-3">
             <div className="min-w-0">
-              <span className="eyebrow block truncate" style={{ color: game.hue }}>
-                {game.short}
+              <span className="eyebrow flex items-center gap-1.5 truncate">
+                <span style={{ color: game.hue }}>{game.short}</span>
+                {ignored && (
+                  <span className="rounded-[3px] bg-hairline px-1 py-px text-[0.5625rem] tracking-normal text-muted">
+                    ignored
+                  </span>
+                )}
               </span>
               <span
                 className={`row-title block truncate text-[0.9375rem] font-medium leading-snug ${
@@ -100,7 +115,28 @@ export function EventRow({ row, completed, onToggle, onOpen }: EventRowProps) {
           </div>
         </div>
 
-        {/* Sits above the row target so ticking done never opens the sheet. */}
+        {/* Sits above the row target so ticking done never opens the sheet.
+            On a revealed ignored row this becomes the undo, which is the most
+            direct place to put it. */}
+        {ignored && onRestore !== undefined ? (
+          <button
+            type="button"
+            onClick={() => onRestore(event.id)}
+            aria-label={`Stop ignoring ${event.title}`}
+            className="row-check pointer-events-auto relative z-20 grid size-7 shrink-0 cursor-pointer place-items-center self-center rounded-md border border-hairline text-faint"
+          >
+            <svg viewBox="0 0 16 16" className="size-3.5" aria-hidden>
+              <path
+                d="M2.5 8a5.5 5.5 0 1 0 1.7-4M2.5 2.5V6H6"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        ) : (
         <button
           type="button"
           onClick={() => onToggle(event.id)}
@@ -125,6 +161,7 @@ export function EventRow({ row, completed, onToggle, onOpen }: EventRowProps) {
             />
           </svg>
         </button>
+        )}
       </div>
     </li>
   );

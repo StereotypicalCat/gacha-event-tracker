@@ -8,6 +8,7 @@ import { Timeline } from "./components/Timeline.tsx";
 import { Welcome } from "./components/Welcome.tsx";
 import { Colophon } from "./components/Colophon.tsx";
 import { Legend } from "./components/Legend.tsx";
+import { Toast } from "./components/Toast.tsx";
 import { KEYS } from "./state/storage.ts";
 import { useMarkSet } from "./state/useMarkSet.ts";
 import { usePrefs } from "./state/usePrefs.ts";
@@ -52,11 +53,20 @@ export function App() {
   const [state, setState] = useState<FeedState>({ status: "loading" });
   const [view, setView] = useState<View>("soon");
   const [openId, setOpenId] = useState<string | null>(null);
+  // The event most recently ignored, so it can be put back without hunting for
+  // a row that just disappeared.
+  const [lastIgnored, setLastIgnored] = useState<{ id: string; title: string } | null>(null);
   const now = useNow();
   const online = useOnline();
   const { prefs, update, toggleGame } = usePrefs();
   const completed = useMarkSet(KEYS.completions);
   const ignored = useMarkSet(KEYS.ignored);
+
+  const toggleIgnored = (id: string, title: string) => {
+    const wasIgnored = ignored.marks[id] !== undefined;
+    ignored.toggle(id);
+    setLastIgnored(wasIgnored ? null : { id, title });
+  };
   const completions = completed.marks;
   const toggle = completed.toggle;
 
@@ -212,7 +222,9 @@ export function App() {
                   key={row.event.id}
                   row={row}
                   completed={completions[row.event.id] !== undefined}
+                  ignored={ignored.marks[row.event.id] !== undefined}
                   onToggle={toggle}
+                  onRestore={(id) => ignored.toggle(id)}
                   onOpen={setOpenId}
                 />
               ))}
@@ -226,7 +238,9 @@ export function App() {
                   key={row.event.id}
                   row={row}
                   completed={completions[row.event.id] !== undefined}
+                  ignored={ignored.marks[row.event.id] !== undefined}
                   onToggle={toggle}
+                  onRestore={(id) => ignored.toggle(id)}
                   onOpen={setOpenId}
                 />
               ))}
@@ -273,12 +287,24 @@ export function App() {
 
       <Colophon sources={state.feed.sources} staleCount={staleSources.length} />
 
+      {lastIgnored !== null && (
+        <Toast
+          message={`Ignored "${lastIgnored.title}"`}
+          actionLabel="Undo"
+          onAction={() => {
+            ignored.toggle(lastIgnored.id);
+            setLastIgnored(null);
+          }}
+          onDismiss={() => setLastIgnored(null)}
+        />
+      )}
+
       {openRow !== null && (
         <EventDetail
           row={openRow}
           completed={completions[openRow.event.id] !== undefined}
           ignored={ignored.marks[openRow.event.id] !== undefined}
-          onIgnore={ignored.toggle}
+          onIgnore={(id) => toggleIgnored(id, openRow.event.title)}
           onToggle={toggle}
           onClose={() => setOpenId(null)}
         />
