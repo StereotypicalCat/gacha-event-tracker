@@ -41,9 +41,11 @@ event, because a missing event sends them to a wiki while a wrong one makes them
 | Wuthering Waves | `wuwa` |
 | Arknights | `arknights` |
 | Arknights: Endfield | `endfield` |
+| Neverness to Everness | `nte` |
 
-Adding a seventh game must require no schema change — only a new adapter. That is the test of
-whether the data model is right.
+Adding a game must require no schema change — only a `GameId` entry and a source registration.
+That is the test of whether the data model is right. A game may have several sources; see
+`docs/INGESTION.md` § Three layers.
 
 ### Features
 
@@ -106,8 +108,8 @@ The app's entire value is that the dates are right. Therefore:
 
 - An event with an uncertain end date is published with `endsAt: null`, **not** with a plausible
   guess.
-- An event whose extraction confidence is below threshold is not published at all until a human
-  approves it.
+- An event whose confidence is below threshold, or whose sources disagree, is not published at all
+  until a human approves it.
 - Every event links to its source so a skeptical user can verify in one click.
 
 An empty calendar is a recoverable disappointment. A confidently wrong end date is the failure this
@@ -120,4 +122,4 @@ product exists to prevent.
 - Should events the user has hidden by game filter still count toward "ends soonest"?
   (Assumption: no — the filter is global.)
 - Is 6 hours the right refresh cadence? (Assumption: yes; events are announced days ahead, so
-  sub-hourly refresh buys nothing and costs API spend.)
+  sub-hourly refresh buys nothing and is rude to the sources.)

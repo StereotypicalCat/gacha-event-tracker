@@ -14,7 +14,7 @@ are no users.
                     │        │                                     │
                     │        ▼                                     │
                     │   ingest pipeline                            │
-                    │   fetch → clean → parse|extract → validate    │
+                    │   fetch → parse → validate                   │
                     │        → reconcile → gate → publish          │
                     │        │                    │                │
                     │        │                    └──► quarantine  │
@@ -35,9 +35,8 @@ are no users.
                         filters, region  ← never leaves the device
 ```
 
-Anthropic API calls happen only inside the ingest pipeline. **No request path — not `/api/events`,
-not a page load — ever calls the model.** If a feature seems to need live inference, it needs a
-precomputed field instead.
+The pipeline makes no third-party API calls beyond fetching source pages. There is no inference
+anywhere, at ingest time or in a request path.
 
 ## Layout
 
@@ -55,24 +54,19 @@ src/
       migrations/       NNN-name.sql, applied in order at boot
       queries.ts        all SQL lives here — no SQL in route handlers
   ingest/
-    scheduler.ts        timer + jitter + per-source lock
-    pipeline.ts         the 7 stages, orchestration only
-    clean.ts            HTML → text reduction before extraction
-    extract.ts          Anthropic client, prompts, batch submission
-    validate.ts         zod parse + calendar sanity rules
-    reconcile.ts        diff vs published, confidence, conflict detection
+    scheduler.ts        timer + jitter + per-source lock          [not built]
+    pipeline.ts         the 6 stages, orchestration only          [not built]
+    html.ts             flat-table HTML reader (no dependency)    ✓ built
+    dates.ts            deterministic date parsing                ✓ built
+    validate.ts         zod parse + calendar sanity rules         [not built]
+    reconcile.ts        diff vs published, confidence, conflicts  [not built]
     adapters/
-      index.ts          registry: GameId → Adapter
-      genshin.ts
-      hsr.ts
-      zzz.ts
-      wuwa.ts
-      arknights.ts
-      endfield.ts
+      types.ts          Adapter interface, ParseContext           ✓ built
+      game8.ts          shared Game8 parser (2 table shapes)      ✓ built
+      index.ts          registry: adapter id → Adapter            ✓ built
   shared/
-    schema.ts           zod schemas — the contract, imported by both sides
-    types.ts            z.infer types only
-    time.ts             region reset math, duration formatting
+    schema.ts           zod schemas — the contract, both sides    ✓ built
+    time.ts             region reset math, duration formatting    [not built]
   client/
     main.tsx
     App.tsx
@@ -131,21 +125,19 @@ in that area needs an explicit auth story first.
   data — worst case, the game's lane goes stale and gets a warning badge (F7).
 - Three consecutive failures for one source raises its `health` to `failing` in `/api/health`. It
   does not stop the schedule; a wiki being down for a day is normal.
-- Extraction results are written to `extraction_log` with the input hash, so a prompt change can be
-  evaluated against previously-seen inputs without re-fetching or re-paying.
+- Raw snapshots are cached by content hash, so a parser change is always evaluated offline against
+  stored pages rather than by re-fetching.
 
 ## Deployment
 
-Single process, single SQLite file, no external services beyond the Anthropic API.
+Single process, single SQLite file, no external services at all.
 
 ```
 PORT=3000
 ADMIN_PORT=3001            # bound to 127.0.0.1
 DATABASE_PATH=./data/events.sqlite
-ANTHROPIC_API_KEY=sk-ant-...
 INGEST_INTERVAL_MS=21600000
 INGEST_ENABLED=true        # false for local UI work — never hits the network or the API
-EXTRACTION_MODE=batch      # batch | sync
 CONFIDENCE_THRESHOLD=0.8
 ```
 

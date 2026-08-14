@@ -9,7 +9,7 @@
 import { z } from "zod";
 
 export const GameId = z.enum([
-  "genshin", "hsr", "zzz", "wuwa", "arknights", "endfield",
+  "genshin", "hsr", "zzz", "wuwa", "arknights", "endfield", "nte",
 ]);
 
 export const EventType = z.enum([
@@ -54,7 +54,7 @@ export const GachaEvent = z.object({
 
   status: z.enum(["published", "delisted"]),
   confidence: z.number().min(0).max(1),
-  extractionMethod: z.enum(["parser", "llm", "manual"]),
+  extractionMethod: z.enum(["parser", "manual"]),
 
   version: z.number().int().positive(),
   firstSeenAt: z.string().datetime(),
@@ -78,8 +78,8 @@ true`, with `regionEnds` carrying the three resolved UTC instants. The client pi
 user's stored region (PRD F5). Collapsing these into a single timestamp loses up to 13 hours of
 accuracy and will make the countdown wrong for two thirds of users.
 
-**`confidence`** is assigned during reconciliation, not by the model's self-report. See
-`docs/LLM-EXTRACTION.md` § Scoring — a model asserting "I am 0.95 confident" is not evidence.
+**`confidence`** is assigned by the parser and adjusted during merge and reconciliation — see
+`docs/INGESTION.md` § Scoring. It records how firmly the sources pinned the event down.
 
 **`status: "delisted"`** means the event stopped appearing at its source. It is never deleted,
 because a source outage would otherwise silently empty the calendar. Delisted events are excluded
@@ -122,7 +122,7 @@ CREATE TABLE events (
   source_id         TEXT NOT NULL,
   status            TEXT NOT NULL DEFAULT 'published',
   confidence        REAL NOT NULL,
-  extraction_method TEXT NOT NULL,
+  extraction_method TEXT NOT NULL,      -- 'parser' | 'manual'
   version           INTEGER NOT NULL DEFAULT 1,
   first_seen_at     TEXT NOT NULL,
   updated_at        TEXT NOT NULL
@@ -147,10 +147,11 @@ CREATE INDEX idx_quarantine_open ON events_quarantine (created_at) WHERE resolve
 
 -- One row per configured source.
 CREATE TABLE sources (
-  id               TEXT PRIMARY KEY,   -- 'genshin-wiki-events'
+  id               TEXT PRIMARY KEY,   -- '<game>-<site>-<page>', e.g. 'genshin-game8-events'
   game             TEXT NOT NULL,
   url              TEXT NOT NULL,
-  strategy         TEXT NOT NULL,      -- 'parser' | 'llm' | 'parser_then_llm'
+  parser_id        TEXT NOT NULL,      -- parser template id, e.g. 'game8'
+  priority         INTEGER NOT NULL DEFAULT 0,
   min_interval_ms  INTEGER NOT NULL DEFAULT 21600000,
   etag             TEXT,
   last_modified    TEXT,
@@ -177,26 +178,7 @@ CREATE TABLE ingest_runs (
   events_held     INTEGER DEFAULT 0
 );
 
--- One row per LLM call. Enables replaying prompt changes against past inputs.
-CREATE TABLE extraction_log (
-  id                  TEXT PRIMARY KEY,
-  run_id              TEXT NOT NULL REFERENCES ingest_runs(id),
-  source_id           TEXT NOT NULL,
-  model               TEXT NOT NULL,
-  prompt_version      TEXT NOT NULL,
-  input_hash          TEXT NOT NULL,   -- of the cleaned text sent to the model
-  input_tokens        INTEGER,
-  output_tokens       INTEGER,
-  cache_read_tokens   INTEGER,
-  cache_write_tokens  INTEGER,
-  stop_reason         TEXT,
-  refusal_category    TEXT,
-  duration_ms         INTEGER,
-  created_at          TEXT NOT NULL
-);
-CREATE INDEX idx_extraction_input ON extraction_log (input_hash);
-
--- Cached raw + cleaned snapshots so re-extraction never re-fetches.
+-- Cached raw snapshots so re-parsing never re-fetches.
 CREATE TABLE snapshots (
   content_hash TEXT PRIMARY KEY,
   source_id    TEXT NOT NULL,

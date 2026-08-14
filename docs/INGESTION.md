@@ -1,108 +1,156 @@
 # Ingestion Pipeline
 
-Seven stages, run per source. Every stage writes its outcome to `ingest_runs` so a failure two days
-ago can be diagnosed without re-running or re-paying.
+Six stages, run per source. Every stage writes its outcome to `ingest_runs` so a failure two days
+ago can be diagnosed without re-running.
 
 ```
-fetch → clean → parse|extract → validate → reconcile → gate → publish
-                                                        │
-                                                        └──► quarantine
+fetch → parse → merge → validate → reconcile → gate → publish
+                                                  │
+                                                  └──► quarantine
 ```
 
-## The adapter contract
+## No LLM
 
-An adapter is the only per-game code. Everything downstream of `parse` is shared.
+Event data is extracted by deterministic code only. There is no model call anywhere in this
+pipeline, no API key, and no per-run cost.
+
+This is a deliberate constraint, not an omission:
+
+- A source that cannot be parsed deterministically **does not get an adapter.** Report it rather
+  than reaching for inference.
+- Parser output is reproducible — the same fixture always yields the same events, which is what
+  makes the fixture tests meaningful.
+- Iterating is free and offline: `bun run parse <adapter-id> <fixture>`.
+
+If a source's markup is too unstable to parse, the answer is a different source, not a model.
+
+## Three layers: parsers, adapters, merge
+
+The layering is what makes a second, third, or tenth source cheap.
+
+| Layer | Answers | Lives in | Scope |
+|---|---|---|---|
+| **Parser** | "How is this *site* laid out?" | `src/ingest/parsers/` | One site template, many games |
+| **Adapter** | "Which URL, for which game, via which parser?" | `src/ingest/adapters/index.ts` | One page |
+| **Merge** | "These sources disagree — now what?" | `src/ingest/merge.ts` | One game, many sources |
+
+Consequences worth internalising:
+
+- Adding a source for a site already parsed = **one entry in `SOURCES`**. No new parsing code.
+- Adding a new *site* = one parser module + its `PARSERS` entry, then adapters as above.
+- A game may have any number of sources. `parseGame(game, documents, now)` runs them all and
+  merges.
+
+### The parser interface
 
 ```ts
-export interface Adapter {
-  id: string;                    // 'genshin-wiki-events'
-  game: GameId;
-  url: string;
-  strategy: "parser" | "llm" | "parser_then_llm";
-  minIntervalMs?: number;        // default 6h
-
-  /** Narrow the cleaned document to just the region containing event data. */
-  select?(cleaned: string): string;
-
-  /**
-   * Deterministic parse. Return null to fall through to LLM extraction
-   * (only meaningful when strategy is 'parser_then_llm').
-   * Pure over its input — no network, no clock, no randomness. This is what
-   * makes fixture tests possible.
-   */
-  parse?(cleaned: string, ctx: ParseContext): RawEvent[] | null;
-
-  /** Extra instructions appended to the shared extraction prompt. */
-  extractionHints?: string;
-
-  /** Game-specific normalization: reset times, region offsets, patch cadence. */
-  normalize(raw: RawEvent, ctx: ParseContext): GachaEvent;
-}
-
-export interface ParseContext {
-  now: string;                   // injected, never Date.now() — keeps parse pure and testable
-  sourceUrl: string;
-  sourceId: string;
-  game: GameId;
+export interface SourceParser {
+  id: string;                                   // "game8"
+  label: string;                                // "Game8"
+  canParse(html: string): boolean;              // structural sanity check
+  parse(html: string, ctx: ParseContext): GachaEvent[];
 }
 ```
 
-**`parse` must not read the clock.** It takes `now` from `ctx`. This is what lets a fixture test
-assert exact output for a page captured last March.
+`canParse` is the redesign tripwire. Without it, a site rewrite makes every selector miss and the
+parser returns zero events — which reads downstream as "this game has no events" rather than as a
+failure. The adapter throws when `canParse` is false, so the run fails loudly and the previously
+published events stay put.
 
-### Choosing a strategy
+Keep `canParse` structural, not content-based, and **do not over-fit it**. Game8's own pages differ
+in attribute quote style (`class="a-table"` on Genshin, `class='a-table'` on NTE), which is exactly
+the kind of variation a naive check gets wrong. Every regex in `html.ts` is attribute-agnostic for
+the same reason.
 
-| Source shape | Strategy |
+### The adapter registry
+
+```ts
+const SOURCES: SourceSpec[] = [
+  { id: "genshin-game8-events", game: "genshin",
+    url: "https://game8.co/games/Genshin-Impact/archives/301601", parserId: "game8" },
+  { id: "nte-game8-events", game: "nte",
+    url: "https://game8.co/games/Neverness-to-Everness/archives/592073", parserId: "game8" },
+];
+```
+
+`priority` (default 0) breaks ties when two sources disagree and neither is clearly better — give
+official feeds a higher number than community wikis. Adapter ids are `"<game>-<site>-<page>"` and
+are recorded on every event as `sourceId`, so any row in the feed traces back to the source that
+produced it.
+
+### Assessing a new source
+
+| Source shape | Verdict |
 |---|---|
-| JSON API, or a stable HTML table with consistent headers | `parser` |
-| Free-form patch notes, announcement prose, inconsistent markup | `llm` |
-| Mostly-stable markup that occasionally changes | `parser_then_llm` |
+| JSON API, or an HTML table with consistent headers | Good — write the adapter |
+| Label/value or column tables with full dates including a year | Good — an existing parser may already handle it |
+| Dates without a year, or no end date at all | **Unsupportable** — yields nothing rather than guessing |
+| Free-form prose with no table structure | Find a different source |
 
-Prefer `parser`. It is free, deterministic, and instantly testable. The LLM exists for sources that
-genuinely cannot be parsed reliably, not as the default. A source with a clean API that goes through
-the model is a bug.
+Game8 uses at least three page templates and a game's page may use any of them:
+
+1. **Label/value detail tables** — `Event Start` / `Event End` rows under a per-event `h3`, full
+   dates with year. *(Genshin Impact)*
+2. **Column tables** — `Event | Duration | Event Details | Rewards`, one row per event, under a
+   section heading. *(Neverness to Everness)*
+3. **Image-grid schedules** — a bare `MM/DD`, no year, no end date. **Unsupportable.**
+   *(Arknights: Endfield)*
+
+Shapes 1 and 2 are handled. Before assuming a new Game8 page will work, dump its heading/table
+structure and check which shape it uses.
 
 ## Stage 1 — fetch
 
 - Send `If-None-Match` / `If-Modified-Since` from `sources.etag` / `last_modified`. A `304` ends
-  the run as `skipped_unchanged` with zero further cost.
+  the run as `skipped_unchanged`.
 - `User-Agent: gacha-event-tracker/1.0 (+https://github.com/<owner>/gacha-event-tracker)`.
-- Honor `robots.txt`. Cache the parsed robots per host for 24h.
-- 20s timeout; retry twice with exponential backoff on 5xx and network errors; never retry 4xx.
-- Store the raw bytes in `snapshots`.
+- Honor `robots.txt`; cache parsed robots per host for 24h.
+- 20s timeout; retry twice with backoff on 5xx and network errors; never retry 4xx.
+- Store raw bytes in `snapshots`.
 
-On failure: increment `consecutive_failures`, leave published events untouched, end the run as
-`failed`. A source being down never mutates the feed.
+On failure: increment `consecutive_failures`, leave published events untouched, end as `failed`. A
+source being down never mutates the feed.
 
-## Stage 2 — clean
+## Stage 2 — parse
 
-Reduce the document before it costs anything. This stage is the second-biggest cost lever after the
-content-hash skip.
+Hash the raw body (sha256) → `content_hash`. **If it matches `sources.content_hash`, end as
+`skipped_unchanged`** and do no further work.
 
-- Drop `<script>`, `<style>`, `<svg>`, `<noscript>`, comments, nav, header, footer, and known
-  wiki chrome (edit links, category boxes, reference lists).
-- Collapse whitespace; convert tables to pipe-delimited text; keep headings as `#` markers so
-  section structure survives.
-- Apply `adapter.select()` if present to isolate the event region.
-- Hash the result (sha256) → `content_hash`.
+Otherwise call `adapter.parse(html, ctx)`, which runs `canParse` and then the parser. Because
+parsers are pure, this stage is fully reproducible offline against the stored snapshot:
 
-**If `content_hash` matches `sources.content_hash`, end the run as `skipped_unchanged`.** This is
-the check that keeps a 6-hourly schedule from costing anything on a quiet week — most runs should
-end here.
+```
+bun run parse <adapter-id> fixtures/<game>/<source>-<date>.html
+```
 
-A typical wiki page goes from ~15k tokens raw to ~5k cleaned. Verify with `messages.count_tokens`
-when tuning, not by guessing.
+**Watch the event count.** A source that changes date format or table shape makes events vanish with
+no error — the parser simply matches nothing. Compare each run's `events_seen` against the previous
+run and flag a large drop. A source that went from 13 events to 2 has broken, not quieted down.
+This is the most likely real failure mode of a parser-only pipeline, and nothing else surfaces it.
 
-## Stage 3 — parse or extract
+## Stage 3 — merge
 
-Per strategy. `parse` produces `RawEvent[]` directly. `extract` sends the cleaned text to
-`claude-opus-5` with a structured-output schema — see `docs/LLM-EXTRACTION.md` for the request
-shape, prompt, and cost rules.
+Only meaningful when a game has more than one source; a single-source game passes straight through.
 
-`parser_then_llm` calls `parse` first and falls through to `extract` only when it returns `null`.
-When that fallthrough happens, log it loudly: it means the source changed shape and the parser needs
-updating. A `parser_then_llm` source that is silently always falling through is paying LLM prices
-for a parser that no longer works.
+`mergeEvents(groups)` compares events across sources:
+
+1. **Same ID** → same event; keep the higher-confidence copy.
+2. **Near match** — same game, title similarity ≥ 0.80, starts within 24h — → same event under
+   different titles; keep the higher-confidence copy.
+3. **Otherwise** → distinct events; keep both.
+
+Title similarity alone would merge a rerun with its original, since reruns reuse the name. The
+start-date proximity check is the actual guard; the title threshold is deliberately loose (0.80) so
+that "Stygian Onslaught" and "Stygian Onslaught Event" collapse into one row rather than showing
+the user a duplicate.
+
+**Agreement raises confidence (+0.10) only across different `sourceId`s.** The same row seen twice
+in one document is not corroboration.
+
+**Disagreement is surfaced, never averaged.** Two sources whose `endsAt` differ by more than 24
+hours produce a `conflicts` entry; the pipeline routes those to quarantine. Splitting the difference
+between two dates would produce a value neither source asserts — the worst possible answer for a
+product whose promise is date accuracy.
 
 ## Stage 4 — validate
 
@@ -113,109 +161,103 @@ quarantine with `reason: 'sanity_failed'` — never to the feed.
 
 | Rule | Rationale |
 |---|---|
-| `endsAt > startsAt` when both present | A backwards interval is always a parse error |
-| Duration ≤ 180 days | Patch cycles are ~6 weeks; 180d means a year was misread as a range |
+| `endsAt` after `startsAt` when both present | A backwards interval is always a parse error |
+| Duration under 180 days | Patch cycles are ~6 weeks; longer means a misread year |
 | `startsAt` within [now − 2y, now + 1y] | Catches century typos and relative-date misreads |
-| `endsAt` null ⟺ `endPrecision === "unknown"` | The two fields must agree |
-| `regionEnds` non-null ⟺ `regionScoped` | Same |
+| `endsAt` null exactly when `endPrecision` is `"unknown"` | The two fields must agree |
+| `regionEnds` non-null exactly when `regionScoped` | Same |
 | All `regionEnds` values within 24h of each other | Region resets differ by hours, not days |
-| `title` non-empty, ≤ 200 chars, not a placeholder ("TBD", "Event", "Unknown") | Catches header rows scraped as events |
+| `title` non-empty, ≤ 200 chars, not a placeholder | Catches header rows scraped as events |
+
+Rules 1, 4, and 5 are enforced by `GachaEvent` itself in `src/shared/schema.ts`, so they cannot be
+bypassed by constructing an event object directly.
 
 **Soft rules (reduce confidence, do not reject):**
 
 - Duration under 1 hour or over 60 days → −0.2
-- `startPrecision` or `endPrecision` is `"day"` → −0.1
 - Title very similar to another event in the same batch → −0.15 (likely a duplicate row)
 
 ## Stage 5 — reconcile
 
-Diff the validated candidates against currently published events for this source.
+Diff validated candidates against currently published events.
 
-1. **Exact ID match** → compare fields. Unchanged: no-op. Changed: candidate update.
-2. **Near match** — same game, date windows overlap, title similarity ≥ 0.85 — → treat as an update
-   to the existing event, **keeping the existing ID**. This is what survives a wiki renaming an
-   event without orphaning every user's completion mark.
+1. **Exact ID match** → compare fields. Unchanged: no-op. Changed: update.
+2. **Near match** → update the existing event, **keeping the existing ID**. This is what survives a
+   wiki renaming an event without orphaning every user's completion mark.
 3. **No match** → new event.
-4. **Published event absent from this run's candidates** → mark `status = 'delisted'`. Do not
-   delete.
+4. **Published event absent from this run** → mark `status = 'delisted'`. Never delete.
 
-**Conflict detection.** A candidate that changes an already-published `endsAt` by more than 24 hours
-is a `date_conflict`. This is the case worth being paranoid about: the user may have already planned
-around the old date, and a silent shift is exactly the failure the product exists to prevent. Route
-it to quarantine regardless of confidence.
+**Conflict detection.** A candidate moving an already-published `endsAt` by more than 24 hours is a
+`date_conflict`. The user may have planned around the old date, so route it to quarantine regardless
+of confidence.
 
 ### Scoring
 
-Confidence is computed here, from evidence — **not** taken from the model's self-report. A model
-saying "confidence: 0.95" is a token prediction, not a measurement.
+Confidence records how firmly the sources pinned an event down, so the gate can hold back weak
+cases. The parser assigns a base score; merge and reconcile adjust it.
 
 ```
-base            parser → 0.95        llm → 0.70
-+0.15  the same event was extracted identically from a previous run
-+0.10  both timestamps have precision "exact"
-+0.10  a second source for the same game corroborates within 1 hour
+base                                          0.95
+−0.05  a boundary is day-precision rather than exact
+−0.15  the end date is unknown (endsAt null)
++0.10  an independent source corroborates
++0.15  identical event parsed in a previous run
 −0.20  any soft rule fired
-−0.30  this is a date_conflict against a published event
+−0.30  a date_conflict against a published event
 ```
 
-Clamp to [0, 1]. `CONFIDENCE_THRESHOLD` (default 0.8) is the gate.
+Clamp to [0, 1]. `CONFIDENCE_THRESHOLD` (default 0.8) is the gate. Under the current parser a
+day-precision event with a known end scores 0.85 and publishes, while one with an unknown end
+scores 0.75 and is held — the intended bias.
 
-## Stage 6 — gate
+## Stage 6 — gate and publish
 
 | Condition | Destination |
 |---|---|
-| `confidence >= CONFIDENCE_THRESHOLD` and no conflict | publish |
-| `confidence < CONFIDENCE_THRESHOLD` | quarantine — `low_confidence` |
-| `date_conflict` | quarantine — `date_conflict`, with `conflicts_with` set |
-| failed a hard rule | quarantine — `sanity_failed` |
-| new event type or field the schema does not recognize | quarantine — `novel_shape` |
+| Confidence at or above threshold, no conflict | publish |
+| Confidence below threshold | quarantine, `low_confidence` |
+| Cross-source or cross-run date disagreement | quarantine, `date_conflict` |
+| Failed a hard rule | quarantine, `sanity_failed` |
+| Shape the schema does not recognise | quarantine, `novel_shape` |
 
-A quarantined event does not block its siblings. If eight events in a run pass and two are held, the
-eight publish.
+A quarantined event does not block its siblings — if eight pass and two are held, the eight publish.
 
-## Stage 7 — publish
-
-Upsert by ID inside a transaction. Bump `version` and `updatedAt` only when a field actually
-changed — an unchanged run must not churn `updatedAt`, or the freshness badge (PRD F7) becomes
-meaningless. Update `sources.content_hash`, `etag`, `last_success_at`, and reset
-`consecutive_failures`.
+Publish upserts by ID in a transaction. Bump `version` and `updatedAt` only when a field actually
+changed, or the freshness badge (PRD F7) becomes meaningless. Update `sources.content_hash`,
+`etag`, `last_success_at`, and reset `consecutive_failures`.
 
 ## The review gate
 
 Quarantined events surface at `GET /review` on the admin listener (`127.0.0.1:ADMIN_PORT`). See
-`docs/ARCHITECTURE.md` § Why `/review` needs no auth — the routes are simply not registered on the
-public listener.
+`docs/ARCHITECTURE.md` § Why `/review` needs no auth.
 
-The review UI shows, per held event: the parsed fields, the reason and detail, the conflicting
-published event side-by-side when applicable, a link to the source, and the exact cleaned text
-excerpt the extraction came from. A reviewer needs to answer "is this date right?" without leaving
-the page.
+- `POST /api/review/:id/approve` — writes to `events` with `extraction_method: 'manual'`,
+  `confidence: 1.0`. Approving with edits is supported; the corrected value publishes.
+- `POST /api/review/:id/reject` — stamps resolution only. The candidate is held again next run if
+  the source has not changed, which is intended.
 
-- `POST /api/review/:id/approve` — writes to `events` with `extraction_method: 'manual'` and
-  `confidence: 1.0`, and stamps `resolved_at` / `resolution`.
-- `POST /api/review/:id/reject` — stamps resolution only. The event is not published, and the same
-  candidate will be re-held on the next run if the source has not changed.
-
-Approving with edits is supported: the reviewer can correct a date before approving. That corrected
-value is the one that publishes.
-
-**Quarantine depth is the health signal for the whole pipeline.** A growing queue means a source
-changed shape or the prompt regressed. `/api/health` exposes the count; watch it.
+**Quarantine depth is the pipeline's health signal.** A growing queue means a source changed shape.
+`/api/health` exposes the count.
 
 ## Testing
 
 Every adapter ships:
 
 1. `fixtures/<game>/<source>-<YYYY-MM-DD>.html` — a real captured page.
-2. `fixtures/<game>/<source>-<YYYY-MM-DD>.expected.json` — the exact `GachaEvent[]` it should
-   produce.
-3. A test running `parse` + `normalize` against the fixture with a pinned `ctx.now`, asserting
-   deep equality.
+2. `fixtures/<game>/<source>-<YYYY-MM-DD>.expected.json` — the exact `GachaEvent[]` it produces.
+3. A test running `parse` against the fixture with a pinned `ctx.now`, asserting deep equality.
 
-`bun test` must pass with no network access. When a source changes shape, capture a new fixture
-alongside the old one and keep both — the old fixture is the regression test proving the parser
-still handles the previous format.
+`bun test` must pass with no network access.
 
-Validator rules get their own unit tests with deliberately broken inputs: backwards intervals,
-1000-year durations, `endsAt` set with `endPrecision: "unknown"`. These rules are the last line of
-defense before a wrong date reaches a user; test them like it.
+**Regenerating `.expected.json` from the parser makes the test self-consistent, not correct.** After
+an intentional change, re-verify a sample against the live page — and ideally extract the same data
+a second way (a throwaway script over the fixture) to confirm counts and dates independently. That
+independent check is what caught the exact event counts for both current adapters.
+
+When a source changes shape, capture a new fixture **alongside** the old one and keep both — the old
+fixture is the regression test proving the parser still handles the previous format.
+
+`test/dates.test.ts` covers the cases that matter most: a missing year returns null rather than
+guessing, impossible calendar dates are rejected, ranges crossing New Year roll the start year back,
+and abbreviated months parse. `test/merge.test.ts` covers cross-source agreement, disagreement, and
+rerun disambiguation. These are the last line of defense before a wrong date reaches a user.
