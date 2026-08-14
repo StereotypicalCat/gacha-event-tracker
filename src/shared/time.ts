@@ -140,3 +140,39 @@ export function endingSoonestFirst(
   if (b.clock.msRemaining === null) return -1;
   return a.clock.msRemaining - b.clock.msRemaining;
 }
+
+/**
+ * A plain-language caption for an event's window.
+ *
+ * The meter shows a proportion; this says what the proportion is *of*. Without
+ * it a reader has to infer that ticks mean remaining time, which is exactly the
+ * kind of "obvious to the author" encoding that leaves everyone else guessing.
+ */
+export function windowCaption(clock: EventClock, now: number): string {
+  const on = (ms: number) =>
+    new Date(ms).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+
+  if (clock.upcoming) {
+    return clock.endsMs === null
+      ? `starts ${on(clock.startsMs)}`
+      : `${on(clock.startsMs)} – ${on(clock.endsMs)} · not started yet`;
+  }
+
+  if (clock.endsMs === null) {
+    return `started ${on(clock.startsMs)} · no end date announced`;
+  }
+
+  const totalDays = Math.max(
+    1,
+    Math.round((clock.endsMs - clock.startsMs) / DAY),
+  );
+  const leftMs = Math.max(0, clock.endsMs - now);
+  const leftDays = Math.ceil(leftMs / DAY);
+
+  const left =
+    leftMs < DAY
+      ? `${Math.max(1, Math.floor(leftMs / HOUR))} of ${totalDays * 24} hours left`
+      : `${leftDays} of ${totalDays} days left`;
+
+  return `${on(clock.startsMs)} – ${on(clock.endsMs)} · ${left}`;
+}

@@ -1,6 +1,10 @@
 import { gameMeta } from "../../shared/games.ts";
 import type { GachaEvent } from "../../shared/schema.ts";
-import { formatRemaining, type EventClock } from "../../shared/time.ts";
+import {
+  formatRemaining,
+  windowCaption,
+  type EventClock,
+} from "../../shared/time.ts";
 import { Meter, URGENCY_COLOR } from "./Meter.tsx";
 
 export interface RowEvent {
@@ -19,6 +23,8 @@ export function EventRow({ row, completed, onToggle, onOpen }: EventRowProps) {
   const { event, clock } = row;
   const game = gameMeta(event.game);
   const heat = URGENCY_COLOR[clock.urgency];
+
+  const caption = windowCaption(clock, Date.now());
 
   const countdown = clock.upcoming
     ? `starts in ${formatRemaining(clock.startsMs - Date.now())}`
@@ -84,8 +90,13 @@ export function EventRow({ row, completed, onToggle, onOpen }: EventRowProps) {
             <Meter
               progress={clock.upcoming ? 1 : clock.progress}
               urgency={clock.urgency}
-              label={`${event.title}: ${countdown}`}
+              label={`${event.title}: ${caption}`}
             />
+            {/* Says what the bar is a proportion of. Without this the ticks
+                are a shape the reader has to guess the meaning of. */}
+            <p className="mt-1.5 text-[0.6875rem] leading-none text-faint">
+              {caption}
+            </p>
           </div>
         </div>
 

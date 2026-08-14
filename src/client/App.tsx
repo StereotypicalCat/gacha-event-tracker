@@ -7,6 +7,7 @@ import { NextUp } from "./components/NextUp.tsx";
 import { Timeline } from "./components/Timeline.tsx";
 import { Welcome } from "./components/Welcome.tsx";
 import { Colophon } from "./components/Colophon.tsx";
+import { Legend } from "./components/Legend.tsx";
 import { useCompletions } from "./state/useCompletions.ts";
 import { usePrefs } from "./state/usePrefs.ts";
 import { clockFor, DAY, endingSoonestFirst, formatRemaining } from "../shared/time.ts";
@@ -189,6 +190,7 @@ export function App() {
 
           {live.length > 0 && (
             <Section
+              legend
               title="Running now"
               hint={
                 live.length > 1
@@ -284,10 +286,12 @@ function Shell({ children }: { children: React.ReactNode }) {
 function Section({
   title,
   hint,
+  legend,
   children,
 }: {
   title: string;
   hint?: string | undefined;
+  legend?: boolean | undefined;
   children: React.ReactNode;
 }) {
   return (
@@ -296,6 +300,7 @@ function Section({
         <h2 className="eyebrow">{title}</h2>
         {hint !== undefined && <p className="text-xs text-faint">{hint}</p>}
       </div>
+      {legend === true && <Legend />}
       <ul className="border-t border-hairline">{children}</ul>
     </section>
   );
