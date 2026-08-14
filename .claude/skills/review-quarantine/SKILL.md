@@ -39,21 +39,18 @@ through the queue.
 
 ## Reviewing one event
 
-For each held event the UI shows the parsed fields, the reason and detail, the source link, and the
-cleaned text excerpt the extraction came from. Work in this order:
+For each held event the UI shows the parsed fields, the reason and detail, and the source link. Work
+in this order:
 
-1. **Read the evidence span.** Does it actually contain the dates claimed? If the quoted text does
-   not support the extracted dates, reject — and note it, because that is a hallucination and the
-   extraction prompt needs evaluating.
-2. **Open the source.** Confirm the dates against the live page, not just the excerpt.
+1. **Open the source.** Confirm the dates against the live page.
 3. **Check the timezone.** Most gacha sources publish in UTC+8. Confirm the conversion. A silently
    wrong timezone is the most common real error here, and it is 8 hours of wrongness that looks
    plausible.
-4. **Check `regionScoped`.** Is this a global banner end or a per-region reset? Getting this wrong
+3. **Check `regionScoped`.** Is this a global banner end or a per-region reset? Getting this wrong
    makes the countdown wrong for two thirds of users.
-5. **Check for a guessed end date.** If the source says TBD or gives no end and the candidate has a
-   concrete `endsAt`, that is a fabrication. Correct it to `null` with `endPrecision: "unknown"`
-   before approving, and flag the extraction.
+4. **Check for a guessed end date.** If the source says TBD or gives no end and the candidate has a
+   concrete `endsAt`, that is a parser bug. Correct it to `null` with `endPrecision: "unknown"`
+   before approving, and open the adapter.
 
 For `date_conflict` specifically: the UI shows the published event beside the candidate. Determine
 which is right by going to the source. If the source genuinely changed, approve the correction. If
@@ -77,8 +74,6 @@ The queue is a signal. After working it, report what caused it:
 
 - Repeated `sanity_failed` from one source → the adapter needs repair. Use the **adapter-author**
   agent.
-- Hallucinated dates or fabricated evidence → the prompt regressed. Use the **extraction-evaluator**
-  agent before changing anything.
 - Many `low_confidence` items that all turn out correct → the threshold may be too high, or the
   source needs a second corroborating source. Do not just lower `CONFIDENCE_THRESHOLD` to make the
   queue shorter; that trades a visible queue for invisible wrong dates.
