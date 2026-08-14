@@ -16,9 +16,9 @@ server, database and scheduler are specified but not built.
 | Piece | State |
 |---|---|
 | Event schema, date parsing, Game8 parser | Built, tested |
-| Genshin Impact and Neverness to Everness sources | Built, tested |
+| Five game sources (Genshin, Star Rail, Wuthering Waves, ZZZ, NTE) | Built, tested |
 | Cross-source merge and conflict detection | Built, tested |
-| Web interface | Built |
+| Web interface, offline support | Built |
 | Bun server, SQLite, refresh scheduler, review queue | Specified in `docs/`, not built |
 
 Today the feed is generated offline from fixtures. That is deliberate: it let the interface be built
@@ -66,26 +66,33 @@ parser serves every Game8 page). An *adapter* binds a URL and a game to a parser
 several sources for the same game. Adding a source for a site already covered is one registry entry.
 
 **Nothing is guessed.** Every date function returns null rather than inventing a missing year or
-end date. An event whose end is unannounced is published with no end and rendered distinctly — never
-filled in with a plausible-looking date.
+end date. Sources really do publish "July 10, 2026 - Permanent" and "Jul. 24, 2026 - End of 4.6";
+those keep their real start and report no end, rendered distinctly from an event ending far away —
+never filled in with a plausible-looking date.
 
 That last rule is the whole product. A missing event sends you to a wiki; a confidently wrong end
 date makes you miss content. Given the choice, this ships nothing rather than a guess.
 
 ## Games
 
-| Game | Source | Notes |
+| Game | Source | Events |
 |---|---|---|
-| Genshin Impact | Game8 | 9 events |
-| Neverness to Everness | Game8 | 13 events |
-| Arknights: Endfield | — | No source yet, see below |
+| Genshin Impact | Game8 | 9 |
+| Honkai: Star Rail | Game8 | 6 |
+| Wuthering Waves | Game8 | 10 |
+| Zenless Zone Zero | Game8 | 12 |
+| Neverness to Everness | Game8 | 13 |
+| Arknights: Endfield | — | No usable source, see below |
+
+Game8 uses a different page template for almost every game — label/value detail tables, column
+tables, rowspan Start/End pairs — and four different date formats between them. One parser handles
+all of it; each game costs a registry entry.
 
 **Endfield has no adapter on purpose.** Its Game8 page carries no usable dates: every duration reads
 "Permanently Available", and the schedule is an image grid showing `07/16` with no year and no end
 date. Supporting it would mean inventing both. It needs a different source.
 
-Honkai: Star Rail, Zenless Zone Zero, Wuthering Waves and Arknights are defined in the schema and
-awaiting sources.
+Arknights is defined in the schema and awaiting a source.
 
 ## Adding a source
 
@@ -99,6 +106,14 @@ awaiting sources.
    passing test only proves the parser agrees with a file you wrote yourself.
 
 Full walkthrough in `docs/INGESTION.md`, or run the `add-game-source` skill.
+
+## Offline
+
+The app works with no network. A service worker caches the shell and webfonts, and serves the last
+feed it downloaded when the network is gone — countdowns keep running off your device clock. Being
+offline is shown in the header and above the footer, because stale data must never look current.
+
+It installs to a home screen as a standalone app.
 
 ## Conduct
 
