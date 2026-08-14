@@ -9,7 +9,7 @@ import {
   parseSlashDateTimeRange,
   type ParsedInstant,
 } from "../dates.ts";
-import { assertFlatTables, scanDocument } from "../html.ts";
+import { assertFlatTables, scanDocument, type DocNode } from "../html.ts";
 import type { ParseContext } from "../adapters/types.ts";
 import type { SourceParser } from "./types.ts";
 
@@ -84,7 +84,10 @@ export function parseGame8EventsPage(
   let sectionIncluded = false;
   let currentTitle: string | null = null;
 
-  for (const node of nodes) {
+  for (let i = 0; i < nodes.length; i += 1) {
+    const node = nodes[i];
+    if (node === undefined) continue;
+
     // Sections are marked by h2 on some pages and h3 on others, so inclusion is
     // tracked at whichever level actually names the section. A heading matching
     // neither list leaves the current state alone — it is an event name.
@@ -102,7 +105,7 @@ export function parseGame8EventsPage(
       continue;
     }
 
-    if (!sectionIncluded) continue;
+    if (!sectionIncluded || node.kind !== "table") continue;
 
     const fromColumns = readColumnTable(node.rows);
     if (fromColumns.length > 0) {
@@ -114,13 +117,37 @@ export function parseGame8EventsPage(
     const dates = readLabelledDates(node.pairs);
     if (dates === null) continue;
 
-    candidates.push({ title: currentTitle, summary: null, ...dates });
+    candidates.push({
+      title: currentTitle,
+      // Detail tables carry no description column, but the page follows them
+      // with a sentence of prose. That sentence is the event blurb.
+      summary: summaryAfter(nodes, i),
+      ...dates,
+    });
     // One dated table per heading; ignore follow-on reward tables until the
     // next heading.
     currentTitle = null;
   }
 
   return dedupe(candidates.map((c) => toEvent(c, ctx)));
+}
+
+/**
+ * The event blurb that follows a detail table.
+ *
+ * Scans forward only to the next heading or table, so a description never
+ * leaks from one event onto another. Call-to-action paragraphs ("… Event
+ * Guide") are skipped — they are navigation, not description.
+ */
+function summaryAfter(nodes: DocNode[], from: number): string | null {
+  for (let i = from + 1; i < nodes.length; i += 1) {
+    const node = nodes[i];
+    if (node === undefined) break;
+    if (node.kind !== "p") break;
+    if (node.isButton || node.text.length === 0) continue;
+    return node.text.slice(0, 500);
+  }
+  return null;
 }
 
 /** Shape 1: `Event Start` / `Event End` / `Availability Period` rows. */

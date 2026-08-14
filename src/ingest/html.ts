@@ -51,10 +51,22 @@ export interface TableNode {
   rows: string[][];
 }
 
+export interface ParagraphNode {
+  kind: "p";
+  text: string;
+  /**
+   * True when the paragraph is really a call-to-action link rather than prose.
+   * Game8 wraps its "… Event Guide" buttons in the same paragraph class as body
+   * copy, so callers need to tell them apart.
+   */
+  isButton: boolean;
+}
+
 export type DocNode =
   | { kind: "h2"; text: string }
   | { kind: "h3"; text: string }
-  | TableNode;
+  | TableNode
+  | ParagraphNode;
 
 /**
  * Walk a document in source order, yielding h2/h3 headings and tables.
@@ -66,16 +78,19 @@ export function scanDocument(rawHtml: string): DocNode[] {
   const html = rawHtml.replace(/<!--[\s\S]*?-->/g, "").replace(/\s+/g, " ");
   const nodes: DocNode[] = [];
 
-  const re = /<h2\b[^>]*>([\s\S]*?)<\/h2>|<h3\b[^>]*>([\s\S]*?)<\/h3>|<table\b[^>]*>([\s\S]*?)<\/table>/gi;
+  const re =
+    /<h2\b[^>]*>([\s\S]*?)<\/h2>|<h3\b[^>]*>([\s\S]*?)<\/h3>|<table\b[^>]*>([\s\S]*?)<\/table>|<p\b[^>]*>([\s\S]*?)<\/p>/gi;
 
   for (const m of html.matchAll(re)) {
-    const [, h2, h3, table] = m;
+    const [whole, h2, h3, table, p] = m;
     if (h2 !== undefined) {
       nodes.push({ kind: "h2", text: text(h2) });
     } else if (h3 !== undefined) {
       nodes.push({ kind: "h3", text: text(h3) });
     } else if (table !== undefined) {
       nodes.push(readTable(table));
+    } else if (p !== undefined) {
+      nodes.push({ kind: "p", text: text(p), isButton: /a-btn/.test(whole) });
     }
   }
 
