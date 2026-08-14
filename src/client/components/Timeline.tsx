@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { gameMeta } from "../../shared/games.ts";
 import type { GameId } from "../../shared/schema.ts";
 import { DAY } from "../../shared/time.ts";
@@ -11,6 +12,12 @@ const DAY_WIDTH = 13; // px per day — dense enough to see a patch cycle at onc
  * rather than merging with the border.
  */
 const HALF_DAY_LEAD = 12 * 60 * 60 * 1000;
+
+/**
+ * How far back the view can be scrolled beyond the oldest running event, so
+ * "when did this start?" is answerable without the window being unbounded.
+ */
+const PAST_LEAD = 7 * DAY;
 
 /**
  * One lane per game, bars spanning start→end, today pinned as a rule.
@@ -30,6 +37,31 @@ export function Timeline({
   onOpen: (id: string) => void;
   completions: Record<string, unknown>;
 }) {
+  const scroller = useRef<HTMLDivElement>(null);
+
+  const ends = rows.map((r) => r.clock.endsMs ?? r.clock.startsMs + 14 * DAY);
+  const starts = rows.map((r) => r.clock.startsMs);
+
+  // The window covers the past too, so a reader can scroll back to see when a
+  // running event began — but it *opens* scrolled to now, because that is what
+  // they came for. Rendering from the earliest start alone buried today
+  // off-screen; clamping to now made the past unreachable. This does both.
+  const min = Math.min(...starts, now) - PAST_LEAD;
+  const max = Math.max(...ends, now) + 2 * DAY;
+  // Where "now" sits, so the container can be scrolled there on open.
+  const nowOffset = ((now - HALF_DAY_LEAD - min) / DAY) * DAY_WIDTH;
+  const totalDays = Math.ceil((max - min) / DAY);
+  const width = totalDays * DAY_WIDTH;
+  const x = (ms: number) => ((ms - min) / DAY) * DAY_WIDTH;
+
+  // Open at today rather than at the far past. Keyed on the rounded offset so
+  // it runs when the range changes, not every second — re-scrolling on each
+  // tick would fight the reader's own scrolling.
+  const openAt = Math.round(nowOffset);
+  useEffect(() => {
+    scroller.current?.scrollTo({ left: openAt, behavior: "instant" });
+  }, [openAt]);
+
   if (rows.length === 0) {
     return (
       <p className="px-4 py-10 text-sm text-muted">
@@ -37,17 +69,6 @@ export function Timeline({
       </p>
     );
   }
-
-  const ends = rows.map((r) => r.clock.endsMs ?? r.clock.startsMs + 14 * DAY);
-  // The window opens at now. Events that began earlier are clipped at the left
-  // edge rather than pushing the view back weeks — what already happened is not
-  // what the reader is here for, and starting at the earliest start buries
-  // today off-screen.
-  const min = now - HALF_DAY_LEAD;
-  const max = Math.max(...ends, now) + 2 * DAY;
-  const totalDays = Math.ceil((max - min) / DAY);
-  const width = totalDays * DAY_WIDTH;
-  const x = (ms: number) => ((ms - min) / DAY) * DAY_WIDTH;
 
   const byGame = new Map<GameId, RowEvent[]>();
   for (const row of rows) {
@@ -57,7 +78,7 @@ export function Timeline({
   const monthTicks = monthBoundaries(min, max);
 
   return (
-    <div className="scroll-x">
+    <div ref={scroller} className="scroll-x">
       <div style={{ width, minWidth: "100%" }} className="relative px-4 pb-8 pt-3">
         {/* Month rule, so a bar's absolute position means something. */}
         <div className="relative mb-3 h-4 border-b border-hairline">
@@ -91,8 +112,10 @@ export function Timeline({
                 <div className="relative h-auto space-y-1">
                   {events.map(({ event, clock }) => {
                     const unknownEnd = clock.endsMs === null;
-                    // Already running when the view opens: clip to the edge and
-                    // say so, the same way an unknown end frays on the right.
+                    // Only clipped if it began before the rendered window,
+                    // which now reaches a week past the oldest running event —
+                    // so in practice bars show their real start and the fade is
+                    // reserved for genuinely truncated ones.
                     const clippedStart = clock.startsMs < min;
                     const left = Math.max(x(clock.startsMs), 0);
                     const right = x(clock.endsMs ?? clock.startsMs + 14 * DAY);
