@@ -13,6 +13,7 @@
     "noFallthroughCasesInSwitch": true,
     "exactOptionalPropertyTypes": true,
     "skipLibCheck": true,
+    "jsx": "react-jsx",
     "verbatimModuleSyntax": true
   },
   "include": ["src", "test", "scripts"]

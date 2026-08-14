@@ -5,13 +5,25 @@
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "parse": "bun run scripts/parse-fixture.ts"
+    "parse": "bun run scripts/parse-fixture.ts",
+    "build:feed": "bun run scripts/build-feed.ts",
+    "build:css": "bunx @tailwindcss/cli -i src/client/styles.css -o public/styles.css --minify",
+    "build:js": "bun build src/client/main.tsx --outfile public/main.js --minify",
+    "build": "bun run build:feed && bun run build:css && bun run build:js && bun run build:html",
+    "dev": "bun run build && bunx serve public -l 3000",
+    "build:html": "cp index.html public/index.html"
   },
   "dependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
     "@types/bun": "^1.1.10",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "tailwindcss": "^4.3.3",
     "typescript": "^5.6.3"
   }
 }
