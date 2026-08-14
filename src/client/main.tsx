@@ -15,7 +15,8 @@ createRoot(root).render(
 // guarded because file:// and older browsers have no service worker at all.
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
   window.addEventListener("load", () => {
-    void navigator.serviceWorker.register("/sw.js").catch(() => {
+    const swUrl = new URL("sw.js", document.baseURI);
+    void navigator.serviceWorker.register(swUrl).catch(() => {
       // An unavailable worker costs offline support, nothing else. The app
       // works exactly as before.
     });

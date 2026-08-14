@@ -13,7 +13,10 @@ export type FeedState =
  * worse than one that asks you to reload.
  */
 export async function fetchFeed(signal?: AbortSignal): Promise<EventFeed> {
-  const res = await fetch("/data/events.v1.json", { signal: signal ?? null });
+  // Resolved against <base>, so this is correct at a domain root, under a
+  // GitHub Pages subpath, and on a deep link alike.
+  const feedUrl = new URL("data/events.v1.json", document.baseURI);
+  const res = await fetch(feedUrl, { signal: signal ?? null });
   if (!res.ok) {
     throw new Error(`Feed request failed (${res.status}).`);
   }

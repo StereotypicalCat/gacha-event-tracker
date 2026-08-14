@@ -11,7 +11,7 @@
     "build:js": "bun build src/client/main.tsx --outfile public/main.js --minify",
     "build": "bun run build:feed && bun run build:css && bun run build:js && bun run build:static",
     "dev": "bun run build && bun run serve.ts",
-    "build:static": "cp index.html public/index.html && cp src/client/sw.js public/sw.js && cp src/client/manifest.webmanifest public/manifest.webmanifest && cp src/client/icon.svg public/icon.svg",
+    "build:static": "mkdir -p public && sed \"s|__BASE__|${BASE_PATH:-/}|g\" index.html > public/index.html && cp src/client/sw.js public/sw.js && cp src/client/manifest.webmanifest public/manifest.webmanifest && cp src/client/icon.svg public/icon.svg",
     "serve": "bun run serve.ts"
   },
   "dependencies": {

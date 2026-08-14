@@ -148,10 +148,25 @@ so iteration never re-fetches. Every event links back to its source.
 
 ## CI
 
-`.gitlab-ci.yml` runs typecheck, tests and a feed sanity check on every push, then builds and
-publishes a container image from the default branch. The feed job fails if the event count collapses
-— a source that quietly stops yielding events is the failure mode a parser-only pipeline is most
-prone to, and nothing else surfaces it.
+Both `.github/workflows/ci.yml` and `.gitlab-ci.yml` run the same gates on every push — typecheck,
+tests, and a feed sanity check — then build and publish a container image from the default branch.
+GitHub Actions additionally deploys to Pages.
+
+The feed job fails if the event count collapses. A source that quietly stops yielding events is the
+failure mode a parser-only pipeline is most prone to, and nothing else would surface it. Everything
+runs offline against checked-in fixtures, so a red pipeline always means the code changed rather
+than a wiki being down.
+
+### Hosting under a subpath
+
+Assets resolve against a `<base href>` that the build substitutes, so the app works at a domain root
+and under a subpath alike:
+
+```bash
+BASE_PATH=/gacha-event-tracker/ bun run build
+```
+
+The Pages job sets this automatically. Without it, a subpath deploy 404s on every asset.
 
 ## Licence
 

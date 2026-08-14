@@ -15,8 +15,12 @@
  */
 
 const CACHE_VERSION = "event-clock-v1";
-const SHELL = ["/", "/index.html", "/styles.css", "/main.js"];
-const FEED = "/data/events.v1.json";
+// Paths are derived from the registration scope, so the same worker is
+// correct at a domain root and under a subpath (GitHub Pages) alike.
+const BASE = new URL("./", self.registration.scope);
+const at = (path) => new URL(path, BASE).toString();
+const SHELL = ["", "index.html", "styles.css", "main.js"].map(at);
+const FEED = new URL("data/events.v1.json", BASE).pathname;
 const FONT_HOSTS = new Set(["fonts.googleapis.com", "fonts.gstatic.com"]);
 
 self.addEventListener("install", (event) => {
