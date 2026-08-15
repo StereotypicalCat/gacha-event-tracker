@@ -17,7 +17,7 @@ import { useDailyLog, type DailyLogMap } from "./state/useDailyLog.ts";
 import { usePrefs } from "./state/usePrefs.ts";
 import { compareRows, SORT_MODES, type Activity, type SortMode } from "./state/sort.ts";
 import { clockFor, DAY, formatRemaining } from "../shared/time.ts";
-import { dailySummary, isDaily } from "../shared/daily.ts";
+import { dailySummary, isDaily, resolveDaily } from "../shared/daily.ts";
 import type { GameId } from "../shared/schema.ts";
 
 type View = "soon" | "calendar";
@@ -85,9 +85,16 @@ export function App() {
     return daily.daysFor(id).length > 0 ? "doing" : "idle";
   };
 
+  /**
+   * Whether an event repeats, the reader's own answer included. Detection reads
+   * the source's wording; they can overrule it either way.
+   */
+  const repeatsDaily = (row: RowEvent): boolean =>
+    resolveDaily(row.event, prog.progress[row.event.id]?.daily);
+
   /** Today's state for a repeating event, or undefined if it does not repeat. */
   const dailyBadge = (row: RowEvent): DailyBadge | undefined => {
-    if (!isDaily(row.event)) return undefined;
+    if (!repeatsDaily(row)) return undefined;
     const summary = dailySummary({
       startsMs: row.clock.startsMs,
       endsMs: row.clock.endsMs,
@@ -255,6 +262,7 @@ export function App() {
               that expires tonight rather than next patch. */}
           <Dailies
             games={games.filter((g) => !prefs.hiddenGames.includes(g))}
+            events={live.filter(repeatsDaily).map((r) => r.event)}
             region={prefs.region}
             now={now}
             daysFor={daily.daysFor}
@@ -386,7 +394,10 @@ export function App() {
           note={prog.progress[openRow.event.id]?.note ?? ""}
           region={prefs.region}
           now={now}
+          daily={repeatsDaily(openRow)}
+          detectedDaily={isDaily(openRow.event)}
           dailyDays={daily.daysFor(openRow.event.id)}
+          onDaily={prog.setDaily}
           onToggleDay={daily.toggleDay}
           onStatus={prog.setStatus}
           onEffort={prog.setEffort}

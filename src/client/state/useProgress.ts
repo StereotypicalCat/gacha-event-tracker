@@ -9,6 +9,12 @@ export type Status = "doing" | "done";
 export interface Progress {
   status?: Status | undefined;
   effort?: Effort | undefined;
+  /**
+   * The reader's own answer to "does this repeat daily?", overriding what the
+   * source's wording implies. Absent means they have not said and detection
+   * stands — see resolveDaily in shared/daily.ts.
+   */
+  daily?: boolean | undefined;
   /** Anything the reader wants to remember about it. */
   note?: string | undefined;
   at: string;
@@ -42,6 +48,20 @@ function load(): ProgressMap {
   return seeded;
 }
 
+/**
+ * Nothing recorded, so not worth a row. Every field the reader can set has to
+ * be listed here: one left out means an event they marked *only* with that
+ * field gets silently dropped on the next write.
+ */
+function isEmpty(p: Progress): boolean {
+  return (
+    p.status === undefined &&
+    p.effort === undefined &&
+    p.daily === undefined &&
+    (p.note ?? "") === ""
+  );
+}
+
 export function useProgress() {
   const [progress, setProgress] = useState<ProgressMap>(load);
 
@@ -58,11 +78,7 @@ export function useProgress() {
       };
       // An entry with nothing recorded is not worth keeping; drop it so the
       // store stays a set of things the reader actually said something about.
-      if (
-        merged.status === undefined &&
-        merged.effort === undefined &&
-        (merged.note ?? "") === ""
-      ) {
+      if (isEmpty(merged)) {
         const { [id]: _removed, ...rest } = prev;
         return rest;
       }
@@ -88,11 +104,7 @@ export function useProgress() {
           status: next,
           at: new Date().toISOString(),
         };
-        if (
-          merged.status === undefined &&
-          merged.effort === undefined &&
-          (merged.note ?? "") === ""
-        ) {
+        if (isEmpty(merged)) {
           const { [id]: _removed, ...rest } = prev;
           return rest;
         }
@@ -100,6 +112,11 @@ export function useProgress() {
       });
     },
     [],
+  );
+
+  const setDaily = useCallback(
+    (id: string, daily: boolean | undefined) => patch(id, { daily }),
+    [patch],
   );
 
   const setEffort = useCallback(
@@ -125,5 +142,14 @@ export function useProgress() {
     });
   }, []);
 
-  return { progress, patch, setStatus, cycleStatus, setEffort, setNote, merge };
+  return {
+    progress,
+    patch,
+    setStatus,
+    cycleStatus,
+    setDaily,
+    setEffort,
+    setNote,
+    merge,
+  };
 }

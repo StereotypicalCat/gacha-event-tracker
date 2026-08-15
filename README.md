@@ -159,6 +159,11 @@ Repeating events are recognised from what the source actually printed — a logi
 wording like "daily", "check-in", "7-day". Nothing is assumed from a game's habits, and an event
 whose end was never announced gets a day count rather than a checklist of invented length.
 
+That guess is only a starting point. Open any event and you can say **it repeats daily** — the
+grind whose page never prints the word still gets a checklist — or dismiss one the wording caught
+by mistake. Anything you mark joins today's dailies at the top of the page, so ticking it off is one
+tap rather than a trip back into the event.
+
 ## Sorting
 
 Two orders, and the toggle sits with the list rather than in settings:

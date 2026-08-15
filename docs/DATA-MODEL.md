@@ -211,6 +211,7 @@ Namespaced, versioned, and small. Nothing here ever goes to the server.
 | `status` | `"doing"` \| `"done"` \| absent | Where they are with it |
 | `effort` | `"quick"` \| `"short"` \| `"long"` \| `"grind"` \| absent | How much work they reckon it is |
 | `note` | free text | Anything worth remembering |
+| `daily` | `true` \| `false` \| absent | Whether it repeats daily, overruling detection |
 
 An entry with none of the three set is deleted rather than kept, so the store stays a set of things
 the reader actually said something about.
@@ -255,6 +256,13 @@ a copy:
 Dailiness is derived from the published event — `type: "login"`, or wording like "daily",
 "check-in", "7-day" in the title or summary — and never from a game's habits or an event's length.
 It adds no schema field, so nothing about the feed contract or the event ID changes.
+
+**The reader overrules detection.** `progress.daily` records their answer and wins outright
+(`resolveDaily`); absent means they have not said, so detection stands. An override that merely
+agrees with detection is **not stored** (`dailyOverride`) — freezing today's guess into their data
+would stop a later parser improvement from ever reaching that event. This is the only field in
+`progress` that changes what the app *shows* rather than recording what the reader did, which is
+why it lives beside their other notes rather than in the feed.
 
 ### Migration from `completions`
 

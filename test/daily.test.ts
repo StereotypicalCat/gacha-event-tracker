@@ -2,11 +2,13 @@ import { describe, expect, test } from "bun:test";
 import {
   dailiesId,
   dailyDays,
+  dailyOverride,
   dailySummary,
   dayKey,
   isDaily,
   msUntilReset,
   nextResetMs,
+  resolveDaily,
   streakOf,
 } from "../src/shared/daily.ts";
 import { DAY, HOUR } from "../src/shared/time.ts";
@@ -53,6 +55,50 @@ describe("isDaily", () => {
       }),
     ).toBe(false);
     expect(isDaily({ ...base, type: "challenge", title: "Spiral Abyss" })).toBe(false);
+  });
+});
+
+describe("resolveDaily", () => {
+  const detected = { type: "login" as const, title: "Daily Check-In", summary: null };
+  const plain = { type: "story" as const, title: "Chapter Three", summary: null };
+
+  test("detection stands until the reader says otherwise", () => {
+    expect(resolveDaily(detected, undefined)).toBe(true);
+    expect(resolveDaily(plain, undefined)).toBe(false);
+  });
+
+  test("the reader can mark an event the source never called daily", () => {
+    // The case this exists for: a grind whose page never prints the word, but
+    // which the player knows resets every day.
+    expect(resolveDaily(plain, true)).toBe(true);
+  });
+
+  test("the reader can unmark a false positive", () => {
+    // A banner whose blurb happens to mention "daily login rewards" should not
+    // be stuck with a twenty-box checklist the reader cannot dismiss.
+    expect(resolveDaily(detected, false)).toBe(false);
+  });
+});
+
+describe("dailyOverride", () => {
+  test("agreeing with detection records nothing", () => {
+    // Storing "yes" on an event already detected as daily would freeze today's
+    // guess into the reader's data, so a later parser fix could never reach it.
+    expect(dailyOverride(true, true)).toBeUndefined();
+    expect(dailyOverride(false, false)).toBeUndefined();
+  });
+
+  test("disagreeing with detection records the disagreement", () => {
+    expect(dailyOverride(true, false)).toBe(true);
+    expect(dailyOverride(false, true)).toBe(false);
+  });
+
+  test("round-trips: overriding then changing back leaves no trace", () => {
+    const detectedDaily = false;
+    const on = dailyOverride(true, detectedDaily);
+    expect(resolveDaily({ type: "story", title: "x", summary: null }, on)).toBe(true);
+    const off = dailyOverride(false, detectedDaily);
+    expect(off).toBeUndefined();
   });
 });
 

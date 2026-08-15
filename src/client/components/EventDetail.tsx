@@ -6,7 +6,7 @@ import { pressure, pressureReason, type Effort } from "../../shared/effort.ts";
 import type { Status } from "../state/useProgress.ts";
 import { ProgressControls } from "./ProgressControls.tsx";
 import { DailyChecklist } from "./DailyChecklist.tsx";
-import { isDaily } from "../../shared/daily.ts";
+import { dailyOverride } from "../../shared/daily.ts";
 import type { Region } from "../../shared/schema.ts";
 import { Meter, URGENCY_COLOR } from "./Meter.tsx";
 
@@ -19,7 +19,10 @@ export function EventDetail({
   note,
   region,
   now,
+  daily,
+  detectedDaily,
   dailyDays,
+  onDaily,
   onToggleDay,
   onToggle,
   onIgnore,
@@ -36,8 +39,13 @@ export function EventDetail({
   note: string;
   region: Region;
   now: number;
+  /** Whether to treat this as repeating, the reader's answer included. */
+  daily: boolean;
+  /** What the source's wording implies, so an override can fall back to it. */
+  detectedDaily: boolean;
   /** Days already ticked off, for events that repeat. */
   dailyDays: string[];
+  onDaily: (id: string, daily: boolean | undefined) => void;
   onToggleDay: (id: string, day: string) => void;
   onToggle: (id: string) => void;
   onIgnore: (id: string) => void;
@@ -132,16 +140,45 @@ export function EventDetail({
 
         {/* A repeating event gets the checklist instead of nothing but a
             "mark done" — its work is spread over every day of the run, and one
-            tick cannot express that. */}
-        {isDaily(event) && (
-          <DailyChecklist
-            startsMs={clock.startsMs}
-            endsMs={clock.endsMs}
-            region={region}
-            now={now}
-            logged={dailyDays}
-            onToggleDay={(day) => onToggleDay(event.id, day)}
-          />
+            tick cannot express that.
+
+            Detection reads the source's wording and is wrong in both
+            directions, so the reader can say. The control sits where the
+            checklist goes, which is the one place the answer visibly matters. */}
+        {daily ? (
+          <>
+            <DailyChecklist
+              startsMs={clock.startsMs}
+              endsMs={clock.endsMs}
+              region={region}
+              now={now}
+              logged={dailyDays}
+              onToggleDay={(day) => onToggleDay(event.id, day)}
+            />
+            <button
+              type="button"
+              onClick={() => onDaily(event.id, dailyOverride(false, detectedDaily))}
+              className="mt-2 text-xs text-faint transition-colors hover:text-muted"
+            >
+              This isn't a daily event
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onDaily(event.id, dailyOverride(true, detectedDaily))}
+            className="mt-5 flex w-full items-center gap-2.5 rounded-xl border border-dashed border-hairline px-4 py-3 text-left transition-colors hover:border-faint"
+          >
+            <span aria-hidden className="text-base leading-none text-faint">＋</span>
+            <span>
+              <span className="block text-sm font-medium">
+                It repeats daily
+              </span>
+              <span className="block text-xs leading-relaxed text-faint">
+                Track it day by day, and tick today off as you go.
+              </span>
+            </span>
+          </button>
         )}
 
         <ProgressControls

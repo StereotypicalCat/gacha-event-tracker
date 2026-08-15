@@ -76,6 +76,36 @@ export function dailiesId(game: GameId): string {
   return `dailies:${game}`;
 }
 
+/**
+ * Whether to treat an event as repeating, given what the reader said about it.
+ *
+ * Detection reads the source's wording, which is right most of the time and
+ * wrong in both directions: a grind event whose page never prints the word
+ * "daily" still wants a checklist, and a banner whose blurb mentions "daily
+ * login rewards" does not. The reader's own answer is the better evidence, so
+ * it wins outright — `undefined` means they have not said, so detection stands.
+ */
+export function resolveDaily(
+  event: DailyCandidate,
+  override: boolean | undefined,
+): boolean {
+  return override ?? isDaily(event);
+}
+
+/**
+ * What to store when the reader asks for `desired`.
+ *
+ * Agreeing with detection stores nothing: an override that merely repeats what
+ * the parser already worked out would freeze today's guess into the reader's
+ * data, so a later parser improvement could never reach that event.
+ */
+export function dailyOverride(
+  desired: boolean,
+  detected: boolean,
+): boolean | undefined {
+  return desired === detected ? undefined : desired;
+}
+
 /** Offset from UTC midnight to this region's reset instant. */
 function shift(region: Region): number {
   return REGION_RESET_UTC_OFFSET[region] * HOUR - RESET_HOUR_LOCAL * HOUR;
