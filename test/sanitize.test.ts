@@ -193,12 +193,19 @@ describe("sanitizeText — length", () => {
     const title = sanitizeText(long, { maxLength: LIMITS.title });
     expect(title.length).toBeLessThanOrEqual(LIMITS.title);
     expect(title.startsWith("Windblume")).toBe(true);
-    expect(title.endsWith("…")).toBe(true);
+    expect(title.endsWith("...")).toBe(true);
   });
 
   test("cuts at a word boundary when there is one", () => {
     const words = "Windblume Festival Returns To Mondstadt In Full Bloom";
-    expect(sanitizeText(words, { maxLength: 20 })).toBe("Windblume Festival…");
+    expect(sanitizeText(words, { maxLength: 30 })).toBe("Windblume Festival Returns...");
+  });
+
+  test("cuts mid-word rather than losing most of a tight cap", () => {
+    // With no space late enough to cut at, keeping the characters beats
+    // throwing half the value away to land on a boundary.
+    const words = "Windblume Festival Returns To Mondstadt In Full Bloom";
+    expect(sanitizeText(words, { maxLength: 20 })).toBe("Windblume Festiva...");
   });
 
   test("a value at the cap is left exactly as it is", () => {
@@ -216,6 +223,33 @@ describe("sanitizeText — length", () => {
 
     expect(GachaEvent.safeParse(event({ title: "a".repeat(LIMITS.title + 1) })).success).toBe(false);
     expect(GachaEvent.safeParse(event({ summary: "b".repeat(LIMITS.summary + 1) })).success).toBe(false);
+  });
+});
+
+describe("sanitizeText — truncation", () => {
+  // Prose, with spaces near the end: the shape that exposes the bug the
+  // over-long entry in HOSTILE missed, because that one has no space in its
+  // final 40% and so happened to re-cut to the identical string.
+  const prose = "Windblume Festival returns to Mondstadt with games and rewards ".repeat(6);
+
+  test("truncating twice changes nothing", () => {
+    // NFKC decomposes U+2026 into three dots, so an ellipsis character appended
+    // here would grow the string on the next pass and re-cut it at a different
+    // word boundary — quietly rewriting a title every time it was re-ingested.
+    const once = sanitizeText(prose, { maxLength: 190 });
+    expect(sanitizeText(once, { maxLength: 190 })).toBe(once);
+  });
+
+  test("stays within the cap it was given", () => {
+    for (const max of [12, 40, 190, LIMITS.title, LIMITS.summary]) {
+      expect(sanitizeText(prose, { maxLength: max }).length).toBeLessThanOrEqual(max);
+      // Astral characters truncate by code unit; the cap still holds.
+      expect(sanitizeText("𝔊".repeat(400), { maxLength: max }).length).toBeLessThanOrEqual(max);
+    }
+  });
+
+  test("marks the cut so a reader can see it is not the whole text", () => {
+    expect(sanitizeText(prose, { maxLength: 190 })).toEndWith("...");
   });
 });
 

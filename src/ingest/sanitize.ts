@@ -149,15 +149,26 @@ function collapse(input: string): string {
 function truncate(input: string, max: number): string {
   if (input.length <= max) return input;
 
-  let cut = input.slice(0, max - 1);
+  let cut = input.slice(0, max - ELLIPSIS.length);
   // Never end on half a surrogate pair.
   if (/[\uD800-\uDBFF]$/.test(cut)) cut = cut.slice(0, -1);
 
   const lastSpace = cut.lastIndexOf(" ");
   if (lastSpace > max * 0.6) cut = cut.slice(0, lastSpace);
 
-  return `${cut.replace(/[\s,;:.–—-]+$/, "")}…`;
+  return `${cut.replace(/[\s,;:.–—-]+$/, "")}${ELLIPSIS}`;
 }
+
+/**
+ * Three dots, not U+2026.
+ *
+ * NFKC decomposes the ellipsis character into these three anyway, so a "…"
+ * appended here would grow by two characters on the next pass and re-cut the
+ * string at a different word boundary — breaking the idempotency this module
+ * promises. Writing what normalisation would produce keeps the second pass a
+ * no-op.
+ */
+const ELLIPSIS = "...";
 
 export interface SanitizeTextOptions {
   /** Hard cap; the result is never longer. Defaults to the summary cap. */
