@@ -136,12 +136,23 @@ two real events were in a table further down.
 - Send `If-None-Match` / `If-Modified-Since` from `sources.etag` / `last_modified`. A `304` ends
   the run as `skipped_unchanged`.
 - `User-Agent: gacha-event-tracker/1.0 (+https://github.com/<owner>/gacha-event-tracker)`.
-- Honor `robots.txt`; cache parsed robots per host for 24h.
-- 20s timeout; retry twice with backoff on 5xx and network errors; never retry 4xx.
-- Store raw bytes in `snapshots`.
+- Honor `robots.txt`; cache parsed robots per host for 24h. **Fail closed** — a `robots.txt` that
+  5xxs or times out means "do not fetch", because a permission we could not read is not a
+  permission we have. A 404 means no restrictions.
+- 20s timeout. **No retries**: a retry is a second request, and CLAUDE.md § Scraping conduct says
+  one per source per cycle. A failed source waits for the next cycle instead.
+- Store raw bytes in `snapshots/<source-id>.html`, with hash/ETag/Last-Modified alongside it.
 
-On failure: increment `consecutive_failures`, leave published events untouched, end as `failed`. A
+On failure: increment the failure streak, leave published events untouched, end as `failed`. A
 source being down never mutates the feed.
+
+**Built: `scripts/refresh-sources.ts`** (`bun run refresh`), scheduled by
+`.github/workflows/refresh.yml`. It takes its adapters, store, robots gate, fetch and clock by
+injection, so the whole runner is tested offline against a fake fetch. A fetched body is *rejected*
+— the previous snapshot survives — when it fails `canParse`, throws, or yields zero events; storing
+an empty parse would make the feed build prefer it over the fixture and silently empty a game's
+calendar. One source down is a warning and exit 0; every source failing is exit 1, so CI never
+commits a cycle that learned nothing.
 
 ## Stage 2 — parse
 
@@ -159,6 +170,33 @@ bun run parse <adapter-id> fixtures/<game>/<source>-<date>.html
 no error — the parser simply matches nothing. Compare each run's `events_seen` against the previous
 run and flag a large drop. A source that went from 13 events to 2 has broken, not quieted down.
 This is the most likely real failure mode of a parser-only pipeline, and nothing else surfaces it.
+
+### Stage 2.5 — sanitize
+
+Everything a parser returns came from a page we do not control, and it is about to become React
+text, JSON on disk, a `localStorage` key and eventually a SQLite row. `src/ingest/sanitize.ts` is
+the trust boundary, applied in `toAdapter()`'s `parse` wrapper in `src/ingest/adapters/index.ts` —
+the one seam every source passes through, so a source added tomorrow is sanitized without its
+author doing anything and no parser can opt out. It runs after `canParse` and before validation.
+
+What it does: removes script/style/comment content and residual tags; decodes entities **to a fixed
+point** so `&amp;lt;script&amp;gt;` cannot resurrect as markup in a later decoder; NFKC-normalizes;
+strips control, zero-width and bidi-override characters (an RTL override visually spoofs a title);
+collapses whitespace; truncates to the schema's own caps at a word boundary; and requires
+`sourceUrl` to be absolute http(s), falling back to the source's registered URL rather than
+dropping the event.
+
+Three constraints it holds:
+
+- **It never touches a date.** Not a timestamp, not a precision, not `regionEnds`. Dates are the
+  product's promise and the sanitizer's job stops at prose and URLs.
+- **It cleans rather than drops.** The only drop is a title that sanitizes to nothing, and every
+  repair and drop emits a note whose default sink is `console.warn` — silence is not something a
+  future caller gets for free (§ Silent drops).
+- **It does not move event IDs.** An ID is recomputed only when sanitizing actually changed the
+  title *and* the incoming ID was minted the standard way. All seven fixtures pass through with
+  zero repairs and byte-identical output, which is the regression guard: IDs are localStorage keys
+  and moving one orphans a reader's marks with no server-side recovery.
 
 ## Stage 3 — merge
 

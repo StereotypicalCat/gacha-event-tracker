@@ -6,27 +6,33 @@ You play three or four gacha games. Each has its own calendar, none of them talk
 the only question that actually matters — *what runs out first?* — takes four browser tabs to
 answer. This does it in one screen.
 
-No account. No login. What you've finished, what you're partway through, and how much work you
-reckon each event is are saved in your browser and never leave your device.
+No account. No login. What you've finished, what you're partway through, how much work you reckon
+each event is, and which day of a daily you've ticked off are saved in your browser and never leave
+your device.
 
 ## Status
 
-Early, but usable. The parsing pipeline and the interface work end to end against checked-in
-fixtures, and the whole thing builds, serves, containerises and deploys. The database, refresh
-scheduler and review queue are specified but not built, so the feed is generated offline rather than
-refreshing itself.
+Usable, and it now keeps itself up to date. The parsing pipeline and the interface work end to end,
+a scheduled job refreshes the sources twice a day, and the whole thing builds, serves, containerises
+and deploys. The database and review queue are specified but not built.
 
 | Piece | State |
 |---|---|
 | Event schema, date parsing, Game8 parser | Built, tested |
 | Six game sources | Built, tested |
 | Cross-source merge and conflict detection | Built, tested |
-| Web interface, offline support, first-run picker | Built |
+| Input sanitization at the ingest boundary | Built, tested |
+| Scheduled refresh — robots, snapshots, commit-on-change | Built, tested offline |
+| Web interface, daily checklists, offline support | Built |
 | Static server, Docker image, GitHub + GitLab CI | Built |
-| SQLite, refresh scheduler, review queue | Specified in `docs/`, not built |
+| SQLite, review queue | Specified in `docs/`, not built |
 
-Today the feed is generated offline from fixtures. That is deliberate: it let the interface be built
-against real parsed data, and it produces exactly the shape the server will serve.
+The feed is still a static JSON file rather than a database read: the refresh job commits the raw
+pages it fetched, CI rebuilds the feed from them, and a clean checkout with no snapshots falls back
+to the checked-in fixtures — so the build stays offline and reproducible either way.
+
+The refresh runner is tested against a fake fetch, never a live wiki. Its first real run against
+game8.co and wiki.gg is unproven.
 
 ## Try it
 
@@ -53,7 +59,11 @@ reproducible and a wiki being down never breaks it.
 bun test                  # full suite, offline, no network
 bun run typecheck         # tsc --noEmit
 bun run build             # feed + css + js + html into public/
-bun run build:feed        # regenerate public/data/events.v1.json from fixtures
+bun run build:feed        # regenerate public/data/events.v1.json from snapshots, else fixtures
+
+# Fetch the sources. Makes real requests, so read "Conduct" first.
+bun run refresh --dry-run             # plan only: no requests, no writes
+bun run refresh --only genshin-game8-events
 
 # Run one source against its fixture and print what it yields
 bun run parse genshin-game8-events fixtures/genshin/game8-events-2026-08-14.html
@@ -63,11 +73,12 @@ bun run parse nte-game8-events     fixtures/nte/game8-events-2026-08-14.html --j
 ## How it works
 
 ```
-game wikis ──► fetch ──► parse ──► merge ──► validate ──► gate ──► feed ──► browser
-                          │          │                     │                  │
-                    per-site      per-game            hold anything    localStorage:
-                     parser      corroboration        uncertain for      what you've
-                                 and conflicts        human review        finished
+game wikis ─► fetch ─► parse ─► sanitize ─► merge ─► validate ─► gate ─► feed ─► browser
+               │         │         │          │                   │                 │
+          robots, 6h, per-site  untrusted  per-game        hold anything    localStorage:
+          conditional,  parser    text     corroboration   uncertain for   what you've done,
+           snapshots            bounded    and conflicts   human review    day by day if it
+                                                                            repeats daily
 ```
 
 **Parsers are deterministic code.** There is no LLM anywhere in the pipeline — no API key, no
@@ -126,6 +137,39 @@ Arknights is defined in the schema and awaiting a source.
 
 Full walkthrough in `docs/INGESTION.md`, or run the `add-game-source` skill.
 
+## Dailies
+
+Some things are not one job with a deadline. A login campaign is twenty small jobs on twenty
+separate deadlines, and a day you miss is gone whatever you do afterwards — which a single "done"
+tick cannot express.
+
+So events that repeat get a checklist instead: today's tick, a strip of every day in the run showing
+what you got and what you missed, your streak, and how many chances are left. Past days stay
+editable, because people tick up later and a checklist you can't correct stops being trusted after
+the first mistake.
+
+Alongside them sits **today's dailies** — commissions, sanity, daily training — one tick per game.
+No wiki publishes those, so they are a fixed list in the app rather than scraped data, and they are
+the only thing on the page that expires tonight rather than next patch.
+
+Both roll over at **04:00 server time** in your region, not midnight, because that is when the games
+roll over. Finishing at 02:00 still counts as yesterday.
+
+Repeating events are recognised from what the source actually printed — a login event type, or
+wording like "daily", "check-in", "7-day". Nothing is assumed from a game's habits, and an event
+whose end was never announced gets a day count rather than a checklist of invented length.
+
+## Sorting
+
+Two orders, and the toggle sits with the list rather than in settings:
+
+- **Ending soonest** — the default, and the reason this app exists.
+- **Doing first** — what you're partway through, floated to the top. Ticking a daily counts as
+  "doing it" without your having to say so twice.
+
+Sorting only ever *groups*. Deadline order survives inside every group, so choosing an order can
+never cost you the one thing you came for.
+
 ## Offline
 
 The app works with no network. A service worker caches the shell and webfonts, and serves the last
@@ -137,8 +181,13 @@ It installs to a home screen as a standalone app.
 ## Conduct
 
 Sources are community wikis, treated as a guest would: `robots.txt` honoured, a descriptive
-`User-Agent`, one request per source per six hours, conditional requests, and raw snapshots cached
-so iteration never re-fetches. Every event links back to its source.
+`User-Agent` with a contact URL, one request per source per six hours, conditional requests, and raw
+snapshots cached so iteration never re-fetches. Every event links back to its source.
+
+`bun run refresh` enforces all of that in code rather than leaving it to good intentions: the
+six-hour floor is checked per source, there are no retries (a retry is a second request), and a
+`robots.txt` that cannot be read means *do not fetch* rather than *assume yes*. Text scraped from a
+page is sanitized at the ingest boundary before it reaches the feed, the browser or your disk.
 
 ## Documentation
 
@@ -164,9 +213,26 @@ Until then the `pages` job is skipped and the pipeline stays green. Pages is una
 repositories on the free plan.
 
 The feed job fails if the event count collapses. A source that quietly stops yielding events is the
-failure mode a parser-only pipeline is most prone to, and nothing else would surface it. Everything
-runs offline against checked-in fixtures, so a red pipeline always means the code changed rather
-than a wiki being down.
+failure mode a parser-only pipeline is most prone to, and nothing else would surface it. Tests run
+offline against checked-in fixtures, so a red pipeline always means the code changed rather than a
+wiki being down.
+
+### Refreshing the data
+
+GitHub Actions only — the GitLab pipeline still runs the gates, but nothing there fetches.
+`.github/workflows/refresh.yml` runs `bun run refresh` twice a day (and on demand, with a dry-run
+input). It fetches each source at most once per cycle, and **commits only when a page's bytes
+actually changed** — a `304`, an identical body, or a fetch that fails to parse all leave the
+working tree clean and produce no commit. When something did change it commits the raw snapshots and
+dispatches `ci.yml`, which typechecks, tests, rebuilds the feed and deploys through the path that
+already existed; none of that logic is duplicated.
+
+A body that yields zero events is rejected and the previous snapshot kept, so a wiki redesign shows
+up as a stale timestamp rather than an empty calendar. One source being down is a warning; every
+source being down fails the run, so a bad cycle never gets committed.
+
+The schedule is off for forks (it is pinned to this repository) — a fork owner can still dispatch it
+by hand and take responsibility for the traffic.
 
 ### Hosting under a subpath
 

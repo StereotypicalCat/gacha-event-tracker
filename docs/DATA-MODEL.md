@@ -197,8 +197,9 @@ Namespaced, versioned, and small. Nothing here ever goes to the server.
 
 ```ts
 "gacha-tracker:v1:progress"     // { [eventId]: { status?, effort?, note?, at } }
+"gacha-tracker:v1:daily"        // { [id]: { days: ["2026-08-15", ...], at } }
 "gacha-tracker:v1:ignored"      // { [eventId]: { at } }  — "stop showing me this"
-"gacha-tracker:v1:prefs"        // { region, hiddenGames[], showCompleted, showIgnored,
+"gacha-tracker:v1:prefs"        // { region, hiddenGames[], sort, showCompleted, showIgnored,
                                 //   regionConfirmed, onboarded }
 "gacha-tracker:v1:completions"  // SUPERSEDED — read once to migrate, never written
 ```
@@ -224,6 +225,36 @@ about it would be fabricating the reader's own input.
 
 Ignores stay in a separate store because they mean something different: a done event is dimmed and
 still counted, an ignored one disappears from both views.
+
+### Daily checklists
+
+Some events are not one job with a deadline but twenty small jobs on twenty separate deadlines, and
+a missed day is gone whatever you do afterwards. `daily` records which game-days the reader ticked
+off, keyed by:
+
+- an **event ID**, for a repeating event in the feed (`src/shared/daily.ts` § `isDaily`), or
+- **`dailies:<game>`**, the standing per-game chore — commissions, sanity, daily training. No source
+  publishes these, so they are a fixed client-side list, never feed data. The two-segment shape
+  cannot collide with an event ID, which is always `game:slug:date`.
+
+Day keys are `YYYY-MM-DD` in **game-day space, not UTC**: gacha servers roll the day at 04:00 local
+server time, so a player finishing at 02:00 is still on the previous day's dailies, and the key is
+computed against the reader's chosen region (`RESET_HOUR_LOCAL`, `dayKey`). Keys sort
+lexicographically, which is what "how many days are left" and streak counting rely on.
+
+Three rules this store keeps, for the same reason the rest of the client does — nothing else holds
+a copy:
+
+- **A tick is never removed except by the reader.** Ticks that fall outside the window the feed now
+  claims still count; a source quietly moving a date must not erase a fortnight's streak.
+- **An unannounced end yields no checklist**, not a checklist of guessed length. `dailyDays` returns
+  null when `endsAt` is null, and the UI says how many days are ticked instead of how many are left.
+- **Past days stay editable.** People log in and tick up later, and a checklist that cannot be
+  corrected stops being trusted after the first mistake.
+
+Dailiness is derived from the published event — `type: "login"`, or wording like "daily",
+"check-in", "7-day" in the title or summary — and never from a game's habits or an event's length.
+It adds no schema field, so nothing about the feed contract or the event ID changes.
 
 ### Migration from `completions`
 
@@ -254,13 +285,19 @@ old key.
     "genshin:windblume-festival:2026-03-14": { "status": "done", "at": "..." },
     "hsr:garden-of-plenty:2026-08-14": { "status": "doing", "effort": "grind", "at": "..." }
   },
+  "daily": {
+    "endfield:bedazzling-dawnstar:2026-08-12": { "days": ["2026-08-13", "2026-08-14"], "at": "..." },
+    "dailies:genshin": { "days": ["2026-08-14", "2026-08-15"], "at": "..." }
+  },
   "ignored": { "zzz:some-event-i-skip:2026-08-19": { "at": "..." } },
-  "prefs": { "region": "europe", "hiddenGames": [], "onboarded": true }
+  "prefs": { "region": "europe", "hiddenGames": [], "sort": "ending", "onboarded": true }
 }
 ```
 
-Import **merges** both sets: a mark present in either the file or the current device survives, and
-import never removes one. Losing a user's marks to a bad import is unrecoverable, so the merge is
+Import **merges** every set: a mark present in either the file or the current device survives, and
+import never removes one. `daily` merges as a **union of days per ID** — every day either side
+recorded is a day the reader actually played. An export written before daily checklists existed
+simply has no `daily` key, which is not an error. Losing a user's marks to a bad import is unrecoverable, so the merge is
 deliberately one-directional. A file whose `format` is unrecognised is refused outright rather than
 partly applied.
 

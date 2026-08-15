@@ -5,12 +5,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 A web app that aggregates live and upcoming events across popular gacha games, plots them on a
-calendar, sorts them by end date, and lets a user mark events completed.
+calendar, sorts them by end date or by what the reader is partway through, tracks day-by-day
+progress on events that repeat daily, and lets a user mark events completed.
 
-**Status: working app, no live refresh.** Schema, two parsers, seven sources across six games, the
-full interface, offline support, a static server, a Docker image and CI all exist and are tested.
-The SQLite layer, the refresh scheduler and the review queue are specified in `docs/` but not built,
-so the feed is generated offline from checked-in fixtures.
+**Status: working app, refreshing itself on a schedule.** Schema, two parsers, seven sources across
+six games, the full interface, offline support, a static server, a Docker image and CI all exist and
+are tested. The refresh runner (`bun run refresh`) fetches, caches raw snapshots and rebuilds the
+feed; `.github/workflows/refresh.yml` runs it twice a day and commits only when a page actually
+changed. The SQLite layer and the review queue are still specified in `docs/` but not built, so the
+feed is a static JSON file built from snapshots, falling back to checked-in fixtures.
 
 ## Three constraints that shape everything
 
@@ -45,6 +48,11 @@ bun run typecheck             # tsc --noEmit
 bun run dev                   # build then serve on :3000
 bun run build                 # feed + css + js + static into public/
 
+# Fetch sources and refresh the snapshots. Makes real requests — see § Scraping
+# conduct before running it, and prefer --dry-run.
+bun run refresh --dry-run
+bun run refresh --only genshin-game8-events
+
 # Run one source against its fixture (offline, free)
 bun run parse genshin-game8-events fixtures/genshin/game8-events-2026-08-14.html
 bun run parse endfield-wikigg-events fixtures/endfield/wikigg-events-2026-08-15.html --json
@@ -67,18 +75,21 @@ re-verify a sample against the live page afterward.
 ## Current state of the code
 
 ```
-src/shared/       schema.ts (the contract), time.ts, games.ts, feed.ts
-src/ingest/       html.ts, dates.ts (six formats), merge.ts
+src/shared/       schema.ts (the contract), time.ts, daily.ts, effort.ts, games.ts, feed.ts
+src/ingest/       html.ts, dates.ts (six formats), merge.ts, sanitize.ts, robots.ts, snapshots.ts
   parsers/        game8.ts, wikigg.ts — keyed by SITE, not game
-  adapters/       index.ts — SOURCES registry binding url+game+parser
+  adapters/       index.ts — SOURCES registry binding url+game+parser, and the sanitize seam
 src/client/       React app, service worker, manifest
-scripts/          build-feed.ts, parse-fixture.ts (both offline)
+  state/          progress, daily log, ignores, prefs, sort — all localStorage
+scripts/          build-feed.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             112 tests
-fixtures/<game>/  raw HTML + .expected.json per source
+test/             257 tests
+fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
+snapshots/        current page per source, rewritten by refresh — see its README
 ```
 
-Not yet built: the SQLite layer, the ingest scheduler, the review UI.
+Not yet built: the SQLite layer and the review UI. Everything upstream of them runs as files on
+disk.
 
 ## Domain rules that are not obvious from the code
 
@@ -132,6 +143,18 @@ recovery**, because the server never had the data. If it must change, ship a cli
 that remaps old keys and keep it for at least a year. Use the **schema-guardian** agent on any such
 change.
 
+Two more key spaces have the same property, for the same reason:
+
+- **`dailies:<game>`** (`dailiesId` in `src/shared/daily.ts`) keys a game's standing daily chore.
+  Two segments, so it cannot collide with an event ID.
+- **Game-day keys** (`dayKey`) are `YYYY-MM-DD` in *server-reset space*, not UTC — the day rolls at
+  04:00 local server time. They are storage keys *and* they are compared with `<` and sorted, so the
+  format is fixed. Changing the reset hour or the offsets moves every reader's streak by a day.
+
+The sanitizer at the ingest boundary recomputes an event ID only when a sanitized title actually
+changed *and* the ID was minted the standard way. If a change to it starts moving IDs on real
+fixtures, that is a data-loss bug, not a diff to regenerate.
+
 ## Scraping conduct
 
 Sources are community wikis. Treat them as a guest would:
@@ -149,6 +172,35 @@ rate, and do not add an LLM that consumes page content.
 
 A source whose ToS forbids automated access does not get an adapter. Flag it and ask.
 
+`scripts/refresh-sources.ts` enforces all of the above in code — the 6h floor, one request, no
+retries, conditional headers, robots (failing closed when `robots.txt` cannot be read). Anything
+that would make it fetch more often is a change to this section first.
+
+## Untrusted input
+
+Every string on an event came from a page we do not control. `src/ingest/sanitize.ts` is the trust
+boundary and it is wired into `toAdapter()` in `src/ingest/adapters/index.ts`, which is the single
+seam every source passes through — **do not sanitize inside a parser**, and do not add a code path
+that reaches `parser.parse` directly. Parsers stay pure readers of one site's markup.
+
+The sanitizer never touches a date, cleans rather than drops (a title that sanitizes to nothing is
+the only drop), and logs every repair and drop by default. See `docs/INGESTION.md` § Stage 2.5.
+
+## Events that repeat daily
+
+Some events are twenty small jobs on twenty deadlines, not one job with an end date, and a missed
+day is unrecoverable. `src/shared/daily.ts` decides dailiness from what the source published —
+`type: "login"`, or "daily"/"check-in"/"7-day" wording — and never from a game's habits or an
+event's length. It adds **no schema field**, so the feed contract is untouched.
+
+- The day rolls at **04:00 server time** (`RESET_HOUR_LOCAL`), per region. Getting this wrong ticks
+  the wrong box for four hours every night.
+- **An unannounced end yields no checklist**, not a checklist of guessed length — the `endsAt: null`
+  rule applies here exactly as it does to a countdown.
+- **A tick is never removed except by the reader**, including ticks outside the window the feed now
+  claims. A source quietly moving a date must not erase a fortnight's streak that exists nowhere
+  else.
+
 ## Conventions
 
 - **Zod schemas are the single source of truth for types.** Derive with `z.infer<>`; never
@@ -156,4 +208,12 @@ A source whose ToS forbids automated access does not get an adapter. Flag it and
 - Every adapter ships a fixture in `fixtures/<game>/` and a test asserting parsed output. This is
   how a source silently changing shape gets caught.
 - Keep old fixtures when a source changes shape — the old one is the regression test proving the
-  parser still handles the previous format.
+  parser still handles the previous format. Fixtures are pinned and permanent; `snapshots/` is the
+  current page and gets overwritten. Do not conflate them.
+- **A list row is one target.** The event row opens the event and does nothing else — status,
+  effort, notes and the daily checklist all live in the detail sheet. A second control inside a
+  full-bleed row target is a mis-tap waiting to happen, and a decorative chevron says "this opens"
+  without adding a second stop for keyboard and screen-reader users.
+- **Sorting groups, it never reorders within a group.** Every mode falls back to
+  `endingSoonestFirst`, so choosing one can never cost the reader the deadline order the product
+  exists for.
