@@ -15,7 +15,8 @@ import { useMarkSet } from "./state/useMarkSet.ts";
 import { useProgress } from "./state/useProgress.ts";
 import { useDailyLog, type DailyLogMap } from "./state/useDailyLog.ts";
 import { usePrefs } from "./state/usePrefs.ts";
-import { clockFor, DAY, endingSoonestFirst, formatRemaining } from "../shared/time.ts";
+import { compareRows, SORT_MODES, type Activity, type SortMode } from "./state/sort.ts";
+import { clockFor, DAY, formatRemaining } from "../shared/time.ts";
 import { dailySummary, isDaily } from "../shared/daily.ts";
 import type { GameId } from "../shared/schema.ts";
 
@@ -69,6 +70,20 @@ export function App() {
   // "Completed" is now one status among several; the rest of the UI still asks
   // this question a lot, so keep a cheap shorthand.
   const isDone = (id: string) => prog.progress[id]?.status === "done";
+
+  /**
+   * How far into an event the reader is, for ordering only.
+   *
+   * Ticking a day off a repeating event counts as "doing it" without them
+   * having to also set the status — the tick already said so, and asking twice
+   * is how a sort ends up lying about what you were in the middle of.
+   */
+  const activityOf = (id: string): Activity => {
+    const status = prog.progress[id]?.status;
+    if (status === "done") return "done";
+    if (status === "doing") return "doing";
+    return daily.daysFor(id).length > 0 ? "doing" : "idle";
+  };
 
   /** Today's state for a repeating event, or undefined if it does not repeat. */
   const dailyBadge = (row: RowEvent): DailyBadge | undefined => {
@@ -128,12 +143,15 @@ export function App() {
         // — that is the whole point of ignoring one.
         .filter((r) => prefs.showIgnored || ignored.marks[r.event.id] === undefined)
         .filter((r) => prefs.showCompleted || !isDone(r.event.id))
-        .sort(endingSoonestFirst),
+        // Sorting only ever groups: both modes fall back to soonest-ending
+        // inside a group, so choosing one never costs the deadline order.
+        .sort(compareRows(prefs.sort, activityOf)),
     [
       allRows,
       prefs.hiddenGames,
       prefs.showCompleted,
       prefs.showIgnored,
+      prefs.sort,
       prog.progress,
       daily.logs,
       ignored.marks,
@@ -254,6 +272,14 @@ export function App() {
                     )}`
                   : undefined
               }
+              action={
+                visible.length > 1 ? (
+                  <SortControl
+                    value={prefs.sort}
+                    onChange={(sort) => update({ sort })}
+                  />
+                ) : undefined
+              }
             >
               {live.map((row) => (
                 <EventRow
@@ -272,7 +298,19 @@ export function App() {
           )}
 
           {upcoming.length > 0 && (
-            <Section title="Not started yet">
+            <Section
+              title="Not started yet"
+              // The ordering control lives with the first list on the page, so
+              // it is never missing when there is something to order.
+              action={
+                live.length === 0 && upcoming.length > 1 ? (
+                  <SortControl
+                    value={prefs.sort}
+                    onChange={(sort) => update({ sort })}
+                  />
+                ) : undefined
+              }
+            >
               {upcoming.map((row) => (
                 <EventRow
                   key={row.event.id}
@@ -374,22 +412,64 @@ function Section({
   title,
   hint,
   legend,
+  action,
   children,
 }: {
   title: string;
   hint?: string | undefined;
   legend?: boolean | undefined;
+  /** A control that belongs to this section, e.g. how it is ordered. */
+  action?: React.ReactNode | undefined;
   children: React.ReactNode;
 }) {
   return (
     <section className="pt-5">
       <div className="flex items-baseline justify-between gap-3 px-4 pb-2">
         <h2 className="eyebrow">{title}</h2>
-        {hint !== undefined && <p className="text-xs text-faint">{hint}</p>}
+        {action ?? (hint !== undefined && <p className="text-xs text-faint">{hint}</p>)}
       </div>
       {legend === true && <Legend />}
       <ul className="border-t border-hairline">{children}</ul>
     </section>
+  );
+}
+
+/**
+ * Order the list by deadline, or by what the reader is partway through.
+ *
+ * Sits in the list's own header rather than down in settings: ordering is a
+ * thing you reach for while looking at the list, not a preference you go and
+ * configure.
+ */
+function SortControl({
+  value,
+  onChange,
+}: {
+  value: SortMode;
+  onChange: (mode: SortMode) => void;
+}) {
+  return (
+    <div role="group" aria-label="Sort events" className="flex gap-1">
+      {SORT_MODES.map((mode) => {
+        const on = value === mode.id;
+        return (
+          <button
+            key={mode.id}
+            type="button"
+            onClick={() => onChange(mode.id)}
+            aria-pressed={on}
+            title={mode.hint}
+            className={`rounded-full border px-2.5 py-1 text-[0.6875rem] font-medium transition-colors ${
+              on
+                ? "border-ink/60 text-ink"
+                : "border-transparent text-faint hover:text-muted"
+            }`}
+          >
+            {mode.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
