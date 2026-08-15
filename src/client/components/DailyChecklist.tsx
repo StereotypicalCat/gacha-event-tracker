@@ -135,9 +135,14 @@ function DayPip({
 }) {
   const isToday = day === today;
   const isFuture = day > today;
+  // Rendered in UTC on purpose. A day key is a game-day, not an instant, and
+  // formatting it in the reader's own zone shifts it a day backwards for
+  // everyone west of UTC — so the pip would read "12" while the label a screen
+  // reader announces said "Aug 11".
   const label = new Date(`${day}T00:00:00Z`).toLocaleDateString(undefined, {
     day: "numeric",
     month: "short",
+    timeZone: "UTC",
   });
 
   return (
