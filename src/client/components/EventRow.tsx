@@ -14,11 +14,20 @@ export interface RowEvent {
   clock: EventClock;
 }
 
+/** What a repeating event needs to say in a list: today, and how many left. */
+export interface DailyBadge {
+  doneToday: boolean;
+  /** Days left including today. Null when the end is unannounced. */
+  remaining: number | null;
+}
+
 interface EventRowProps {
   row: RowEvent;
   completed: boolean;
   status?: Status | undefined;
   effort?: Effort | undefined;
+  /** Present only on events that repeat daily. */
+  daily?: DailyBadge | undefined;
   /** Only ever true when the reader has chosen to reveal ignored events. */
   ignored?: boolean | undefined;
   onRestore?: ((id: string) => void) | undefined;
@@ -30,6 +39,7 @@ export function EventRow({
   completed,
   status,
   effort,
+  daily,
   ignored = false,
   onRestore,
   onOpen,
@@ -102,8 +112,28 @@ export function EventRow({
             </span>
           </div>
 
-          {(status === "doing" || effort !== undefined || risk !== "fine") && (
+          {(status === "doing" ||
+            effort !== undefined ||
+            daily !== undefined ||
+            risk !== "fine") && (
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              {/* A repeating event's real deadline is tonight's reset, not the
+                  end date the countdown shows, so the row says both. */}
+              {daily !== undefined && (
+                <span
+                  className={`rounded-[3px] px-1.5 py-px text-[0.625rem] font-medium ${
+                    daily.doneToday
+                      ? "bg-near/15 text-near"
+                      : "bg-soon/15 text-soon"
+                  }`}
+                >
+                  {daily.doneToday
+                    ? "daily · done today"
+                    : daily.remaining === null
+                      ? "daily · not today"
+                      : `daily · ${daily.remaining} left`}
+                </span>
+              )}
               {status === "doing" && (
                 <span className="rounded-[3px] bg-near/15 px-1.5 py-px text-[0.625rem] font-medium text-near">
                   doing
@@ -158,8 +188,8 @@ export function EventRow({
             does not any more: "done" was never the only thing a reader wants
             to say about an event, and a tick they can hit by accident on the
             way to opening it is a bad trade. The row opens the sheet, where
-            status, effort and notes all live; this is just the affordance
-            saying so.
+            status, effort, notes and a daily checklist all live; this is just
+            the affordance saying so.
 
             The one exception is a revealed ignored row, where undo is a real
             action with nowhere better to sit. */}

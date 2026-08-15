@@ -5,6 +5,9 @@ import type { RowEvent } from "./EventRow.tsx";
 import { pressure, pressureReason, type Effort } from "../../shared/effort.ts";
 import type { Status } from "../state/useProgress.ts";
 import { ProgressControls } from "./ProgressControls.tsx";
+import { DailyChecklist } from "./DailyChecklist.tsx";
+import { isDaily } from "../../shared/daily.ts";
+import type { Region } from "../../shared/schema.ts";
 import { Meter, URGENCY_COLOR } from "./Meter.tsx";
 
 export function EventDetail({
@@ -14,6 +17,10 @@ export function EventDetail({
   status,
   effort,
   note,
+  region,
+  now,
+  dailyDays,
+  onToggleDay,
   onToggle,
   onIgnore,
   onStatus,
@@ -27,6 +34,11 @@ export function EventDetail({
   status: Status | undefined;
   effort: Effort | undefined;
   note: string;
+  region: Region;
+  now: number;
+  /** Days already ticked off, for events that repeat. */
+  dailyDays: string[];
+  onToggleDay: (id: string, day: string) => void;
   onToggle: (id: string) => void;
   onIgnore: (id: string) => void;
   onStatus: (id: string, s: Status | undefined) => void;
@@ -116,6 +128,20 @@ export function EventDetail({
             {pressureReason(effort, clock.msRemaining)} It is a rough guide, not a
             verdict — you know your own schedule.
           </p>
+        )}
+
+        {/* A repeating event gets the checklist instead of nothing but a
+            "mark done" — its work is spread over every day of the run, and one
+            tick cannot express that. */}
+        {isDaily(event) && (
+          <DailyChecklist
+            startsMs={clock.startsMs}
+            endsMs={clock.endsMs}
+            region={region}
+            now={now}
+            logged={dailyDays}
+            onToggleDay={(day) => onToggleDay(event.id, day)}
+          />
         )}
 
         <ProgressControls

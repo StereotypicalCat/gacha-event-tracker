@@ -18,6 +18,11 @@ export const KEYS = {
    */
   completions: `${NS}:completions`,
   progress: `${NS}:progress`,
+  /**
+   * Which game-days of a repeating event the reader has ticked off. Separate
+   * from `progress` because it is a growing list per event, not one record.
+   */
+  daily: `${NS}:daily`,
   ignored: `${NS}:ignored`,
   prefs: `${NS}:prefs`,
 } as const;

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchFeed, type FeedState } from "./api.ts";
 import { Controls } from "./components/Controls.tsx";
+import { Dailies } from "./components/Dailies.tsx";
 import { EventDetail } from "./components/EventDetail.tsx";
-import { EventRow, type RowEvent } from "./components/EventRow.tsx";
+import { EventRow, type DailyBadge, type RowEvent } from "./components/EventRow.tsx";
 import { NextUp } from "./components/NextUp.tsx";
 import { Timeline } from "./components/Timeline.tsx";
 import { Welcome } from "./components/Welcome.tsx";
@@ -12,8 +13,10 @@ import { Toast } from "./components/Toast.tsx";
 import { KEYS } from "./state/storage.ts";
 import { useMarkSet } from "./state/useMarkSet.ts";
 import { useProgress } from "./state/useProgress.ts";
+import { useDailyLog, type DailyLogMap } from "./state/useDailyLog.ts";
 import { usePrefs } from "./state/usePrefs.ts";
 import { clockFor, DAY, endingSoonestFirst, formatRemaining } from "../shared/time.ts";
+import { dailySummary, isDaily } from "../shared/daily.ts";
 import type { GameId } from "../shared/schema.ts";
 
 type View = "soon" | "calendar";
@@ -62,9 +65,23 @@ export function App() {
   const { prefs, update, toggleGame } = usePrefs();
   const ignored = useMarkSet(KEYS.ignored);
   const prog = useProgress();
+  const daily = useDailyLog();
   // "Completed" is now one status among several; the rest of the UI still asks
   // this question a lot, so keep a cheap shorthand.
   const isDone = (id: string) => prog.progress[id]?.status === "done";
+
+  /** Today's state for a repeating event, or undefined if it does not repeat. */
+  const dailyBadge = (row: RowEvent): DailyBadge | undefined => {
+    if (!isDaily(row.event)) return undefined;
+    const summary = dailySummary({
+      startsMs: row.clock.startsMs,
+      endsMs: row.clock.endsMs,
+      region: prefs.region,
+      now,
+      logged: daily.daysFor(row.event.id),
+    });
+    return { doneToday: summary.doneToday, remaining: summary.remaining };
+  };
 
   const toggleIgnored = (id: string, title: string) => {
     const wasIgnored = ignored.marks[id] !== undefined;
@@ -112,7 +129,15 @@ export function App() {
         .filter((r) => prefs.showIgnored || ignored.marks[r.event.id] === undefined)
         .filter((r) => prefs.showCompleted || !isDone(r.event.id))
         .sort(endingSoonestFirst),
-    [allRows, prefs.hiddenGames, prefs.showCompleted, prefs.showIgnored, prog.progress, ignored.marks],
+    [
+      allRows,
+      prefs.hiddenGames,
+      prefs.showCompleted,
+      prefs.showIgnored,
+      prog.progress,
+      daily.logs,
+      ignored.marks,
+    ],
   );
 
   const live = visible.filter((r) => r.clock.live);
@@ -208,6 +233,16 @@ export function App() {
         <>
           <NextUp row={next} onOpen={setOpenId} />
 
+          {/* The chores no wiki publishes, and the only thing on this page
+              that expires tonight rather than next patch. */}
+          <Dailies
+            games={games.filter((g) => !prefs.hiddenGames.includes(g))}
+            region={prefs.region}
+            now={now}
+            daysFor={daily.daysFor}
+            onToggleDay={daily.toggleDay}
+          />
+
           {live.length > 0 && (
             <Section
               legend
@@ -227,6 +262,7 @@ export function App() {
                   completed={isDone(row.event.id)}
                   status={prog.progress[row.event.id]?.status}
                   effort={prog.progress[row.event.id]?.effort}
+                  daily={dailyBadge(row)}
                   ignored={ignored.marks[row.event.id] !== undefined}
                   onRestore={(id) => ignored.toggle(id)}
                   onOpen={setOpenId}
@@ -244,6 +280,7 @@ export function App() {
                   completed={isDone(row.event.id)}
                   status={prog.progress[row.event.id]?.status}
                   effort={prog.progress[row.event.id]?.effort}
+                  daily={dailyBadge(row)}
                   ignored={ignored.marks[row.event.id] !== undefined}
                   onRestore={(id) => ignored.toggle(id)}
                   onOpen={setOpenId}
@@ -269,8 +306,12 @@ export function App() {
         onToggleGame={toggleGame}
         onUpdate={update}
         ignoredCount={Object.keys(ignored.marks).length}
-        onExport={() => exportProgress(prog.progress, ignored.marks, prefs)}
-        onImport={(file) => void importProgress(file, prog.merge, ignored.merge)}
+        onExport={() =>
+          exportProgress(prog.progress, daily.logs, ignored.marks, prefs)
+        }
+        onImport={(file) =>
+          void importProgress(file, prog.merge, daily.merge, ignored.merge)
+        }
       />
 
       {!online && (
@@ -305,6 +346,10 @@ export function App() {
           status={prog.progress[openRow.event.id]?.status}
           effort={prog.progress[openRow.event.id]?.effort}
           note={prog.progress[openRow.event.id]?.note ?? ""}
+          region={prefs.region}
+          now={now}
+          dailyDays={daily.daysFor(openRow.event.id)}
+          onToggleDay={daily.toggleDay}
           onStatus={prog.setStatus}
           onEffort={prog.setEffort}
           onNote={prog.setNote}
@@ -350,6 +395,7 @@ function Section({
 
 function exportProgress(
   progress: Record<string, unknown>,
+  daily: DailyLogMap,
   ignored: Record<string, { at: string }>,
   prefs: unknown,
 ) {
@@ -361,6 +407,9 @@ function exportProgress(
           version: 1,
           exportedAt: new Date().toISOString(),
           progress,
+          // Streaks live nowhere else — not on a server, not in the feed — so
+          // an export that omitted them would quietly be a lossy backup.
+          daily,
           ignored,
           prefs,
         },
@@ -381,6 +430,7 @@ function exportProgress(
 async function importProgress(
   file: File,
   mergeProgress: (c: Record<string, { at: string }>) => void,
+  mergeDaily: (c: DailyLogMap) => void,
   mergeIgnored: (c: Record<string, { at: string }>) => void,
 ) {
   try {
@@ -389,6 +439,7 @@ async function importProgress(
       format?: string;
       progress?: unknown;
       completions?: unknown;
+      daily?: unknown;
       ignored?: unknown;
     };
     if (data.format !== "gacha-tracker-export") {
@@ -412,6 +463,10 @@ async function importProgress(
         ),
       );
     }
+    // An export written before daily checklists existed simply has no `daily`
+    // key; that is not an error, it just leaves the streaks it never held.
+    const d = data.daily;
+    if (typeof d === "object" && d !== null) mergeDaily(d as DailyLogMap);
     if (i !== null) mergeIgnored(i);
   } catch {
     alert("That file couldn't be read. Export a fresh copy and try again.");

@@ -104,8 +104,9 @@ export function Controls({
       <div className="mt-6 border-t border-hairline pt-4">
         <p className="eyebrow">Your progress</p>
         <p className="mt-1.5 max-w-md text-xs leading-relaxed text-faint">
-          Completed events are saved in this browser only — there is no account.
-          Move them to another device with a file.
+          What you've finished, and every daily you've ticked off, are saved in
+          this browser only — there is no account. Move them to another device
+          with a file.
         </p>
         <div className="mt-3 flex gap-2">
           <button
