@@ -260,12 +260,7 @@ export function App() {
           )}
         </>
       ) : (
-        <Timeline
-          rows={visible}
-          now={now}
-          onOpen={setOpenId}
-          completions={prog.progress}
-        />
+        <Timeline rows={visible} now={now} onOpen={setOpenId} isDone={isDone} />
       )}
 
       <Controls

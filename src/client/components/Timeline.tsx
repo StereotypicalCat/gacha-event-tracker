@@ -30,12 +30,17 @@ export function Timeline({
   rows,
   now,
   onOpen,
-  completions,
+  isDone,
 }: {
   rows: RowEvent[];
   now: number;
   onOpen: (id: string) => void;
-  completions: Record<string, unknown>;
+  /**
+   * Asked rather than derived from the progress store: an entry exists there
+   * the moment a reader records an effort or a note, and dimming a bar for
+   * that would say "finished" about something they have not started.
+   */
+  isDone: (id: string) => boolean;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
 
@@ -119,7 +124,7 @@ export function Timeline({
                     const clippedStart = clock.startsMs < min;
                     const left = Math.max(x(clock.startsMs), 0);
                     const right = x(clock.endsMs ?? clock.startsMs + 14 * DAY);
-                    const done = completions[event.id] !== undefined;
+                    const done = isDone(event.id);
                     return (
                       <button
                         key={event.id}
