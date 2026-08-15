@@ -1,5 +1,7 @@
 .git
-.github
+# .github is NOT ignored: the test suite asserts on the refresh workflows, and
+# the image build runs that suite as its gate. It reaches the build stage only —
+# the runtime stage copies nothing but public/ and serve.ts.
 .gitlab-ci.yml
 node_modules
 public
