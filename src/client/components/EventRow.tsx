@@ -21,7 +21,6 @@ interface EventRowProps {
   effort?: Effort | undefined;
   /** Only ever true when the reader has chosen to reveal ignored events. */
   ignored?: boolean | undefined;
-  onToggle: (id: string) => void;
   onRestore?: ((id: string) => void) | undefined;
   onOpen: (id: string) => void;
 }
@@ -32,7 +31,6 @@ export function EventRow({
   status,
   effort,
   ignored = false,
-  onToggle,
   onRestore,
   onOpen,
 }: EventRowProps) {
@@ -156,9 +154,15 @@ export function EventRow({
           </div>
         </div>
 
-        {/* Sits above the row target so ticking done never opens the sheet.
-            On a revealed ignored row this becomes the undo, which is the most
-            direct place to put it. */}
+        {/* The trailing control used to tick an event done from the list. It
+            does not any more: "done" was never the only thing a reader wants
+            to say about an event, and a tick they can hit by accident on the
+            way to opening it is a bad trade. The row opens the sheet, where
+            status, effort and notes all live; this is just the affordance
+            saying so.
+
+            The one exception is a revealed ignored row, where undo is a real
+            action with nowhere better to sit. */}
         {ignored && onRestore !== undefined ? (
           <button
             type="button"
@@ -178,30 +182,39 @@ export function EventRow({
             </svg>
           </button>
         ) : (
-        <button
-          type="button"
-          onClick={() => onToggle(event.id)}
-          aria-pressed={completed}
-          aria-label={
-            completed ? `Mark ${event.title} not done` : `Mark ${event.title} done`
-          }
-          className={`row-check pointer-events-auto relative z-20 grid size-7 shrink-0 cursor-pointer place-items-center self-center rounded-md border ${
-            completed
-              ? "border-transparent bg-near/20 text-near"
-              : "border-hairline text-faint"
-          }`}
-        >
-          <svg viewBox="0 0 16 16" className="size-3.5" aria-hidden>
-            <path
-              d="M2.5 8.5l3.5 3.5 7.5-8"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
+          // Decorative: the full-bleed button behind the row is already the
+          // control, and a second one with the same effect would just be an
+          // extra stop for anyone tabbing or using a screen reader.
+          <span
+            aria-hidden
+            className={`row-check row-open grid size-7 shrink-0 place-items-center self-center rounded-md ${
+              completed ? "text-near" : "text-faint"
+            }`}
+          >
+            {completed ? (
+              <svg viewBox="0 0 16 16" className="size-3.5">
+                <path
+                  d="M2.5 8.5l3.5 3.5 7.5-8"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 16 16" className="size-3.5">
+                <path
+                  d="M6 3l5 5-5 5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            )}
+          </span>
         )}
       </div>
     </li>

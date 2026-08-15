@@ -228,7 +228,6 @@ export function App() {
                   status={prog.progress[row.event.id]?.status}
                   effort={prog.progress[row.event.id]?.effort}
                   ignored={ignored.marks[row.event.id] !== undefined}
-                  onToggle={toggle}
                   onRestore={(id) => ignored.toggle(id)}
                   onOpen={setOpenId}
                 />
@@ -246,7 +245,6 @@ export function App() {
                   status={prog.progress[row.event.id]?.status}
                   effort={prog.progress[row.event.id]?.effort}
                   ignored={ignored.marks[row.event.id] !== undefined}
-                  onToggle={toggle}
                   onRestore={(id) => ignored.toggle(id)}
                   onOpen={setOpenId}
                 />

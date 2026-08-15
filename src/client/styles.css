@@ -176,6 +176,13 @@ body {
     border-color: var(--color-faint);
     color: var(--color-muted);
   }
+  /* The chevron leans towards where the row is about to take you. It is the
+     only thing left on the right of a row, so it has to carry "this opens"
+     on its own. */
+  .event-row:hover .row-open {
+    transform: translateX(2px);
+    color: var(--color-ink);
+  }
   .row-check:hover {
     transform: scale(1.08);
     border-color: var(--color-muted);
@@ -212,6 +219,7 @@ body {
   }
   .row-check:hover,
   .row-check:active,
+  .event-row:hover .row-open,
   .event-row:hover .row-rail {
     transform: none;
   }
