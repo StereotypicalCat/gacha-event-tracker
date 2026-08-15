@@ -86,6 +86,26 @@ export function Controls({
             Show events I've finished
           </label>
 
+          {/* Detection reads the source's wording and is wrong in both
+              directions. Off leaves only the events the reader marked, and
+              discards nothing — every mark and logged day survives, so it can
+              be switched back on. */}
+          <label className="flex cursor-pointer select-none items-start gap-2 text-xs text-muted">
+            <input
+              type="checkbox"
+              checked={prefs.detectDaily}
+              onChange={(e) => onUpdate({ detectDaily: e.target.checked })}
+              className="mt-px size-4 accent-[var(--color-near)]"
+            />
+            <span>
+              Spot daily events automatically
+              <span className="mt-0.5 block max-w-xs leading-relaxed text-faint">
+                Off, only events you mark yourself get a checklist. Your ticks
+                and streaks are kept either way.
+              </span>
+            </span>
+          </label>
+
           {ignoredCount > 0 && (
             <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-muted">
               <input

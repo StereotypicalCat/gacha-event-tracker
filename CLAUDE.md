@@ -201,9 +201,10 @@ event's length. It adds **no schema field**, so the feed contract is untouched.
   claims. A source quietly moving a date must not erase a fortnight's streak that exists nowhere
   else.
 - **Detection is a default, not a verdict.** The reader can mark any event as repeating, or unmark
-  one detection got wrong (`progress.daily`, resolved by `resolveDaily`). Store an override only
-  when it *disagrees* with detection — recording agreement would freeze today's guess and stop a
-  better parser from ever reaching that event.
+  one detection got wrong (`progress.daily`, resolved by `resolveDaily`), and `prefs.detectDaily`
+  switches the guessing off entirely. Store an override only when it *disagrees* with detection —
+  recording agreement would freeze today's guess and stop a better parser from ever reaching that
+  event. Neither control ever deletes a mark or a logged day, so both are reversible.
 
 ## Conventions
 

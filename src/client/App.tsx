@@ -90,7 +90,11 @@ export function App() {
    * the source's wording; they can overrule it either way.
    */
   const repeatsDaily = (row: RowEvent): boolean =>
-    resolveDaily(row.event, prog.progress[row.event.id]?.daily);
+    resolveDaily(
+      row.event,
+      prog.progress[row.event.id]?.daily,
+      prefs.detectDaily,
+    );
 
   /** Today's state for a repeating event, or undefined if it does not repeat. */
   const dailyBadge = (row: RowEvent): DailyBadge | undefined => {
@@ -395,7 +399,7 @@ export function App() {
           region={prefs.region}
           now={now}
           daily={repeatsDaily(openRow)}
-          detectedDaily={isDaily(openRow.event)}
+          detectedDaily={prefs.detectDaily && isDaily(openRow.event)}
           dailyDays={daily.daysFor(openRow.event.id)}
           onDaily={prog.setDaily}
           onToggleDay={daily.toggleDay}

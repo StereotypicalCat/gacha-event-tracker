@@ -199,8 +199,8 @@ Namespaced, versioned, and small. Nothing here ever goes to the server.
 "gacha-tracker:v1:progress"     // { [eventId]: { status?, effort?, note?, at } }
 "gacha-tracker:v1:daily"        // { [id]: { days: ["2026-08-15", ...], at } }
 "gacha-tracker:v1:ignored"      // { [eventId]: { at } }  — "stop showing me this"
-"gacha-tracker:v1:prefs"        // { region, hiddenGames[], sort, showCompleted, showIgnored,
-                                //   regionConfirmed, onboarded }
+"gacha-tracker:v1:prefs"        // { region, hiddenGames[], sort, detectDaily, showCompleted,
+                                //   showIgnored, regionConfirmed, onboarded }
 "gacha-tracker:v1:completions"  // SUPERSEDED — read once to migrate, never written
 ```
 
@@ -257,8 +257,11 @@ Dailiness is derived from the published event — `type: "login"`, or wording li
 "check-in", "7-day" in the title or summary — and never from a game's habits or an event's length.
 It adds no schema field, so nothing about the feed contract or the event ID changes.
 
-**The reader overrules detection.** `progress.daily` records their answer and wins outright
-(`resolveDaily`); absent means they have not said, so detection stands. An override that merely
+**The reader overrules detection**, per event and globally. `progress.daily` records their answer
+for one event and wins outright (`resolveDaily`); absent means they have not said, so detection
+stands. `prefs.detectDaily` switches the guessing off altogether, leaving only events they marked
+themselves — it silences detection rather than deleting anything, so every mark and every logged day
+survives and switching it back on restores exactly what was there. An override that merely
 agrees with detection is **not stored** (`dailyOverride`) — freezing today's guess into their data
 would stop a later parser improvement from ever reaching that event. This is the only field in
 `progress` that changes what the app *shows* rather than recording what the reader did, which is

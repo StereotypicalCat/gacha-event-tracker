@@ -73,6 +73,15 @@ describe("resolveDaily", () => {
     expect(resolveDaily(plain, true)).toBe(true);
   });
 
+  test("detection can be switched off entirely", () => {
+    // The preference only silences the guess. Nothing the reader marked is
+    // affected, and no logged day is touched, so it is reversible.
+    expect(resolveDaily(detected, undefined, false)).toBe(false);
+    expect(resolveDaily(detected, true, false)).toBe(true);
+    expect(resolveDaily(plain, true, false)).toBe(true);
+    expect(resolveDaily(detected, undefined, true)).toBe(true);
+  });
+
   test("the reader can unmark a false positive", () => {
     // A banner whose blurb happens to mention "daily login rewards" should not
     // be stuck with a twenty-box checklist the reader cannot dismiss.

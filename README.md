@@ -161,7 +161,9 @@ whose end was never announced gets a day count rather than a checklist of invent
 
 That guess is only a starting point. Open any event and you can say **it repeats daily** — the
 grind whose page never prints the word still gets a checklist — or dismiss one the wording caught
-by mistake. Anything you mark joins today's dailies at the top of the page, so ticking it off is one
+by mistake. If you would rather it never guessed, **Spot daily events automatically** in the
+settings turns detection off and leaves only what you marked yourself; it discards nothing, so your
+ticks and streaks are still there if you turn it back on. Anything you mark joins today's dailies at the top of the page, so ticking it off is one
 tap rather than a trip back into the event.
 
 ## Sorting

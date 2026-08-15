@@ -84,12 +84,19 @@ export function dailiesId(game: GameId): string {
  * "daily" still wants a checklist, and a banner whose blurb mentions "daily
  * login rewards" does not. The reader's own answer is the better evidence, so
  * it wins outright — `undefined` means they have not said, so detection stands.
+ *
+ * `detect` is the reader's standing preference for guessing at all. Switching
+ * it off leaves only the events they marked themselves; it never touches a
+ * mark or a logged day, so switching it back on restores exactly what was
+ * there.
  */
 export function resolveDaily(
   event: DailyCandidate,
   override: boolean | undefined,
+  detect = true,
 ): boolean {
-  return override ?? isDaily(event);
+  if (override !== undefined) return override;
+  return detect && isDaily(event);
 }
 
 /**

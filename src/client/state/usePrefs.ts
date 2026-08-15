@@ -10,6 +10,12 @@ export interface Prefs {
   hiddenGames: GameId[];
   /** How the list is ordered. Deadline order is the default and the fallback. */
   sort: SortMode;
+  /**
+   * Whether to guess which events repeat daily from what the source printed.
+   * Off leaves only the ones the reader marked themselves; it never discards a
+   * mark or a logged day, so it is reversible.
+   */
+  detectDaily: boolean;
   showCompleted: boolean;
   /** Reveal events the reader has ignored, so they can be restored. */
   showIgnored: boolean;
@@ -24,6 +30,7 @@ function defaults(): Prefs {
     region: guessRegion(),
     hiddenGames: [],
     sort: "ending",
+    detectDaily: true,
     showCompleted: true,
     showIgnored: false,
     regionConfirmed: false,
