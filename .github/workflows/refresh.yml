@@ -67,7 +67,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: snapshots/*.state.json
-          key: refresh-state-${{ github.run_id }}
+          key: refresh-state-
           restore-keys: refresh-state-
 
       - name: Refresh
@@ -88,12 +88,16 @@ jobs:
           fi
           bun run refresh "${args[@]}"
 
+      # The key must differ every time this step runs. `run_id` is stable across
+      # re-runs, so a re-run's save hits an existing key, is skipped, and the
+      # next run restores the bookkeeping from before the re-run — records of
+      # requests we did make, lost. `run_attempt` increments per attempt.
       - name: Save refresh bookkeeping
         if: always()
         uses: actions/cache/save@v4
         with:
           path: snapshots/*.state.json
-          key: refresh-state-${{ github.run_id }}
+          key: refresh-state-${{ github.run_id }}-${{ github.run_attempt }}
 
       # git is the authority on "did anything change" — a 304, an unchanged
       # body, or a rejected parse all leave the working tree clean.
@@ -108,15 +112,40 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # A human push landing between the checkout and this push makes the push
+      # non-fast-forward. Failing there would throw away pages we have already
+      # fetched while the bookkeeping above (saved with `if: always()`) has
+      # already spent their six-hour budget — the wikis would be asked again for
+      # nothing. So rebase onto whatever landed and try again. Never force: this
+      # commit is only ever new files under snapshots/, so it has nothing to say
+      # about anyone else's work.
       - name: Commit refreshed snapshots
         if: steps.diff.outputs.changed == 'true' && inputs.dry_run != true
+        env:
+          BRANCH: ${{ github.ref_name }}
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -- snapshots
           git commit -m "chore(data): refresh source snapshots" \
             -m "Automated fetch from ${{ github.workflow }} run ${{ github.run_id }}."
-          git push
+
+          for attempt in 1 2 3; do
+            if git push origin "HEAD:$BRANCH"; then
+              exit 0
+            fi
+            echo "push rejected (attempt $attempt); rebasing onto origin/$BRANCH"
+            git fetch origin "$BRANCH"
+            if ! git rebase "origin/$BRANCH"; then
+              git rebase --abort || true
+              echo "::error::snapshot commit conflicts with $BRANCH; not force-pushing"
+              exit 1
+            fi
+            sleep $((attempt * 5))
+          done
+          echo "::error::could not push refreshed snapshots after 3 attempts"
+          exit 1
 
       # ci.yml owns typecheck, tests, the feed sanity check, the image and the
       # Pages deploy. Dispatching it is how the refreshed data reaches the site
