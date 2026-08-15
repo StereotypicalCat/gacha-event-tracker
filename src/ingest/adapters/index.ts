@@ -1,6 +1,7 @@
 import type { GachaEvent, GameId } from "../../shared/schema.ts";
 import { mergeEvents, type MergeResult } from "../merge.ts";
 import { parserById } from "../parsers/index.ts";
+import { sanitizeEvents } from "../sanitize.ts";
 import { SIX_HOURS_MS, type Adapter, type ParseContext } from "./types.ts";
 
 /**
@@ -90,7 +91,20 @@ function toAdapter(spec: SourceSpec): Adapter {
           `${spec.id}: document does not match the '${parser.label}' template; the source has likely been redesigned`,
         );
       }
-      return parser.parse(html, ctx);
+
+      // The trust boundary. Everything a parser produces came from a page we do
+      // not control, and this is the one place every source passes through:
+      // `ADAPTERS` is built from `SOURCES` via this function, so a source added
+      // tomorrow is sanitised without its author doing anything, and a parser
+      // cannot opt out. Sanitising here rather than inside the parsers also
+      // keeps parsers what they are — pure readers of one site's markup.
+      //
+      // `sanitizeEvents` logs to console.warn by default, so a repaired or
+      // dropped event is never silent (CLAUDE.md § Silent drops).
+      return sanitizeEvents(parser.parse(html, ctx), {
+        sourceId: ctx.sourceId,
+        fallbackUrl: ctx.sourceUrl,
+      }).events;
     },
   };
 }

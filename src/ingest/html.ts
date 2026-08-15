@@ -23,13 +23,27 @@ const ENTITIES: Record<string, string> = {
   rdquo: "”",
 };
 
+/**
+ * A numeric reference the page may or may not mean literally.
+ *
+ * Out-of-range and non-finite code points come back as the original text rather
+ * than throwing: `&#1114112;` and `&#x110000;` are junk a hostile or merely
+ * broken page can emit, and `String.fromCodePoint` throws RangeError on both.
+ * A parser crashing on one bad character would take a whole source's events
+ * down with it.
+ */
+function fromCodePoint(value: number, original: string): string {
+  if (!Number.isInteger(value) || value < 0 || value > 0x10ffff) return original;
+  return String.fromCodePoint(value);
+}
+
 export function decodeEntities(input: string): string {
   return input
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex: string) =>
-      String.fromCodePoint(parseInt(hex, 16)),
+    .replace(/&#x([0-9a-fA-F]+);/g, (whole, hex: string) =>
+      fromCodePoint(parseInt(hex, 16), whole),
     )
-    .replace(/&#(\d+);/g, (_, dec: string) =>
-      String.fromCodePoint(parseInt(dec, 10)),
+    .replace(/&#(\d+);/g, (whole, dec: string) =>
+      fromCodePoint(parseInt(dec, 10), whole),
     )
     .replace(/&([a-zA-Z]+);/g, (whole, name: string) => ENTITIES[name] ?? whole);
 }
