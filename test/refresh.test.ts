@@ -99,7 +99,7 @@ function options(
 async function seed(html: string, at: string, eventCount: number | null) {
   await store.save("genshin-game8-events", {
     url: "https://game8.co/games/Genshin-Impact/archives/301601",
-    html,
+    body: html,
     etag: 'W/"v1"',
     lastModified: "Fri, 14 Aug 2026 09:00:00 GMT",
     at,
@@ -370,6 +370,79 @@ describe("a source being down never blanks the feed", () => {
     expect(summary.outcomes[0]?.note).toContain("down from 10");
   });
 
+  test("a body that dies mid-read is one source's failure, not the cycle's", async () => {
+    // The headers arrive, then the connection resets. Read outside the try,
+    // that rejection escaped refreshOne and took the whole run with it: the
+    // sources after this one were never asked, no summary was printed, and
+    // this source's lastCheckedAt was never written — so the six-hour floor
+    // did not register a request we had already spent.
+    const { opts, calls } = options({
+      adapters: [
+        adapter(),
+        adapter({
+          id: "nte-game8-events",
+          game: "nte",
+          url: "https://game8.co/games/Neverness-to-Everness/archives/592073",
+        }),
+      ],
+      responder: (call) => {
+        if (!call.url.includes("Genshin")) {
+          return new Response("<html><event></event></html>");
+        }
+        return new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode("<html><event>"));
+              controller.error(new Error("ECONNRESET"));
+            },
+          }),
+          { status: 200 },
+        );
+      },
+    });
+
+    const summary = await runRefresh(opts);
+
+    expect(calls).toHaveLength(2);
+    expect(summary.outcomes[0]?.result).toBe("failed");
+    expect(summary.outcomes[0]?.note).toContain("body unreadable");
+    expect(summary.outcomes[1]?.result).toBe("fetched");
+    expect(summary.hardFailure).toBeNull();
+
+    // The request was spent, so it must be on the record.
+    const state = await store.readState("genshin-game8-events");
+    expect(state.lastCheckedAt).toBe(NOW.toISOString());
+    expect(state.consecutiveFailures).toBe(1);
+  });
+
+  test("an unforeseen error in one source does not abort the others", async () => {
+    // The robots gate itself blowing up is not something refreshOne guards;
+    // the loop's backstop is what keeps the remaining sources alive.
+    const { opts } = options({
+      adapters: [
+        adapter(),
+        adapter({
+          id: "nte-game8-events",
+          game: "nte",
+          url: "https://game8.co/games/Neverness-to-Everness/archives/592073",
+        }),
+      ],
+      robots: {
+        allows: async (url) => {
+          if (url.includes("Genshin")) throw new Error("robots cache exploded");
+          return { allowed: true, reason: "ok" };
+        },
+      },
+    });
+    const summary = await runRefresh(opts);
+
+    expect(summary.outcomes).toHaveLength(2);
+    expect(summary.outcomes[0]?.result).toBe("failed");
+    expect(summary.outcomes[0]?.note).toContain("unexpected error");
+    expect(summary.outcomes[1]?.result).toBe("fetched");
+    expect(summary.hardFailure).toBeNull();
+  });
+
   test("a feed that will not rebuild fails the run", async () => {
     const { opts } = options({
       rebuildFeed: async () => {
@@ -378,6 +451,121 @@ describe("a source being down never blanks the feed", () => {
     });
     const summary = await runRefresh(opts);
     expect(summary.hardFailure).toContain("feed rebuild failed");
+  });
+});
+
+describe("a page that is not UTF-8", () => {
+  // "<html><event>イベント</event></html>" with the title in Shift_JIS.
+  const SJIS_TITLE = [0x83, 0x43, 0x83, 0x78, 0x83, 0x93, 0x83, 0x67];
+  const body = new Uint8Array([
+    ...new TextEncoder().encode("<html><event>"),
+    ...SJIS_TITLE,
+    ...new TextEncoder().encode("</event></html>"),
+  ]);
+
+  test("is decoded with the charset the server declared", async () => {
+    const { opts } = options({
+      responder: () =>
+        new Response(body, {
+          status: 200,
+          headers: { "Content-Type": "text/html; charset=shift_jis" },
+        }),
+    });
+    const summary = await runRefresh(opts);
+    expect(summary.outcomes[0]?.result).toBe("fetched");
+
+    const snapshot = await store.read("genshin-game8-events");
+    // Read as UTF-8 this is U+FFFD soup, and mojibake in a title flows through
+    // slugify into the event ID, which is a localStorage key.
+    expect(snapshot?.html).toBe("<html><event>イベント</event></html>");
+    expect(snapshot?.html).not.toContain("�");
+  });
+
+  test("stores the bytes as served, so a re-decode is still possible", async () => {
+    const { opts } = options({
+      responder: () =>
+        new Response(body, {
+          status: 200,
+          headers: { "Content-Type": "text/html; charset=shift_jis" },
+        }),
+    });
+    await runRefresh(opts);
+
+    const onDisk = new Uint8Array(
+      await Bun.file(store.bodyPath("genshin-game8-events")).arrayBuffer(),
+    );
+    expect([...onDisk]).toEqual([...body]);
+    // `bytes` is the served length, which is not the length of the decoded text.
+    expect((await store.readMeta("genshin-game8-events"))?.bytes).toBe(
+      body.byteLength,
+    );
+  });
+
+  test("falls back to the document's own meta charset", async () => {
+    const withMeta = new Uint8Array([
+      ...new TextEncoder().encode('<html><head><meta charset="shift_jis"></head><event>'),
+      ...SJIS_TITLE,
+      ...new TextEncoder().encode("</event></html>"),
+    ]);
+    const { opts } = options({
+      responder: () =>
+        new Response(withMeta, {
+          status: 200,
+          headers: { "Content-Type": "text/html" },
+        }),
+    });
+    await runRefresh(opts);
+    expect((await store.read("genshin-game8-events"))?.html).toContain(
+      "イベント",
+    );
+  });
+});
+
+describe("the workflows that drive the refresh", () => {
+  // These three defects live in YAML, and each one is silent: nothing fails,
+  // the site just quietly carries wrong or stale data. Asserting on the file
+  // is the only offline way to keep them fixed.
+  const read = (name: string) =>
+    Bun.file(new URL(`../.github/workflows/${name}`, import.meta.url)).text();
+
+  test("ci.yml restores the refresh bookkeeping before it builds the feed", async () => {
+    // lastConfirmedAt lives only in the gitignored snapshots/*.state.json. If
+    // the job that builds the deployed feed never restores that cache,
+    // freshnessAt falls back to contentChangedAt and the UI calls a source
+    // stale two days after its bytes last moved — which for a wiki page is
+    // most of the time.
+    const ci = await read("ci.yml");
+    const restores = ci.split("actions/cache/restore@").length - 1;
+    expect(restores).toBeGreaterThanOrEqual(2); // the check job and the build job
+    expect(ci).toContain("snapshots/*.state.json");
+    // Restore only: refresh.yml owns writing it.
+    expect(ci).not.toContain("actions/cache/save@");
+
+    const buildJob = ci.slice(ci.indexOf("  build:"), ci.indexOf("  image:"));
+    expect(buildJob).toContain("actions/cache/restore@");
+  });
+
+  test("refresh.yml saves its cache under a key that changes per attempt", async () => {
+    // github.run_id is stable across re-runs, so a re-run's save is skipped and
+    // the next run restores bookkeeping from before it — losing the record of
+    // requests we did make.
+    const refresh = await read("refresh.yml");
+    const saveKey = /key: (refresh-state-[^\n]*)\n/g;
+    const keys = [...refresh.matchAll(saveKey)].map((m) => m[1] ?? "");
+    const savedKey = keys.find((k) => k.includes("run_id"));
+    expect(savedKey).toBeDefined();
+    expect(savedKey).toContain("github.run_attempt");
+  });
+
+  test("refresh.yml survives losing a push race without ever forcing", async () => {
+    // A human push landing mid-job made the push non-fast-forward: the fetched
+    // pages were thrown away while the bookkeeping had already spent their
+    // six-hour budget.
+    const refresh = await read("refresh.yml");
+    expect(refresh).toContain("git rebase");
+    expect(refresh).toMatch(/for attempt in/);
+    expect(refresh).not.toContain("--force");
+    expect(refresh).not.toContain("-f origin");
   });
 });
 
@@ -435,5 +623,18 @@ describe("flags", () => {
 
   test("parseArgs rejects an unknown flag rather than ignoring it", () => {
     expect(() => parseArgs(["--force"])).toThrow("unknown flag");
+  });
+
+  test("parseArgs rejects a flag whose value is missing", () => {
+    // `--only` with nothing after it used to mean "every source": the operator
+    // asked for one request and would have got seven.
+    expect(() => parseArgs(["--only"])).toThrow("--only requires a value");
+    expect(() => parseArgs(["--only", "--dry-run"])).toThrow(
+      "--only requires a value",
+    );
+    expect(() => parseArgs(["--snapshots"])).toThrow("--snapshots requires a value");
+    expect(() => parseArgs(["--user-agent"])).toThrow(
+      "--user-agent requires a value",
+    );
   });
 });

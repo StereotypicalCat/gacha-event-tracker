@@ -138,6 +138,26 @@ export function agentToken(userAgent: string): string {
 }
 
 /**
+ * Does a `User-agent:` value in robots.txt name us?
+ *
+ * RFC 9309 § 2.2.1 matches the *product token* — the header up to the first
+ * `/` — not the header text. Matching anywhere in the header is actively
+ * dangerous here: our contact URL contains the string `StereotypicalCat`, so a
+ * `User-agent: cat` group elsewhere in the file would be treated as naming us,
+ * and because a named group replaces the `*` group outright, that unrelated
+ * group's rules would *discard* every rule the site actually wrote for us.
+ * Erring towards obeying more rules means never letting a coincidence take a
+ * `*` group away.
+ *
+ * A robots.txt that names us with a version (`gacha-event-tracker/1.0`) is
+ * still honoured: the group's own product token is compared too.
+ */
+function agentNames(agent: string, token: string): boolean {
+  if (agent === "*") return false;
+  return agent === token || agentToken(agent) === token;
+}
+
+/**
  * The group that applies to a user agent, with every group naming the same
  * agent merged, as RFC 9309 requires.
  *
@@ -150,19 +170,11 @@ export function groupFor(
   userAgent: string,
 ): RobotsGroup | null {
   const token = agentToken(userAgent);
-  const full = userAgent.toLowerCase();
 
   let bestName: string | null = null;
   for (const group of robots.groups) {
     for (const agent of group.agents) {
-      if (agent === "*") continue;
-      // Match on the product token first (the spec's rule); fall back to a
-      // substring of the whole header so a group naming "gptbot" still binds a
-      // header of "Mozilla/5.0 (compatible; GPTBot/1.2)". Erring towards
-      // matching means erring towards obeying more rules, not fewer.
-      const hit =
-        token === agent || token.startsWith(agent) || full.includes(agent);
-      if (!hit) continue;
+      if (!agentNames(agent, token)) continue;
       if (bestName === null || agent.length > bestName.length) bestName = agent;
     }
   }
@@ -280,8 +292,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * One robots.txt fetch per host per run (cached 24h), reused by every source on
  * that host — six Game8 adapters must not mean six robots requests.
  *
- * Fails closed. A 5xx, a timeout or a network error means we do not know what
- * the site permits, and "unknown" is not permission.
+ * Fails closed. A 5xx, a timeout, a network error, a body that dies mid-read
+ * or a body that is plainly not robots.txt all mean we do not know what the
+ * site permits, and "unknown" is not permission. Only two answers open the
+ * host: a parsed robots.txt, and a 404/410 saying there is none.
  */
 export class RobotsCache {
   private readonly entries = new Map<string, CacheEntry>();
@@ -368,7 +382,50 @@ export class RobotsCache {
       };
     }
 
-    const text = await response.text();
+    // Reading the body is a second chance to fail: the connection can reset or
+    // the timeout can fire mid-stream, long after the headers arrived. Outside
+    // the try that rejection would escape as an exception rather than as "we
+    // could not read robots.txt", which is the one answer this class exists to
+    // give.
+    let text: string;
+    try {
+      text = await response.text();
+    } catch (error) {
+      return {
+        robots: ALLOW_ALL,
+        usable: false,
+        reason: `robots.txt body unreadable (${String(error)})`,
+        at,
+      };
+    }
+
+    // A soft 404 — an HTML "not found" page served with status 200 — is the
+    // commonest robots.txt misconfiguration there is, and it parses to zero
+    // groups, which is indistinguishable from "everything is permitted". We do
+    // not know what the site allows, and unknown is not permission.
+    if (looksLikeHtml(text)) {
+      return {
+        robots: ALLOW_ALL,
+        usable: false,
+        reason: "robots.txt returned HTML, not a robots.txt (soft 404?)",
+        at,
+      };
+    }
+
     return { robots: parseRobots(text), usable: true, reason: "robots.txt ok", at };
   }
+}
+
+/**
+ * Is this body markup rather than robots.txt?
+ *
+ * An empty body is *valid* robots.txt meaning "no restrictions", so emptiness
+ * is deliberately not a failure. Only markup is — no robots.txt directive can
+ * begin with `<`.
+ */
+export function looksLikeHtml(text: string): boolean {
+  const head = text.trimStart().slice(0, 512).toLowerCase();
+  if (head === "") return false;
+  if (head.startsWith("<")) return true;
+  return /<!doctype html|<html[\s>]|<head[\s>]|<body[\s>]/.test(head);
 }

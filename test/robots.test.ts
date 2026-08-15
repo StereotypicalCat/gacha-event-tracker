@@ -77,6 +77,48 @@ Disallow: /admin
     expect(isAllowed(robots, UA, "/games/x")).toBe(true);
   });
 
+  test("an unrelated named group cannot steal the wildcard group", () => {
+    // Our contact URL contains "StereotypicalCat". Matching a group name
+    // anywhere in the header made `User-agent: cat` look like our group, and
+    // because a named group replaces `*`, that coincidence *discarded* the
+    // rules the site actually wrote for everyone.
+    const ua =
+      "gacha-event-tracker/1.0 (+https://github.com/StereotypicalCat/gacha-event-tracker)";
+    const robots = parseRobots(`
+User-agent: *
+Disallow: /games/
+
+User-agent: cat
+Disallow: /litter
+`);
+    expect(groupFor(robots, ua)?.agents).toEqual(["*"]);
+    expect(isAllowed(robots, ua, "/games/x")).toBe(false);
+    expect(isAllowed(robots, ua, "/litter")).toBe(true);
+  });
+
+  test("a substring of the product token does not name us either", () => {
+    const robots = parseRobots(`
+User-agent: *
+Disallow: /games/
+
+User-agent: gacha
+Allow: /
+`);
+    expect(isAllowed(robots, UA, "/games/x")).toBe(false);
+  });
+
+  test("a group naming us with a version still binds", () => {
+    const robots = parseRobots(`
+User-agent: *
+Disallow: /
+
+User-agent: gacha-event-tracker/1.0
+Disallow: /admin
+`);
+    expect(isAllowed(robots, UA, "/games/x")).toBe(true);
+    expect(isAllowed(robots, UA, "/admin/panel")).toBe(false);
+  });
+
   test("the longest matching agent name wins", () => {
     const robots = parseRobots(`
 User-agent: googlebot
@@ -225,6 +267,47 @@ describe("RobotsCache", () => {
     const decision = await cache.allows("https://x.test/wiki/Event");
     expect(decision.allowed).toBe(false);
     expect(decision.reason).toContain("503");
+  });
+
+  test("an empty 200 body is a valid robots.txt that restricts nothing", async () => {
+    const { cache } = cacheWith(() => new Response("   \n", { status: 200 }));
+    const decision = await cache.allows("https://x.test/wiki/Event");
+    expect(decision.allowed).toBe(true);
+    expect(decision.reason).toBe("robots.txt ok");
+  });
+
+  test("fails closed on a soft 404 — an HTML page served as 200", async () => {
+    // The commonest robots.txt misconfiguration there is. It parses to zero
+    // groups, which is indistinguishable from "nothing is restricted", so
+    // reading it as permission is exactly the fail-open this class forbids.
+    const { cache } = cacheWith(
+      () =>
+        new Response(
+          "<!DOCTYPE html>\n<html><head><title>404 Not Found</title></head><body>Not found</body></html>",
+          { status: 200, headers: { "Content-Type": "text/html" } },
+        ),
+    );
+    const decision = await cache.allows("https://x.test/wiki/Event");
+    expect(decision.allowed).toBe(false);
+    expect(decision.reason).toContain("HTML");
+  });
+
+  test("fails closed when the body dies mid-read", async () => {
+    const { cache } = cacheWith(
+      () =>
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode("User-agent: *\n"));
+              controller.error(new Error("ECONNRESET"));
+            },
+          }),
+          { status: 200 },
+        ),
+    );
+    const decision = await cache.allows("https://x.test/wiki/Event");
+    expect(decision.allowed).toBe(false);
+    expect(decision.reason).toContain("unreadable");
   });
 
   test("fails closed when robots.txt is unreachable", async () => {

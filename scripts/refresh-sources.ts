@@ -29,7 +29,7 @@ import {
 import { SIX_HOURS_MS } from "../src/ingest/adapters/types.ts";
 import type { Adapter } from "../src/ingest/adapters/types.ts";
 import { RobotsCache, type FetchLike } from "../src/ingest/robots.ts";
-import { SnapshotStore } from "../src/ingest/snapshots.ts";
+import { decodeBody, SnapshotStore } from "../src/ingest/snapshots.ts";
 
 const DEFAULT_CONTACT =
   "https://github.com/StereotypicalCat/gacha-event-tracker";
@@ -113,7 +113,23 @@ export async function runRefresh(
   }
 
   for (const adapter of selected) {
-    const outcome = await refreshOne(adapter, options);
+    // One source can never take the cycle down with it. Everything inside
+    // refreshOne that can fail is handled there; this is the backstop that
+    // keeps an unforeseen throw from costing every source after this one its
+    // turn — the sources are independent, and a run that stops halfway leaves
+    // no summary and no record of what was already asked.
+    let outcome: SourceOutcome;
+    try {
+      outcome = await refreshOne(adapter, options);
+    } catch (error) {
+      outcome = {
+        sourceId: adapter.id,
+        result: "failed",
+        note: `unexpected error: ${String(error)}`,
+        status: null,
+        eventCount: null,
+      };
+    }
     summary.outcomes.push(outcome);
 
     if (outcome.result === "fetched") {
@@ -256,7 +272,37 @@ async function refreshOne(
     };
   }
 
-  const html = await response.text();
+  // Reading the body is a second chance to fail — a reset connection, a
+  // truncated response, or the timeout firing mid-stream. Left outside the try
+  // this rejection escapes refreshOne, aborts the whole cycle, and leaves the
+  // sources after this one unfetched and this one's `lastCheckedAt` unwritten:
+  // one bad body would both blank the run and lose the record that we had
+  // already spent this source's request.
+  let bytes: Uint8Array;
+  try {
+    bytes = new Uint8Array(await response.arrayBuffer());
+  } catch (error) {
+    await store.recordCheck(adapter.id, {
+      at: nowIso,
+      status: response.status,
+      ok: false,
+    });
+    return {
+      sourceId: adapter.id,
+      result: "failed",
+      note: `body unreadable: ${String(error)}`,
+      status: response.status,
+      eventCount: meta?.eventCount ?? null,
+    };
+  }
+
+  // Decode with the charset the server declared. Storing the raw bytes keeps
+  // the snapshot re-decodable; decoding before parsing keeps mojibake out of
+  // titles, and therefore out of the event IDs that are localStorage keys.
+  const { text: html, charset } = decodeBody(
+    bytes,
+    response.headers.get("Content-Type"),
+  );
 
   // The parse gate. A body that no longer parses, or that yields nothing where
   // it used to yield events, is a source that changed shape — publishing it
@@ -310,7 +356,8 @@ async function refreshOne(
 
   const saved = await store.save(adapter.id, {
     url: adapter.url,
-    html,
+    body: bytes,
+    charset,
     etag: response.headers.get("ETag"),
     lastModified: response.headers.get("Last-Modified"),
     at: nowIso,
@@ -377,6 +424,17 @@ export function parseArgs(argv: readonly string[]): Args {
     help: false,
   };
 
+  // A flag whose value is missing is a mistake, never a default. `--only` with
+  // nothing after it used to mean "every source", which is the opposite of
+  // what the operator typed and one request per source more than they wanted.
+  const value = (i: number, flag: string): string => {
+    const next = argv[i];
+    if (next === undefined || next.startsWith("-")) {
+      throw new Error(`${flag} requires a value`);
+    }
+    return next;
+  };
+
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     switch (arg) {
@@ -385,15 +443,15 @@ export function parseArgs(argv: readonly string[]): Args {
         break;
       case "--only":
         i += 1;
-        args.only = argv[i] ?? null;
+        args.only = value(i, "--only");
         break;
       case "--snapshots":
         i += 1;
-        args.root = argv[i] ?? args.root;
+        args.root = value(i, "--snapshots");
         break;
       case "--user-agent":
         i += 1;
-        args.userAgent = argv[i] ?? args.userAgent;
+        args.userAgent = value(i, "--user-agent");
         break;
       case "--no-feed":
         args.rebuild = false;
