@@ -1,0 +1,128 @@
+name: Refresh sources
+
+# Fetch each source at most twice a day and commit the raw snapshots when — and
+# only when — the bytes actually changed. Everything downstream (parse, merge,
+# feed, build, deploy) is CI's existing job; this workflow does not duplicate
+# any of it, it just hands CI fresher input.
+#
+# Twelve hours apart is deliberately well clear of the six-hour-per-source floor
+# in CLAUDE.md § Scraping conduct, and the runner enforces that floor itself, so
+# a manual dispatch on top of a scheduled run cannot double up on a wiki.
+on:
+  schedule:
+    - cron: "27 5,17 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Plan only — no requests, no writes"
+        type: boolean
+        default: false
+      only:
+        description: "Refresh a single source id (blank = all)"
+        type: string
+        default: ""
+
+# Never two refreshes at once: they would both fetch, and the second would race
+# the first's commit. Queue instead of cancelling — a half-finished refresh that
+# has already written snapshots should be allowed to finish and push.
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    name: Fetch sources and rebuild the feed
+    runs-on: ubuntu-latest
+    # A fork must not point this at the wikis on a schedule. Same shape as the
+    # DEPLOY_PAGES gate in ci.yml: off by default for anyone but this repo,
+    # while a fork owner can still dispatch it by hand and take responsibility.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.repository == 'StereotypicalCat/gacha-event-tracker'
+    permissions:
+      # Commit the refreshed snapshots.
+      contents: write
+      # Dispatch ci.yml afterwards: a push made with GITHUB_TOKEN deliberately
+      # does not trigger other workflows, so without this the fresh data would
+      # sit in the repo undeployed until someone pushed by hand.
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3"
+
+      - run: bun install --frozen-lockfile
+
+      # When each source was last checked. Gitignored on purpose (committing it
+      # would mean a commit every cycle saying nothing changed), so it rides in
+      # the actions cache instead. A cache miss only means the runner has no
+      # record of the last check — the twelve-hour schedule still keeps us well
+      # inside the etiquette floor.
+      - name: Restore refresh bookkeeping
+        uses: actions/cache/restore@v4
+        with:
+          path: snapshots/*.state.json
+          key: refresh-state-${{ github.run_id }}
+          restore-keys: refresh-state-
+
+      - name: Refresh
+        env:
+          # Identify the crawler with a contact URL, per CLAUDE.md.
+          REFRESH_CONTACT_URL: ${{ github.server_url }}/${{ github.repository }}
+          # Passed through the environment rather than interpolated into the
+          # run script, so a dispatch input cannot become shell.
+          ONLY: ${{ inputs.only }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          args=()
+          if [ "$DRY_RUN" = "true" ]; then
+            args+=(--dry-run)
+          fi
+          if [ -n "$ONLY" ]; then
+            args+=(--only "$ONLY")
+          fi
+          bun run refresh "${args[@]}"
+
+      - name: Save refresh bookkeeping
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: snapshots/*.state.json
+          key: refresh-state-${{ github.run_id }}
+
+      # git is the authority on "did anything change" — a 304, an unchanged
+      # body, or a rejected parse all leave the working tree clean.
+      - name: Detect changes
+        id: diff
+        run: |
+          if [ -n "$(git status --porcelain -- snapshots)" ]; then
+            git status --porcelain -- snapshots
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "no source changed"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit refreshed snapshots
+        if: steps.diff.outputs.changed == 'true' && inputs.dry_run != true
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- snapshots
+          git commit -m "chore(data): refresh source snapshots" \
+            -m "Automated fetch from ${{ github.workflow }} run ${{ github.run_id }}."
+          git push
+
+      # ci.yml owns typecheck, tests, the feed sanity check, the image and the
+      # Pages deploy. Dispatching it is how the refreshed data reaches the site
+      # without any of that logic being copied here.
+      - name: Publish the refreshed feed
+        if: steps.diff.outputs.changed == 'true' && inputs.dry_run != true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run ci.yml --ref "${{ github.ref_name }}"

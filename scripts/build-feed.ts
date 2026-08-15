@@ -1,18 +1,22 @@
 /**
- * Build the static event feed from checked-in fixtures.
+ * Build the static event feed from cached snapshots, falling back to fixtures.
  *
- * Offline: this reads fixtures, never the network. It exists so the client can
- * be developed and demoed against real parsed data before the server and
- * database land, and it emits exactly the shape `GET /api/events.json` will.
+ * Offline: this reads files on disk, never the network. Fetching is
+ * `scripts/refresh-sources.ts`'s job; this stage only parses what that left in
+ * the snapshot cache. On a clean checkout — and in the container build — no
+ * snapshot exists and the checked-in fixture is used instead, so the build
+ * stays reproducible and a wiki being down never breaks it.
  *
  *   bun run build:feed
  */
 import { ADAPTERS } from "../src/ingest/adapters/index.ts";
 import { mergeEvents } from "../src/ingest/merge.ts";
+import { SnapshotStore, freshnessAt } from "../src/ingest/snapshots.ts";
 import { EventFeed, SCHEMA_VERSION, type SourceHealth } from "../src/shared/feed.ts";
 import type { GachaEvent, GameId } from "../src/shared/schema.ts";
 
 const OUT = "public/data/events.v1.json";
+const snapshots = new SnapshotStore(process.env["SNAPSHOT_DIR"] ?? "snapshots");
 
 /**
  * Newest fixture for one *source*, not one game.
@@ -32,12 +36,32 @@ async function latestFixture(adapterId: string, game: GameId) {
   return { file, html: await Bun.file(file).text() };
 }
 
+/**
+ * The document to parse for one source: the live snapshot when the refresh
+ * runner has cached one, otherwise the newest checked-in fixture.
+ *
+ * `at` is what the UI's staleness badge reads, so it must never claim to be
+ * fresher than the bytes actually are — a fixture reports its capture date.
+ */
+async function documentFor(adapterId: string, game: GameId) {
+  const cached = await snapshots.read(adapterId);
+  if (cached !== null) {
+    return {
+      file: snapshots.bodyPath(adapterId),
+      html: cached.html,
+      at: freshnessAt(cached),
+    };
+  }
+  const { file, html } = await latestFixture(adapterId, game);
+  return { file, html, at: fixtureDate(file) };
+}
+
 const now = new Date().toISOString();
 const byGame = new Map<GameId, GachaEvent[][]>();
 const sources: SourceHealth[] = [];
 
 for (const adapter of ADAPTERS) {
-  const { file, html } = await latestFixture(adapter.id, adapter.game);
+  const { file, html, at } = await documentFor(adapter.id, adapter.game);
   const events = adapter.parse(html, {
     now,
     sourceUrl: adapter.url,
@@ -53,10 +77,9 @@ for (const adapter of ADAPTERS) {
     sourceId: adapter.id,
     game: adapter.game,
     url: adapter.url,
-    // Fixture capture date stands in for a real fetch timestamp until the
-    // scheduler exists. The UI's staleness badge reads this, so it must not
-    // claim to be fresher than the data actually is.
-    lastSuccessAt: fixtureDate(file),
+    // When the bytes were last confirmed live; a fixture's capture date when
+    // this source has never been refreshed.
+    lastSuccessAt: at,
     eventCount: events.length,
   });
 

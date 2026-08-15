@@ -1,9 +1,10 @@
 # Build the static site, then serve it from a distroless-ish runtime.
 #
 # Two stages so the image ships the built assets and nothing else: no source,
-# no fixtures, no toolchain. The build is fully offline — it parses checked-in
-# fixtures rather than fetching anything — so the image is reproducible and
-# needs no network at build time.
+# no fixtures, no toolchain. The build is fully offline — it parses the
+# committed snapshots, falling back to checked-in fixtures, rather than
+# fetching anything — so the image is reproducible and needs no network at
+# build time.
 
 FROM oven/bun:1.3-alpine AS build
 WORKDIR /app
@@ -16,6 +17,12 @@ COPY tsconfig.json index.html serve.ts ./
 COPY src ./src
 COPY scripts ./scripts
 COPY fixtures ./fixtures
+# Whatever the last refresh committed. The directory always exists (it carries
+# a README), so this cannot break a build made before the first refresh — it
+# just leaves build:feed on the fixture fallback, which is what the image did
+# before. Without it the container would serve fixture-era data while the site
+# served fresh, with nothing to say why.
+COPY snapshots ./snapshots
 COPY test ./test
 
 # Fail the image on a type error or a failing test rather than shipping it.

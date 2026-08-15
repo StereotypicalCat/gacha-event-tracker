@@ -120,3 +120,9 @@ data/
 
 # build output
 public/
+
+# refresh bookkeeping (when we last checked a source).
+# The snapshots themselves ARE tracked — they are what the feed is built from —
+# but this file changes on every cycle, and committing it would mean a commit
+# per run saying nothing changed.
+snapshots/*.state.json

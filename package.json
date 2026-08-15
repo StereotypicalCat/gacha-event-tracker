@@ -7,6 +7,7 @@
     "typecheck": "tsc --noEmit",
     "parse": "bun run scripts/parse-fixture.ts",
     "build:feed": "bun run scripts/build-feed.ts",
+    "refresh": "bun run scripts/refresh-sources.ts",
     "build:css": "bunx @tailwindcss/cli -i src/client/styles.css -o public/styles.css --minify",
     "build:js": "bun build src/client/main.tsx --outfile public/main.js --minify",
     "build": "bun run build:feed && bun run build:css && bun run build:js && bun run build:static",
