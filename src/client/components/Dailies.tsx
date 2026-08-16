@@ -120,6 +120,11 @@ export function Dailies({
  * The same pill whether it is a game's standing chore or an event that repeats:
  * to the reader at 23:50 they are the same job, and the distinction between
  * "the app knows about this" and "a wiki published it" is ours, not theirs.
+ *
+ * The game's hue is on the border in both states — softly when the job is
+ * outstanding, fully once it is done. A chip that only takes its colour on
+ * completion means the strip you actually scan, the unfinished one, is a row of
+ * identical grey pills with no clue which game each belongs to.
  */
 function TickChip({
   label,
@@ -150,20 +155,25 @@ function TickChip({
       title={title}
       className="flex max-w-[15rem] items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
       style={{
-        borderColor: isDone ? hue : "var(--color-hairline)",
-        color: isDone ? hue : "var(--color-faint)",
-        background: isDone ? `color-mix(in srgb, ${hue} 14%, transparent)` : "transparent",
+        borderColor: isDone ? hue : `color-mix(in srgb, ${hue} 34%, transparent)`,
+        // Colour identifies the game; done-ness is carried by the tick, the
+        // full-strength border and the wash. Keeping the label readable matters
+        // more than saturating it, so an outstanding chip stays on muted ink.
+        color: isDone ? hue : "var(--color-muted)",
+        background: isDone
+          ? `color-mix(in srgb, ${hue} 14%, transparent)`
+          : `color-mix(in srgb, ${hue} 5%, transparent)`,
       }}
     >
       <svg viewBox="0 0 16 16" aria-hidden className="size-3 shrink-0">
         <path
           d="M2.5 8.5l3.5 3.5 7.5-8"
           fill="none"
-          stroke="currentColor"
+          stroke={isDone ? "currentColor" : hue}
           strokeWidth="2.2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          opacity={isDone ? 1 : 0.3}
+          opacity={isDone ? 1 : 0.35}
         />
       </svg>
       <span className="truncate">{label}</span>
