@@ -12,6 +12,7 @@ import { Meter, URGENCY_COLOR } from "./Meter.tsx";
  */
 export function NextUp({
   row,
+  focused,
   onOpen,
 }: {
   /**
@@ -21,6 +22,8 @@ export function NextUp({
    * they have chosen to keep it elsewhere.
    */
   row: RowEvent | null;
+  /** Name of the game being focused on, when the page is narrowed to one. */
+  focused: string | null;
   onOpen: (id: string) => void;
 }) {
   if (row === null) {
@@ -28,8 +31,9 @@ export function NextUp({
       <section className="border-b border-hairline px-4 py-8">
         <p className="eyebrow">Nothing running</p>
         <p className="mt-2 max-w-sm text-sm text-muted">
-          Nothing live and unfinished in the games you have switched on. Turn a
-          game back on below, or check again after the next patch.
+          {focused === null
+            ? "Nothing live and unfinished in the games you have switched on. Turn a game back on below, or check again after the next patch."
+            : `Nothing live and unfinished in ${focused}. Move to the next game, or show all of them.`}
         </p>
       </section>
     );

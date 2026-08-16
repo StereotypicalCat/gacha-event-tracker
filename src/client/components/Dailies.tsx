@@ -73,9 +73,9 @@ export function Dailies({
     previous.current = { total, complete };
     if (was === null || !allDone) return;
     // Celebrate finishing the last one, and only that. The list also gets
-    // shorter when the reader marks a repeating event done, which can land on
-    // "all complete" without them having ticked anything — a burst there is the
-    // app congratulating them for filtering.
+    // shorter when the reader focuses a single game or marks a repeating event
+    // done, which can land on "all complete" without them having ticked
+    // anything — a burst there is the app congratulating them for filtering.
     if (was.total === total && complete > was.complete) setBurst((n) => n + 1);
   }, [total, complete, allDone]);
 

@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { firstToExpire, outstanding } from "../src/client/state/lens.ts";
+import {
+  advanceFocus,
+  countByGame,
+  firstToExpire,
+  outstanding,
+  resolveFocus,
+} from "../src/client/state/lens.ts";
 import type { GameId } from "../src/shared/schema.ts";
 
 const row = (id: string, game: GameId, msRemaining: number | null) => ({
@@ -64,5 +70,64 @@ describe("firstToExpire", () => {
 
   test("no rows is null rather than a crash", () => {
     expect(firstToExpire([])).toBeNull();
+  });
+});
+
+describe("resolveFocus", () => {
+  const enabled: GameId[] = ["genshin", "hsr"];
+
+  test("a focus on a game they still play stands", () => {
+    expect(resolveFocus("hsr", enabled)).toBe("hsr");
+  });
+
+  test("a focus on a game they switched off is ignored, not obeyed", () => {
+    // Obeying it leaves a blank page whose cause is a setting in a panel at the
+    // bottom. The stored value is left alone, so switching the game back on
+    // puts them back where they were.
+    expect(resolveFocus("zzz", enabled)).toBeNull();
+  });
+
+  test("no focus is all games", () => {
+    expect(resolveFocus(null, enabled)).toBeNull();
+  });
+});
+
+describe("advanceFocus", () => {
+  const enabled: GameId[] = ["genshin", "hsr", "zzz"];
+
+  test("all games leads into the first one", () => {
+    expect(advanceFocus(null, enabled)).toBe("genshin");
+  });
+
+  test("steps through in order", () => {
+    expect(advanceFocus("genshin", enabled)).toBe("hsr");
+    expect(advanceFocus("hsr", enabled)).toBe("zzz");
+  });
+
+  test("the last game leads back out to all of them", () => {
+    // Not a wrap to the first: a rotation with no exit means the only way back
+    // to everything is finding the "All" chip, which is the thing the rotation
+    // was meant to save them.
+    expect(advanceFocus("zzz", enabled)).toBeNull();
+  });
+
+  test("a focus that is no longer enabled restarts the rotation", () => {
+    expect(advanceFocus("wuwa", enabled)).toBe("genshin");
+  });
+
+  test("no games to rotate through", () => {
+    expect(advanceFocus(null, [])).toBeNull();
+  });
+});
+
+describe("countByGame", () => {
+  test("counts per game and omits games with nothing", () => {
+    const counts = countByGame([
+      row("a", "genshin", 1),
+      row("b", "genshin", 2),
+      row("c", "hsr", 3),
+    ]);
+    expect(counts).toEqual({ genshin: 2, hsr: 1 });
+    expect(counts.zzz).toBeUndefined();
   });
 });

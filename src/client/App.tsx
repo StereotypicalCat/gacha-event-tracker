@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { fetchFeed, type FeedState } from "./api.ts";
 import { Controls } from "./components/Controls.tsx";
 import { Dailies } from "./components/Dailies.tsx";
+import { GameFocus } from "./components/GameFocus.tsx";
 import { EventDetail } from "./components/EventDetail.tsx";
 import { EventRow, type DailyBadge, type RowEvent } from "./components/EventRow.tsx";
 import { NextUp } from "./components/NextUp.tsx";
@@ -16,9 +17,16 @@ import { useProgress } from "./state/useProgress.ts";
 import { useDailyLog, type DailyLogMap } from "./state/useDailyLog.ts";
 import { usePrefs } from "./state/usePrefs.ts";
 import { compareRows, SORT_MODES, type Activity, type SortMode } from "./state/sort.ts";
-import { firstToExpire, outstanding } from "./state/lens.ts";
+import {
+  advanceFocus,
+  countByGame,
+  firstToExpire,
+  outstanding,
+  resolveFocus,
+} from "./state/lens.ts";
 import { clockFor, DAY, formatRemaining } from "../shared/time.ts";
 import { dailySummary, isDaily, resolveDaily } from "../shared/daily.ts";
+import { gameMeta } from "../shared/games.ts";
 import type { GameId } from "../shared/schema.ts";
 
 type View = "soon" | "calendar";
@@ -148,7 +156,24 @@ export function App() {
     [allRows],
   );
 
-  const visible = useMemo(
+  /** Games the reader plays, in feed order. The focus bar rotates through these. */
+  const enabled = useMemo(
+    () => games.filter((g) => !prefs.hiddenGames.includes(g)),
+    [games, prefs.hiddenGames],
+  );
+
+  // A focus on a game they have since switched off is ignored, not obeyed —
+  // otherwise the page is blank for a reason that lives in a panel at the
+  // bottom. The stored value is left alone so switching the game back on
+  // restores where they were.
+  const focus = resolveFocus(prefs.focusGame, enabled);
+
+  /**
+   * Everything the reader could be looking at, before focus narrows it. The
+   * focus chips count off this, so a chip can say what is waiting in a game
+   * that is not the one currently on screen.
+   */
+  const inScope = useMemo(
     () =>
       allRows
         .filter((r) => !prefs.hiddenGames.includes(r.event.game))
@@ -156,20 +181,25 @@ export function App() {
         // Ignored events are gone from both views unless deliberately revealed
         // — that is the whole point of ignoring one.
         .filter((r) => prefs.showIgnored || !isIgnored(r.event.id))
-        .filter((r) => prefs.showCompleted || !isDone(r.event.id))
-        // Sorting only ever groups: both modes fall back to soonest-ending
-        // inside a group, so choosing one never costs the deadline order.
-        .sort(compareRows(prefs.sort, activityOf)),
+        .filter((r) => prefs.showCompleted || !isDone(r.event.id)),
     [
       allRows,
       prefs.hiddenGames,
       prefs.showCompleted,
       prefs.showIgnored,
-      prefs.sort,
       prog.progress,
-      daily.logs,
       ignored.marks,
     ],
+  );
+
+  const visible = useMemo(
+    () =>
+      inScope
+        .filter((r) => focus === null || r.event.game === focus)
+        // Sorting only ever groups: both modes fall back to soonest-ending
+        // inside a group, so choosing one never costs the deadline order.
+        .sort(compareRows(prefs.sort, activityOf)),
+    [inScope, focus, prefs.sort, prog.progress, daily.logs],
   );
 
   const live = visible.filter((r) => r.clock.live);
@@ -187,6 +217,14 @@ export function App() {
    */
   const todo = outstanding(live, isDone, isIgnored);
   const next = firstToExpire(todo);
+
+  // Counted across every game the reader plays, not just the focused one — a
+  // chip has to say what is waiting behind it to be worth tapping.
+  const scopedTodo = useMemo(
+    () => outstanding(inScope, isDone, isIgnored),
+    [inScope, prog.progress, ignored.marks],
+  );
+  const perGame = useMemo(() => countByGame(scopedTodo), [scopedTodo]);
 
   const openRow = allRows.find((r) => r.event.id === openId) ?? null;
 
@@ -274,14 +312,31 @@ export function App() {
         </div>
       </header>
 
+      {/* Working through games one at a time, which is how someone with four
+          of them actually plays: clear one, move on. Above everything it
+          filters, so what it is doing to the page is never a mystery. */}
+      <GameFocus
+        games={enabled}
+        focus={focus}
+        counts={perGame}
+        total={scopedTodo.length}
+        next={advanceFocus(focus, enabled)}
+        onFocus={(focusGame) => update({ focusGame })}
+        onAdvance={() => update({ focusGame: advanceFocus(focus, enabled) })}
+      />
+
       {view === "soon" ? (
         <>
-          <NextUp row={next} onOpen={setOpenId} />
+          <NextUp
+            row={next}
+            focused={focus === null ? null : gameMeta(focus).name}
+            onOpen={setOpenId}
+          />
 
           {/* The chores no wiki publishes, and the only thing on this page
               that expires tonight rather than next patch. */}
           <Dailies
-            games={games.filter((g) => !prefs.hiddenGames.includes(g))}
+            games={focus === null ? enabled : [focus]}
             events={todo.filter(repeatsDaily).map((r) => r.event)}
             region={prefs.region}
             now={now}
@@ -357,8 +412,9 @@ export function App() {
 
           {visible.length === 0 && (
             <p className="px-4 py-12 text-sm leading-relaxed text-muted">
-              Nothing to show. Every game is switched off, or you've finished
-              everything and hidden completed events.
+              {focus !== null
+                ? `Nothing running in ${gameMeta(focus).name}. Try another game, or show all of them.`
+                : "Nothing to show. Every game is switched off, or you've finished everything and hidden completed events."}
             </p>
           )}
         </>

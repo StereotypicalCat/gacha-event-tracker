@@ -73,6 +73,20 @@ but de-emphasized; a filter toggles them out entirely.
 Filter by game (multi-select, persisted) and by event type. Hiding a game hides it from both views.
 Preferences persist in `localStorage`.
 
+**F4a — Focus one game at a time.**
+Switching games on and off says *which games the reader plays*, and is set once. It is the wrong
+tool for the thing a player of four games actually does while reading: clear one game, move to the
+next. Doing that with the on/off switches costs two taps per game and leaves the settings panel no
+longer describing what they play.
+
+So focus is a **lens over the filter, not a second filter**: a bar at the top of the page, above
+everything it affects, narrowing every view — headline, dailies, lists, calendar and counts — to one
+game, with a "next game" control that steps through them and ends by returning to all. It never
+changes `hiddenGames`, "All" is always one tap away, and a focus on a game that is switched off or
+has left the feed is ignored rather than obeyed, so it can never strand the reader on a blank page
+whose cause is elsewhere. Each chip carries that game's outstanding count, so a game with nothing
+waiting says so before it is visited.
+
 **F5 — Region selection.**
 A user picks Asia / America / Europe once. For events where `regionScoped` is true, all displayed
 end times resolve to that region's server reset. This is stored in `localStorage` and defaults to a

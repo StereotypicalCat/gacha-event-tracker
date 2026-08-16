@@ -62,3 +62,46 @@ export function firstToExpire<T extends Row>(rows: readonly T[]): T | null {
   }
   return best ?? rows[0] ?? null;
 }
+
+/**
+ * The focused game, if it is still a game the reader can see.
+ *
+ * A focus on a game they have since switched off, or that has dropped out of
+ * the feed, is ignored rather than obeyed — the alternative is an empty page
+ * whose reason is a setting two screens away.
+ */
+export function resolveFocus(
+  focus: GameId | null,
+  enabled: readonly GameId[],
+): GameId | null {
+  return focus !== null && enabled.includes(focus) ? focus : null;
+}
+
+/**
+ * The next game in the rotation: all → first → … → last → all.
+ *
+ * Working through games one at a time is a loop, and it ends by coming back to
+ * everything rather than silently starting over — otherwise there is no way out
+ * of the rotation except finding the "all" chip again.
+ */
+export function advanceFocus(
+  focus: GameId | null,
+  enabled: readonly GameId[],
+): GameId | null {
+  if (enabled.length === 0) return null;
+  const at = focus === null ? -1 : enabled.indexOf(focus);
+  // An unknown focus (switched-off game) restarts the rotation rather than
+  // jumping to index 0 of nowhere.
+  return enabled[at + 1] ?? null;
+}
+
+/** How many rows each game still has outstanding, for the focus chips. */
+export function countByGame<T extends Row>(
+  rows: readonly T[],
+): Partial<Record<GameId, number>> {
+  const out: Partial<Record<GameId, number>> = {};
+  for (const row of rows) {
+    out[row.event.game] = (out[row.event.game] ?? 0) + 1;
+  }
+  return out;
+}

@@ -8,6 +8,15 @@ export interface Prefs {
   region: Region;
   /** Games the reader has switched off. Stored as hidden so a newly added game shows up by default. */
   hiddenGames: GameId[];
+  /**
+   * One game to look at right now, or null for all of them.
+   *
+   * A lens, not a setting: it never changes `hiddenGames`, and a focus on a
+   * game that is switched off or has left the feed is ignored rather than
+   * obeyed (`resolveFocus`), so it can never leave the reader on a blank page
+   * with no visible cause.
+   */
+  focusGame: GameId | null;
   /** How the list is ordered. Deadline order is the default and the fallback. */
   sort: SortMode;
   /**
@@ -29,6 +38,7 @@ function defaults(): Prefs {
   return {
     region: guessRegion(),
     hiddenGames: [],
+    focusGame: null,
     sort: "ending",
     detectDaily: true,
     showCompleted: true,
