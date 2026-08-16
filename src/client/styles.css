@@ -225,6 +225,58 @@ body {
   }
 }
 
+/* ---- The daily burst ---------------------------------------------------- */
+/*
+ * Fires once, when the last daily of the day gets ticked. Purely decorative and
+ * pointer-transparent, so it never sits between the reader and a chip.
+ *
+ * The whole thing is inside `prefers-reduced-motion: no-preference` rather than
+ * being merely reduced by it: unlike the meter, nothing here carries meaning
+ * that would be lost, so the honest reduced version is nothing at all.
+ */
+.fireworks {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  display: none;
+}
+.firework {
+  position: absolute;
+  display: block;
+  width: 0;
+  height: 0;
+}
+.spark {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .fireworks {
+    display: block;
+  }
+  .spark {
+    animation: spark-fly 900ms cubic-bezier(0.15, 0.7, 0.35, 1) var(--delay, 0ms)
+      both;
+  }
+  @keyframes spark-fly {
+    from {
+      transform: rotate(var(--a)) translateX(0) scale(0.6);
+      opacity: 0;
+    }
+    18% {
+      opacity: 1;
+    }
+    to {
+      transform: rotate(var(--a)) translateX(var(--d)) scale(1);
+      opacity: 0;
+    }
+  }
+}
+
 /* Focus ring: visible, and never removed. */
 :where(a, button, [tabindex]):focus-visible {
   outline: 2px solid var(--color-near);

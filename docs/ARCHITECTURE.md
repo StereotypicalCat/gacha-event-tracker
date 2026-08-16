@@ -90,6 +90,7 @@ src/
       ProgressControls  status, effort, note        (F12)
       Dailies.tsx       today's strip of repeating jobs
       DailyChecklist    one repeating event's whole run
+      Fireworks.tsx     the burst when the last daily lands
       Controls.tsx      games, region, export/import(F4, F5, F6)
       Welcome.tsx       first-run game picker       (F8)
       Toast.tsx         undo an ignore

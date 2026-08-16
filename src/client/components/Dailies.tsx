@@ -1,7 +1,9 @@
+import { useEffect, useRef, useState } from "react";
 import { dailiesId, dayKey, msUntilReset, streakOf } from "../../shared/daily.ts";
 import { gameMeta } from "../../shared/games.ts";
 import type { GachaEvent, GameId, Region } from "../../shared/schema.ts";
 import { formatRemaining } from "../../shared/time.ts";
+import { Fireworks } from "./Fireworks.tsx";
 
 /**
  * The chores no source publishes.
@@ -55,6 +57,29 @@ export function Dailies({
   const items = [...chores, ...repeating];
   const total = items.length;
   const complete = items.filter((i) => daysFor(i.key).includes(i.today)).length;
+  const allDone = total > 0 && complete === total;
+
+  const [burst, setBurst] = useState(0);
+  // Null until the first render has been seen, so arriving at a page where
+  // everything is already ticked is not treated as having just finished it.
+  const previous = useRef<{ total: number; complete: number } | null>(null);
+
+  useEffect(() => {
+    const was = previous.current;
+    previous.current = { total, complete };
+    if (was === null || !allDone) return;
+    // Celebrate finishing the last one, and only that. The list also gets
+    // shorter when the reader marks a repeating event done, which can land on
+    // "all complete" without them having ticked anything — a burst there is the
+    // app congratulating them for filtering.
+    if (was.total === total && complete > was.complete) setBurst((n) => n + 1);
+  }, [total, complete, allDone]);
+
+  useEffect(() => {
+    if (burst === 0) return;
+    const id = setTimeout(() => setBurst(0), 1400);
+    return () => clearTimeout(id);
+  }, [burst]);
 
   if (total === 0) return null;
 
@@ -64,8 +89,10 @@ export function Dailies({
   const mixed = new Set(items.map((i) => i.resetsIn)).size > 1;
 
   return (
-    <section className="border-b border-hairline px-4 py-4">
-      <div className="flex items-baseline justify-between gap-3">
+    <section className="relative border-b border-hairline px-4 py-4">
+      {burst > 0 && <Fireworks key={burst} />}
+
+      <div className="relative flex items-baseline justify-between gap-3">
         <h2 className="eyebrow">
           Today's dailies · {complete}/{total}
         </h2>
@@ -75,7 +102,7 @@ export function Dailies({
         </p>
       </div>
 
-      <ul className="mt-2.5 flex flex-wrap gap-1.5">
+      <ul className="relative mt-2.5 flex flex-wrap gap-1.5">
         {chores.map((chore) => (
           <li key={chore.key}>
             <TickChip
@@ -105,8 +132,8 @@ export function Dailies({
         ))}
       </ul>
 
-      <p className="mt-2 text-[0.6875rem] leading-relaxed text-faint">
-        {complete === total
+      <p className="relative mt-2 text-[0.6875rem] leading-relaxed text-faint">
+        {allDone
           ? "All done. Nothing else expires tonight."
           : `${waiting(total - complete)} still waiting on you today.`}
       </p>
