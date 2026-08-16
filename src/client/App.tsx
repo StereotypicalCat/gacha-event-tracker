@@ -103,6 +103,7 @@ export function App() {
       startsMs: row.clock.startsMs,
       endsMs: row.clock.endsMs,
       region: prefs.region,
+      game: row.event.game,
       now,
       logged: daily.daysFor(row.event.id),
     });

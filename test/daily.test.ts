@@ -133,6 +133,86 @@ describe("dayKey", () => {
   });
 });
 
+describe("a game whose server map differs from the default", () => {
+  // Endfield has two server groups, not three: Europe is served off the
+  // Americas machine on a fixed UTC-5, so a European player's 04:00 reset is
+  // 09:00 UTC — six hours after the HoYo/Kuro Europe pattern. Asia has its own
+  // server and is unaffected.
+  const morning = at("2026-08-16T08:00:00Z");
+
+  test("the override beats the regional default for that region", () => {
+    expect(dayKey(morning, "europe", "endfield")).toBe("2026-08-15");
+    expect(dayKey(morning, "europe", "genshin")).toBe("2026-08-16");
+  });
+
+  test("rolls exactly on 09:00 UTC in Europe", () => {
+    expect(dayKey(at("2026-08-16T08:59:59Z"), "europe", "endfield")).toBe(
+      "2026-08-15",
+    );
+    expect(dayKey(at("2026-08-16T09:00:00Z"), "europe", "endfield")).toBe(
+      "2026-08-16",
+    );
+    expect(nextResetMs(morning, "europe", "endfield")).toBe(
+      at("2026-08-16T09:00:00Z"),
+    );
+  });
+
+  test("a region with its own server keeps the answer it always had", () => {
+    // The override is per region on purpose. A blanket per-game offset would
+    // drag Asia — which genuinely has its own Endfield server — onto the
+    // Americas clock, moving a reader's already-logged day keys by eleven
+    // hours to fix a bug they never had.
+    for (const region of ["asia", "america"] as const) {
+      for (const hour of [0, 6, 9, 14, 20, 23]) {
+        const t = at(`2026-08-16T${String(hour).padStart(2, "0")}:30:00Z`);
+        expect(dayKey(t, region, "endfield")).toBe(dayKey(t, region));
+      }
+    }
+  });
+
+  test("a game with no override still follows its region", () => {
+    // Europe is UTC+1, so 03:00 UTC. Asia rolled six hours before that.
+    const instant = at("2026-08-16T02:00:00Z");
+    expect(dayKey(instant, "europe", "genshin")).toBe("2026-08-15");
+    expect(dayKey(instant, "asia", "genshin")).toBe("2026-08-16");
+    // …and matches the answer given with no game at all.
+    expect(dayKey(instant, "europe", "genshin")).toBe(dayKey(instant, "europe"));
+  });
+
+  test("the checklist counts days on the clock that reader is actually on", () => {
+    const start = at("2026-08-16T09:00:00Z"); // an endfield europe reset
+    expect(dailyDays(start, start + 3 * DAY, "europe", "endfield")).toEqual([
+      "2026-08-16",
+      "2026-08-17",
+      "2026-08-18",
+    ]);
+
+    const summary = dailySummary({
+      startsMs: start,
+      endsMs: start + 3 * DAY,
+      region: "europe",
+      game: "endfield",
+      now: at("2026-08-17T08:00:00Z"), // still the 16th on a UTC-5 server
+      logged: [],
+    });
+    expect(summary.today).toBe("2026-08-16");
+    expect(summary.msUntilReset).toBe(HOUR);
+  });
+
+  test("an Asia reader's checklist is byte-identical to before the override", () => {
+    // The regression this guards: an Endfield event whose end lands between the
+    // two candidate resets loses its final claimable day if the wrong clock is
+    // used, and a day that leaves `dailyDays` can never be ticked or untucked
+    // again — the pip is simply not rendered.
+    const start = at("2026-08-06T04:00:00Z");
+    const end = at("2026-08-19T22:00:00Z");
+    expect(dailyDays(start, end, "asia", "endfield")).toEqual(
+      dailyDays(start, end, "asia"),
+    );
+    expect(dailyDays(start, end, "asia", "endfield")).toContain("2026-08-20");
+  });
+});
+
 describe("nextResetMs", () => {
   test("is the next reset strictly after the instant given", () => {
     const reset = at("2026-08-15T20:00:00Z"); // asia

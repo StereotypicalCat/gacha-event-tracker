@@ -72,7 +72,7 @@ src/
   shared/
     schema.ts           zod schemas — the contract, both sides    ✓ built
     time.ts             clocks, urgency, region resets, captions  ✓ built
-    games.ts            per-game name and hue                     ✓ built
+    games.ts            per-game name, hue, and reset clock       ✓ built
     feed.ts             the /api/events.json wire contract        ✓ built
   client/                                                         ✓ all built
     main.tsx            render + service worker registration

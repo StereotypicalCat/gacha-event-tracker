@@ -1,3 +1,4 @@
+import { GAMES } from "./games.ts";
 import type { GachaEvent, GameId, Region } from "./schema.ts";
 import { DAY, HOUR, REGION_RESET_UTC_OFFSET } from "./time.ts";
 
@@ -113,9 +114,35 @@ export function dailyOverride(
   return desired === detected ? undefined : desired;
 }
 
-/** Offset from UTC midnight to this region's reset instant. */
-function shift(region: Region): number {
-  return REGION_RESET_UTC_OFFSET[region] * HOUR - RESET_HOUR_LOCAL * HOUR;
+/**
+ * The UTC offset of the server clock a reader's day rolls on.
+ *
+ * The reader's region is always the question; a game can just answer it
+ * differently. Most run a server per region and take the default. One that
+ * serves two regions off a single machine lists the regions that differ in
+ * `resetOffsets` — Endfield's European players sit on the Americas server, so
+ * `europe` resolves to UTC-5 there and to UTC+1 everywhere else.
+ *
+ * A blanket per-game offset would be the wrong shape: it would drag the regions
+ * that *do* have their own server onto somebody else's clock, which is a
+ * different bug in the same place.
+ */
+export function serverOffsetUtc(region: Region, game?: GameId): number {
+  const override = game === undefined ? undefined : GAMES[game].resetOffsets?.[region];
+  return override ?? REGION_RESET_UTC_OFFSET[region];
+}
+
+/**
+ * Offset from UTC midnight to this game's reset instant.
+ *
+ * Everything downstream of this is a **localStorage key**. Moving the reset
+ * hour, a region offset, or a game's own override re-labels the game-day some
+ * already-logged ticks fall in — at most by one day, and never by deleting one,
+ * but it is still the reader's streak moving under them. Treat a change here as
+ * a data change, not a constant.
+ */
+function shift(region: Region, game?: GameId): number {
+  return serverOffsetUtc(region, game) * HOUR - RESET_HOUR_LOCAL * HOUR;
 }
 
 /**
@@ -123,20 +150,24 @@ function shift(region: Region): number {
  *
  * These are storage keys, and they are compared with `<` elsewhere in this
  * module, so the format is fixed and sortable on purpose.
+ *
+ * `game` is optional because a caller that has no particular game in hand — a
+ * generic "what day is it here?" — still gets the regional answer. Anything
+ * that reads or writes a tick should pass it.
  */
-export function dayKey(ms: number, region: Region): string {
-  return new Date(ms + shift(region)).toISOString().slice(0, 10);
+export function dayKey(ms: number, region: Region, game?: GameId): string {
+  return new Date(ms + shift(region, game)).toISOString().slice(0, 10);
 }
 
 /** The next reset instant strictly after `ms`. */
-export function nextResetMs(ms: number, region: Region): number {
-  const shifted = ms + shift(region);
-  return Math.floor(shifted / DAY) * DAY + DAY - shift(region);
+export function nextResetMs(ms: number, region: Region, game?: GameId): number {
+  const s = shift(region, game);
+  return Math.floor((ms + s) / DAY) * DAY + DAY - s;
 }
 
 /** How long the reader has left to do today's dailies. */
-export function msUntilReset(ms: number, region: Region): number {
-  return nextResetMs(ms, region) - ms;
+export function msUntilReset(ms: number, region: Region, game?: GameId): number {
+  return nextResetMs(ms, region, game) - ms;
 }
 
 /**
@@ -150,6 +181,7 @@ export function dailyDays(
   startsMs: number,
   endsMs: number | null,
   region: Region,
+  game?: GameId,
 ): string[] | null {
   if (endsMs === null) return null;
 
@@ -158,11 +190,11 @@ export function dailyDays(
   // reset: an event ending at 04:00 gives you nothing on that final day.
   const last = endsMs - 1;
   let cursor = startsMs;
-  if (last < startsMs) return [dayKey(startsMs, region)];
+  if (last < startsMs) return [dayKey(startsMs, region, game)];
 
   while (cursor <= last && out.length < MAX_DAYS) {
-    out.push(dayKey(cursor, region));
-    cursor = nextResetMs(cursor, region);
+    out.push(dayKey(cursor, region, game));
+    cursor = nextResetMs(cursor, region, game);
   }
   return out;
 }
@@ -197,12 +229,14 @@ export function dailySummary(input: {
   startsMs: number;
   endsMs: number | null;
   region: Region;
+  /** Whose reset clock this runs on. Omitted falls back to the region's. */
+  game?: GameId | undefined;
   now: number;
   logged: readonly string[];
 }): DailySummary {
-  const { startsMs, endsMs, region, now, logged } = input;
-  const days = dailyDays(startsMs, endsMs, region);
-  const today = dayKey(now, region);
+  const { startsMs, endsMs, region, game, now, logged } = input;
+  const days = dailyDays(startsMs, endsMs, region, game);
+  const today = dayKey(now, region, game);
   const ticked = new Set(logged);
 
   const inWindow = days === null ? logged.slice() : days.filter((d) => ticked.has(d));
@@ -220,7 +254,7 @@ export function dailySummary(input: {
         ? null
         : days.filter((d) => d < today && !ticked.has(d)).length,
     streak: streakOf(logged, today),
-    msUntilReset: msUntilReset(now, region),
+    msUntilReset: msUntilReset(now, region, game),
   };
 }
 

@@ -3,7 +3,7 @@ import {
   msUntilReset,
   type DailySummary,
 } from "../../shared/daily.ts";
-import type { Region } from "../../shared/schema.ts";
+import type { GameId, Region } from "../../shared/schema.ts";
 import { formatRemaining } from "../../shared/time.ts";
 
 /**
@@ -23,6 +23,7 @@ export function DailyChecklist({
   startsMs,
   endsMs,
   region,
+  game,
   now,
   logged,
   onToggleDay,
@@ -30,11 +31,13 @@ export function DailyChecklist({
   startsMs: number;
   endsMs: number | null;
   region: Region;
+  /** Whose reset clock the days are counted on — not every game shares one. */
+  game: GameId;
   now: number;
   logged: string[];
   onToggleDay: (day: string) => void;
 }) {
-  const summary = dailySummary({ startsMs, endsMs, region, now, logged });
+  const summary = dailySummary({ startsMs, endsMs, region, game, now, logged });
   const { days, today, doneToday, todayInWindow } = summary;
   const started = now >= startsMs;
 
@@ -43,7 +46,7 @@ export function DailyChecklist({
       <div className="flex items-baseline justify-between gap-3">
         <p className="eyebrow">Daily checklist</p>
         <p className="tnum text-[0.6875rem] text-faint">
-          resets in {formatRemaining(msUntilReset(now, region))}
+          resets in {formatRemaining(msUntilReset(now, region, game))}
         </p>
       </div>
 

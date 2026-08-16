@@ -151,6 +151,7 @@ export function EventDetail({
               startsMs={clock.startsMs}
               endsMs={clock.endsMs}
               region={region}
+              game={event.game}
               now={now}
               logged={dailyDays}
               onToggleDay={(day) => onToggleDay(event.id, day)}

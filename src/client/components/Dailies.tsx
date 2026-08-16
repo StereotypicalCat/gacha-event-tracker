@@ -35,13 +35,33 @@ export function Dailies({
   daysFor: (id: string) => string[];
   onToggleDay: (id: string, day: string) => void;
 }) {
-  if (games.length === 0 && events.length === 0) return null;
+  // Each game rolls on its own server clock, so "today" is asked per game
+  // rather than once for the section — Endfield's European day can still be
+  // yesterday's while every HoYo game has already turned over.
+  const chores = games.map((id) => ({
+    key: dailiesId(id),
+    game: gameMeta(id),
+    today: dayKey(now, region, id),
+    resetsIn: msUntilReset(now, region, id),
+  }));
+  const repeating = events.map((event) => ({
+    key: event.id,
+    event,
+    game: gameMeta(event.game),
+    today: dayKey(now, region, event.game),
+    resetsIn: msUntilReset(now, region, event.game),
+  }));
 
-  const today = dayKey(now, region);
-  const doneEvents = events.filter((e) => daysFor(e.id).includes(today));
-  const done = games.filter((g) => daysFor(dailiesId(g)).includes(today));
-  const total = games.length + events.length;
-  const complete = done.length + doneEvents.length;
+  const items = [...chores, ...repeating];
+  const total = items.length;
+  const complete = items.filter((i) => daysFor(i.key).includes(i.today)).length;
+
+  if (total === 0) return null;
+
+  // With mixed reset clocks there is no single "resets in", so the header
+  // reports the next one to land and says that it is the next one.
+  const soonest = Math.min(...items.map((i) => i.resetsIn));
+  const mixed = new Set(items.map((i) => i.resetsIn)).size > 1;
 
   return (
     <section className="border-b border-hairline px-4 py-4">
@@ -50,45 +70,39 @@ export function Dailies({
           Today's dailies · {complete}/{total}
         </h2>
         <p className="tnum text-[0.6875rem] text-faint">
-          resets in {formatRemaining(msUntilReset(now, region))}
+          {mixed ? "next reset in " : "resets in "}
+          {formatRemaining(soonest)}
         </p>
       </div>
 
       <ul className="mt-2.5 flex flex-wrap gap-1.5">
-        {games.map((id) => {
-          const game = gameMeta(id);
-          const key = dailiesId(id);
-          return (
-            <li key={key}>
-              <TickChip
-                label={game.short}
-                hue={game.hue}
-                title={game.dailyTasks}
-                ariaLabel={`${game.name} dailies — ${game.dailyTasks}`}
-                days={daysFor(key)}
-                today={today}
-                onToggle={() => onToggleDay(key, today)}
-              />
-            </li>
-          );
-        })}
+        {chores.map((chore) => (
+          <li key={chore.key}>
+            <TickChip
+              label={chore.game.short}
+              hue={chore.game.hue}
+              title={chore.game.dailyTasks}
+              ariaLabel={`${chore.game.name} dailies — ${chore.game.dailyTasks}`}
+              days={daysFor(chore.key)}
+              today={chore.today}
+              onToggle={() => onToggleDay(chore.key, chore.today)}
+            />
+          </li>
+        ))}
 
-        {events.map((event) => {
-          const game = gameMeta(event.game);
-          return (
-            <li key={event.id}>
-              <TickChip
-                label={event.title}
-                hue={game.hue}
-                title={`${game.name} — ${event.title}`}
-                ariaLabel={`${event.title} (${game.name})`}
-                days={daysFor(event.id)}
-                today={today}
-                onToggle={() => onToggleDay(event.id, today)}
-              />
-            </li>
-          );
-        })}
+        {repeating.map((row) => (
+          <li key={row.key}>
+            <TickChip
+              label={row.event.title}
+              hue={row.game.hue}
+              title={`${row.game.name} — ${row.event.title}`}
+              ariaLabel={`${row.event.title} (${row.game.name})`}
+              days={daysFor(row.key)}
+              today={row.today}
+              onToggle={() => onToggleDay(row.key, row.today)}
+            />
+          </li>
+        ))}
       </ul>
 
       <p className="mt-2 text-[0.6875rem] leading-relaxed text-faint">

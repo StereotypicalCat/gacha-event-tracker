@@ -243,6 +243,38 @@ server time, so a player finishing at 02:00 is still on the previous day's daili
 computed against the reader's chosen region (`RESET_HOUR_LOCAL`, `dayKey`). Keys sort
 lexicographically, which is what "how many days are left" and streak counting rely on.
 
+**Not every game has a server per region.** `GameMeta.resetOffsets` records the regions where a
+game's server clock differs from `REGION_RESET_UTC_OFFSET`. Endfield is the case this exists for: it
+has two server groups rather than three, and Europe is served off the Americas machine on a fixed
+UTC-5, so a European player's reset is 09:00 UTC — six hours after the HoYoverse/Kuro pattern.
+Every day-key function takes an optional `game` for this reason, and **anything reading or writing a
+tick must pass it**: a write under one clock and a read under another puts the tick on a day the
+reader cannot see.
+
+| Game | Reset (server local) | Server offset | Reset (UTC) | Copenhagen, summer / winter |
+|---|---|---|---|---|
+| Genshin, Star Rail, ZZZ, Wuwa, NTE | 04:00 | region (EU = UTC+1) | 03:00 | 05:00 / 04:00 |
+| Endfield, Europe | 04:00 | UTC-5 (on the Americas server) | 09:00 | 11:00 / 10:00 |
+| Endfield, Asia / Americas | 04:00 | regional default | 20:00 / 09:00 | — |
+
+These server offsets are **fixed and do not observe DST**, so the reader's local reset time moves by
+an hour across the European clock change while the UTC instant stays put.
+
+The override is deliberately **per region, not per game**. A blanket per-game offset is the wrong
+shape: it drags the regions that do have their own server onto somebody else's clock, moving day
+keys for readers who never had the bug. List only the regions that actually differ.
+
+Changing a value in that table is a **data change, not a constant change**: it re-labels the
+game-day some already-logged ticks fall in, for readers in that region. Two consequences to check
+before shipping one, both of which are invisible at runtime:
+
+- A tick logged inside the shifted window reads as the adjacent day, which can show as a one-day
+  break in a streak. Recoverable — past days stay editable.
+- If the shift moves a window's boundary, a day can drop out of `dailyDays` entirely. A day that is
+  not in `dailyDays` renders no pip, so a tick on it is **unreachable**: not deleted, but with no UI
+  path back to it and nothing server-side to recover from. Check the real fixture windows for the
+  affected game and region before changing an offset.
+
 Three rules this store keeps, for the same reason the rest of the client does — nothing else holds
 a copy:
 

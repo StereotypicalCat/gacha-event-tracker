@@ -83,7 +83,7 @@ src/client/       React app, service worker, manifest
   state/          progress, daily log, ignores, prefs, sort — all localStorage
 scripts/          build-feed.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             257 tests
+test/             301 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
@@ -150,6 +150,13 @@ Two more key spaces have the same property, for the same reason:
 - **Game-day keys** (`dayKey`) are `YYYY-MM-DD` in *server-reset space*, not UTC — the day rolls at
   04:00 local server time. They are storage keys *and* they are compared with `<` and sorted, so the
   format is fixed. Changing the reset hour or the offsets moves every reader's streak by a day.
+  A game whose server map differs lists the affected regions in `resetOffsets` (`games.ts`) —
+  Endfield serves Europe off the Americas machine, so `europe` is UTC-5 there and its reset is
+  09:00 UTC, not 03:00. Keep that override **per region**: a blanket per-game offset drags the
+  regions that do have their own server onto someone else's clock. Every day-key function takes an
+  optional `game` — **anything reading or writing a tick must pass it**, or it writes under one
+  clock and reads under another. A day that drops out of `dailyDays` renders no pip, so a tick on it
+  becomes unreachable; check real fixture windows before changing an offset.
 
 The sanitizer at the ingest boundary recomputes an event ID only when a sanitized title actually
 changed *and* the ID was minted the standard way. If a change to it starts moving IDs on real
