@@ -36,6 +36,11 @@ game8.co and wiki.gg is unproven.
 
 ## Try it
 
+Live at **<https://stereotypicalcat.github.io/gacha-event-tracker/>**, deployed from `main` by the
+Pages job below.
+
+Or run it yourself:
+
 ```bash
 bun install
 bun run dev        # build, then serve on :3000
@@ -217,7 +222,8 @@ the default `GITHUB_TOKEN` is not allowed to create a Pages site:
 2. **Settings → Secrets and variables → Actions → Variables:** add `DEPLOY_PAGES` = `true`.
 
 Until then the `pages` job is skipped and the pipeline stays green. Pages is unavailable for private
-repositories on the free plan.
+repositories on the free plan. Both steps are done here, and the deploy lands at
+<https://stereotypicalcat.github.io/gacha-event-tracker/>.
 
 The feed job fails if the event count collapses. A source that quietly stops yielding events is the
 failure mode a parser-only pipeline is most prone to, and nothing else would surface it. Tests run
