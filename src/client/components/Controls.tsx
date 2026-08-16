@@ -87,9 +87,9 @@ export function Controls({
           </label>
 
           {/* Detection reads the source's wording and is wrong in both
-              directions. Off leaves only the events the reader marked, and
-              discards nothing — every mark and logged day survives, so it can
-              be switched back on. */}
+              directions, so it ships off and says so. Off leaves only the
+              events the reader marked, and discards nothing — every mark and
+              logged day survives, so it can be switched back on. */}
           <label className="flex cursor-pointer select-none items-start gap-2 text-xs text-muted">
             <input
               type="checkbox"
@@ -99,9 +99,13 @@ export function Controls({
             />
             <span>
               Spot daily events automatically
+              <span className="ml-1.5 rounded-full border border-hairline px-1.5 py-0.5 align-[1px] text-[0.5625rem] font-medium uppercase tracking-wider text-faint">
+                Experimental
+              </span>
               <span className="mt-0.5 block max-w-xs leading-relaxed text-faint">
-                Off, only events you mark yourself get a checklist. Your ticks
-                and streaks are kept either way.
+                Guessed from what the source wrote, so it misses some and
+                invents others. Off, only events you mark yourself get a
+                checklist. Your ticks and streaks are kept either way.
               </span>
             </span>
           </label>

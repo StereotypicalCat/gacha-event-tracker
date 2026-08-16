@@ -293,7 +293,14 @@ It adds no schema field, so nothing about the feed contract or the event ID chan
 for one event and wins outright (`resolveDaily`); absent means they have not said, so detection
 stands. `prefs.detectDaily` switches the guessing off altogether, leaving only events they marked
 themselves — it silences detection rather than deleting anything, so every mark and every logged day
-survives and switching it back on restores exactly what was there. An override that merely
+survives and switching it back on restores exactly what was there.
+
+**Detection is off by default and labelled experimental in the UI.** Wording is a weak signal and it
+is wrong in both directions, so a new reader starts with only the standing `dailies:<game>` chores
+and whatever they mark themselves; opting in is one checkbox. The default applies to new readers
+only — a stored `prefs` keeps whatever value it has, because turning it off under a reader who has
+been ticking auto-detected checklists would pull those chips out of the strip with no explanation.
+An override that merely
 agrees with detection is **not stored** (`dailyOverride`) — freezing today's guess into their data
 would stop a later parser improvement from ever reaching that event. This is the only field in
 `progress` that changes what the app *shows* rather than recording what the reader did, which is

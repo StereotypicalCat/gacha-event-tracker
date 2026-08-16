@@ -211,9 +211,12 @@ event's length. It adds **no schema field**, so the feed contract is untouched.
 - **A repeating event the reader marked done leaves the strip.** They have said there is nothing
   left to do; keeping a tickable chip for it is the app arguing with them. Their logged days are
   untouched, so unmarking it brings the chip and the streak straight back.
-- **Detection is a default, not a verdict.** The reader can mark any event as repeating, or unmark
-  one detection got wrong (`progress.daily`, resolved by `resolveDaily`), and `prefs.detectDaily`
-  switches the guessing off entirely. Store an override only when it *disagrees* with detection —
+- **Detection is a guess, not a verdict — and it ships off.** `prefs.detectDaily` defaults to
+  `false` and the control is labelled experimental: wording is a weak signal and gets it wrong in
+  both directions, so a new reader opts in rather than out. The default moves nothing for an
+  existing reader, whose stored `prefs` wins. The reader can mark any event as repeating, or unmark
+  one detection got wrong (`progress.daily`, resolved by `resolveDaily`), whether the guessing is
+  on or off. Store an override only when it *disagrees* with detection —
   recording agreement would freeze today's guess and stop a better parser from ever reaching that
   event. Neither control ever deletes a mark or a logged day, so both are reversible.
 

@@ -23,6 +23,10 @@ export interface Prefs {
    * Whether to guess which events repeat daily from what the source printed.
    * Off leaves only the ones the reader marked themselves; it never discards a
    * mark or a logged day, so it is reversible.
+   *
+   * Off by default: the guess reads source wording and is wrong in both
+   * directions, so a reader starts with only the dailies they chose. Readers
+   * who already switched it on keep it — stored prefs win over this default.
    */
   detectDaily: boolean;
   showCompleted: boolean;
@@ -40,7 +44,7 @@ function defaults(): Prefs {
     hiddenGames: [],
     focusGame: null,
     sort: "ending",
-    detectDaily: true,
+    detectDaily: false,
     showCompleted: true,
     showIgnored: false,
     regionConfirmed: false,
