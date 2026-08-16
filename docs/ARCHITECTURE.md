@@ -87,13 +87,20 @@ src/
       Legend.tsx        what the bars and colours mean
       Timeline.tsx      calendar lanes              (F1)
       EventDetail.tsx   detail sheet, ignore action (F9)
+      ProgressControls  status, effort, note        (F12)
+      Dailies.tsx       today's strip of repeating jobs
+      DailyChecklist    one repeating event's whole run
       Controls.tsx      games, region, export/import(F4, F5, F6)
       Welcome.tsx       first-run game picker       (F8)
+      Toast.tsx         undo an ignore
       Colophon.tsx      credit, disclaimer, repo link
     state/
       storage.ts        namespaced, versioned localStorage
-      useMarkSet.ts     completions and ignores (same shape)
+      useMarkSet.ts     ignores (and the superseded completions shape)
+      useProgress.ts    status, effort, note, daily override  (F12)
+      useDailyLog.ts    which game-days are ticked off
       usePrefs.ts       region, filters, onboarding flags
+      sort.ts           deadline order, or what you're partway through
 serve.ts                static server + /api/health              ✓ built
 scripts/
   build-feed.ts         fixtures → public/data/events.v1.json     ✓ built
