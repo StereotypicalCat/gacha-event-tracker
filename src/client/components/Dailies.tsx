@@ -30,7 +30,11 @@ export function Dailies({
   onToggleDay,
 }: {
   games: GameId[];
-  /** Live events that repeat daily — detected, or marked by the reader. */
+  /**
+   * Live events that repeat daily — detected, or marked by the reader — and
+   * that the reader has not already finished or ignored. An event they marked
+   * done has no line left to tick, and listing it is the app arguing with them.
+   */
   events: GachaEvent[];
   region: Region;
   now: number;

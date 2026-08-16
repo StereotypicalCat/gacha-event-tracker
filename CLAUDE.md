@@ -83,7 +83,7 @@ src/client/       React app, service worker, manifest
   state/          progress, daily log, ignores, prefs, sort — all localStorage
 scripts/          build-feed.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             301 tests
+test/             309 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
@@ -207,6 +207,9 @@ event's length. It adds **no schema field**, so the feed contract is untouched.
 - **A tick is never removed except by the reader**, including ticks outside the window the feed now
   claims. A source quietly moving a date must not erase a fortnight's streak that exists nowhere
   else.
+- **A repeating event the reader marked done leaves the strip.** They have said there is nothing
+  left to do; keeping a tickable chip for it is the app arguing with them. Their logged days are
+  untouched, so unmarking it brings the chip and the streak straight back.
 - **Detection is a default, not a verdict.** The reader can mark any event as repeating, or unmark
   one detection got wrong (`progress.daily`, resolved by `resolveDaily`), and `prefs.detectDaily`
   switches the guessing off entirely. Store an override only when it *disagrees* with detection —
@@ -229,3 +232,9 @@ event's length. It adds **no schema field**, so the feed contract is untouched.
 - **Sorting groups, it never reorders within a group.** Every mode falls back to
   `endingSoonestFirst`, so choosing one can never cost the reader the deadline order the product
   exists for.
+- **Telling the reader to do something is not the same as showing it to them.** `showCompleted` and
+  `showIgnored` decide what they can *look at*; the "next to expire" headline and the dailies strip
+  are *instructions*, so both drop anything done or ignored regardless (`outstanding` in
+  `src/client/state/lens.ts`). Being pointed at a job you already finished is the bug either way.
+  For the same reason "next to expire" reads the minimum end date rather than the head of the list,
+  which under "doing first" is a different event entirely.

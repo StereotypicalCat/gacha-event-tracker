@@ -16,6 +16,7 @@ import { useProgress } from "./state/useProgress.ts";
 import { useDailyLog, type DailyLogMap } from "./state/useDailyLog.ts";
 import { usePrefs } from "./state/usePrefs.ts";
 import { compareRows, SORT_MODES, type Activity, type SortMode } from "./state/sort.ts";
+import { firstToExpire, outstanding } from "./state/lens.ts";
 import { clockFor, DAY, formatRemaining } from "../shared/time.ts";
 import { dailySummary, isDaily, resolveDaily } from "../shared/daily.ts";
 import type { GameId } from "../shared/schema.ts";
@@ -110,8 +111,10 @@ export function App() {
     return { doneToday: summary.doneToday, remaining: summary.remaining };
   };
 
+  const isIgnored = (id: string) => ignored.marks[id] !== undefined;
+
   const toggleIgnored = (id: string, title: string) => {
-    const wasIgnored = ignored.marks[id] !== undefined;
+    const wasIgnored = isIgnored(id);
     ignored.toggle(id);
     setLastIgnored(wasIgnored ? null : { id, title });
   };
@@ -153,7 +156,7 @@ export function App() {
         .filter((r) => !r.clock.ended)
         // Ignored events are gone from both views unless deliberately revealed
         // — that is the whole point of ignoring one.
-        .filter((r) => prefs.showIgnored || ignored.marks[r.event.id] === undefined)
+        .filter((r) => prefs.showIgnored || !isIgnored(r.event.id))
         .filter((r) => prefs.showCompleted || !isDone(r.event.id))
         // Sorting only ever groups: both modes fall back to soonest-ending
         // inside a group, so choosing one never costs the deadline order.
@@ -172,7 +175,20 @@ export function App() {
 
   const live = visible.filter((r) => r.clock.live);
   const upcoming = visible.filter((r) => r.clock.upcoming);
-  const next = live.find((r) => r.clock.msRemaining !== null) ?? live[0] ?? null;
+
+  /**
+   * What the page is telling the reader to *do*, as opposed to what it is
+   * letting them look at.
+   *
+   * The headline and the dailies strip are both instructions, so both drop
+   * events the reader has finished or ignored — being pointed at a job you
+   * already did is the bug whether the pointer is a countdown or a checkbox.
+   * `showCompleted` deliberately does not reach this: that preference says keep
+   * them on screen, not keep nagging me about them.
+   */
+  const todo = outstanding(live, isDone, isIgnored);
+  const next = firstToExpire(todo);
+
   const openRow = allRows.find((r) => r.event.id === openId) ?? null;
 
   if (state.status === "loading") {
@@ -267,7 +283,7 @@ export function App() {
               that expires tonight rather than next patch. */}
           <Dailies
             games={games.filter((g) => !prefs.hiddenGames.includes(g))}
-            events={live.filter(repeatsDaily).map((r) => r.event)}
+            events={todo.filter(repeatsDaily).map((r) => r.event)}
             region={prefs.region}
             now={now}
             daysFor={daily.daysFor}
@@ -302,7 +318,7 @@ export function App() {
                   status={prog.progress[row.event.id]?.status}
                   effort={prog.progress[row.event.id]?.effort}
                   daily={dailyBadge(row)}
-                  ignored={ignored.marks[row.event.id] !== undefined}
+                  ignored={isIgnored(row.event.id)}
                   onRestore={(id) => ignored.toggle(id)}
                   onOpen={setOpenId}
                 />
@@ -332,7 +348,7 @@ export function App() {
                   status={prog.progress[row.event.id]?.status}
                   effort={prog.progress[row.event.id]?.effort}
                   daily={dailyBadge(row)}
-                  ignored={ignored.marks[row.event.id] !== undefined}
+                  ignored={isIgnored(row.event.id)}
                   onRestore={(id) => ignored.toggle(id)}
                   onOpen={setOpenId}
                 />
@@ -393,7 +409,7 @@ export function App() {
         <EventDetail
           row={openRow}
           completed={isDone(openRow.event.id)}
-          ignored={ignored.marks[openRow.event.id] !== undefined}
+          ignored={isIgnored(openRow.event.id)}
           status={prog.progress[openRow.event.id]?.status}
           effort={prog.progress[openRow.event.id]?.effort}
           note={prog.progress[openRow.event.id]?.note ?? ""}

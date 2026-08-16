@@ -10,14 +10,26 @@ import { Meter, URGENCY_COLOR } from "./Meter.tsx";
  * Deliberately not a stat grid. One number, because the reader has exactly one
  * question on arrival.
  */
-export function NextUp({ row, onOpen }: { row: RowEvent | null; onOpen: (id: string) => void }) {
+export function NextUp({
+  row,
+  onOpen,
+}: {
+  /**
+   * The soonest-expiring event the reader has neither finished nor ignored.
+   * A panel headed "next to expire" is a deadline they still have to meet, so
+   * an event they already ticked off does not belong in it however visible
+   * they have chosen to keep it elsewhere.
+   */
+  row: RowEvent | null;
+  onOpen: (id: string) => void;
+}) {
   if (row === null) {
     return (
       <section className="border-b border-hairline px-4 py-8">
         <p className="eyebrow">Nothing running</p>
         <p className="mt-2 max-w-sm text-sm text-muted">
-          No live events in the games you have switched on. Turn a game back on
-          below, or check again after the next patch.
+          Nothing live and unfinished in the games you have switched on. Turn a
+          game back on below, or check again after the next patch.
         </p>
       </section>
     );

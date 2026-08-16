@@ -102,6 +102,7 @@ src/
       useDailyLog.ts    which game-days are ticked off
       usePrefs.ts       region, filters, onboarding flags
       sort.ts           deadline order, or what you're partway through
+      lens.ts           who sees which rows — outstanding, next-to-expire
 serve.ts                static server + /api/health              ✓ built
 scripts/
   build-feed.ts         fixtures → public/data/events.v1.json     ✓ built
