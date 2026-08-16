@@ -152,10 +152,15 @@ export function Dailies({
  * to the reader at 23:50 they are the same job, and the distinction between
  * "the app knows about this" and "a wiki published it" is ours, not theirs.
  *
- * The game's hue is on the border in both states — softly when the job is
+ * The game's hue is on the border in both states — faintly while the job is
  * outstanding, fully once it is done. A chip that only takes its colour on
  * completion means the strip you actually scan, the unfinished one, is a row of
  * identical grey pills with no clue which game each belongs to.
+ *
+ * The outstanding tint is kept low enough to read as a hint rather than a
+ * state: it has to say *which game* without competing with the tick, which is
+ * the only thing on the chip that answers the question the reader came with.
+ * Ticking one should be a visible jump, not a nudge.
  */
 function TickChip({
   label,
@@ -186,14 +191,14 @@ function TickChip({
       title={title}
       className="flex max-w-[15rem] items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
       style={{
-        borderColor: isDone ? hue : `color-mix(in srgb, ${hue} 34%, transparent)`,
+        borderColor: isDone ? hue : `color-mix(in srgb, ${hue} 20%, transparent)`,
         // Colour identifies the game; done-ness is carried by the tick, the
         // full-strength border and the wash. Keeping the label readable matters
         // more than saturating it, so an outstanding chip stays on muted ink.
         color: isDone ? hue : "var(--color-muted)",
         background: isDone
           ? `color-mix(in srgb, ${hue} 14%, transparent)`
-          : `color-mix(in srgb, ${hue} 5%, transparent)`,
+          : `color-mix(in srgb, ${hue} 3%, transparent)`,
       }}
     >
       <svg viewBox="0 0 16 16" aria-hidden className="size-3 shrink-0">
@@ -204,7 +209,7 @@ function TickChip({
           strokeWidth="2.2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          opacity={isDone ? 1 : 0.35}
+          opacity={isDone ? 1 : 0.25}
         />
       </svg>
       <span className="truncate">{label}</span>
