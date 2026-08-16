@@ -91,28 +91,11 @@ export function useProgress() {
     [patch],
   );
 
-  const cycleStatus = useCallback(
-    (id: string) => {
-      setProgress((prev) => {
-        // Untouched → doing → done → untouched. One control, three states, in
-        // the order the reader actually moves through them.
-        const current = prev[id]?.status;
-        const next: Status | undefined =
-          current === undefined ? "doing" : current === "doing" ? "done" : undefined;
-        const merged: Progress = {
-          ...prev[id],
-          status: next,
-          at: new Date().toISOString(),
-        };
-        if (isEmpty(merged)) {
-          const { [id]: _removed, ...rest } = prev;
-          return rest;
-        }
-        return { ...prev, [id]: merged };
-      });
-    },
-    [],
-  );
+  // There was a `cycleStatus` here that advanced untouched → doing → done →
+  // untouched from a single control. It is gone: the only caller was the sheet's
+  // "Mark done" button, where one press on a fresh event produced "doing it" and
+  // the press after "done" cleared the status instead of undoing it. Status is
+  // set outright now, by a control per state.
 
   const setDaily = useCallback(
     (id: string, daily: boolean | undefined) => patch(id, { daily }),
@@ -146,7 +129,6 @@ export function useProgress() {
     progress,
     patch,
     setStatus,
-    cycleStatus,
     setDaily,
     setEffort,
     setNote,

@@ -118,7 +118,6 @@ export function App() {
     ignored.toggle(id);
     setLastIgnored(wasIgnored ? null : { id, title });
   };
-  const toggle = prog.cycleStatus;
 
   useEffect(() => {
     const ac = new AbortController();
@@ -424,7 +423,6 @@ export function App() {
           onEffort={prog.setEffort}
           onNote={prog.setNote}
           onIgnore={(id) => toggleIgnored(id, openRow.event.title)}
-          onToggle={toggle}
           onClose={() => setOpenId(null)}
         />
       )}

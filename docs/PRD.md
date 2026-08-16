@@ -87,6 +87,10 @@ completion the user already has.
 Three states, not two: untouched, doing it, done. Plus an optional effort estimate — quick, short,
 long, grind — and a free-text note.
 
+Three states need three targets. A single control cycling untouched → doing → done makes a button
+labelled "Mark done" produce "doing it", which is the control lying about itself; the detail sheet
+has an explicit control per state, and its primary action goes straight to done and back.
+
 Effort is not decoration. Combined with the time remaining it answers the question the calendar
 can't: *can I still finish this?* The same two days is comfortable for a quick event and hopeless
 for a grind, so an event carrying an effort estimate gets a "tight" or "running out of time" flag

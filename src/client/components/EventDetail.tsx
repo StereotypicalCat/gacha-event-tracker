@@ -24,7 +24,6 @@ export function EventDetail({
   dailyDays,
   onDaily,
   onToggleDay,
-  onToggle,
   onIgnore,
   onStatus,
   onEffort,
@@ -47,7 +46,6 @@ export function EventDetail({
   dailyDays: string[];
   onDaily: (id: string, daily: boolean | undefined) => void;
   onToggleDay: (id: string, day: string) => void;
-  onToggle: (id: string) => void;
   onIgnore: (id: string) => void;
   onStatus: (id: string, s: Status | undefined) => void;
   onEffort: (id: string, e: Effort | undefined) => void;
@@ -198,10 +196,19 @@ export function EventDetail({
           </p>
         )}
 
+        {/* Says what it does and does what it says.
+
+            It used to advance one step round the untouched → doing → done
+            cycle, so a reader pressing a button labelled "Mark done" on a fresh
+            event got "doing it" and had to press it again — and the second
+            press from "done" silently wiped the status rather than undoing
+            anything. Three states need three targets, which is what the control
+            above is; this one is the commit, so it goes straight to done and
+            back. */}
         <div className="mt-5 flex items-center gap-2">
           <button
             type="button"
-            onClick={() => onToggle(event.id)}
+            onClick={() => onStatus(event.id, completed ? undefined : "done")}
             className={`flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${
               completed
                 ? "border-hairline text-muted hover:text-ink"
