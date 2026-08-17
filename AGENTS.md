@@ -376,6 +376,13 @@ to an open page). Four things hold it up:
 
 - **Commit straight to `main`.** This is a solo repo and its history is a single line; do not open a
   branch for a change unless asked for one. Committing still waits to be asked.
+- **Only ever commit your own work.** Stage the files you changed, by path, and nothing else. The
+  working tree may already hold edits, untracked fixtures or a half-finished experiment that someone
+  else — the user, or another agent — put there and has not decided about yet; `git add -A`, `git
+  commit -a` and `git stash` all sweep those into your change or out of sight. Authorship in the log
+  then says you wrote something you never read, and the commit stops being the one coherent change
+  the bullet below asks for. If unrelated changes are in the way, say what you see and leave them
+  alone.
 - **Commits are self-contained and succinct.** One coherent change per commit, typechecking and
   passing tests on its own — a feature spanning layers splits as model → store → UI → docs, each
   step green by itself, even when that means widening a type in the model commit that only the UI
