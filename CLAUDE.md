@@ -318,6 +318,9 @@ to an open page). Four things hold it up:
 
 ## Conventions
 
+- **Commit straight to `main`.** This is a solo repo and its history is a single line; do not open a
+  branch for a change unless asked for one. Committing still waits to be asked, and each commit is
+  self-contained — one coherent change, typechecking and passing tests on its own.
 - **Zod schemas are the single source of truth for types.** Derive with `z.infer<>`; never
   hand-write an interface that duplicates a schema.
 - Every adapter ships a fixture in `fixtures/<game>/` and a test asserting parsed output. This is
