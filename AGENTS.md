@@ -7,6 +7,29 @@ from the code alone. Read it before changing anything.
 `CLAUDE.md` points here, so Claude Code picks it up too — keep the guidance in this file and leave
 that one a pointer.
 
+## Read the docs before changing the thing they describe
+
+This file is the working agreement, not the specification. `docs/` holds the reasoning, and it is
+written for whoever touches that area next — reading the relevant one first is the difference
+between repairing a rule and rediscovering it the expensive way.
+
+| Doc | What it settles | Read it before |
+|---|---|---|
+| `docs/PRD.md` | What the product is for, feature by feature (F1–F14), and the quality bar for dates | Changing behaviour a reader can see, or arguing something is out of scope |
+| `docs/DATA-MODEL.md` | `GachaEvent`, the SQLite tables, every `localStorage` key space, the export format | Touching `src/shared/schema.ts`, an ID scheme, a stored key, or the game/reset table |
+| `docs/INGESTION.md` | The six pipeline stages, the parser/adapter/merge layering, date formats, the review gate | Adding a source, writing or repairing a parser, or changing the fetch runner |
+| `docs/ARCHITECTURE.md` | Process shape, file layout, request paths, offline and update mechanics | Moving files, adding a route, or changing the service worker |
+| `docs/FEEDBACK.md` | What readers actually said about the first release, and the work it argues for | Deciding what to build next |
+
+Two rules that follow from that:
+
+- **The docs are part of the change.** A change that makes a sentence in `docs/` false is not
+  finished until that sentence is fixed. They are the only record of *why*, so drift costs the next
+  agent the whole reasoning, not just a detail.
+- **When this file and a doc disagree, that is a bug — say so.** Neither one silently wins. This
+  file summarises; the doc holds the argument, so fix whichever is actually wrong rather than
+  reconciling them in your head and moving on.
+
 ## What this is
 
 A web app that aggregates live and upcoming events across popular gacha games, plots them on a
