@@ -9,7 +9,7 @@
 import { z } from "zod";
 
 export const GameId = z.enum([
-  "genshin", "hsr", "zzz", "wuwa", "arknights", "endfield", "nte",
+  "genshin", "hsr", "zzz", "wuwa", "arknights", "endfield", "nte", "nikki", "p5x",
 ]);
 
 export const EventType = z.enum([
@@ -254,8 +254,14 @@ reader cannot see.
 | Game | Reset (server local) | Server offset | Reset (UTC) | Copenhagen, summer / winter |
 |---|---|---|---|---|
 | Genshin, Star Rail, ZZZ, Wuwa, NTE | 04:00 | region (EU = UTC+1) | 03:00 | 05:00 / 04:00 |
+| Infinity Nikki, P5X | 04:00 | region (assumed) | 03:00 | 05:00 / 04:00 |
 | Endfield, Europe | 04:00 | UTC-5 (on the Americas server) | 09:00 | 11:00 / 10:00 |
 | Endfield, Asia / Americas | 04:00 | regional default | 20:00 / 09:00 | — |
+
+Infinity Nikki and P5X carry **no `resetOffsets` entry**, so they take the regional default. That is
+an assumption, not a verified server map — neither source states one. Confirm it against the games
+before relying on it, and note that adding an override later re-labels the game-day of ticks readers
+have already logged, which is the change this table warns about below.
 
 These server offsets are **fixed and do not observe DST**, so the reader's local reset time moves by
 an hour across the European clock change while the UTC instant stays put.

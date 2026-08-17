@@ -25,7 +25,7 @@ Fetch the page exactly once.
 **3. Decide whether an existing parser covers it.**
 
 Parsers live in `src/ingest/parsers/` and are keyed by *site*, not game. Two exist: `game8`
-(six sources) and `wikigg` (wiki.gg MediaWiki `mp-event` templates). Check `PARSERS` first:
+(eight sources) and `wikigg` (wiki.gg MediaWiki `mp-event` templates). Check `PARSERS` first:
 
 - **Existing parser handles it** → add one entry to `SOURCES` in `adapters/index.ts`. No new
   parsing code. This is the common case and should be the first thing you try.

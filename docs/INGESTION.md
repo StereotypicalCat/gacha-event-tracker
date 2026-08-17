@@ -45,7 +45,7 @@ Consequences worth internalising:
 
 | Parser | Site | Sources using it |
 |---|---|---|
-| `game8` | game8.co article calendars | Genshin, Star Rail, Wuthering Waves, ZZZ, Endfield, NTE |
+| `game8` | game8.co article calendars | Genshin, Star Rail, Wuthering Waves, ZZZ, Endfield, NTE, Infinity Nikki, Persona 5: The Phantom X |
 | `wikigg` | wiki.gg MediaWiki `mp-event` templates | Endfield |
 
 `wikigg` is the better shape by a distance: it emits ISO timestamps with one timer per server
@@ -63,10 +63,18 @@ All live in `src/ingest/dates.ts`, each returning null rather than inferring any
 | `parseFullRange` | `Aug. 14, 2026 - Aug. 24, 2026` (a year each side) | Star Rail, Wuthering Waves |
 | `parseShortSlashRange` | `08/09/26 - 08/30/26` | Endfield |
 | `parseSlashDateTimeRange` | `2021/01/16 04:00 - 2021/01/31 03:59` | Genshin past events |
+| `parseLabelledStartEnd` | `Start: January 24, 2025 End: Permanent` | Infinity Nikki |
+| `parseAdjacentFullRange` | `July 30, 2026 August 13, 2026` (halves split by an `<hr>`) | Persona 5: The Phantom X |
 | `parseOpenRange` | `Jul. 24, 2026 - End of 4.6`, `July 10, 2026 - Permanent` | Star Rail, Wuthering Waves |
 
 `parseOpenRange` is tried last because it is the most permissive — it accepts any leading full date
 and reports no end.
+
+The last two are anchored at both ends and require a year on each half, which is what keeps them from
+eating prose. `August 12, 2026 Day 3 rewards are doubled` would otherwise read "Day 3" as an end, and
+`June 25, 2026 July 16/30, 2026` names *two* candidate ends — so it takes neither, and the leftover is
+not shown as a summary either (a date the parser refused to trust must not reappear dressed as
+information).
 
 ### The parser interface
 
@@ -125,11 +133,24 @@ Game8 uses at least four page templates and a game's page may use any of them:
    (`Period: 08/09/26 - 08/30/26 During the event...`). *(Arknights: Endfield)*
 5. **Rowspan Start/End pairs** — the event name spans two rows, so a flat cell reader sees
    `[title, "Start", date]` then `["End", date]`. *(Zenless Zone Zero)*
+6. **Labelled cells** — one cell holding `Start: <date>` and `End: <date>` split by a `<br>`, where
+   the end half is often the word `Permanent`. *(Infinity Nikki)*
+7. **`<hr>`-separated pairs** — a `Event | Duration` table whose two dates are divided by a rule
+   rather than a dash, so a tag-stripping reader sees only whitespace between them. The same page
+   repeats each live event under its own `h3` with `Start Date` / `End Date` rows and a paragraph of
+   prose; those corroborate the dates and supply the blurb the flat table lacks.
+   *(Persona 5: The Phantom X)*
 
-Shapes 1, 2, 4 and 5 are handled. Before assuming a new Game8 page will work, dump its heading/table
+Shapes 1, 2, 4, 5, 6 and 7 are handled. Before assuming a new Game8 page will work, dump its heading/table
 structure and check which shape it uses — and check **every** table, not just the obvious one.
 Endfield was written off as undatable on a first pass that only inspected its `Duration` rows; its
 two real events were in a table further down.
+
+**Check what ends a section, too.** Headings decide inclusion and the level is not consistent: Persona
+5 puts its whole finished back catalogue behind an `<h4>Finished Events</h4>` inside a collapsed
+accordion, so a reader that ignores `h4` publishes fifty dead events. Genshin uses `h4` the opposite
+way — for sub-headings *within* one event ("Availability Period") — so an unrecognised `h4` gates the
+section but must never claim the event title.
 
 ## Stage 1 — fetch
 

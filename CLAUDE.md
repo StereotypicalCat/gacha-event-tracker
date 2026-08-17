@@ -8,8 +8,8 @@ A web app that aggregates live and upcoming events across popular gacha games, p
 calendar, sorts them by end date or by what the reader is partway through, tracks day-by-day
 progress on events that repeat daily, and lets a user mark events completed.
 
-**Status: working app, refreshing itself on a schedule.** Schema, two parsers, seven sources across
-six games, the full interface, offline support, a static server, a Docker image and CI all exist and
+**Status: working app, refreshing itself on a schedule.** Schema, two parsers, nine sources across
+eight games, the full interface, offline support, a static server, a Docker image and CI all exist and
 are tested. The refresh runner (`bun run refresh`) fetches, caches raw snapshots and rebuilds the
 feed; `.github/workflows/refresh.yml` runs it twice a day and commits only when a page actually
 changed. The SQLite layer and the review queue are still specified in `docs/` but not built, so the
@@ -76,7 +76,7 @@ re-verify a sample against the live page afterward.
 
 ```
 src/shared/       schema.ts (the contract), time.ts, daily.ts, effort.ts, games.ts, feed.ts
-src/ingest/       html.ts, dates.ts (six formats), merge.ts, sanitize.ts, robots.ts, snapshots.ts
+src/ingest/       html.ts, dates.ts (eight formats), merge.ts, sanitize.ts, robots.ts, snapshots.ts
   parsers/        game8.ts, wikigg.ts — keyed by SITE, not game
   adapters/       index.ts — SOURCES registry binding url+game+parser, and the sanitize seam
 src/client/       React app, service worker, manifest
@@ -84,7 +84,7 @@ src/client/       React app, service worker, manifest
                   lens.ts — who sees which rows (focus, outstanding, next-to-expire); pure
 scripts/          build-feed.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             318 tests
+test/             348 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
@@ -116,14 +116,19 @@ These come from how gacha games actually schedule things, and they cause most bu
 - **Skip, never guess.** Every function in `dates.ts` returns `null` rather than inferring a missing
   year, month, or end. `readColumnTable` drops a row it cannot date. An omitted event is a
   recoverable disappointment; a confidently wrong date is the failure this product exists to prevent.
-- **Parsers are keyed by site, not game.** One `game8` parser serves six sources; `wikigg` serves
+- **Parsers are keyed by site, not game.** One `game8` parser serves eight sources; `wikigg` serves
   one. Adding a source for a known site is one `SOURCES` entry; a new site is a parser module.
-- **Game8 has no single template.** Five shapes are known and a page may mix them: label/value
+- **Game8 has no single template.** Seven shapes are known and a page may mix them: label/value
   detail tables, column tables, image-grid schedules (unsupportable), combined label+range+blurb
-  cells, and rowspan Start/End pairs. Full table in `docs/INGESTION.md`. Before assuming a new
+  cells, rowspan Start/End pairs, labelled `Start: … End: …` cells, and `<hr>`-separated date pairs.
+  Full table in `docs/INGESTION.md`. Before assuming a new
   Game8 page will work, dump its structure and check **every** table — Endfield was written off as
   undatable on a pass that only inspected its `Duration` rows, and its real events were further
   down the page.
+- **Check what fences a section off.** Inclusion is decided by headings, and the level varies: Persona
+  5 hides fifty finished events behind nothing but an `<h4>Finished Events</h4>` in a collapsed
+  accordion, while Genshin uses `h4` for sub-headings *inside* one event. So `h4` gates sections but
+  never names one — an unrecognised `h4` must leave the current event title alone.
 - **Prefer a source that states machine-readable times.** wiki.gg emits ISO timestamps with a timer
   per server region, which is the only reason `regionEnds` carries real data anywhere.
 - **Silent drops are the dangerous failure.** A date format the parser does not recognise makes
