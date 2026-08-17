@@ -38,7 +38,7 @@ import {
 } from "../shared/custom.ts";
 import { metaFor } from "../shared/games.ts";
 
-type View = "soon" | "calendar";
+type View = "soon" | "timeline";
 
 /**
  * Connection state. Offline is not an error here — the service worker serves
@@ -326,7 +326,7 @@ export function App() {
           {(
             [
               ["soon", "Ending soon"],
-              ["calendar", "Calendar"],
+              ["timeline", "Timeline"],
             ] as const
           ).map(([id, label]) => (
             <button
