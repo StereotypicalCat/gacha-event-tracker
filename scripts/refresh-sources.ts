@@ -346,7 +346,15 @@ async function refreshOne(
     };
   }
 
-  if (!response.ok) {
+  // 200 is the only status that means "here is the page". `response.ok` also
+  // admits the rest of the 2xx range, and that cost us the diagnosis: game8.co's
+  // edge answers a GitHub runner with **202 Accepted** and a bot-management
+  // body, which sailed through this gate as a document, reached the parser,
+  // yielded no events and was reported as "kept previous snapshot" — describing
+  // the symptom while the status that explained it went unmentioned. 202 means
+  // the request was accepted for processing; 204 has no body and 206 is a
+  // fragment. None of them is a wiki page.
+  if (response.status !== 200) {
     await store.recordCheck(adapter.id, {
       at: nowIso,
       status: response.status,

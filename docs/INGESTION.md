@@ -177,6 +177,11 @@ section but must never claim the event title.
   permission we have. A 404 means no restrictions.
 - 20s timeout. **No retries**: a retry is a second request, and CLAUDE.md § Scraping conduct says
   one per source per cycle. A failed source waits for the next cycle instead.
+- **Only `200` is a page** (plus `304` for "unchanged"). Not `response.ok` — that admits the whole
+  2xx range, and `202 Accepted` is what an edge bot-manager answers with while it serves a challenge
+  instead of the wiki. Admitting it fed that challenge page to the parser, which reported "yielded 0
+  events" — the symptom, with the status that explained it unmentioned. `204` has no body and `206`
+  is a fragment; none of them is a document.
 - **Space requests to a host we have already asked this cycle** — the host's `Crawl-delay` if it
   states one, else `DEFAULT_HOST_GAP_MS` (2s). The wait is taken after the interval and robots gates,
   so a source we then skip costs nothing.

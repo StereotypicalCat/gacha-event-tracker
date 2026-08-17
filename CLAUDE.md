@@ -193,6 +193,19 @@ AI-training crawlers. Our use is a low-rate personal aggregator with attribution
 training, and no `User-agent: *` rule applies to our paths. Keep it that way: do not raise the fetch
 rate, and do not add an LLM that consumes page content.
 
+**game8.co does not answer a GitHub Actions runner** (confirmed 2026-08-17). Its edge returns
+`202 Accepted` with a bot-management body to every one of the eight game8 sources, from the first
+scheduled cycle onward — `last confirmed: never` — while the same URLs return `200` and parse
+cleanly from a normal address. So `robots.txt` permits us and the network does not, and those eight
+games have only ever been built from checked-in fixtures in CI.
+
+The per-host spacing above does not fix this and was not meant to: a 202 on the very first request
+of a cycle is address reputation, not rate. **Do not work around it.** Browser-shaped headers, a
+proxy, or a residential egress would each be defeating a deliberate access control, which is the
+same reason `uma.moe` was declined below — and unlike `uma.moe` we would be doing it to a host whose
+`robots.txt` was welcoming, which makes it worse, not better. The legitimate options are to run the
+refresh from an address game8 will serve, or to find those games another source.
+
 A source whose ToS forbids automated access does not get an adapter. Flag it and ask.
 
 **Sources assessed and declined** (2026-08-17), so these are not re-litigated each pass:

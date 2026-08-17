@@ -214,6 +214,30 @@ describe("one request per source per six hours", () => {
     expect(calls).toHaveLength(1);
   });
 
+  test("a 2xx that is not 200 is not a page", async () => {
+    // game8.co's edge answers a GitHub runner with 202 and a bot-management
+    // body. `response.ok` admitted it, so it reached the parser and was reported
+    // as "yielded 0 events" — the symptom, while the status that explained it
+    // was never named. Six sources read that way for days.
+    await seed("<html><event></event></html>", "2026-08-01T00:00:00.000Z", 1);
+    const { opts } = options({
+      responder: () =>
+        new Response("<html>checking your browser</html>", {
+          status: 202,
+          headers: { Server: "AkamaiGHost" },
+        }),
+    });
+    const summary = await runRefresh(opts);
+
+    expect(summary.outcomes[0]?.result).toBe("failed");
+    expect(summary.outcomes[0]?.note).toContain("HTTP 202");
+    expect(summary.outcomes[0]?.note).toContain("AkamaiGHost");
+    // The page we already hold is still the page.
+    expect((await store.read("genshin-game8-events"))?.html).toBe(
+      "<html><event></event></html>",
+    );
+  });
+
   test("never retries a failure inside the same cycle", async () => {
     const { opts, calls } = options({
       responder: () => new Response("nope", { status: 500 }),
