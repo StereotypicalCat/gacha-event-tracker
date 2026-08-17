@@ -101,13 +101,15 @@ All live in `src/ingest/dates.ts`, each returning null rather than inferring any
 | `parseAdjacentFullRange` | `July 30, 2026 August 13, 2026` (halves split by an `<hr>`) | Persona 5: The Phantom X |
 | `parseYearFirstSlashRange` | `2026/07/30 – 2026/08/20` (year first, so field order is not inferred) | Arknights |
 | `parseOrdinalDateTimeRange` | `November 9th, 05:00 - December 4th, 2023, 04:59 (UTC-5)` (ordinal days, stated offset) | Reverse: 1999 |
+| `parseIsoDay` | `2026-08-04` (one boundary per column, so nothing to split) | Blue Archive |
 | `parseOpenRange` | `Jul. 24, 2026 - End of 4.6`, `July 10, 2026 - Permanent` | Star Rail, Wuthering Waves |
 
 `parseOpenRange` is tried last because it is the most permissive — it accepts any leading full date
 and reports no end.
 
-The last two are anchored at both ends and require a year on each half, which is what keeps them from
-eating prose. `August 12, 2026 Day 3 rewards are doubled` would otherwise read "Day 3" as an end, and
+`parseAdjacentFullRange` and `parseYearFirstSlashRange` are anchored at both ends and require a year
+on each half, which is what keeps them from eating prose. `August 12, 2026 Day 3 rewards are doubled`
+would otherwise read "Day 3" as an end, and
 `June 25, 2026 July 16/30, 2026` names *two* candidate ends — so it takes neither, and the leftover is
 not shown as a summary either (a date the parser refused to trust must not reappear dressed as
 information).

@@ -53,6 +53,25 @@ export function parseMonthDayYear(input: string): ParsedInstant | null {
 }
 
 /**
+ * "2026-08-04" → 2026-08-04T00:00:00.000Z, day precision.
+ *
+ * A whole cell, anchored at both ends, because this is the least distinctive
+ * shape here: unanchored it would find a date inside a version string or an
+ * article slug. Blue Archive's wiki gives each boundary its own column and
+ * writes it as a bare ISO date, so unlike every range above there is nothing to
+ * split and no field order to infer.
+ *
+ * Rejects an impossible calendar date (`2026-02-30`) through `iso`, and states
+ * `day` rather than `exact` because the source publishes no time of day.
+ */
+export function parseIsoDay(input: string): ParsedInstant | null {
+  const m = /^\s*(\d{4})-(\d{1,2})-(\d{1,2})\s*$/.exec(input);
+  if (!m) return null;
+  const value = iso(Number(m[1]), Number(m[2]), Number(m[3]));
+  return value === null ? null : { iso: value, precision: "day" };
+}
+
+/**
  * "August 12 - September 21, 2026" → both instants, year taken from the end.
  * A range whose end carries no year is unresolvable and returns null.
  */

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   parseAdjacentFullRange,
   parseFullRange,
+  parseIsoDay,
   parseLabelledStartEnd,
   parseMonthDayRange,
   parseMonthDayYear,
@@ -328,5 +329,41 @@ describe("parseOrdinalDateTimeRange", () => {
       "August 13th, 05:00 ~ September 21st, 2026, 04:59 (UTC-5)",
     );
     expect(range?.start.iso).toBe("2026-08-13T10:00:00.000Z");
+  });
+});
+
+describe("parseIsoDay", () => {
+  test("parses a bare ISO date at day precision", () => {
+    expect(parseIsoDay("2026-08-04")).toEqual({
+      iso: "2026-08-04T00:00:00.000Z",
+      precision: "day",
+    });
+  });
+
+  test("tolerates the whitespace a table cell carries", () => {
+    expect(parseIsoDay(" 2026-09-15 ")?.iso).toBe("2026-09-15T00:00:00.000Z");
+  });
+
+  test("rejects an impossible calendar date", () => {
+    expect(parseIsoDay("2026-02-30")).toBeNull();
+    expect(parseIsoDay("2026-13-01")).toBeNull();
+  });
+
+  test("refuses a date embedded in anything else", () => {
+    // Anchored at both ends because this is the least distinctive shape in this
+    // module. Unanchored it finds dates in article slugs and version strings.
+    expect(parseIsoDay("Rerun 2026-08-04")).toBeNull();
+    expect(parseIsoDay("2026-08-04 - 2026-08-18")).toBeNull();
+    // The page's other schedule tables write their boundaries this way, with a
+    // wall clock and no timezone anywhere. Reading one as UTC would invent the
+    // fact that matters most, so this reader takes none of them.
+    expect(parseIsoDay("08/12/2026 11:00")).toBeNull();
+  });
+
+  test("does not accept a partial date", () => {
+    expect(parseIsoDay("2026-08")).toBeNull();
+    expect(parseIsoDay("2026")).toBeNull();
+    expect(parseIsoDay("TBA")).toBeNull();
+    expect(parseIsoDay("")).toBeNull();
   });
 });
