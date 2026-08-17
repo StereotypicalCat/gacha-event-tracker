@@ -16,6 +16,7 @@ import { useMarkSet } from "./state/useMarkSet.ts";
 import { useProgress } from "./state/useProgress.ts";
 import { useDailyLog, type DailyLogMap } from "./state/useDailyLog.ts";
 import { usePrefs } from "./state/usePrefs.ts";
+import { useCustom } from "./state/useCustom.ts";
 import { compareRows, SORT_MODES, type Activity, type SortMode } from "./state/sort.ts";
 import {
   advanceFocus,
@@ -26,8 +27,14 @@ import {
 } from "./state/lens.ts";
 import { clockFor, DAY, formatRemaining } from "../shared/time.ts";
 import { dailySummary, isDaily, resolveDaily } from "../shared/daily.ts";
-import { useGameMeta } from "./state/gameMeta.tsx";
-import type { LaneId } from "../shared/custom.ts";
+import { GameMetaProvider, type MetaResolver } from "./state/gameMeta.tsx";
+import {
+  isCustomGameId,
+  type CustomEvents,
+  type CustomGames,
+  type LaneId,
+} from "../shared/custom.ts";
+import { metaFor } from "../shared/games.ts";
 
 type View = "soon" | "calendar";
 
@@ -70,13 +77,24 @@ export function App() {
   // The event most recently ignored, so it can be put back without hunting for
   // a row that just disappeared.
   const [lastIgnored, setLastIgnored] = useState<{ id: string; title: string } | null>(null);
-  const gameMeta = useGameMeta();
   const now = useNow();
   const online = useOnline();
   const { prefs, update, toggleGame } = usePrefs();
   const ignored = useMarkSet(KEYS.ignored);
   const prog = useProgress();
   const daily = useDailyLog();
+  const custom = useCustom();
+  /**
+   * How every lane in this tree is named and coloured.
+   *
+   * App owns it because App is the only thing holding the reader's own games,
+   * and hands it down rather than letting components import a lookup that can
+   * only ever answer for the tracked ones.
+   */
+  const gameMeta = useMemo<MetaResolver>(
+    () => (id) => metaFor(id, custom.games),
+    [custom.games],
+  );
   // "Completed" is now one status among several; the rest of the UI still asks
   // this question a lot, so keep a cheap shorthand.
   const isDone = (id: string) => prog.progress[id]?.status === "done";
@@ -144,17 +162,25 @@ export function App() {
 
   const allRows = useMemo<RowEvent[]>(() => {
     if (state.status !== "ready") return [];
-    return state.feed.events
-      .filter((e) => e.status === "published")
-      .map((event) => ({ event, clock: clockFor(event, prefs.region, now) }));
+    // The reader's own events are events. They sort, filter, focus, expire and
+    // tick exactly like scraped ones — what sets them apart is only that
+    // nothing is claimed about where their dates came from.
+    return [
+      ...state.feed.events.filter((e) => e.status === "published"),
+      ...custom.rows,
+    ].map((event) => ({ event, clock: clockFor(event, prefs.region, now) }));
     // `now` intentionally excluded: recomputing every clock each second is
     // wasteful, and the countdown text re-renders from `now` anyway.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, prefs.region, Math.floor(now / 60_000)]);
+  }, [state, custom.rows, prefs.region, Math.floor(now / 60_000)]);
 
+  // Feed lanes come from rows, the reader's from the games themselves — so a
+  // game they just created shows up in the filters before it holds anything.
+  // It is still not a scraped game with an empty feed: it has no source row, no
+  // freshness badge and no colophon credit.
   const games = useMemo<LaneId[]>(
-    () => [...new Set(allRows.map((r) => r.event.game))],
-    [allRows],
+    () => [...new Set([...allRows.map((r) => r.event.game), ...custom.lanes])],
+    [allRows, custom.lanes],
   );
 
   /** Games the reader plays, in feed order. The focus bar rotates through these. */
@@ -251,17 +277,19 @@ export function App() {
   // up by default rather than staying invisible.
   if (!prefs.onboarded) {
     return (
-      <Shell>
-        <Welcome
-          available={games}
-          onConfirm={(chosen) =>
-            update({
-              onboarded: true,
-              hiddenGames: games.filter((g) => !chosen.includes(g)),
-            })
-          }
-        />
-      </Shell>
+      <GameMetaProvider value={gameMeta}>
+        <Shell>
+          <Welcome
+            available={games}
+            onConfirm={(chosen) =>
+              update({
+                onboarded: true,
+                hiddenGames: games.filter((g) => !chosen.includes(g)),
+              })
+            }
+          />
+        </Shell>
+      </GameMetaProvider>
     );
   }
 
@@ -270,6 +298,7 @@ export function App() {
   );
 
   return (
+    <GameMetaProvider value={gameMeta}>
     <Shell>
       <header className="flex items-center justify-between px-4 pb-3 pt-5">
         <div>
@@ -336,8 +365,13 @@ export function App() {
 
           {/* The chores no wiki publishes, and the only thing on this page
               that expires tonight rather than next patch. */}
+          {/* Standing chores are a tracked-game notion: there is no routine we
+              could name on behalf of a game the reader invented, so their lanes
+              contribute repeating events here but no chore of their own. */}
           <Dailies
-            games={focus === null ? enabled : [focus]}
+            games={(focus === null ? enabled : [focus]).filter(
+              (id) => !isCustomGameId(id),
+            )}
             events={todo.filter(repeatsDaily).map((r) => r.event)}
             region={prefs.region}
             now={now}
@@ -430,10 +464,19 @@ export function App() {
         onUpdate={update}
         ignoredCount={Object.keys(ignored.marks).length}
         onExport={() =>
-          exportProgress(prog.progress, daily.logs, ignored.marks, prefs)
+          exportProgress(prog.progress, daily.logs, ignored.marks, prefs, {
+            games: custom.games,
+            events: custom.events,
+          })
         }
         onImport={(file) =>
-          void importProgress(file, prog.merge, daily.merge, ignored.merge)
+          void importProgress(
+            file,
+            prog.merge,
+            daily.merge,
+            ignored.merge,
+            custom.merge,
+          )
         }
       />
 
@@ -484,6 +527,7 @@ export function App() {
         />
       )}
     </Shell>
+    </GameMetaProvider>
   );
 }
 
@@ -565,6 +609,7 @@ function exportProgress(
   daily: DailyLogMap,
   ignored: Record<string, { at: string }>,
   prefs: unknown,
+  own: { games: CustomGames; events: CustomEvents },
 ) {
   const blob = new Blob(
     [
@@ -578,6 +623,11 @@ function exportProgress(
           // an export that omitted them would quietly be a lossy backup.
           daily,
           ignored,
+          // The reader's own games and events exist nowhere else at all — not
+          // in the feed, not on a server. An export without them is a backup
+          // that quietly loses the half they typed themselves.
+          customGames: own.games,
+          customEvents: own.events,
           prefs,
         },
         null,
@@ -599,6 +649,7 @@ async function importProgress(
   mergeProgress: (c: Record<string, { at: string }>) => void,
   mergeDaily: (c: DailyLogMap) => void,
   mergeIgnored: (c: Record<string, { at: string }>) => void,
+  mergeCustom: (games: unknown, events: unknown) => void,
 ) {
   try {
     const parsed: unknown = JSON.parse(await file.text());
@@ -608,6 +659,8 @@ async function importProgress(
       completions?: unknown;
       daily?: unknown;
       ignored?: unknown;
+      customGames?: unknown;
+      customEvents?: unknown;
     };
     if (data.format !== "gacha-tracker-export") {
       alert("That file isn't an Event Clock export.");
@@ -635,6 +688,11 @@ async function importProgress(
     const d = data.daily;
     if (typeof d === "object" && d !== null) mergeDaily(d as DailyLogMap);
     if (i !== null) mergeIgnored(i);
+    // Additive keys: an export written before F13 has neither, which is a file
+    // from a device that had none rather than an error. An event and the game
+    // it belongs to always travel together, so this can never land a lane with
+    // nothing to name it.
+    mergeCustom(data.customGames, data.customEvents);
   } catch {
     alert("That file couldn't be read. Export a fresh copy and try again.");
   }

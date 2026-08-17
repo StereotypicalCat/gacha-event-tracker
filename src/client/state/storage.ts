@@ -25,6 +25,16 @@ export const KEYS = {
   daily: `${NS}:daily`,
   ignored: `${NS}:ignored`,
   prefs: `${NS}:prefs`,
+  /**
+   * Games and events the reader entered themselves (PRD F13).
+   *
+   * Two keys rather than one because they have different lifetimes: a game
+   * outlives the events in it, and deleting one is refused while the other
+   * still references it. Like everything else here, this is the only copy —
+   * there is no server that has ever seen it.
+   */
+  customGames: `${NS}:customGames`,
+  customEvents: `${NS}:customEvents`,
 } as const;
 
 /**

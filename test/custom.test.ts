@@ -16,6 +16,7 @@ import { metaFor } from "../src/shared/games.ts";
 import { dailiesId } from "../src/shared/daily.ts";
 import { eventId, GameId } from "../src/shared/schema.ts";
 import { clockFor } from "../src/shared/time.ts";
+import { readerInstant } from "../src/client/state/useCustom.ts";
 
 const AT = "2026-08-17T12:00:00.000Z";
 
@@ -242,5 +243,44 @@ describe("knownLane", () => {
     expect(knownLane("genshin", mine)).toBe(true);
     expect(knownLane("mygame:a", mine)).toBe(true);
     expect(knownLane("mygame:gone", mine)).toBe(false);
+  });
+});
+
+describe("readerInstant", () => {
+  // Timezone-independent assertions on purpose: the point of this helper is
+  // that it reads a typed date in the *reader's* zone, so the tests check the
+  // relationships that must hold in any of them rather than pinning UTC.
+  const localDate = (iso: string) =>
+    new Date(iso).toLocaleDateString("en-CA"); // YYYY-MM-DD in local time
+
+  test("a typed date comes back as that same date where the reader is", () => {
+    // Someone who types 20 August means the 20th where they are, and has to see
+    // the 20th back — not the 19th because a server is five hours behind.
+    for (const boundary of ["start", "end"] as const) {
+      const iso = readerInstant("2026-08-20", null, boundary);
+      expect(iso).not.toBeNull();
+      expect(localDate(iso!)).toBe("2026-08-20");
+    }
+  });
+
+  test("a bare start is the beginning of the day and a bare end is the end of it", () => {
+    // Which is how a person reads "20 Aug – 3 Sep": through the 3rd, not up to
+    // the first second of it.
+    const start = readerInstant("2026-08-20", null, "start")!;
+    const end = readerInstant("2026-08-20", null, "end")!;
+    expect(Date.parse(end) - Date.parse(start)).toBe(86_399_000);
+  });
+
+  test("a stated time is kept", () => {
+    const iso = readerInstant("2026-08-20", "18:30", "start")!;
+    const d = new Date(iso);
+    expect(d.getHours()).toBe(18);
+    expect(d.getMinutes()).toBe(30);
+  });
+
+  test("returns null for a date it cannot read, rather than a wrong one", () => {
+    expect(readerInstant("", null, "start")).toBeNull();
+    expect(readerInstant("not-a-date", null, "start")).toBeNull();
+    expect(readerInstant("2026-02-30", null, "start")).toBeNull();
   });
 });
