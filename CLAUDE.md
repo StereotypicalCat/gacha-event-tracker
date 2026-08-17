@@ -8,8 +8,8 @@ A web app that aggregates live and upcoming events across popular gacha games, p
 calendar, sorts them by end date or by what the reader is partway through, tracks day-by-day
 progress on events that repeat daily, and lets a user mark events completed.
 
-**Status: working app, refreshing itself on a schedule.** Schema, two parsers, nine sources across
-eight games, the full interface, offline support, a static server, a Docker image and CI all exist and
+**Status: working app, refreshing itself on a schedule.** Schema, three parsers, ten sources across
+nine games, the full interface, offline support, a static server, a Docker image and CI all exist and
 are tested. The refresh runner (`bun run refresh`) fetches, caches raw snapshots and rebuilds the
 feed; `.github/workflows/refresh.yml` runs it twice a day and commits only when a page actually
 changed. The SQLite layer and the review queue are still specified in `docs/` but not built, so the
@@ -76,15 +76,15 @@ re-verify a sample against the live page afterward.
 
 ```
 src/shared/       schema.ts (the contract), time.ts, daily.ts, effort.ts, games.ts, feed.ts
-src/ingest/       html.ts, dates.ts (eight formats), merge.ts, sanitize.ts, robots.ts, snapshots.ts
-  parsers/        game8.ts, wikigg.ts — keyed by SITE, not game
+src/ingest/       html.ts, dates.ts (nine formats), merge.ts, sanitize.ts, robots.ts, snapshots.ts
+  parsers/        game8.ts, wikigg.ts, akwiki.ts — keyed by SITE, not game
   adapters/       index.ts — SOURCES registry binding url+game+parser, and the sanitize seam
 src/client/       React app, service worker, manifest
   state/          progress, daily log, ignores, prefs, sort — all localStorage
                   lens.ts — who sees which rows (focus, outstanding, next-to-expire); pure
 scripts/          build-feed.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             348 tests
+test/             366 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
@@ -116,8 +116,12 @@ These come from how gacha games actually schedule things, and they cause most bu
 - **Skip, never guess.** Every function in `dates.ts` returns `null` rather than inferring a missing
   year, month, or end. `readColumnTable` drops a row it cannot date. An omitted event is a
   recoverable disappointment; a confidently wrong date is the failure this product exists to prevent.
-- **Parsers are keyed by site, not game.** One `game8` parser serves eight sources; `wikigg` serves
-  one. Adding a source for a known site is one `SOURCES` entry; a new site is a parser module.
+- **Parsers are keyed by site, not game.** One `game8` parser serves eight sources; `wikigg` and
+  `akwiki` serve one each — same host family, entirely different templates. Adding a source for a
+  known site is one `SOURCES` entry; a new site is a parser module.
+- **A source may publish more than one region's schedule.** Arknights' wiki lists CN and Global on
+  every row, five months apart. Publish the one our readers are on and skip the row that lacks it —
+  a CN date on a Global calendar is a confidently wrong date, not a near miss.
 - **Game8 has no single template.** Seven shapes are known and a page may mix them: label/value
   detail tables, column tables, image-grid schedules (unsupportable), combined label+range+blurb
   cells, rowspan Start/End pairs, labelled `Start: … End: …` cells, and `<hr>`-separated date pairs.

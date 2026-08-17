@@ -45,7 +45,14 @@ export const GAMES: Record<GameId, GameMeta> = {
   hsr: { id: "hsr", name: "Honkai: Star Rail", short: "Star Rail", hue: "#7B8CFF" , studio: "HoYoverse", dailyTasks: "Daily training, Trailblaze Power" },
   zzz: { id: "zzz", name: "Zenless Zone Zero", short: "ZZZ", hue: "#F2A03D" , studio: "HoYoverse", dailyTasks: "Daily missions, battery" },
   wuwa: { id: "wuwa", name: "Wuthering Waves", short: "Wuwa", hue: "#3DD6A0" , studio: "Kuro Games", dailyTasks: "Daily activity, waveplate" },
-  arknights: { id: "arknights", name: "Arknights", short: "Arknights", hue: "#9AA3B8" , studio: "Hypergryph", dailyTasks: "Daily missions, sanity" },
+  // Arknights runs a single Global (EN) server for all three of our regions on
+  // a fixed UTC-7, so every region gets the same override rather than the
+  // regional default. Evidenced by the source rather than assumed: every ending
+  // event on arknights.wiki.gg carries an exact end of 10:59:59Z, which is
+  // 03:59:59 at UTC-7 — one second before a 04:00 reset. Without this a
+  // European reader's Arknights day would roll at 03:00 UTC while the game
+  // rolls at 11:00, ticking the wrong box for eight hours.
+  arknights: { id: "arknights", name: "Arknights", short: "Arknights", hue: "#9AA3B8" , studio: "Hypergryph", dailyTasks: "Daily missions, sanity", resetOffsets: { asia: -7, america: -7, europe: -7 } },
   // Endfield has two server groups, not three: Europe is served off the same
   // machine as the Americas, on a fixed UTC-5. So a European player's day rolls
   // at 09:00 UTC — 11:00 in Copenhagen in summer, 10:00 in winter — six hours

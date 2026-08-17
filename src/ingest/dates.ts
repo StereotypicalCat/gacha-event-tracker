@@ -224,6 +224,37 @@ export function parseOpenRange(
 }
 
 /**
+ * "2026/07/30 – 2026/08/20" → both instants, day precision.
+ *
+ * Year-first, unlike `parseShortSlashRange`'s MM/DD/YY, so there is nothing to
+ * infer about field order: a four-digit leading number can only be the year.
+ * The Arknights wiki writes its release windows this way, one line per server.
+ *
+ * Anchored on the four-digit year at both ends deliberately. Without it the
+ * looser MM/DD/YY reader matches the tail of "2026/07/30" as "26/07/30" and
+ * calls month 26 an invalid date — null either way, but by accident rather than
+ * by rule.
+ */
+export function parseYearFirstSlashRange(
+  input: string,
+): { start: ParsedInstant; end: ParsedInstant } | null {
+  const re =
+    /(\d{4})\/(\d{1,2})\/(\d{1,2})\s*[-–—]\s*(\d{4})\/(\d{1,2})\/(\d{1,2})/;
+  const m = re.exec(input);
+  if (!m) return null;
+
+  const n = (i: number) => Number(m[i]);
+  const startIso = iso(n(1), n(2), n(3));
+  const endIso = iso(n(4), n(5), n(6));
+  if (startIso === null || endIso === null) return null;
+
+  return {
+    start: { iso: startIso, precision: "day" },
+    end: { iso: endIso, precision: "day" },
+  };
+}
+
+/**
  * "2021/01/16 04:00 - 2021/01/31 03:59" → both instants, exact precision.
  * Trailing prose after the range (e.g. "Currently Unavailable") is ignored.
  *

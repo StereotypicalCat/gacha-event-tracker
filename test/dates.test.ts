@@ -7,6 +7,7 @@ import {
   parseMonthDayYear,
   parseOpenRange,
   parseSlashDateTimeRange,
+  parseYearFirstSlashRange,
 } from "../src/ingest/dates.ts";
 
 describe("parseMonthDayYear", () => {
@@ -196,5 +197,40 @@ describe("parseLabelledStartEnd", () => {
     expect(
       parseLabelledStartEnd("Start the quest before August 12, 2026 to end the arc"),
     ).toBeNull();
+  });
+});
+
+describe("parseYearFirstSlashRange", () => {
+  test("reads a year-first range at day precision", () => {
+    expect(parseYearFirstSlashRange("2026/07/30 – 2026/08/20")).toEqual({
+      start: { iso: "2026-07-30T00:00:00.000Z", precision: "day" },
+      end: { iso: "2026-08-20T00:00:00.000Z", precision: "day" },
+    });
+  });
+
+  test("accepts a hyphen as well as an en dash", () => {
+    expect(parseYearFirstSlashRange("2026/07/30 - 2026/08/20")?.end.iso).toBe(
+      "2026-08-20T00:00:00.000Z",
+    );
+  });
+
+  test("ignores an ISO timestamp sitting beside the range", () => {
+    // The Arknights wiki prints the countdown target in the same cell:
+    // "2026/07/30 – 2026/08/20; ends in 2026-08-20T10:59:59+00:00". The dashes
+    // in the ISO half must not be read as a second range.
+    const r = parseYearFirstSlashRange(
+      "2026/07/30 – 2026/08/20; ends in 2026-08-20T10:59:59+00:00",
+    );
+    expect(r?.start.iso).toBe("2026-07-30T00:00:00.000Z");
+    expect(r?.end.iso).toBe("2026-08-20T00:00:00.000Z");
+  });
+
+  test("rejects an impossible calendar date rather than rolling it over", () => {
+    expect(parseYearFirstSlashRange("2026/02/30 – 2026/03/17")).toBeNull();
+  });
+
+  test("returns null when either side is missing its year", () => {
+    expect(parseYearFirstSlashRange("07/30 – 2026/08/20")).toBeNull();
+    expect(parseYearFirstSlashRange("2026/07/30 – 08/20")).toBeNull();
   });
 });

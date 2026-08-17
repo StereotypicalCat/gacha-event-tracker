@@ -47,10 +47,24 @@ Consequences worth internalising:
 |---|---|---|
 | `game8` | game8.co article calendars | Genshin, Star Rail, Wuthering Waves, ZZZ, Endfield, NTE, Infinity Nikki, Persona 5: The Phantom X |
 | `wikigg` | wiki.gg MediaWiki `mp-event` templates | Endfield |
+| `akwiki` | arknights.wiki.gg's `mrfz-wtable` "Ongoing/upcoming" table | Arknights |
 
 `wikigg` is the better shape by a distance: it emits ISO timestamps with one timer per server
 region, so its events carry exact precision and real `regionEnds`. Prefer a source like that over a
 prose wiki when both exist, and give it a higher `priority`.
+
+`akwiki` shares a host family with `wikigg` and nothing else — arknights.wiki.gg has no `mp-event`
+cards, so the two are separate modules rather than one parser with a branch. Two things about that
+page shape are worth knowing before touching it:
+
+- **Every row states two schedules, CN and Global, about five months apart.** Only Global is
+  published. A row with no Global line yields no event rather than borrowing the CN one.
+- **Only the next boundary is machine-readable.** The countdown sits on the end while an event runs
+  and on the start while it is still upcoming, so one side is exact and the other is the table's
+  date — and which is which flips when the event goes live. An exact instant is therefore accepted
+  only when it falls on the same UTC day as the date beside it, because `startsAt.slice(0, 10)` is
+  part of the event ID and a start that moved a day would orphan every completion mark on the
+  morning the event began.
 
 ### Date formats understood
 
@@ -65,6 +79,7 @@ All live in `src/ingest/dates.ts`, each returning null rather than inferring any
 | `parseSlashDateTimeRange` | `2021/01/16 04:00 - 2021/01/31 03:59` | Genshin past events |
 | `parseLabelledStartEnd` | `Start: January 24, 2025 End: Permanent` | Infinity Nikki |
 | `parseAdjacentFullRange` | `July 30, 2026 August 13, 2026` (halves split by an `<hr>`) | Persona 5: The Phantom X |
+| `parseYearFirstSlashRange` | `2026/07/30 – 2026/08/20` (year first, so field order is not inferred) | Arknights |
 | `parseOpenRange` | `Jul. 24, 2026 - End of 4.6`, `July 10, 2026 - Permanent` | Star Rail, Wuthering Waves |
 
 `parseOpenRange` is tried last because it is the most permissive — it accepts any leading full date

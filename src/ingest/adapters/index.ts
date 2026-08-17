@@ -61,6 +61,12 @@ const SOURCES: SourceSpec[] = [
     priority: 10,
   },
   {
+    id: "arknights-akwiki-events",
+    game: "arknights",
+    url: "https://arknights.wiki.gg/wiki/Event",
+    parserId: "akwiki",
+  },
+  {
     id: "nte-game8-events",
     game: "nte",
     url: "https://game8.co/games/Neverness-to-Everness/archives/592073",

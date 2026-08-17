@@ -255,8 +255,15 @@ reader cannot see.
 |---|---|---|---|---|
 | Genshin, Star Rail, ZZZ, Wuwa, NTE | 04:00 | region (EU = UTC+1) | 03:00 | 05:00 / 04:00 |
 | Infinity Nikki, P5X | 04:00 | region (assumed) | 03:00 | 05:00 / 04:00 |
+| Arknights, all regions | 04:00 | UTC-7 (one Global server) | 11:00 | 13:00 / 12:00 |
 | Endfield, Europe | 04:00 | UTC-5 (on the Americas server) | 09:00 | 11:00 / 10:00 |
 | Endfield, Asia / Americas | 04:00 | regional default | 20:00 / 09:00 | — |
+
+Arknights is the one game whose override covers **all three** regions, and it is not a blanket
+per-game offset of the kind this section warns about below: the game genuinely runs a single Global
+server for every region we model. The offset is read off the source rather than assumed — every
+ending event on arknights.wiki.gg carries an exact end of `10:59:59Z`, which is `03:59:59` at UTC-7,
+one second before a 04:00 reset.
 
 Infinity Nikki and P5X carry **no `resetOffsets` entry**, so they take the regional default. That is
 an assumption, not a verified server map — neither source states one. Confirm it against the games

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { adapterById } from "../../src/ingest/adapters/index.ts";
 import type { Adapter } from "../../src/ingest/adapters/types.ts";
+import { arknightsWikiParser } from "../../src/ingest/parsers/akwiki.ts";
 import { inferType } from "../../src/ingest/parsers/game8.ts";
 import { GachaEvent, type EventType } from "../../src/shared/schema.ts";
 
@@ -29,6 +30,7 @@ const CASES: Array<{ adapter: Adapter; fixture: string }> = [
   { adapter: adapter("endfield-wikigg-events"), fixture: "fixtures/endfield/wikigg-events-2026-08-14" },
   { adapter: adapter("nikki-game8-events"), fixture: "fixtures/nikki/game8-events-2026-08-17" },
   { adapter: adapter("p5x-game8-events"), fixture: "fixtures/p5x/game8-events-2026-08-17" },
+  { adapter: adapter("arknights-akwiki-events"), fixture: "fixtures/arknights/akwiki-events-2026-08-17" },
 ];
 
 async function runAdapter(adapter: Adapter, fixture: string) {
@@ -309,6 +311,83 @@ describe("p5x", () => {
       (e) => e.title === "1st Anniversary Celebration",
     );
     expect(anniversary?.summary).toContain("first anniversary");
+  });
+});
+
+describe("arknights wiki", () => {
+  const fixture = "fixtures/arknights/akwiki-events-2026-08-17";
+  const akwiki = adapter("arknights-akwiki-events");
+
+  test("publishes the Global schedule and never the CN one", async () => {
+    // Every row carries both, and CN runs about five months ahead. A reader on
+    // Global told a CN date would be told an event ended in March that has not
+    // started yet — the confidently-wrong date this product exists to prevent.
+    const events = await runAdapter(akwiki, fixture);
+    expect(events).toHaveLength(6); // the six rows of the Ongoing/upcoming table
+
+    const crossing = events.find((e) => e.title === "[Story Collection] Crossing");
+    expect(crossing?.startsAt).toBe("2026-08-13T00:00:00.000Z"); // Global
+    // CN ran 2026/03/10 - 2026/03/17. Nothing in the output may fall there.
+    for (const e of events) expect(e.startsAt > "2026-06-01").toBe(true);
+  });
+
+  test("takes the exact boundary the countdown states, on whichever side it is", async () => {
+    // The page puts a machine-readable timer on the *next* boundary only: the
+    // end while an event is running, the start while it is still upcoming. So
+    // precision legitimately differs per event and per side.
+    const events = await runAdapter(akwiki, fixture);
+
+    const running = events.find((e) => e.title.startsWith("Vector Breakthrough"));
+    expect(running?.endPrecision).toBe("exact");
+    expect(running?.endsAt).toBe("2026-08-20T10:59:59.000Z");
+    expect(running?.startPrecision).toBe("day");
+
+    const upcoming = events.find((e) => e.title === "[Side Story] People, A People");
+    expect(upcoming?.startPrecision).toBe("exact");
+    expect(upcoming?.startsAt).toBe("2026-09-16T15:00:00.000Z");
+    expect(upcoming?.endPrecision).toBe("day");
+  });
+
+  test("an exact instant never moves the day an event ID is built from", async () => {
+    // The ID ends in startsAt.slice(0, 10). When an upcoming event goes live
+    // its exact start disappears from the page and the day-precision date takes
+    // over, so the two must agree on the day or every completion mark for that
+    // event is orphaned the morning it starts.
+    const events = await runAdapter(akwiki, fixture);
+    for (const e of events) {
+      expect(e.id.endsWith(e.startsAt.slice(0, 10))).toBe(true);
+    }
+  });
+
+  test("reports one global end rather than inventing per-region ones", async () => {
+    // Arknights serves all three of our regions from one Global server, which
+    // is the opposite of Endfield. regionScoped means the source distinguishes
+    // regions; this one does not.
+    for (const e of await runAdapter(akwiki, fixture)) {
+      expect(e.regionScoped).toBe(false);
+      expect(e.regionEnds).toBeNull();
+    }
+  });
+
+  test("the back catalogue under 'By year' stays off the calendar", async () => {
+    // The same table class repeats further down the page for every event the
+    // game has ever run. Inclusion has to stop at the next heading.
+    const titles = (await runAdapter(akwiki, fixture)).map((e) => e.title);
+    expect(titles).not.toContain("Ceremonial Rite");
+    expect(titles.length).toBeLessThan(20);
+  });
+
+  test("fails loudly if the wiki drops the section or the table", async () => {
+    const html = await Bun.file(`${fixture}.html`).text();
+    const parser = arknightsWikiParser;
+    expect(parser.canParse(html)).toBe(true);
+    expect(parser.canParse(html.replace(/mrfz-wtable/g, "x-table"))).toBe(false);
+    // MediaWiki emits both the modern anchor and a legacy percent-escaped one
+    // (`Ongoing.2Fupcoming`) on the same heading, so a rename has to take both
+    // away before the parser should give up on the page.
+    expect(
+      parser.canParse(html.replace(/id="Ongoing(\/|\.2F)upcoming"/g, 'id="Now"')),
+    ).toBe(false);
   });
 });
 
