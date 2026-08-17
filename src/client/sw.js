@@ -14,7 +14,11 @@
  * Bump CACHE_VERSION on any shell change; old caches are deleted on activate.
  */
 
-const CACHE_VERSION = "event-clock-v1";
+// v2: reader-authored games and events (PRD F13) changed main.js. The shell is
+// served cache-first, so without this bump a returning reader keeps the old
+// bundle and none of the new UI reaches them — the page looks unchanged and
+// nothing anywhere says why.
+const CACHE_VERSION = "event-clock-v2";
 // Paths are derived from the registration scope, so the same worker is
 // correct at a domain root and under a subpath (GitHub Pages) alike.
 const BASE = new URL("./", self.registration.scope);

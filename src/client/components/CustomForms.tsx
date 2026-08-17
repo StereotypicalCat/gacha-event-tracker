@@ -215,6 +215,16 @@ export function EventForm({
         </select>
       </label>
 
+      {/* Otherwise the list is nine games we track and no sign of why none of
+          them is theirs — the reader who came here to add a game we don't cover
+          has no way of knowing they need to make it first. */}
+      {Object.keys(customGames).length === 0 && (
+        <p className="mt-1.5 text-xs leading-relaxed text-faint">
+          These are the games we track. To file this under a game of your own,
+          cancel and add the game first.
+        </p>
+      )}
+
       <label className={`${labelClass()} mt-3`}>
         What is it
         <input
