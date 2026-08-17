@@ -52,6 +52,7 @@ Consequences worth internalising:
 | `wikigg` | wiki.gg MediaWiki `mp-event` templates | Endfield |
 | `akwiki` | arknights.wiki.gg's `mrfz-wtable` "Ongoing/upcoming" table | Arknights |
 | `fandom` | Fandom wikis via the MediaWiki `action=parse` API — `Event \| Time Period \| Version` wikitables | Reverse: 1999 |
+| `bawiki` | bluearchive.wiki's rendered `/wiki/Events` — a JP/Global tabber over `Name (EN) \| Start date \| End date \| Notes` wikitables | Blue Archive |
 
 `wikigg` is the better shape by a distance: it emits ISO timestamps with one timer per server
 region, so its events carry exact precision and real `regionEnds`. Prefer a source like that over a
@@ -72,6 +73,21 @@ rather than parse to zero events. Two page facts drive the rest of it:
   (154 rows, six of them unfinished when the fixture was captured), with no "ongoing" section to
   anchor on. Inclusion is therefore decided against `ctx.now`, the one parser here that does so;
   `akwiki` and `game8` can gate on a heading instead, and should where one exists.
+
+`bawiki` is the mirror image of `fandom`: same MediaWiki software, opposite conclusion about which
+surface to read. bluearchive.wiki is Miraheze, whose `robots.txt` disallows `/w/` and `/*?action=`,
+so the API is closed and the rendered `/wiki/Events` page is what `*` is allowed — and it serves our
+own `User-Agent` a `200`. Three page facts drive the parser (all three in AGENTS.md § Blue Archive):
+
+- **JP and Global are separate tabs, months apart**, so only Global is published — the `akwiki`
+  hazard. The Global tab's nav *button* precedes both panels, so slicing from the first matching id
+  reads the Japanese schedule.
+- **Three tabs are named Global**, the schedule plus Mini-Event and Joint Firing Drill. The schedule
+  is identified by its `Name (EN)` header rather than by position, and `canParse` runs the same
+  lookup so a rename fails the run rather than emptying the lane.
+- **Nothing on the page states a time of day or a timezone.** The schedule's bare ISO dates are day
+  precision; the five tables that do carry a wall clock name no zone for it and are left unparsed
+  rather than read as UTC.
 
 `akwiki` shares a host family with `wikigg` and nothing else — arknights.wiki.gg has no `mp-event`
 cards, so the two are separate modules rather than one parser with a branch. Two things about that

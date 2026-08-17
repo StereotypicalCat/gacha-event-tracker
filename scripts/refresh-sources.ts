@@ -15,7 +15,7 @@
  *     second request, and the next cycle is minutes-cheap compared to being a
  *     bad guest.
  *   - requests to one host are spaced, honouring its `Crawl-delay`. Eight of the
- *     ten sources are game8.co pages, so without this one cycle is eight
+ *     twelve sources are game8.co pages, so without this one cycle is eight
  *     back-to-back requests to a single site — inside the per-source floor and
  *     still the behaviour an edge network throttles.
  *   - conditional requests always, so an unchanged page costs the wiki a 304.

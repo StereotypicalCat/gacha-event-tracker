@@ -215,7 +215,7 @@ export function EventForm({
         </select>
       </label>
 
-      {/* Otherwise the list is nine games we track and no sign of why none of
+      {/* Otherwise the list is eleven games we track and no sign of why none of
           them is theirs — the reader who came here to add a game we don't cover
           has no way of knowing they need to make it first. */}
       {Object.keys(customGames).length === 0 && (

@@ -121,7 +121,7 @@ Named across the thread, excluding the six already covered:
 | Arknights | 2 | **`GameId`, hue and `dailyTasks` already exist in `games.ts` with no source registered.** Cheapest possible win. |
 | Reverse: 1999 | 1 | Named as the one thing between a bookmark and a habit. |
 | Azur Lane | 1 | OP judged doable |
-| Blue Archive | 1 | OP judged doable |
+| Blue Archive | 1 | OP judged doable. **Done** (2026-08-17) — `bluearchive.wiki`, not the Fandom wiki, which is a JP archive yielding nothing live |
 | Umamusume | 1 | OP judged doable |
 | Persona 5X | 1 | OP judged doable |
 | Nikke | 1 | |
@@ -305,7 +305,7 @@ diagnosis in each item still holds — what changed is whether it has been acted
 | P1b cap the long list | **Not done.** No "show all N" expander |
 | P1b persist `view` | **Not done.** Still `useState` in `App.tsx` |
 | P1b Calendar → Timeline | **Done.** The tab reads "Timeline" |
-| P1c more games | **Done, three of them.** Infinity Nikki, Persona 5: The Phantom X, Reverse: 1999 — one commit each. The declined and cleared-but-unbuilt candidates are recorded in `AGENTS.md` § Scraping conduct so they are not re-litigated |
+| P1c more games | **Done, four of them.** Infinity Nikki, Persona 5: The Phantom X, Reverse: 1999, Blue Archive — one commit each. Of the games named in the thread, Azur Lane and Umamusume are **declined on conduct** rather than pending, and the declined and cleared-but-unbuilt candidates are recorded in `AGENTS.md` § Scraping conduct so they are not re-litigated |
 | P1c roadmap in the colophon | **Not done** |
 | P2 colour and screenshot | **Not done** |
 | P2 custom events | **Done.** PRD F13 first, then the code; `mygame:` / `myevent:` key spaces, in the export |

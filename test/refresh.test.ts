@@ -561,7 +561,7 @@ describe("a page that is not UTF-8", () => {
 });
 
 describe("requests to one host are spaced", () => {
-  // Eight of the ten sources are game8.co pages. Each one is inside the
+  // Eight of the twelve sources are game8.co pages. Each one is inside the
   // six-hour-per-source floor and the burst is still the shape a CDN throttles.
   const twoOnOneHost = () => [
     adapter({ id: "genshin-game8-events", url: "https://game8.co/a" }),

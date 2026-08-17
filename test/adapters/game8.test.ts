@@ -3,6 +3,7 @@ import { adapterById } from "../../src/ingest/adapters/index.ts";
 import type { Adapter } from "../../src/ingest/adapters/types.ts";
 import { parseOrdinalDateTimeRange } from "../../src/ingest/dates.ts";
 import { arknightsWikiParser } from "../../src/ingest/parsers/akwiki.ts";
+import { blueArchiveWikiParser } from "../../src/ingest/parsers/bawiki.ts";
 import { fandomParser, renderedHtml } from "../../src/ingest/parsers/fandom.ts";
 import { inferType } from "../../src/ingest/parsers/game8.ts";
 import { GachaEvent, type EventType } from "../../src/shared/schema.ts";
@@ -37,6 +38,7 @@ const CASES: Array<{ adapter: Adapter; fixture: string }> = [
   // action API, and `snapshots/` names every stored body `<id>.html` whatever
   // its content type. The fixture is the bytes the fetcher would store.
   { adapter: adapter("r1999-fandom-events"), fixture: "fixtures/r1999/fandom-events-2026-08-17" },
+  { adapter: adapter("ba-bawiki-events"), fixture: "fixtures/ba/bawiki-events-2026-08-17" },
 ];
 
 async function runAdapter(adapter: Adapter, fixture: string) {
@@ -514,5 +516,191 @@ describe("fandom parser", () => {
     expect(rendered).not.toBeNull();
     expect(rendered!).toContain("February 20th, 05:00 - March 27th, 04:59");
     expect(parseOrdinalDateTimeRange("February 20th, 05:00 - March 27th, 04:59 (UTC-5)")).toBeNull();
+  });
+});
+
+describe("blue archive wiki", () => {
+  const fixture = "fixtures/ba/bawiki-events-2026-08-17";
+  const ba = adapter("ba-bawiki-events");
+
+  /** A stand-in page with the tabber shape this parser navigates. */
+  function tabbed(japanese: string, global: string): string {
+    return `<div class="tabber"><header><nav>
+      <a class="tabber__tab" id="tabber-Japanese_version-label" href="#tabber-Japanese_version">Japanese version</a>
+      <a class="tabber__tab" id="tabber-Global_version-label" href="#tabber-Global_version">Global version</a>
+      </nav></header><section>
+      <article id="tabber-Japanese_version"><table class="wikitable">${japanese}</table></article>
+      <article id="tabber-Global_version"><table class="wikitable">${global}</table></article>
+      </section></div>`;
+  }
+
+  const GLOBAL_HEADER =
+    "<tr><th>Name (EN)</th><th>Start date</th><th>End date</th><th>Notes</th></tr>";
+
+  function parse(html: string) {
+    return ba.parse(html, {
+      now: NOW,
+      sourceUrl: ba.url,
+      sourceId: ba.id,
+      game: ba.game,
+    });
+  }
+
+  test("publishes the Global schedule and never the Japanese one", async () => {
+    // Both panels are on the page and the Japanese one runs months ahead — the
+    // same hazard as the CN column on the Arknights wiki. Counted independently
+    // off the fixture: 98 Global rows, of which two had not ended at the pinned
+    // clock. 104 Japanese rows are on the same page and none of them is ours.
+    const events = await runAdapter(ba, fixture);
+    expect(events).toHaveLength(2);
+    expect(events.map((e) => e.title)).toEqual([
+      "Code: BOX - The Shadow Approaching Millennium",
+      "Pray-Ball! Swing for the Grand Slam!",
+    ]);
+
+    // Live on Global for the fixture's clock.
+    expect(events[0]?.startsAt).toBe("2026-08-04T00:00:00.000Z");
+    expect(events[0]?.endsAt).toBe("2026-08-18T00:00:00.000Z");
+
+    // "Pandemic Hazard ~ Miracle Pancake ~" runs 2026-08-12 to 2026-08-26 on
+    // the *Japanese* server and has not been scheduled on Global at all. It is
+    // what this parser publishes if it slices from the Global tab's nav button
+    // — which precedes the Japanese panel — instead of from the panel itself.
+    for (const e of events) expect(e.title).not.toMatch(/Pandemic Hazard/);
+  });
+
+  test("the back catalogue stays off the calendar", async () => {
+    // The table is an archive going back to 2021 with no "ongoing" heading to
+    // gate on, so inclusion is decided against ctx.now.
+    const events = await runAdapter(ba, fixture);
+    for (const e of events) {
+      expect(e.endsAt).not.toBeNull();
+      expect(Date.parse(e.endsAt!)).toBeGreaterThanOrEqual(Date.parse(NOW));
+    }
+  });
+
+  test("states day precision, because the page states no time of day", async () => {
+    // Every boundary on this page is a bare `YYYY-MM-DD`. Day precision is the
+    // honest reading, and it costs 0.05 of confidence on each side.
+    for (const e of await runAdapter(ba, fixture)) {
+      expect(e.startPrecision).toBe("day");
+      expect(e.endPrecision).toBe("day");
+      expect(e.startsAt.endsWith("T00:00:00.000Z")).toBe(true);
+      expect(e.confidence).toBe(0.85);
+    }
+  });
+
+  test("reports one global end rather than inventing per-region ones", async () => {
+    // The panels are game *versions*, not our asia/america/europe regions —
+    // Blue Archive Global is a single worldwide server and this page draws no
+    // distinction inside it.
+    for (const e of await runAdapter(ba, fixture)) {
+      expect(e.regionScoped).toBe(false);
+      expect(e.regionEnds).toBeNull();
+    }
+  });
+
+  test("links each event to its own article, never to Special:", async () => {
+    for (const e of await runAdapter(ba, fixture)) {
+      expect(e.sourceUrl.startsWith("https://bluearchive.wiki/wiki/")).toBe(true);
+      // robots.txt disallows Special:, and it is the wrong page to send a
+      // reader to besides.
+      expect(e.sourceUrl).not.toMatch(/Special:/);
+    }
+  });
+
+  test("takes the Notes column as the summary and types from it", async () => {
+    const events = await runAdapter(ba, fixture);
+    // A rerun reuses the original's title verbatim, so the title alone cannot
+    // say what kind of event it is. The Notes column can.
+    expect(events.every((e) => e.summary === "Rerun")).toBe(true);
+    expect(events.every((e) => e.type === "rerun")).toBe(true);
+  });
+
+  test("resolves columns from the header row rather than counting them", () => {
+    // The Japanese table carries an extra `Name (JP)` column. If the Global one
+    // ever gains it, fixed indices would feed a title to the date reader and
+    // every row would fail to parse — emptying the lane with no error anywhere.
+    const events = parse(
+      tabbed(
+        "",
+        `<tr><th>Name (EN)</th><th>Name (JP)</th><th>Start date</th><th>End date</th></tr>
+         <tr><td><a href="/wiki/Widened">Widened Table</a></td><td>ワイド</td>
+             <td>2026-09-02</td><td>2026-09-16</td></tr>`,
+      ),
+    );
+    expect(events).toHaveLength(1);
+    expect(events[0]?.title).toBe("Widened Table");
+    expect(events[0]?.startsAt).toBe("2026-09-02T00:00:00.000Z");
+  });
+
+  test("an upcoming row with no end date publishes as endsAt null", () => {
+    // The source genuinely has not announced one. Inventing a plausible end is
+    // the failure this product exists to prevent; a null end renders as such.
+    const events = parse(
+      tabbed(
+        "",
+        `${GLOBAL_HEADER}
+         <tr><td><a href="/wiki/Soon">Announced, Undated</a></td>
+             <td>2026-09-02</td><td>TBA</td><td></td></tr>`,
+      ),
+    );
+    expect(events).toHaveLength(1);
+    expect(events[0]?.endsAt).toBeNull();
+    expect(events[0]?.endPrecision).toBe("unknown");
+    expect(events[0]?.summary).toBeNull();
+    expect(events[0]?.confidence).toBe(0.75); // held under the 0.8 gate
+  });
+
+  test("a started row with no end date yields nothing", () => {
+    // On a page that is 98 rows of history, the end date is the only thing
+    // separating a live event from a finished one. Without it there is no way
+    // to tell, so the row is not publishable.
+    const events = parse(
+      tabbed(
+        "",
+        `${GLOBAL_HEADER}
+         <tr><td><a href="/wiki/Old">Started, Undated</a></td>
+             <td>2021-03-11</td><td></td><td></td></tr>`,
+      ),
+    );
+    expect(events).toEqual([]);
+  });
+
+  test("finds the schedule by its shape, not by its position", async () => {
+    // Three Global panels are on this page: the schedule, and the Mini-Event
+    // and Joint Firing Drill tabbers whose ids are the same name with `_2` and
+    // `_3` appended. Taking the first one works only until the page is
+    // reordered — and those two head their name column `Name`, which is why
+    // `Name (EN)` is what identifies the right table.
+    const html = await Bun.file(`${fixture}.html`).text();
+    expect(html).toContain('id="tabber-Global_version_2"');
+    expect(html).toContain('id="tabber-Global_version_3"');
+
+    const events = await runAdapter(ba, fixture);
+    // Those two tables publish reward campaigns and firing drills. Nothing from
+    // them may appear, and nothing from them can: their dates carry a wall
+    // clock the page never gives a timezone for, so this reader takes neither.
+    for (const e of events) expect(e.title).not.toMatch(/Exercise|rewards/i);
+  });
+
+  test("fails loudly if the wiki renames the tab or the columns", async () => {
+    const html = await Bun.file(`${fixture}.html`).text();
+    expect(blueArchiveWikiParser.canParse(html)).toBe(true);
+
+    // A renamed panel leaves the two Global tabbers further down the page still
+    // matching, so this is a real test of the header check rather than of the
+    // id: neither of those is headed `Name (EN)`.
+    expect(
+      blueArchiveWikiParser.canParse(
+        html.replace(/id="tabber-Global_version"/g, 'id="tabber-Worldwide"'),
+      ),
+    ).toBe(false);
+
+    // A renamed column is the more likely change, and the more dangerous one:
+    // without this it costs no error at all, just an empty Blue Archive lane.
+    expect(
+      blueArchiveWikiParser.canParse(html.replace(/Name \(EN\)/g, "Event")),
+    ).toBe(false);
   });
 });

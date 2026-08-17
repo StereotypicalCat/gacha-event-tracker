@@ -96,6 +96,16 @@ const SOURCES: SourceSpec[] = [
     url: "https://reverse1999.fandom.com/api.php?action=parse&page=Events&prop=text&formatversion=2&format=json",
     parserId: "fandom",
   },
+  {
+    id: "ba-bawiki-events",
+    game: "ba",
+    // The rendered page, deliberately, and the opposite call to the Fandom
+    // source above: this wiki is Miraheze, whose robots.txt disallows `/w/` and
+    // `/*?action=`, so the API route is the one that is closed here and
+    // `/wiki/Events` is the surface the site permits.
+    url: "https://bluearchive.wiki/wiki/Events",
+    parserId: "bawiki",
+  },
 ];
 
 function toAdapter(spec: SourceSpec): Adapter {

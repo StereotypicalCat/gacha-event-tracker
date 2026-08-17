@@ -36,8 +36,8 @@ A web app that aggregates live and upcoming events across popular gacha games, p
 calendar, sorts them by end date or by what the reader is partway through, tracks day-by-day
 progress on events that repeat daily, and lets a user mark events completed.
 
-**Status: working app, refreshing itself on a schedule.** Schema, four parsers, eleven sources across
-ten games, the full interface, offline support, a static server, a Docker image and CI all exist and
+**Status: working app, refreshing itself on a schedule.** Schema, five parsers, twelve sources across
+eleven games, the full interface, offline support, a static server, a Docker image and CI all exist and
 are tested. The refresh runner (`bun run refresh`) fetches, caches raw snapshots and rebuilds the
 feed; `.github/workflows/refresh.yml` runs it twice a day and commits only when a page actually
 changed. The SQLite layer and the review queue are still specified in `docs/` but not built, so the
@@ -105,8 +105,8 @@ re-verify a sample against the live page afterward.
 ```
 src/shared/       schema.ts (the contract), time.ts, daily.ts, effort.ts, games.ts, feed.ts
                   custom.ts — reader-authored games and events, and their key spaces
-src/ingest/       html.ts, dates.ts (ten formats), merge.ts, sanitize.ts, robots.ts, snapshots.ts
-  parsers/        game8.ts, wikigg.ts, akwiki.ts, fandom.ts — keyed by SITE, not game
+src/ingest/       html.ts, dates.ts (eleven formats), merge.ts, sanitize.ts, robots.ts, snapshots.ts
+  parsers/        game8.ts, wikigg.ts, akwiki.ts, fandom.ts, bawiki.ts — keyed by SITE, not game
   adapters/       index.ts — SOURCES registry binding url+game+parser, and the sanitize seam
 src/client/       React app, service worker, manifest
   state/          progress, daily log, ignores, prefs, sort — all localStorage
@@ -114,7 +114,7 @@ src/client/       React app, service worker, manifest
                   lens.ts — who sees which rows (focus, outstanding, next-to-expire); pure
 scripts/          build-feed.ts, build-static.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             494 tests
+test/             517 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
@@ -147,9 +147,9 @@ These come from how gacha games actually schedule things, and they cause most bu
   year, month, or end. `readColumnTable` drops a row it cannot date. An omitted event is a
   recoverable disappointment; a confidently wrong date is the failure this product exists to prevent.
 - **Parsers are keyed by site, not game.** One `game8` parser serves eight sources; `wikigg`,
-  `akwiki` and `fandom` serve one each — the first two share a host family and have entirely
-  different templates. Adding a source for a known site is one `SOURCES` entry; a new site is a
-  parser module.
+  `akwiki`, `fandom` and `bawiki` serve one each — the first two share a host family and have
+  entirely different templates. Adding a source for a known site is one `SOURCES` entry; a new site is
+  a parser module.
 - **A source may publish more than one region's schedule.** Arknights' wiki lists CN and Global on
   every row, five months apart. Publish the one our readers are on and skip the row that lacks it —
   a CN date on a Global calendar is a confidently wrong date, not a near miss.
@@ -215,7 +215,7 @@ Sources are community wikis. Treat them as a guest would:
 - Honor `robots.txt`; set a descriptive `User-Agent` with a contact URL.
 - One request per source per refresh cycle, minimum 6 hours apart.
 - **Space requests to one host**, honouring its `Crawl-delay` and defaulting to 2s. Eight of the
-  eleven sources are game8.co pages, so the per-source floor alone still permits one cycle to arrive
+  twelve sources are game8.co pages, so the per-source floor alone still permits one cycle to arrive
   as eight back-to-back requests to a single site — which is the shape an edge network throttles, and
   what a burst looks like from the far end regardless of our intent.
 - Send `If-None-Match` / `If-Modified-Since`; treat `304` as "skip, unchanged".
@@ -250,7 +250,8 @@ A source whose ToS forbids automated access does not get an adapter. Flag it and
 | `uma.moe` | **Declined.** Data comes from an API behind a Cloudflare Turnstile proof header; an adapter would mean defeating a deliberate access control. The `robots.txt` is permissive, but the gate is not in `robots.txt` |
 | `reverse1999.fandom.com` | **Built** (2026-08-17), via `api.php`, not the wiki page — see § Fandom below |
 | `bluearchive.fandom.com` | **Declined.** Fetches and parses fine; the page is the problem. Its `Event/Event_List` is a JP-server archive whose newest entry ended 2026-02-18, so all 88 rows are history and it yields **zero** live or upcoming events. An adapter would put an empty lane on the calendar and, because the runner rejects a body that parses to nothing, report a broken source forever. Same failure as the Infinity Nikki Game8 page, further along |
-| `bluearchive.wiki`, `prydwen.gg`, `gametora.com` | **Cleared, unbuilt.** `User-agent: *` allows the paths we would want. prydwen sets `Crawl-delay: 10`, far below our one-per-6h. `bluearchive.wiki` is the live Blue Archive source worth building — `Name (EN) \| Name (JP) \| Start date \| End date` with ISO dates, current to 2026-09-15 — but note it is Miraheze and its `robots.txt` **disallows** `/w/` and `/*?action=`, so the API route is closed there and only the rendered `/wiki/Events` page is permitted. It also lists JP and Global in separate tables, which is the akwiki hazard: publishing the wrong server's date |
+| `bluearchive.wiki` | **Built** (2026-08-17), from the rendered `/wiki/Events` page — see § Blue Archive below |
+| `prydwen.gg`, `gametora.com` | **Cleared, unbuilt.** `User-agent: *` allows the paths we would want. prydwen sets `Crawl-delay: 10`, far below our one-per-6h |
 
 `.github/ISSUE_TEMPLATE/feature_request.yml` points readers at that table by heading, so a source
 request can be checked against it before anyone writes it up — the loudest feedback on the first
@@ -283,6 +284,34 @@ broken build — `skipped_robots` does not touch the failure streak, and the run
 *every* source is blocked — so the scheduled refresh simply never updates this game, and the feed
 falls back to the checked-in fixture. Refreshing it means running `bun run refresh` from an address
 Fandom serves, which is how its first snapshot was taken.
+
+**Blue Archive: the page, never the API — the opposite call to Fandom.** `bluearchive.wiki` is a
+Miraheze wiki, and Miraheze's `robots.txt` **disallows** `/w/` and `/*?action=`. So the route
+`parsers/fandom.ts` takes is the one that is closed here, and the rendered `/wiki/Events` page is the
+surface `*` is allowed — it answers our own `User-Agent` with a `200`, no `Content-Signal`, and no
+`Crawl-delay` for us. `Special:` is disallowed too, which is why `parsers/bawiki.ts` skips those links
+exactly as the Fandom one does.
+
+Three things about that page are worth knowing before touching it, all of them ways to publish a
+confidently wrong date:
+
+- **It states JP and Global in separate tabs, and the Japanese one runs four to nine months ahead.**
+  Same hazard as the CN column on `akwiki`, same answer: publish Global only. The tab's *nav button*
+  carries the id `tabber-Global_version-label` and sits above **both** panels, so a reader that slices
+  from the first id match reads the Japanese schedule while believing it read ours.
+- **There are three Global tabs, not one** — the schedule, plus Mini-Event and Joint Firing Drill
+  further down, whose ids are the same name with `_2` and `_3`. The parser finds the schedule by its
+  `Name (EN)` header rather than by position, and `canParse` asserts that lookup, so a renamed tab or
+  column fails the run instead of quietly emptying the lane.
+- **The page states no time of day and no timezone anywhere.** The schedule's dates are bare
+  `YYYY-MM-DD`, which is honest day precision. Its five other tables (Mini-Event, Reward campaigns,
+  Attendance bonuses, Guide missions, Joint Firing Drill) *do* carry a wall clock — `08/12/2026 11:00`
+  — but name no zone for it, and three of the five do not say which server they describe. Those are
+  deliberately unparsed: reading them as UTC invents the fact that matters, and rounding to a day does
+  not save it, because a 04:00 local boundary lands either side of UTC midnight depending on the
+  offset assumed and the start's day is part of the event ID. Attendance bonuses would be a real
+  dailies source if a zone is ever stated. For the same reason `ba` has no `resetOffsets`: Blue
+  Archive Global does run one worldwide server, but nothing in this source says on what clock.
 
 `scripts/refresh-sources.ts` enforces all of the above in code — the 6h floor, one request, no
 retries, conditional headers, per-host spacing, robots (failing closed when `robots.txt` cannot be
