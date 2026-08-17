@@ -291,3 +291,24 @@ scraping, no ToS question, and no server.
 
 Everything in P0 and P1b is a change to code that already exists. That is the cheapest half of this
 list and it addresses the two loudest complaints in the thread.
+
+### Where that list stands (2026-08-17)
+
+The thread reading above is fixed at the date it was made; this is the only part that moves. The
+diagnosis in each item still holds — what changed is whether it has been acted on.
+
+| Item | Status |
+|---|---|
+| P0 refresh pipeline | **Diagnosed, half acted on.** game8.co answers a GitHub Actions runner with `202` and a bot-management body, so those eight sources have only ever built from fixtures in CI — see `AGENTS.md` § Scraping conduct, including why it is not to be worked around. The `broken` tier now makes a source failing three cycles fail the run. Step 5 (a build assertion on snapshot age) is **not built** |
+| P1a Arknights | **Done.** `arknights-akwiki-events`, via the new `akwiki` parser |
+| P1b `NextUp` → three | **Not done.** Still one row |
+| P1b cap the long list | **Not done.** No "show all N" expander |
+| P1b persist `view` | **Not done.** Still `useState` in `App.tsx` |
+| P1b Calendar → Timeline | **Done.** The tab reads "Timeline" |
+| P1c more games | **Done, three of them.** Infinity Nikki, Persona 5: The Phantom X, Reverse: 1999 — one commit each. The declined and cleared-but-unbuilt candidates are recorded in `AGENTS.md` § Scraping conduct so they are not re-litigated |
+| P1c roadmap in the colophon | **Not done** |
+| P2 colour and screenshot | **Not done** |
+| P2 custom events | **Done.** PRD F13 first, then the code; `mygame:` / `myevent:` key spaces, in the export |
+
+So the outstanding work is P1b's three client changes, the colophon roadmap, the colour pass, and
+P0's build assertion — the cheapest items on the list are the ones still open.
