@@ -255,6 +255,118 @@ export function parseYearFirstSlashRange(
 }
 
 /**
+ * "November 9th, 05:00 - December 4th, 2023, 04:59 (UTC-5)" → both instants,
+ * exact precision, converted from the stated offset to UTC.
+ *
+ * The Reverse: 1999 wiki writes every window this way. Three things make it
+ * worth its own reader rather than a variant of one above:
+ *
+ * - **Ordinal days** (`9th`, `23rd`, `04th`). Required on both halves, and they
+ *   are what anchors this pattern: without them the looser readers above would
+ *   have first claim on the text.
+ * - **The offset is stated, so nothing is assumed.** `parseSlashDateTimeRange`
+ *   has to read its wall-clock times as UTC and says so; here `(UTC-5)` is
+ *   part of the format, and a cell without one returns null rather than being
+ *   read as UTC. A missing timezone is a missing fact like any other.
+ * - **The year sits on the end half**, and only sometimes on the start. A range
+ *   crossing New Year reads "December 28th, 05:00 - January 18th, 2024, 04:59",
+ *   so the start year rolls back exactly as in `parseMonthDayRange`.
+ *
+ * Anchored at both ends: this is a whole-cell format, and letting it match
+ * mid-prose is how a reader starts finding ranges in sentences.
+ */
+export function parseOrdinalDateTimeRange(
+  input: string,
+): { start: ParsedInstant; end: ParsedInstant } | null {
+  const re =
+    /^\s*([A-Za-z]+)\.?\s+(\d{1,2})(?:st|nd|rd|th),\s*(?:(\d{4}),\s*)?(\d{1,2}):(\d{2})\s*[-–—~]\s*([A-Za-z]+)\.?\s+(\d{1,2})(?:st|nd|rd|th),\s*(\d{4}),\s*(\d{1,2}):(\d{2})\s*\(UTC\s*([+-]\d{1,2})(?::(\d{2}))?\)\s*$/;
+  const m = re.exec(input);
+  if (!m) return null;
+
+  const startMonth = monthNumber(m[1] ?? "");
+  const endMonth = monthNumber(m[6] ?? "");
+  if (startMonth === null || endMonth === null) return null;
+
+  const endYear = Number(m[8]);
+  // The start states its own year only sometimes. Absent, it belongs to the same
+  // year as the end unless the range crosses New Year.
+  const startYear =
+    m[3] !== undefined
+      ? Number(m[3])
+      : startMonth > endMonth
+        ? endYear - 1
+        : endYear;
+
+  const offsetMs = offsetMilliseconds(m[11] ?? "", m[12]);
+  if (offsetMs === null) return null;
+
+  const startIso = offsetIso(
+    startYear,
+    startMonth,
+    Number(m[2]),
+    Number(m[4]),
+    Number(m[5]),
+    offsetMs,
+  );
+  const endIso = offsetIso(
+    endYear,
+    endMonth,
+    Number(m[7]),
+    Number(m[9]),
+    Number(m[10]),
+    offsetMs,
+  );
+  if (startIso === null || endIso === null) return null;
+
+  return {
+    start: { iso: startIso, precision: "exact" },
+    end: { iso: endIso, precision: "exact" },
+  };
+}
+
+/**
+ * A stated `(UTC±H[:MM])` offset in milliseconds.
+ *
+ * The minutes are written unsigned, so `-3:30` means three and a half hours
+ * behind UTC rather than three behind and thirty ahead. Signing the whole
+ * magnitude is what gets that right, and `-0:30` — a sign with a zero hour —
+ * only works because the sign is read from the text rather than from `Number`,
+ * which cannot tell `-0` from `0`.
+ */
+function offsetMilliseconds(
+  hours: string,
+  minutes: string | undefined,
+): number | null {
+  const magnitude = Math.abs(Number(hours));
+  const mins = minutes === undefined ? 0 : Number(minutes);
+  if (!Number.isFinite(magnitude) || magnitude > 14 || mins > 59) return null;
+  const sign = hours.trimStart().startsWith("-") ? -1 : 1;
+  return sign * (magnitude * 60 + mins) * 60_000;
+}
+
+/**
+ * A local wall-clock reading plus the offset it was stated in, as a UTC ISO
+ * string.
+ *
+ * The calendar validation happens on the stated local fields, before the offset
+ * shifts anything: "February 30th, 23:00 (UTC-5)" is an impossible date in the
+ * timezone the source wrote it in, and converting first would quietly turn it
+ * into a real instant in March.
+ */
+function offsetIso(
+  y: number,
+  m: number,
+  d: number,
+  hh: number,
+  mm: number,
+  offsetMs: number,
+): string | null {
+  const local = iso(y, m, d, hh, mm);
+  if (local === null) return null;
+  return new Date(Date.parse(local) - offsetMs).toISOString();
+}
+
+/**
  * "2021/01/16 04:00 - 2021/01/31 03:59" → both instants, exact precision.
  * Trailing prose after the range (e.g. "Currently Unavailable") is ignored.
  *

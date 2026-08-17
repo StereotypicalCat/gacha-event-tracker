@@ -6,6 +6,7 @@ import {
   parseMonthDayRange,
   parseMonthDayYear,
   parseOpenRange,
+  parseOrdinalDateTimeRange,
   parseSlashDateTimeRange,
   parseYearFirstSlashRange,
 } from "../src/ingest/dates.ts";
@@ -232,5 +233,100 @@ describe("parseYearFirstSlashRange", () => {
   test("returns null when either side is missing its year", () => {
     expect(parseYearFirstSlashRange("07/30 – 2026/08/20")).toBeNull();
     expect(parseYearFirstSlashRange("2026/07/30 – 08/20")).toBeNull();
+  });
+});
+
+describe("parseOrdinalDateTimeRange", () => {
+  test("reads ordinal days, times and a stated offset", () => {
+    const range = parseOrdinalDateTimeRange(
+      "August 13th, 05:00 - September 21st, 2026, 04:59 (UTC-5)",
+    );
+    // 05:00 at UTC-5 is 10:00Z. Reading the wall clock as UTC — which is all
+    // parseSlashDateTimeRange can do, because its source states no offset —
+    // would put both boundaries five hours early.
+    expect(range?.start.iso).toBe("2026-08-13T10:00:00.000Z");
+    expect(range?.end.iso).toBe("2026-09-21T09:59:00.000Z");
+    expect(range?.start.precision).toBe("exact");
+    expect(range?.end.precision).toBe("exact");
+  });
+
+  test("takes the year from the end when the start omits it", () => {
+    const range = parseOrdinalDateTimeRange(
+      "November 9th, 05:00 - December 4th, 2023, 04:59 (UTC-5)",
+    );
+    expect(range?.start.iso).toBe("2023-11-09T10:00:00.000Z");
+    expect(range?.end.iso).toBe("2023-12-04T09:59:00.000Z");
+  });
+
+  test("rolls the start year back across New Year", () => {
+    const range = parseOrdinalDateTimeRange(
+      "December 28th, 05:00 - January 18th, 2024, 04:59 (UTC-5)",
+    );
+    expect(range?.start.iso).toBe("2023-12-28T10:00:00.000Z");
+    expect(range?.end.iso).toBe("2024-01-18T09:59:00.000Z");
+  });
+
+  test("honours a year stated on both halves", () => {
+    const range = parseOrdinalDateTimeRange(
+      "December 28th, 2023, 05:00 - January 18th, 2024, 04:59 (UTC-5)",
+    );
+    expect(range?.start.iso).toBe("2023-12-28T10:00:00.000Z");
+    expect(range?.end.iso).toBe("2024-01-18T09:59:00.000Z");
+  });
+
+  test("returns null when no year is stated at all", () => {
+    // The one row on the Reverse: 1999 page in this shape. There is no year to
+    // infer from and inventing one is the failure this module exists to avoid.
+    expect(
+      parseOrdinalDateTimeRange("February 20th, 05:00 - March 27th, 04:59 (UTC-5)"),
+    ).toBeNull();
+  });
+
+  test("returns null when the offset is not stated", () => {
+    // A missing timezone is a missing fact. Defaulting it to UTC would be a
+    // guess dressed as data.
+    expect(
+      parseOrdinalDateTimeRange("August 13th, 05:00 - September 21st, 2026, 04:59"),
+    ).toBeNull();
+  });
+
+  test("requires the ordinal suffix that anchors the format", () => {
+    expect(
+      parseOrdinalDateTimeRange("August 13, 05:00 - September 21, 2026, 04:59 (UTC-5)"),
+    ).toBeNull();
+  });
+
+  test("does not match a range buried in prose", () => {
+    expect(
+      parseOrdinalDateTimeRange(
+        "Runs August 13th, 05:00 - September 21st, 2026, 04:59 (UTC-5) for everyone",
+      ),
+    ).toBeNull();
+  });
+
+  test("rejects an impossible date in the timezone it was written in", () => {
+    // Validating after the offset shift would turn this into a real instant in
+    // March instead of rejecting it.
+    expect(
+      parseOrdinalDateTimeRange(
+        "February 30th, 05:00 - March 27th, 2026, 04:59 (UTC-5)",
+      ),
+    ).toBeNull();
+  });
+
+  test("signs the minutes of a half-hour offset with the hours", () => {
+    // -3:30 is three and a half hours behind UTC, not three behind and thirty
+    // ahead: 05:00 at UTC-3:30 is 08:30Z.
+    const range = parseOrdinalDateTimeRange(
+      "August 13th, 05:00 - September 21st, 2026, 04:59 (UTC-3:30)",
+    );
+    expect(range?.start.iso).toBe("2026-08-13T08:30:00.000Z");
+  });
+
+  test("accepts a tilde separator", () => {
+    const range = parseOrdinalDateTimeRange(
+      "August 13th, 05:00 ~ September 21st, 2026, 04:59 (UTC-5)",
+    );
+    expect(range?.start.iso).toBe("2026-08-13T10:00:00.000Z");
   });
 });

@@ -80,6 +80,7 @@ All live in `src/ingest/dates.ts`, each returning null rather than inferring any
 | `parseLabelledStartEnd` | `Start: January 24, 2025 End: Permanent` | Infinity Nikki |
 | `parseAdjacentFullRange` | `July 30, 2026 August 13, 2026` (halves split by an `<hr>`) | Persona 5: The Phantom X |
 | `parseYearFirstSlashRange` | `2026/07/30 – 2026/08/20` (year first, so field order is not inferred) | Arknights |
+| `parseOrdinalDateTimeRange` | `November 9th, 05:00 - December 4th, 2023, 04:59 (UTC-5)` (ordinal days, stated offset) | Reverse: 1999 |
 | `parseOpenRange` | `Jul. 24, 2026 - End of 4.6`, `July 10, 2026 - Permanent` | Star Rail, Wuthering Waves |
 
 `parseOpenRange` is tried last because it is the most permissive — it accepts any leading full date
