@@ -148,6 +148,37 @@ export function parseShortSlashRange(
 }
 
 /**
+ * "July 30, 2026 August 13, 2026" → both instants.
+ *
+ * Game8 separates the two halves of a duration cell with `<hr>` rather than a
+ * dash on some templates, and a tag-stripping reader sees only whitespace
+ * between them. Both anchors and both years are required: without the anchors
+ * this would happily read "August 12, 2026 Day 3 rewards" as a range, and a
+ * bare "Month D" second half could belong to any year.
+ */
+export function parseAdjacentFullRange(
+  input: string,
+): { start: ParsedInstant; end: ParsedInstant } | null {
+  const re =
+    /^\s*([A-Za-z]+)\.?\s+(\d{1,2}),\s*(\d{4})\s+([A-Za-z]+)\.?\s+(\d{1,2}),\s*(\d{4})\s*$/;
+  const m = re.exec(input);
+  if (!m) return null;
+
+  const startMonth = monthNumber(m[1] ?? "");
+  const endMonth = monthNumber(m[4] ?? "");
+  if (startMonth === null || endMonth === null) return null;
+
+  const startIso = iso(Number(m[3]), startMonth, Number(m[2]));
+  const endIso = iso(Number(m[6]), endMonth, Number(m[5]));
+  if (startIso === null || endIso === null) return null;
+
+  return {
+    start: { iso: startIso, precision: "day" },
+    end: { iso: endIso, precision: "day" },
+  };
+}
+
+/**
  * "Start: January 24, 2025 End: Permanent" → the start, and whatever the end
  * half turns out to be.
  *

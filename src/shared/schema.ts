@@ -9,6 +9,7 @@ export const GameId = z.enum([
   "endfield",
   "nte", // Neverness to Everness
   "nikki", // Infinity Nikki
+  "p5x", // Persona 5: The Phantom X
 ]);
 export type GameId = z.infer<typeof GameId>;
 

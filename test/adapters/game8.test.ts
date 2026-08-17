@@ -28,6 +28,7 @@ const CASES: Array<{ adapter: Adapter; fixture: string }> = [
   { adapter: adapter("endfield-game8-events"), fixture: "fixtures/endfield/game8-events-2026-08-14" },
   { adapter: adapter("endfield-wikigg-events"), fixture: "fixtures/endfield/wikigg-events-2026-08-14" },
   { adapter: adapter("nikki-game8-events"), fixture: "fixtures/nikki/game8-events-2026-08-17" },
+  { adapter: adapter("p5x-game8-events"), fixture: "fixtures/p5x/game8-events-2026-08-17" },
 ];
 
 async function runAdapter(adapter: Adapter, fixture: string) {
@@ -255,6 +256,59 @@ describe("nikki", () => {
     for (const e of events) {
       expect(e.summary).toBeNull();
     }
+  });
+});
+
+describe("p5x", () => {
+  const fixture = "fixtures/p5x/game8-events-2026-08-17";
+
+  test("reads a range whose halves are separated by an <hr>", async () => {
+    const events = await runAdapter(adapter("p5x-game8-events"), fixture);
+    const beach = events.find((e) =>
+      e.title.startsWith("Haunted Beach Shack Summer Event"),
+    );
+    expect(beach?.startsAt).toBe("2026-07-30T00:00:00.000Z");
+    expect(beach?.endsAt).toBe("2026-08-13T00:00:00.000Z");
+  });
+
+  test("keeps the finished-events back catalogue off the calendar", async () => {
+    // Fifty-odd past events sit in a table fenced off by nothing but an
+    // <h4>Finished Events</h4> inside a collapsed accordion. A reader blind to
+    // h4 sees one uninterrupted run of tables and publishes the lot.
+    const events = await runAdapter(adapter("p5x-game8-events"), fixture);
+    expect(events).toHaveLength(3);
+    const titles = events.map((e) => e.title);
+    expect(titles).not.toContain("Tycoon Season 1"); // finished
+    expect(titles).not.toContain("New Year's Gifts"); // finished
+  });
+
+  test("skips a row whose duration states no date at all", async () => {
+    // "Take Your Heart" ends 30 days after each player makes an account, so it
+    // has no calendar date and no honest place on a calendar.
+    const events = await runAdapter(adapter("p5x-game8-events"), fixture);
+    expect(events.map((e) => e.title)).not.toContain("Take Your Heart");
+  });
+
+  test("takes no end from an ambiguous one, and does not show it as prose", async () => {
+    // "June 25, 2026 July 16/30, 2026" names two candidate ends. Picking either
+    // would be a guess, and echoing the leftover into the summary would dress
+    // the same guess up as information.
+    const events = await runAdapter(adapter("p5x-game8-events"), fixture);
+    const login = events.find((e) => e.title === "Login Campaigns");
+    expect(login?.startsAt).toBe("2026-06-25T00:00:00.000Z");
+    expect(login?.endsAt).toBeNull();
+    expect(login?.summary).toBeNull();
+  });
+
+  test("recovers the blurb from the event's own section", async () => {
+    // The event is listed twice: once in a bare Event|Duration table, and again
+    // under its own heading with a paragraph of prose. Deduping by ID must not
+    // throw the prose away.
+    const events = await runAdapter(adapter("p5x-game8-events"), fixture);
+    const anniversary = events.find(
+      (e) => e.title === "1st Anniversary Celebration",
+    );
+    expect(anniversary?.summary).toContain("first anniversary");
   });
 });
 

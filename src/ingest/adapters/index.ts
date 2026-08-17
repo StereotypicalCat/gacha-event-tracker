@@ -72,6 +72,12 @@ const SOURCES: SourceSpec[] = [
     url: "https://game8.co/games/Infinity-Nikki/archives/487445",
     parserId: "game8",
   },
+  {
+    id: "p5x-game8-events",
+    game: "p5x",
+    url: "https://game8.co/games/Persona-5-Phantom-X/archives/532244",
+    parserId: "game8",
+  },
 ];
 
 function toAdapter(spec: SourceSpec): Adapter {

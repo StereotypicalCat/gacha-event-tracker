@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  parseAdjacentFullRange,
   parseFullRange,
   parseLabelledStartEnd,
   parseMonthDayRange,
@@ -126,6 +127,39 @@ describe("parseOpenRange", () => {
   test("returns null when there is no full date at all", () => {
     expect(parseOpenRange("08/12 - 08/24")).toBeNull();
     expect(parseOpenRange("Releases in Version 3.6")).toBeNull();
+  });
+});
+
+describe("parseAdjacentFullRange", () => {
+  test("reads two dates separated by nothing but whitespace", () => {
+    // Persona 5 separates the halves of a duration cell with an <hr>, which a
+    // tag-stripping reader flattens to a single space.
+    expect(parseAdjacentFullRange("July 30, 2026 August 13, 2026")).toEqual({
+      start: { iso: "2026-07-30T00:00:00.000Z", precision: "day" },
+      end: { iso: "2026-08-13T00:00:00.000Z", precision: "day" },
+    });
+  });
+
+  test("requires a year on both halves", () => {
+    expect(parseAdjacentFullRange("July 30, 2026 August 13")).toBeNull();
+  });
+
+  test("refuses a second half that is only partly a date", () => {
+    // "July 16/30" names two candidate ends. Reading either as the end would
+    // be a coin flip presented as a fact.
+    expect(parseAdjacentFullRange("June 25, 2026 July 16/30, 2026")).toBeNull();
+  });
+
+  test("is anchored, so prose after a date is not read as an end", () => {
+    // Without the anchors, "Day 3" parses as a month and a day.
+    expect(
+      parseAdjacentFullRange("August 12, 2026 Day 3 rewards are doubled"),
+    ).toBeNull();
+    expect(parseAdjacentFullRange("Starts August 12, 2026")).toBeNull();
+  });
+
+  test("rejects an impossible calendar date rather than rolling it over", () => {
+    expect(parseAdjacentFullRange("February 30, 2026 March 4, 2026")).toBeNull();
   });
 });
 

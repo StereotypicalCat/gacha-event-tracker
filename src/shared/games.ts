@@ -54,6 +54,10 @@ export const GAMES: Record<GameId, GameMeta> = {
   endfield: { id: "endfield", name: "Arknights: Endfield", short: "Endfield", hue: "#E8635A" , studio: "Hypergryph", dailyTasks: "Daily missions", resetOffsets: { europe: -5 } },
   nte: { id: "nte", name: "Neverness to Everness", short: "NTE", hue: "#C77DFF" , studio: "Hotta Studio", dailyTasks: "Daily tasks" },
   nikki: { id: "nikki", name: "Infinity Nikki", short: "Nikki", hue: "#F27BB0" , studio: "Infold Games", dailyTasks: "Daily tasks, Vital Energy" },
+  // No `resetOffsets`: nothing in the source states a server map that differs
+  // from the regional default, and an offset invented here would move real
+  // readers' day keys. Add one only against evidence — see games.ts § resetOffsets.
+  p5x: { id: "p5x", name: "Persona 5: The Phantom X", short: "P5X", hue: "#D62246" , studio: "Perfect World", dailyTasks: "Daily missions, stamina" },
 };
 
 export const GAME_LIST: GameMeta[] = Object.values(GAMES);

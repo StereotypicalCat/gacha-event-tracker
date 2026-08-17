@@ -4,6 +4,7 @@ import {
   type GachaEvent,
 } from "../../shared/schema.ts";
 import {
+  parseAdjacentFullRange,
   parseFullRange,
   parseLabelledStartEnd,
   parseMonthDayRange,
@@ -41,7 +42,8 @@ const INCLUDED_SECTIONS = [
   /recurring events/i,
   /events? schedule/i,
   /featured events/i,
-  /list of events/i,
+  /list of (all )?events/i,
+  /all available events/i,
   /ongoing events/i,
 ];
 
@@ -57,9 +59,15 @@ const EXCLUDED_SECTIONS = [
   /finished events/i,
 ];
 
-/** Label/value rows carrying a single boundary instant. */
-const START_LABEL = /^(event|test run|banner)\s+start$/i;
-const END_LABEL = /^(event|test run|banner)\s+end$/i;
+/**
+ * Label/value rows carrying a single boundary instant.
+ *
+ * The qualifier is optional because Persona 5 labels these `Start Date` /
+ * `End Date` where Genshin writes `Event Start`. Anchored at both ends, so a
+ * cell that merely mentions a start is not mistaken for one.
+ */
+const START_LABEL = /^(event|test run|banner)?\s*start(\s+date)?$/i;
+const END_LABEL = /^(event|test run|banner)?\s*end(\s+date)?$/i;
 /** Label/value rows carrying a whole range in one cell. */
 const RANGE_LABEL = /^(availability period|event period|duration|period|dates)$/i;
 
@@ -285,6 +293,13 @@ const ONE_DATE =
   String.raw`(?:\d{1,2}/\d{1,2}/\d{2,4}|[A-Za-z]+\.?\s+\d{1,2}(?:,\s*\d{4})?)`;
 
 /**
+ * A date that carries its own year. Required of the second half when nothing
+ * but whitespace separates the two \u2014 "August 12, 2026 Day 3 rewards" would
+ * otherwise read "Day 3" as the end and eat the description.
+ */
+const DATED_YEAR = String.raw`(?:\d{1,2}/\d{1,2}/\d{2,4}|[A-Za-z]+\.?\s+\d{1,2},\s*\d{4})`;
+
+/**
  * A leading range, whose end may be a date or a stated non-date such as
  * "Permanent" or "End of 4.6". Those words are listed rather than matched
  * loosely, so a real description is never mistaken for a range end.
@@ -294,7 +309,9 @@ const RANGE_PREFIX = new RegExp(
     ONE_DATE +
     String.raw`(?:\s*[-\u2013\u2014]\s*(?:` +
     ONE_DATE +
-    String.raw`|permanent|tbd|ongoing|end of [\d.]+))?\s*`,
+    String.raw`|permanent|tbd|ongoing|end of [\d.]+)|\s+` +
+    DATED_YEAR +
+    String.raw`)?\s*`,
   "i",
 );
 
@@ -325,6 +342,12 @@ function proseAfterDates(cell: string): string | null {
     .trim();
   // Too short to be a description — probably leftover punctuation.
   if (rest.length < 12) return null;
+  // What is left still looks like a date, so the cell was a range shape we only
+  // partly understood ("June 25, 2026 July 16/30, 2026" — two candidate ends,
+  // which is why no end was taken). Showing the leftover as the blurb would
+  // present a date the parser deliberately refused to trust as if it were
+  // information about the event.
+  if (/^(?:\d{1,2}[/.]|[A-Za-z]+\.?\s+\d)/.test(rest)) return null;
   return isRequirementOnly(rest) ? null : rest;
 }
 
@@ -337,6 +360,7 @@ function parseRange(
     parseShortSlashRange(value) ??
     parseMonthDayRange(value) ??
     parseLabelledStartEnd(value) ??
+    parseAdjacentFullRange(value) ??
     parseOpenRange(value)
   );
 }
@@ -400,7 +424,19 @@ function dedupe(events: GachaEvent[]): GachaEvent[] {
   for (const e of events) {
     const existing = byId.get(e.id);
     if (existing === undefined || e.confidence > existing.confidence) {
-      byId.set(e.id, e);
+      // The loser can still carry a blurb the winner lacks: Persona 5 lists an
+      // event in a bare `Event | Duration` table and again under its own
+      // heading with a paragraph of prose. Dates are taken wholesale from the
+      // better-dated copy and never blended — only a *missing* summary is
+      // filled, so this can add information but never contradict any.
+      byId.set(
+        e.id,
+        e.summary === null && existing?.summary != null
+          ? { ...e, summary: existing.summary }
+          : e,
+      );
+    } else if (existing.summary === null && e.summary !== null) {
+      byId.set(e.id, { ...existing, summary: e.summary });
     }
   }
   return [...byId.values()].sort((a, b) =>
