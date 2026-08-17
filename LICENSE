@@ -20,24 +20,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
----
-
-What the license above covers, and what it does not:
-
-The MIT license applies to the code in this repository — the server, the client,
-the parsers, the build and refresh scripts, and the documentation written for
-them. That is the part which is mine to license.
-
-It does not apply to the event data. The schedules, event names and event
-descriptions under `fixtures/` and `snapshots/`, and the feed built from them,
-were compiled by the editors of the sites they were fetched from — Game8,
-wiki.gg and the Arknights Wiki among them — and describe events run by the
-games' publishers. That material is not mine and is not relicensed here. It is
-checked in so the parsers can be tested against real pages, and it remains
-subject to whatever terms those sites and publishers set. If you reuse this
-project, the data is yours to obtain and attribute, not to inherit from me.
-
-Game names, event names, artwork and trademarks belong to their respective
-owners, including HoYoverse, Kuro Games, Hypergryph, Hotta Studio, Infold Games
-and Perfect World. This project is an unofficial fan-made tool, not endorsed by
-or affiliated with any of them or with any of the sources it reads.
+The accompanying NOTICE file forms part of these terms and must be distributed
+with the above copyright notice. It states which material in this repository is
+licensed here and which is not.
