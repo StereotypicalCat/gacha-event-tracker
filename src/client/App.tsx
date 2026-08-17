@@ -463,6 +463,17 @@ export function App() {
         onToggleGame={toggleGame}
         onUpdate={update}
         ignoredCount={Object.keys(ignored.marks).length}
+        own={{
+          games: custom.games,
+          events: custom.events,
+          // Every lane, not just theirs: a source can miss an event in a game
+          // we do track, and that is the same job with the same form.
+          lanes: games,
+          onAddGame: custom.addGame,
+          onEditGame: custom.editGame,
+          onRemoveGame: custom.removeGame,
+          onAddEvent: custom.addEvent,
+        }}
         onExport={() =>
           exportProgress(prog.progress, daily.logs, ignored.marks, prefs, {
             games: custom.games,
@@ -524,6 +535,17 @@ export function App() {
           onNote={prog.setNote}
           onIgnore={(id) => toggleIgnored(id, openRow.event.title)}
           onClose={() => setOpenId(null)}
+          own={
+            custom.events[openRow.event.id] === undefined
+              ? undefined
+              : {
+                  record: custom.events[openRow.event.id]!,
+                  lanes: games,
+                  games: custom.games,
+                  onSave: custom.editEvent,
+                  onDelete: custom.removeEvent,
+                }
+          }
         />
       )}
     </Shell>

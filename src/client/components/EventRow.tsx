@@ -1,4 +1,4 @@
-import type { DisplayEvent } from "../../shared/custom.ts";
+import { isCustomEventId, type DisplayEvent } from "../../shared/custom.ts";
 import { useGameMeta } from "../state/gameMeta.tsx";
 import {
   formatRemaining,
@@ -88,6 +88,13 @@ export function EventRow({
             <div className="min-w-0">
               <span className="eyebrow flex items-center gap-1.5 truncate">
                 <span style={{ color: game.hue }}>{game.short}</span>
+                {/* A date the reader typed is never allowed to look like one
+                    a source published. */}
+                {isCustomEventId(event.id) && (
+                  <span className="rounded-[3px] border border-hairline px-1 py-px text-[0.5625rem] tracking-normal text-faint">
+                    yours
+                  </span>
+                )}
                 {ignored && (
                   <span className="rounded-[3px] bg-hairline px-1 py-px text-[0.5625rem] tracking-normal text-muted">
                     ignored

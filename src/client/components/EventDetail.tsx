@@ -1,5 +1,13 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useGameMeta } from "../state/gameMeta.tsx";
+import {
+  isCustomEventId,
+  type CustomEvent,
+  type CustomGames,
+  type LaneId,
+} from "../../shared/custom.ts";
+import type { EventDraft } from "../state/useCustom.ts";
+import { EventForm } from "./CustomForms.tsx";
 import { formatAbsolute, formatRemaining } from "../../shared/time.ts";
 import type { RowEvent } from "./EventRow.tsx";
 import { pressure, pressureReason, type Effort } from "../../shared/effort.ts";
@@ -29,6 +37,7 @@ export function EventDetail({
   onEffort,
   onNote,
   onClose,
+  own,
 }: {
   row: RowEvent;
   completed: boolean;
@@ -51,8 +60,23 @@ export function EventDetail({
   onEffort: (id: string, e: Effort | undefined) => void;
   onNote: (id: string, n: string) => void;
   onClose: () => void;
+  /**
+   * Present only when this is an event the reader entered themselves, in which
+   * case they can change it or take it back — this sheet is where anyone would
+   * look for that, rather than a list in settings.
+   */
+  own?:
+    | {
+        record: CustomEvent;
+        lanes: LaneId[];
+        games: CustomGames;
+        onSave: (id: string, draft: EventDraft) => void;
+        onDelete: (id: string) => void;
+      }
+    | undefined;
 }) {
   const gameMeta = useGameMeta();
+  const [editing, setEditing] = useState(false);
   const { event, clock } = row;
   const game = gameMeta(event.game);
   const heat = URGENCY_COLOR[clock.urgency];
@@ -86,6 +110,14 @@ export function EventDetail({
         <h2 className="mt-1.5 font-display text-xl font-semibold leading-snug">
           {event.title}
         </h2>
+        {/* Stated plainly, next to the title rather than buried at the bottom:
+            a reader has to be able to tell which dates the app went and found
+            and which ones they typed in themselves. */}
+        {isCustomEventId(event.id) && (
+          <p className="mt-1 text-xs text-faint">
+            You added this. The dates are yours, not a source's.
+          </p>
+        )}
         {event.summary !== null && (
           <p className="mt-2 text-sm leading-relaxed text-muted">{event.summary}</p>
         )}
@@ -189,6 +221,49 @@ export function EventDetail({
           onEffort={(e) => onEffort(event.id, e)}
           onNote={(n) => onNote(event.id, n)}
         />
+
+        {own !== undefined && (
+          <div className="mt-4 border-t border-hairline pt-4">
+            {editing ? (
+              <EventForm
+                lanes={own.lanes}
+                customGames={own.games}
+                initial={own.record}
+                onSave={(draft) => {
+                  own.onSave(event.id, draft);
+                  setEditing(false);
+                }}
+                onCancel={() => setEditing(false)}
+              />
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  className="rounded-lg border border-hairline px-3 py-1.5 text-xs text-muted transition-colors hover:text-ink"
+                >
+                  Edit this event
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    own.onDelete(event.id);
+                    onClose();
+                  }}
+                  className="rounded-lg border border-hairline px-3 py-1.5 text-xs text-muted transition-colors hover:text-critical"
+                >
+                  Delete
+                </button>
+              </div>
+            )}
+            {/* Their marks and logged days are not swept up with it: reaching
+                into three other stores on one tap is how a misclick costs
+                somebody a streak. */}
+            <p className="mt-2 text-xs leading-relaxed text-faint">
+              Deleting removes the event. Anything you ticked off stays.
+            </p>
+          </div>
+        )}
 
         {event.endPrecision === "day" && event.endsAt !== null && (
           <p className="mt-3 text-xs leading-relaxed text-faint">

@@ -2,6 +2,7 @@ import type { LaneId } from "../../shared/custom.ts";
 import type { Region } from "../../shared/schema.ts";
 import { useGameMeta } from "../state/gameMeta.tsx";
 import type { Prefs } from "../state/usePrefs.ts";
+import { YourOwn } from "./YourOwn.tsx";
 
 const REGIONS: Array<{ id: Region; label: string }> = [
   { id: "america", label: "America" },
@@ -17,6 +18,7 @@ export function Controls({
   ignoredCount,
   onExport,
   onImport,
+  own,
 }: {
   games: LaneId[];
   prefs: Prefs;
@@ -25,6 +27,8 @@ export function Controls({
   ignoredCount: number;
   onExport: () => void;
   onImport: (file: File) => void;
+  /** Everything the reader entered themselves, and the ways to change it. */
+  own: React.ComponentProps<typeof YourOwn>;
 }) {
   const gameMeta = useGameMeta();
   return (
@@ -127,12 +131,14 @@ export function Controls({
         </div>
       </div>
 
+      <YourOwn {...own} />
+
       <div className="mt-6 border-t border-hairline pt-4">
         <p className="eyebrow">Your progress</p>
         <p className="mt-1.5 max-w-md text-xs leading-relaxed text-faint">
           What you've finished, and every daily you've ticked off, are saved in
-          this browser only — there is no account. Move them to another device
-          with a file.
+          this browser only — there is no account. Anything you added yourself is
+          in there too. Move it all to another device with a file.
         </p>
         <div className="mt-3 flex gap-2">
           <button

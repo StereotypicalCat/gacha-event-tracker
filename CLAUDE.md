@@ -76,15 +76,17 @@ re-verify a sample against the live page afterward.
 
 ```
 src/shared/       schema.ts (the contract), time.ts, daily.ts, effort.ts, games.ts, feed.ts
+                  custom.ts — reader-authored games and events, and their key spaces
 src/ingest/       html.ts, dates.ts (nine formats), merge.ts, sanitize.ts, robots.ts, snapshots.ts
   parsers/        game8.ts, wikigg.ts, akwiki.ts — keyed by SITE, not game
   adapters/       index.ts — SOURCES registry binding url+game+parser, and the sanitize seam
 src/client/       React app, service worker, manifest
   state/          progress, daily log, ignores, prefs, sort — all localStorage
+                  useCustom.ts — the reader's own games and events (PRD F13)
                   lens.ts — who sees which rows (focus, outstanding, next-to-expire); pure
 scripts/          build-feed.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             366 tests
+test/             396 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
@@ -228,6 +230,29 @@ event's length. It adds **no schema field**, so the feed contract is untouched.
   on or off. Store an override only when it *disagrees* with detection —
   recording agreement would freeze today's guess and stop a better parser from ever reaching that
   event. Neither control ever deletes a mark or a logged day, so both are reversible.
+
+## Events the reader entered themselves
+
+No adapter list covers a ten-game player, so a reader can define a game and type in events
+(PRD F13, `src/shared/custom.ts`, `src/client/state/useCustom.ts`). They join the same lists,
+timeline, sort, filters, progress, ignore and daily stores as scraped events. Four rules:
+
+- **Their ids live in their own spaces**: `mygame:<slug>` and `myevent:<random>`. Never
+  `${game}:${slug}:${date}` — a reader can type a scraped event's exact title and date, and that
+  collision would silently share one completion mark and one streak between two events. Random also
+  means renaming their own event never moves its id. `dailies`, `mygame` and `myevent` are reserved
+  first segments and **none may ever become a `GameId`**; a test pins this.
+- **Nothing they type enters the ingest pipeline.** `sanitize.ts` and `merge.ts` are for pages we do
+  not control. Their events are not fetched, parsed, merged, scored or quarantined.
+- **A hand-entered date is never attributed to a source.** No `sourceUrl`, no source link, and the
+  row and detail sheet both say it is theirs. `"I don't know when it ends"` is an offered answer, for
+  the same reason the parsers are forbidden from guessing one.
+- **They are in the export.** These exist in one browser and nowhere else, so an export without them
+  is a lossy backup. Import merges by id and never removes.
+
+A lane may now be a game the reader invented, so `gameMeta` is a context resolver (`metaFor`, pure
+and total) rather than a direct lookup — a lane can outlive its game when an import carries an event
+whose game did not come with it.
 
 ## Conventions
 
