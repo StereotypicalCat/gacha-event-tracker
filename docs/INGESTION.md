@@ -154,6 +154,7 @@ produced it.
 | Label/value or column tables with full dates including a year | Good — an existing parser may already handle it |
 | Dates without a year, or no end date at all | **Unsupportable** — yields nothing rather than guessing |
 | Free-form prose with no table structure | Find a different source |
+| A clean table whose newest row is months old | **Not a source, an archive.** Check the *latest* date before writing anything: `bluearchive.fandom.com` parses perfectly and yields zero live events, which shows up as an empty lane and a permanently rejected snapshot rather than as an error |
 
 Game8 uses at least four page templates and a game's page may use any of them:
 
