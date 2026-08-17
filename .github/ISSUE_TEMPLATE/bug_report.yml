@@ -1,0 +1,103 @@
+name: Bug report
+description: A wrong date, a missing event, a lost tick, or anything else the app got wrong.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this.
+
+        **If a date looks wrong, please open the event and check its source link first.**
+        This app does not compile schedules; it rearranges what a wiki published. If the wiki
+        page says the same thing, the fix belongs there — and it is still worth telling us,
+        because we may be able to use a better source for that game.
+
+        Nothing you have marked, typed or ticked leaves your browser, so there is no account
+        for us to look up. That means the details below are all we have to go on.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: What part of the app?
+      options:
+        - A wrong date or time
+        - An event is missing
+        - An event that should not be there
+        - Dailies, streaks or the checklist
+        - The list, calendar or sorting
+        - Events I entered myself
+        - Offline, installing, or updating
+        - Export or import
+        - Something else
+    validations:
+      required: true
+
+  - type: input
+    id: event
+    attributes:
+      label: Which game and event?
+      description: The game, and the event title exactly as the app shows it.
+      placeholder: "Genshin Impact — Mutual Aid in Bloom: Into the Frostlands"
+    validations:
+      required: false
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+      description: |
+        For a date problem, the useful shape is: what this app shows, what the source page
+        shows, and which one you believe.
+      placeholder: |
+        The app says it ends 24 Aug, 09:00. The Game8 page says 31 Aug.
+    validations:
+      required: true
+
+  - type: input
+    id: refreshed
+    attributes:
+      label: "\"Event data last refreshed\" line"
+      description: |
+        Copy it from the bottom of the page. Several sources cannot be fetched automatically,
+        so a stale calendar is a normal state with its own explanation — this line tells the
+        two cases apart before anyone goes looking for a parser bug.
+      placeholder: Event data last refreshed 15 Aug 2026, 04:12 — 2 days ago.
+    validations:
+      required: false
+
+  - type: input
+    id: source
+    attributes:
+      label: Source page
+      description: The wiki page the event links to, if the problem involves its data.
+      placeholder: https://game8.co/games/Genshin-Impact/archives/...
+    validations:
+      required: false
+
+  - type: input
+    id: where
+    attributes:
+      label: Where are you running it, and in what browser?
+      placeholder: stereotypicalcat.github.io/gacha-event-tracker — Firefox 141 on Android
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: |
+        Screenshots help. If you attach an export file, remember it is a record of your own
+        progress — trim it to the event in question if you would rather not share the rest.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you post
+      options:
+        - label: I checked the event's source page, or this is not about a date.
+          required: false
+        - label: I searched the open issues for the same problem.
+          required: false

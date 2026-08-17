@@ -114,7 +114,7 @@ src/client/       React app, service worker, manifest
                   lens.ts — who sees which rows (focus, outstanding, next-to-expire); pure
 scripts/          build-feed.ts, build-static.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             480 tests
+test/             494 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
@@ -251,6 +251,11 @@ A source whose ToS forbids automated access does not get an adapter. Flag it and
 | `reverse1999.fandom.com` | **Built** (2026-08-17), via `api.php`, not the wiki page — see § Fandom below |
 | `bluearchive.fandom.com` | **Declined.** Fetches and parses fine; the page is the problem. Its `Event/Event_List` is a JP-server archive whose newest entry ended 2026-02-18, so all 88 rows are history and it yields **zero** live or upcoming events. An adapter would put an empty lane on the calendar and, because the runner rejects a body that parses to nothing, report a broken source forever. Same failure as the Infinity Nikki Game8 page, further along |
 | `bluearchive.wiki`, `prydwen.gg`, `gametora.com` | **Cleared, unbuilt.** `User-agent: *` allows the paths we would want. prydwen sets `Crawl-delay: 10`, far below our one-per-6h. `bluearchive.wiki` is the live Blue Archive source worth building — `Name (EN) \| Name (JP) \| Start date \| End date` with ISO dates, current to 2026-09-15 — but note it is Miraheze and its `robots.txt` **disallows** `/w/` and `/*?action=`, so the API route is closed there and only the rendered `/wiki/Events` page is permitted. It also lists JP and Global in separate tables, which is the akwiki hazard: publishing the wrong server's date |
+
+`.github/ISSUE_TEMPLATE/feature_request.yml` points readers at that table by heading, so a source
+request can be checked against it before anyone writes it up — the loudest feedback on the first
+release was "not enough games" (`docs/FEEDBACK.md`), which makes this the request that arrives most.
+Keep the heading if the section moves.
 
 wiki.gg hosts (`arknights`, `endfield`) carry `Content-Signal: search=yes, ai-train=no, use=reference`
 with `Allow: /`, and disallow `ClaudeBot` and other AI crawlers by name. Our fetcher is neither: it

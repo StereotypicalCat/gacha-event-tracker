@@ -1,0 +1,5 @@
+# Blank issues stay available on purpose. The two forms cover the reports we can
+# act on fastest, but a reader who cannot fit what they saw into either of them
+# should still be able to say so — a form that turns someone away loses the
+# report, not the noise.
+blank_issues_enabled: true

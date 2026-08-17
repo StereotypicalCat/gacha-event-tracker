@@ -4,6 +4,34 @@ import { formatAbsolute, formatRemaining } from "../../shared/time.ts";
 
 export const REPO_URL = "https://github.com/StereotypicalCat/gacha-event-tracker";
 
+/**
+ * Where a reader takes a problem or an idea.
+ *
+ * `template=` names the file in `.github/ISSUE_TEMPLATE/`, so renaming one of
+ * those files breaks these links — GitHub falls back to the template chooser
+ * rather than erroring, which is a soft landing but not the intended one.
+ */
+export const BUG_URL = `${REPO_URL}/issues/new?template=bug_report.yml`;
+export const FEATURE_URL = `${REPO_URL}/issues/new?template=feature_request.yml`;
+
+/**
+ * The bug form, with the footer's own freshness line already filled in.
+ *
+ * A wrong end date and a stale calendar look identical to a reader, and eight of
+ * the sources cannot be fetched from CI at all — so "how old is this page's data"
+ * is the first thing anyone triaging a date report has to establish, and the one
+ * thing they cannot recover after the fact. Asking the reader to copy it works;
+ * carrying it for them works more often.
+ *
+ * `refreshed` must stay the `id` of the matching field in `bug_report.yml`.
+ * GitHub silently drops a parameter that names no field, so a drift here costs
+ * the prefill with no error anywhere — `test/issue-templates.test.tsx` pins it.
+ */
+export function bugReportUrl(refreshed: string | null): string {
+  if (refreshed === null) return BUG_URL;
+  return `${BUG_URL}&refreshed=${encodeURIComponent(refreshed)}`;
+}
+
 /** Who built this, and where to find them. */
 export const AUTHOR = {
   name: "Lucas Winther",
@@ -65,6 +93,13 @@ export function Colophon({
   const studios = [...new Set(games.map((g) => g.studio))];
   const { refreshedAt, stale } = freshness(sources, now);
 
+  // Built once so the sentence a reader reads and the value the bug form is
+  // prefilled with cannot drift apart.
+  const ago =
+    refreshedAt === null ? null : formatRemaining(now - Date.parse(refreshedAt));
+  const refreshedLine =
+    refreshedAt === null ? null : `${formatAbsolute(refreshedAt, true)} — ${ago} ago`;
+
   const sites = [...new Map(sources.map((s) => {
     const site = siteFor(s.url);
     return [site.name, site] as const;
@@ -95,7 +130,7 @@ export function Colophon({
             <time dateTime={refreshedAt} className="text-muted">
               {formatAbsolute(refreshedAt, true)}
             </time>
-            {` — ${formatRemaining(now - Date.parse(refreshedAt))} ago.`}
+            {` — ${ago} ago.`}
           </>
         )}
       </p>
@@ -219,6 +254,34 @@ export function Colophon({
           <GitHubMark />
           Source code
         </a>
+      </p>
+
+      {/*
+        Placed under the disclaimer that admits dates can be wrong, because that
+        paragraph is where a reader who has just found one is looking. The bug
+        link carries the freshness line above it, so a report arrives already
+        saying whether the calendar was current when it was wrong.
+      */}
+      <p className="mt-2">
+        Something wrong, missing, or worth adding?{" "}
+        <a
+          href={bugReportUrl(refreshedLine)}
+          target="_blank"
+          rel="noreferrer noopener"
+          className={LINK}
+        >
+          Report a problem
+        </a>{" "}
+        or{" "}
+        <a
+          href={FEATURE_URL}
+          target="_blank"
+          rel="noreferrer noopener"
+          className={LINK}
+        >
+          request a feature
+        </a>
+        {"."}
       </p>
     </footer>
   );

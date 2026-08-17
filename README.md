@@ -209,6 +209,27 @@ six-hour floor is checked per source, there are no retries (a retry is a second 
 `robots.txt` that cannot be read means *do not fetch* rather than *assume yes*. Text scraped from a
 page is sanitized at the ingest boundary before it reaches the feed, the browser or your disk.
 
+## Found a problem, or want something?
+
+- **[Report a problem](https://github.com/StereotypicalCat/gacha-event-tracker/issues/new?template=bug_report.yml)**
+  — a wrong date, a missing event, a lost tick, anything the app got wrong.
+- **[Request a feature](https://github.com/StereotypicalCat/gacha-event-tracker/issues/new?template=feature_request.yml)**
+  — including a game it does not cover yet, which is the most common ask by a distance.
+
+Both are forms rather than a blank box, for one reason: nothing you mark, type or tick ever leaves
+your browser, so there is no account and no server-side record for anyone to look up afterwards.
+Whatever the report says is all there is. The bug form arrives with the footer's "event data last
+refreshed" line already filled in, because a stale calendar and a genuinely wrong date look
+identical from the outside and only that line tells them apart.
+
+If a date looks wrong, **open the event and check its source link first.** This app rearranges what a
+wiki published; it does not compile schedules. When the wiki says the same thing, the fix belongs
+there — though it is still worth reporting, since a game with a consistently wrong source may need a
+better one.
+
+Blank issues are still open for anything that fits neither form. The templates themselves live in
+[`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE).
+
 ## Documentation
 
 | Document | Covers |

@@ -1,0 +1,68 @@
+name: Feature request
+description: Ask for a game, a source, or something the app should do.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideas are welcome. Three things are settled, though, so you know before you type:
+
+        - **No accounts, no logins, no server-side records.** Everything you mark stays in your
+          browser. "Sync across my devices" is answered by exporting a file and importing it on
+          the other device, not by an account.
+        - **No LLM reads any page.** Every date comes from deterministic parsers. A source that
+          cannot be parsed reliably gets no adapter, rather than a model guessing at it.
+        - **No date is ever invented.** An event whose end was not announced shows no end date.
+          That is the intended behaviour, not a gap to fill in.
+
+        **Asking for a game?** Include the page you would want it read from. Some sources have
+        already been assessed and declined — a wiki that forbids automated access, hides its
+        data behind a bot check, or only archives finished events cannot be used. The current
+        list is in `AGENTS.md` under "Sources assessed and declined", so you can check before
+        writing it up.
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of request is this?
+      options:
+        - A game the app does not cover
+        - A better or extra source for a game it does cover
+        - The list, calendar or sorting
+        - Dailies, streaks or the checklist
+        - Events I enter myself
+        - Offline, installing, or updating
+        - Export or import
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: |
+        The situation, rather than the solution. Knowing what you were doing when the app got
+        in your way often turns up a smaller fix than the one either of us would have guessed.
+      placeholder: |
+        I play six games and only two of them are on here, so I still end up opening tabs.
+    validations:
+      required: true
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like it to do?
+    validations:
+      required: false
+
+  - type: input
+    id: source
+    attributes:
+      label: Source page
+      description: |
+        For a game or source request: the page that lists that game's events, with real dates
+        on it. A page whose newest event has already finished cannot be used.
+      placeholder: https://bluearchive.wiki/wiki/Events
+    validations:
+      required: false
