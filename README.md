@@ -268,4 +268,14 @@ The Pages job sets this automatically. Without it, a subpath deploy 404s on ever
 
 ## Licence
 
-Not yet chosen. Event data belongs to the sources it came from and is linked back on every event.
+MIT — see [LICENSE](LICENSE). It covers the code: server, client, parsers, and the build and refresh
+scripts.
+
+It does not cover the event data. The schedules under `fixtures/` and `snapshots/`, and the feed
+built from them, were compiled by the editors of the sites they came from and describe events run by
+the publishers; every event links back to the page it came from. Fork the code freely — the data you
+obtain and attribute yourself. The scope note at the foot of `LICENSE` spells this out, and the app's
+own colophon says the same thing to readers.
+
+Unofficial and unaffiliated. Game names, event names and trademarks belong to their respective
+owners.
