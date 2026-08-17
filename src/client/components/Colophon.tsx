@@ -1,5 +1,6 @@
 import { gameMeta } from "../../shared/games.ts";
-import type { SourceHealth } from "../../shared/feed.ts";
+import { freshness, type SourceHealth } from "../../shared/feed.ts";
+import { formatAbsolute, formatRemaining } from "../../shared/time.ts";
 
 export const REPO_URL = "https://github.com/StereotypicalCat/gacha-event-tracker";
 
@@ -12,6 +13,15 @@ export const AUTHOR = {
 
 const LINK =
   "text-muted underline decoration-hairline underline-offset-2 transition-colors duration-150 hover:text-ink hover:decoration-near";
+
+/**
+ * How many lagging games to name before summarising the rest.
+ *
+ * Naming them is the point — a reader can act on a name — but past a handful the
+ * list stops being read, and every extra entry repeating the same age crowds out
+ * the sentence that matters.
+ */
+const STALE_NAMES = 4;
 
 function GitHubMark() {
   return (
@@ -46,13 +56,14 @@ function siteFor(url: string): { name: string; url: string } {
  */
 export function Colophon({
   sources,
-  staleCount,
+  now,
 }: {
   sources: SourceHealth[];
-  staleCount: number;
+  now: number;
 }) {
   const games = [...new Set(sources.map((s) => s.game))].map(gameMeta);
   const studios = [...new Set(games.map((g) => g.studio))];
+  const { refreshedAt, stale } = freshness(sources, now);
 
   const sites = [...new Map(sources.map((s) => {
     const site = siteFor(s.url);
@@ -68,10 +79,60 @@ export function Colophon({
         from — check there before the last hours.
       </p>
 
-      {staleCount > 0 && (
+      {/*
+        Stated on every load, not only when something is wrong. A page that says
+        nothing about its own age reads as current, and "how old is this?" is the
+        question a reader has to be able to answer before trusting a countdown
+        (PRD F7). The date is absolute *and* relative on purpose: the relative
+        half is what gets read, the absolute half is what can be checked.
+      */}
+      <p className="mt-2">
+        <span className="text-muted">Event data last refreshed</span>{" "}
+        {refreshedAt === null ? (
+          "— no source has been fetched yet."
+        ) : (
+          <>
+            <time dateTime={refreshedAt} className="text-muted">
+              {formatAbsolute(refreshedAt, true)}
+            </time>
+            {` — ${formatRemaining(now - Date.parse(refreshedAt))} ago.`}
+          </>
+        )}
+      </p>
+
+      {stale.length > 0 && (
+        // Named per game rather than counted, because a count is not something a
+        // reader can act on: knowing *which* lane is behind tells them which
+        // source page to go and check, which is the whole remedy on offer.
+        //
+        // Except when the answer is "all of them", which is what a refresh that
+        // stopped running looks like. Ten names each repeating the same age is
+        // less readable than the count this replaced, and the headline above
+        // already gives the date — so that case gets a sentence, not a list.
         <p className="mt-2 text-soon">
-          {staleCount} source{staleCount > 1 ? "s have" : " has"} not refreshed in
-          over two days. Some end dates may have moved.
+          {stale.length === games.length ? (
+            `Nothing has refreshed in over two days, so any end date here may have moved.`
+          ) : (
+            <>
+              {stale.length === 1 ? "This game has" : "These games have"} not
+              refreshed in over two days, so some of their end dates may have
+              moved:{" "}
+              {stale.slice(0, STALE_NAMES).map((s, i, shown) => (
+                <span key={s.game}>
+                  {i > 0 && (i === shown.length - 1 && stale.length <= STALE_NAMES ? " and " : ", ")}
+                  {gameMeta(s.game).name}
+                  {s.lastSuccessAt === null
+                    ? " (never)"
+                    : ` (${formatRemaining(now - Date.parse(s.lastSuccessAt))} ago)`}
+                </span>
+              ))}
+              {stale.length > STALE_NAMES &&
+                ` and ${stale.length - STALE_NAMES} other game${
+                  stale.length - STALE_NAMES > 1 ? "s" : ""
+                }`}
+              {"."}
+            </>
+          )}
         </p>
       )}
 

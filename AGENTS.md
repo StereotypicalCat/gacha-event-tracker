@@ -114,7 +114,7 @@ src/client/       React app, service worker, manifest
                   lens.ts — who sees which rows (focus, outstanding, next-to-expire); pure
 scripts/          build-feed.ts, build-static.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             466 tests
+test/             480 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
@@ -405,3 +405,12 @@ to an open page). Four things hold it up:
   `src/client/state/lens.ts`). Being pointed at a job you already finished is the bug either way.
   For the same reason "next to expire" reads the minimum end date rather than the head of the list,
   which under "doing first" is a different event entirely.
+- **The page states its own age unprompted, and reads it off the data.** The footer says when event
+  data last refreshed on every load, not only past the two-day threshold — a page silent about its age
+  reads as current, and "how old is this?" has to be answerable before a countdown is worth trusting
+  (PRD F7). `freshness()` in `src/shared/feed.ts` is the one definition: it takes the newest
+  `lastSuccessAt` and **never `generatedAt`**, which is a build stamp that would call a
+  fixture-backed calendar minutes old, and it treats a game as only as fresh as its *oldest* source,
+  so one live wiki cannot vouch for a stalled sibling. Given that eight sources cannot be fetched
+  from CI at all (§ Scraping conduct), this disclosure is the only thing standing between a reader and
+  a confidently stale calendar — do not let a future change source it from the build clock.

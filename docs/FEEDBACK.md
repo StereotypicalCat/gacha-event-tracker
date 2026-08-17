@@ -92,10 +92,14 @@ first thing to find out.
    making a request.
 3. If Game8 is being refused, that is a scraping-conduct question before it is a code question —
    re-read `AGENTS.md` § Scraping conduct and decide, rather than working around it.
-4. Regardless of cause: surface it in the UI. `Colophon.tsx` already receives `staleCount`, and
-   `App.tsx` computes `staleSources` at a two-day threshold. Verify a reader actually sees that
-   banner today, because if five of six games are on four-day-old fixtures, the app is currently
-   claiming more freshness than it has.
+4. ~~Regardless of cause: surface it in the UI.~~ **Done.** The footer now states the data's age on
+   every load rather than only when something is wrong — `freshness()` in `src/shared/feed.ts`, read
+   by `Colophon.tsx`. Two things it settles, both of which were the "claiming more freshness than it
+   has" worry in concrete form: the age comes from the newest `lastSuccessAt` and never from
+   `generatedAt`, which is a build stamp that would call a fixture-backed calendar minutes old; and a
+   game is only as fresh as its *oldest* source, so Endfield's live wiki cannot vouch for its stalled
+   Game8 page. Lagging games are named rather than counted, because a count tells a reader nothing
+   they can act on — except when every game is behind, which collapses to one sentence.
 5. Add a CI assertion that fails the build when a source has neither a snapshot nor a fixture newer
    than N days. A silent fallback to stale bytes should not be able to deploy.
 

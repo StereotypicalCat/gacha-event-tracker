@@ -27,7 +27,7 @@ import {
   outstanding,
   resolveFocus,
 } from "./state/lens.ts";
-import { clockFor, DAY, formatRemaining } from "../shared/time.ts";
+import { clockFor, formatRemaining } from "../shared/time.ts";
 import { dailySummary, isDaily, resolveDaily } from "../shared/daily.ts";
 import { GameMetaProvider, type MetaResolver } from "./state/gameMeta.tsx";
 import {
@@ -295,10 +295,6 @@ export function App() {
     );
   }
 
-  const staleSources = state.feed.sources.filter(
-    (s) => s.lastSuccessAt === null || now - Date.parse(s.lastSuccessAt) > 2 * DAY,
-  );
-
   return (
     <GameMetaProvider value={gameMeta}>
     <Shell>
@@ -503,7 +499,7 @@ export function App() {
         </p>
       )}
 
-      <Colophon sources={state.feed.sources} staleCount={staleSources.length} />
+      <Colophon sources={state.feed.sources} now={now} />
 
       {lastIgnored !== null && (
         <Toast
