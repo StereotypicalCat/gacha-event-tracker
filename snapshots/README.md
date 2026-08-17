@@ -17,7 +17,8 @@ localStorage keys).
 
 Every file is written to a sibling `.tmp-*` and renamed into place, body before metadata, so an
 interrupted run leaves a stray temp file rather than a truncated snapshot or metadata describing
-bytes that were never stored.
+bytes that were never stored. Those temp files are gitignored: `refresh.yml` commits the whole
+directory, so otherwise a run killed mid-write would pin a half-page in git forever.
 
 Three reasons this is committed rather than cached:
 

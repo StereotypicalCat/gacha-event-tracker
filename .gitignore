@@ -126,3 +126,9 @@ public/
 # but this file changes on every cycle, and committing it would mean a commit
 # per run saying nothing changed.
 snapshots/*.state.json
+
+# Half-written snapshots. Every snapshot is written to a sibling temp file and
+# renamed into place, so a run killed mid-write leaves one of these behind — and
+# the refresh workflow commits the whole snapshots/ directory, which would
+# otherwise pin a truncated page in git forever.
+snapshots/*.tmp-*
