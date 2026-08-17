@@ -9,7 +9,7 @@
 import { z } from "zod";
 
 export const GameId = z.enum([
-  "genshin", "hsr", "zzz", "wuwa", "arknights", "endfield", "nte", "nikki", "p5x",
+  "genshin", "hsr", "zzz", "wuwa", "arknights", "endfield", "nte", "nikki", "p5x", "r1999",
 ]);
 
 export const EventType = z.enum([
@@ -258,6 +258,7 @@ reader cannot see.
 | Arknights, all regions | 04:00 | UTC-7 (one Global server) | 11:00 | 13:00 / 12:00 |
 | Endfield, Europe | 04:00 | UTC-5 (on the Americas server) | 09:00 | 11:00 / 10:00 |
 | Endfield, Asia / Americas | 04:00 | regional default | 20:00 / 09:00 | — |
+| Reverse: 1999, all regions | **05:00** | UTC-5 (one global server) | 10:00 | 12:00 / 11:00 |
 
 Arknights is the one game whose override covers **all three** regions, and it is not a blanket
 per-game offset of the kind this section warns about below: the game genuinely runs a single Global
@@ -269,6 +270,15 @@ Infinity Nikki and P5X carry **no `resetOffsets` entry**, so they take the regio
 an assumption, not a verified server map — neither source states one. Confirm it against the games
 before relying on it, and note that adding an override later re-labels the game-day of ticks readers
 have already logged, which is the change this table warns about below.
+
+**Reverse: 1999 is the one game that rolls on a different hour**, and it needs its own field rather
+than a bent offset. It runs a single global server on UTC-5 and resets at **05:00**, so its day rolls
+at 10:00 UTC. `resetOffsets` alone cannot say that: landing 10:00 UTC through the offset would mean
+claiming a UTC-6 server, which is a lie every other reader of `serverOffsetUtc` would inherit. So
+`GameMeta.resetHourLocal` overrides `RESET_HOUR_LOCAL` per game, and is absent — meaning 04:00 — for
+everything else, which is why introducing it moved no existing day key. Both facts come off the
+source: all 154 rows of the wiki's event list state `(UTC-5)`, and every one runs 05:00 → 04:59, an
+event ending one minute before the reset the next one starts on.
 
 These server offsets are **fixed and do not observe DST**, so the reader's local reset time moves by
 an hour across the European clock change while the UTC instant stays put.

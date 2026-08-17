@@ -170,7 +170,12 @@ Two more key spaces have the same property, for the same reason:
   A game whose server map differs lists the affected regions in `resetOffsets` (`games.ts`) —
   Endfield serves Europe off the Americas machine, so `europe` is UTC-5 there and its reset is
   09:00 UTC, not 03:00. Keep that override **per region**: a blanket per-game offset drags the
-  regions that do have their own server onto someone else's clock. Every day-key function takes an
+  regions that do have their own server onto someone else's clock.
+  A game that rolls on a different *hour* says so in `resetHourLocal` instead — Reverse: 1999 resets
+  at 05:00, not 04:00, so its day rolls at 10:00 UTC on its single UTC-5 server. Do not encode that
+  as a bent `resetOffsets` value: shifting a game's stated server offset to land the right instant
+  would misreport the server clock to everything else that asks for it. Both fields are absent for
+  every game that takes the default, which is why adding the second one moved nobody's day keys. Every day-key function takes an
   optional `game` — **anything reading or writing a tick must pass it**, or it writes under one
   clock and reads under another. A day that drops out of `dailyDays` renders no pip, so a tick on it
   becomes unreachable; check real fixture windows before changing an offset.

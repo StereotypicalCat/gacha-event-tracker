@@ -8,6 +8,8 @@ import {
   isDaily,
   msUntilReset,
   nextResetMs,
+  resetHourFor,
+  RESET_HOUR_LOCAL,
   resolveDaily,
   streakOf,
 } from "../src/shared/daily.ts";
@@ -356,5 +358,50 @@ describe("dailiesId", () => {
     // Event IDs are `game:slug:date`; these are deliberately two segments.
     expect(dailiesId("genshin")).toBe("dailies:genshin");
     expect(dailiesId("genshin").split(":")).toHaveLength(2);
+  });
+});
+
+describe("a game whose day rolls on a different hour", () => {
+  // Reverse: 1999 runs one global server on UTC-5 and resets at 05:00 rather
+  // than 04:00, so its day rolls at 10:00 UTC. Both facts are read off the
+  // source: every row of its event list states (UTC-5) and runs 05:00 → 04:59.
+  test("rolls on 10:00 UTC, not the 09:00 a UTC-5 game would", () => {
+    expect(dayKey(at("2026-08-16T09:59:59Z"), "europe", "r1999")).toBe(
+      "2026-08-15",
+    );
+    expect(dayKey(at("2026-08-16T10:00:00Z"), "europe", "r1999")).toBe(
+      "2026-08-16",
+    );
+    expect(nextResetMs(at("2026-08-16T08:00:00Z"), "europe", "r1999")).toBe(
+      at("2026-08-16T10:00:00Z"),
+    );
+  });
+
+  test("every region gets the same answer, because there is one server", () => {
+    const instant = at("2026-08-16T09:30:00Z");
+    const keys = (["asia", "america", "europe"] as const).map((r) =>
+      dayKey(instant, r, "r1999"),
+    );
+    expect(new Set(keys).size).toBe(1);
+  });
+
+  test("resetHourFor defaults to 04:00 for every other game", () => {
+    // Adding the field must not have moved a single existing reader's day key,
+    // which is why it is an override rather than a per-game table.
+    expect(resetHourFor("r1999")).toBe(5);
+    for (const game of ["genshin", "endfield", "arknights", undefined] as const) {
+      expect(resetHourFor(game)).toBe(RESET_HOUR_LOCAL);
+    }
+    // A lane the reader invented has no server map and takes the default too.
+    expect(resetHourFor("mygame:my-own-game")).toBe(RESET_HOUR_LOCAL);
+  });
+
+  test("an event's checklist counts days on the 05:00 clock", () => {
+    const start = at("2026-08-13T10:00:00Z"); // an r1999 reset
+    expect(dailyDays(start, start + 3 * DAY, "europe", "r1999")).toEqual([
+      "2026-08-13",
+      "2026-08-14",
+      "2026-08-15",
+    ]);
   });
 });

@@ -39,6 +39,21 @@ export interface GameMeta {
    * docs/DATA-MODEL.md.
    */
   resetOffsets?: Partial<Record<Region, number>> | undefined;
+  /**
+   * The hour of the server's own day this game rolls over on, when it is not
+   * `RESET_HOUR_LOCAL` (04:00).
+   *
+   * Most gacha servers reset at 04:00 local. Reverse: 1999 resets at 05:00, and
+   * the difference is not cosmetic: `resetOffsets` alone cannot express it,
+   * because bending a game's stated server offset to land the right instant
+   * would put every other reader of that offset an hour out.
+   *
+   * Like `resetOffsets` this feeds `dayKey`, which is a **localStorage key**, so
+   * the same warning applies — changing it for a game that already has readers
+   * re-labels the game-day their logged ticks fall in. Absent means 04:00, which
+   * is why adding this field moved no existing game.
+   */
+  resetHourLocal?: number | undefined;
 }
 
 export const GAMES: Record<GameId, GameMeta> = {
@@ -66,6 +81,12 @@ export const GAMES: Record<GameId, GameMeta> = {
   // from the regional default, and an offset invented here would move real
   // readers' day keys. Add one only against evidence — see games.ts § resetOffsets.
   p5x: { id: "p5x", name: "Persona 5: The Phantom X", short: "P5X", hue: "#D62246" , studio: "Perfect World", dailyTasks: "Daily missions, stamina" },
+  // Reverse: 1999 runs one global server on a fixed UTC-5 and rolls its day at
+  // **05:00**, not the 04:00 every other game here uses. Both facts come from
+  // the source rather than from habit: all 154 rows on the wiki's event list
+  // state `(UTC-5)`, and every one of them starts at 05:00 and ends at 04:59 —
+  // an event ending one minute before the reset that the next one begins on.
+  r1999: { id: "r1999", name: "Reverse: 1999", short: "R1999", hue: "#C9A227" , studio: "Bluepoch", dailyTasks: "Daily missions", resetOffsets: { asia: -5, america: -5, europe: -5 }, resetHourLocal: 5 },
 };
 
 export const GAME_LIST: GameMeta[] = Object.values(GAMES);
