@@ -374,8 +374,16 @@ to an open page). Four things hold it up:
 ## Conventions
 
 - **Commit straight to `main`.** This is a solo repo and its history is a single line; do not open a
-  branch for a change unless asked for one. Committing still waits to be asked, and each commit is
-  self-contained — one coherent change, typechecking and passing tests on its own.
+  branch for a change unless asked for one. Committing still waits to be asked.
+- **Commits are self-contained and succinct.** One coherent change per commit, typechecking and
+  passing tests on its own — a feature spanning layers splits as model → store → UI → docs, each
+  step green by itself, even when that means widening a type in the model commit that only the UI
+  commit uses. `docs/FEEDBACK.md` makes the same argument for adapters specifically: do not batch
+  six games into one commit, because each one is a fixture and a test that has to prove itself.
+  Succinct is about the message, not the change: a one-line subject in plain English, and a body
+  that says *why* — the reasoning a diff cannot show — rather than listing the files it touched.
+  Never reformat code the change did not touch; a formatter the project does not run buries a
+  100-line change in a 550-line diff.
 - **Zod schemas are the single source of truth for types.** Derive with `z.infer<>`; never
   hand-write an interface that duplicates a schema.
 - Every adapter ships a fixture in `fixtures/<game>/` and a test asserting parsed output. This is
