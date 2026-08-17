@@ -16,7 +16,7 @@ import { metaFor } from "../src/shared/games.ts";
 import { dailiesId } from "../src/shared/daily.ts";
 import { eventId, GameId } from "../src/shared/schema.ts";
 import { clockFor } from "../src/shared/time.ts";
-import { readerInstant } from "../src/client/state/useCustom.ts";
+import { readerInstant, validRecords } from "../src/client/state/useCustom.ts";
 
 const AT = "2026-08-17T12:00:00.000Z";
 
@@ -282,5 +282,57 @@ describe("readerInstant", () => {
     expect(readerInstant("", null, "start")).toBeNull();
     expect(readerInstant("not-a-date", null, "start")).toBeNull();
     expect(readerInstant("2026-02-30", null, "start")).toBeNull();
+  });
+});
+
+describe("validRecords — the import gate", () => {
+  test("keeps the good records and drops only the bad ones", () => {
+    // A partly-corrupt file must not cost the reader the parts that are fine.
+    const kept = validRecords(
+      {
+        "mygame:a": { id: "mygame:a", name: "A", hue: "#123456", at: AT },
+        "mygame:b": { id: "mygame:b", name: "B", hue: "not-a-colour", at: AT },
+        "mygame:c": "nonsense",
+      },
+      CustomGame,
+    );
+    expect(Object.keys(kept)).toEqual(["mygame:a"]);
+  });
+
+  test("refuses a hue that is not a hex colour", () => {
+    // It reaches a style attribute, and an import is not necessarily a file
+    // this reader wrote.
+    const kept = validRecords(
+      {
+        "mygame:x": {
+          id: "mygame:x",
+          name: "X",
+          hue: "red; background:url(javascript:alert(1))",
+          at: AT,
+        },
+      },
+      CustomGame,
+    );
+    expect(kept).toEqual({});
+  });
+
+  test("an export written before F13 simply has none", () => {
+    // Not an error — a file from a device that had nothing of its own.
+    expect(validRecords(undefined, CustomEvent)).toEqual({});
+    expect(validRecords(null, CustomEvent)).toEqual({});
+  });
+
+  test("drops an event whose dates contradict themselves", () => {
+    const kept = validRecords(
+      {
+        "myevent:aaaaaaaaaa": {
+          ...ownEvent(),
+          id: "myevent:aaaaaaaaaa",
+          endsAt: "2026-08-01T00:00:00.000Z",
+        },
+      },
+      CustomEvent,
+    );
+    expect(kept).toEqual({});
   });
 });

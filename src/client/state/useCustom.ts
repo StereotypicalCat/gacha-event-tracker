@@ -78,15 +78,38 @@ export function readerInstant(
  */
 function readValid<T>(
   key: string,
-  schema: { safeParse: (v: unknown) => { success: boolean; data?: T } },
+  schema: Validator<T>,
   label: string,
 ): Record<string, T> {
   const raw = readJson<Record<string, unknown>>(key, {});
+  const kept = validRecords(raw, schema);
+  for (const id of Object.keys(raw)) {
+    if (kept[id] === undefined) console.warn(`dropped an unreadable ${label}: ${id}`);
+  }
+  return kept;
+}
+
+interface Validator<T> {
+  safeParse: (v: unknown) => { success: boolean; data?: T };
+}
+
+/**
+ * Keep the records that parse, drop the ones that do not.
+ *
+ * Both the store and an import land here. An import especially: a file is not
+ * necessarily one this reader wrote, and a hostile or merely stale record must
+ * not be able to take the rest of their data down with it — or reach a `style`
+ * attribute unchecked (see `CustomGame.hue`).
+ */
+export function validRecords<T>(
+  input: unknown,
+  schema: Validator<T>,
+): Record<string, T> {
+  if (typeof input !== "object" || input === null) return {};
   const out: Record<string, T> = {};
-  for (const [id, value] of Object.entries(raw)) {
+  for (const [id, value] of Object.entries(input as Record<string, unknown>)) {
     const parsed = schema.safeParse(value);
     if (parsed.success && parsed.data !== undefined) out[id] = parsed.data;
-    else console.warn(`dropped an unreadable ${label}: ${id}`);
   }
   return out;
 }
@@ -209,8 +232,8 @@ export function useCustom() {
   /** Import: union by id, never removing what this device already has. */
   const merge = useCallback(
     (incomingGames: unknown, incomingEvents: unknown) => {
-      const g = validated(incomingGames, CustomGame);
-      const e = validated(incomingEvents, CustomEvent);
+      const g = validRecords(incomingGames, CustomGame);
+      const e = validRecords(incomingEvents, CustomEvent);
       if (Object.keys(g).length > 0) setGames((prev) => ({ ...g, ...prev }));
       if (Object.keys(e).length > 0) setEvents((prev) => ({ ...e, ...prev }));
     },
@@ -239,17 +262,4 @@ export function useCustom() {
     removeEvent,
     merge,
   };
-}
-
-function validated<T>(
-  input: unknown,
-  schema: { safeParse: (v: unknown) => { success: boolean; data?: T } },
-): Record<string, T> {
-  if (typeof input !== "object" || input === null) return {};
-  const out: Record<string, T> = {};
-  for (const [id, value] of Object.entries(input as Record<string, unknown>)) {
-    const parsed = schema.safeParse(value);
-    if (parsed.success && parsed.data !== undefined) out[id] = parsed.data;
-  }
-  return out;
 }
