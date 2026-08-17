@@ -53,6 +53,7 @@ export const GAMES: Record<GameId, GameMeta> = {
   // and `america` already resolves to -5, so Europe is the only real override.
   endfield: { id: "endfield", name: "Arknights: Endfield", short: "Endfield", hue: "#E8635A" , studio: "Hypergryph", dailyTasks: "Daily missions", resetOffsets: { europe: -5 } },
   nte: { id: "nte", name: "Neverness to Everness", short: "NTE", hue: "#C77DFF" , studio: "Hotta Studio", dailyTasks: "Daily tasks" },
+  nikki: { id: "nikki", name: "Infinity Nikki", short: "Nikki", hue: "#F27BB0" , studio: "Infold Games", dailyTasks: "Daily tasks, Vital Energy" },
 };
 
 export const GAME_LIST: GameMeta[] = Object.values(GAMES);

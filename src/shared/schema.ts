@@ -8,6 +8,7 @@ export const GameId = z.enum([
   "arknights",
   "endfield",
   "nte", // Neverness to Everness
+  "nikki", // Infinity Nikki
 ]);
 export type GameId = z.infer<typeof GameId>;
 

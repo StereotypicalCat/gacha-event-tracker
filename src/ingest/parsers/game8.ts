@@ -5,6 +5,7 @@ import {
 } from "../../shared/schema.ts";
 import {
   parseFullRange,
+  parseLabelledStartEnd,
   parseMonthDayRange,
   parseMonthDayYear,
   parseOpenRange,
@@ -313,6 +314,11 @@ function isRequirementOnly(text: string): boolean {
 
 /** Strip a leading label and date range, leaving any description behind it. */
 function proseAfterDates(cell: string): string | null {
+  // A fully labelled "Start: … End: …" cell is structure end to end. Stripping
+  // the leading half would leave "End: Permanent" standing where a description
+  // belongs — a date masquerading as a blurb.
+  if (parseLabelledStartEnd(cell) !== null) return null;
+
   const rest = cell
     .replace(/^\s*(period|duration|schedule|dates?)\s*[:：]\s*/i, "")
     .replace(RANGE_PREFIX, "")
@@ -330,6 +336,7 @@ function parseRange(
     parseFullRange(value) ??
     parseShortSlashRange(value) ??
     parseMonthDayRange(value) ??
+    parseLabelledStartEnd(value) ??
     parseOpenRange(value)
   );
 }

@@ -27,6 +27,7 @@ const CASES: Array<{ adapter: Adapter; fixture: string }> = [
   { adapter: adapter("zzz-game8-events"), fixture: "fixtures/zzz/game8-events-2026-08-14" },
   { adapter: adapter("endfield-game8-events"), fixture: "fixtures/endfield/game8-events-2026-08-14" },
   { adapter: adapter("endfield-wikigg-events"), fixture: "fixtures/endfield/wikigg-events-2026-08-14" },
+  { adapter: adapter("nikki-game8-events"), fixture: "fixtures/nikki/game8-events-2026-08-17" },
 ];
 
 async function runAdapter(adapter: Adapter, fixture: string) {
@@ -223,6 +224,37 @@ describe("endfield", () => {
     // The prose after the dates becomes the blurb, without the label.
     expect(rooted?.summary).not.toBeNull();
     expect(rooted?.summary).not.toMatch(/^Period:/);
+  });
+});
+
+describe("nikki", () => {
+  const fixture = "fixtures/nikki/game8-events-2026-08-17";
+
+  test("reads a labelled Start/End cell, and takes no end from 'Permanent'", async () => {
+    // The duration cell is "Start: January 24, 2025 End: Permanent" — two
+    // labelled halves separated by a <br>, which a tag-stripping reader sees as
+    // one run of text.
+    const events = await runAdapter(adapter("nikki-game8-events"), fixture);
+    expect(events).toHaveLength(7); // every row of the current-events table
+
+    const fiesta = events.find((e) => e.title === "Fireworks Fiesta");
+    expect(fiesta?.startsAt).toBe("2025-01-24T00:00:00.000Z");
+    // "Permanent" is not a date and does not become one.
+    expect(fiesta?.endsAt).toBeNull();
+    expect(fiesta?.endPrecision).toBe("unknown");
+
+    const bubble = events.find((e) => e.title === "Bubble Season");
+    expect(bubble?.startsAt).toBe("2025-04-28T00:00:00.000Z");
+    expect(bubble?.endsAt).toBe("2025-06-12T00:00:00.000Z");
+  });
+
+  test("never presents the labelled cell's own text as a summary", async () => {
+    // "End: Permanent" is structure, not a blurb. Leaving it in the summary
+    // slot would show a reader a date the parser deliberately refused to use.
+    const events = await runAdapter(adapter("nikki-game8-events"), fixture);
+    for (const e of events) {
+      expect(e.summary).toBeNull();
+    }
   });
 });
 

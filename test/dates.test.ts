@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   parseFullRange,
+  parseLabelledStartEnd,
   parseMonthDayRange,
   parseMonthDayYear,
   parseOpenRange,
@@ -125,5 +126,41 @@ describe("parseOpenRange", () => {
   test("returns null when there is no full date at all", () => {
     expect(parseOpenRange("08/12 - 08/24")).toBeNull();
     expect(parseOpenRange("Releases in Version 3.6")).toBeNull();
+  });
+});
+
+describe("parseLabelledStartEnd", () => {
+  test("reads a labelled cell", () => {
+    expect(
+      parseLabelledStartEnd("Start: April 28, 2025 End: June 12, 2025"),
+    ).toEqual({
+      start: { iso: "2025-04-28T00:00:00.000Z", precision: "day" },
+      end: { iso: "2025-06-12T00:00:00.000Z", precision: "day" },
+    });
+  });
+
+  test("reports no end when the end half is not a date", () => {
+    // "Permanent" is the source telling us there is no deadline. Inventing one
+    // is the failure this codebase exists to prevent.
+    const permanent = parseLabelledStartEnd(
+      "Start: January 24, 2025 End: Permanent",
+    );
+    expect(permanent?.start.iso).toBe("2025-01-24T00:00:00.000Z");
+    expect(permanent?.end).toBeNull();
+
+    expect(parseLabelledStartEnd("Start: January 24, 2025 End: TBD")?.end).toBeNull();
+    expect(parseLabelledStartEnd("Start: January 24, 2025")?.end).toBeNull();
+  });
+
+  test("returns null when the start half is not a date", () => {
+    expect(parseLabelledStartEnd("Start: After maintenance End: TBD")).toBeNull();
+    expect(parseLabelledStartEnd("Ends after 30 days of making your account.")).toBeNull();
+  });
+
+  test("requires the colons, so prose containing 'end' does not split", () => {
+    // Without them, any sentence mentioning an end would look like a boundary.
+    expect(
+      parseLabelledStartEnd("Start the quest before August 12, 2026 to end the arc"),
+    ).toBeNull();
   });
 });

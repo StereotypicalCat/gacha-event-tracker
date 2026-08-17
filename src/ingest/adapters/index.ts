@@ -66,6 +66,12 @@ const SOURCES: SourceSpec[] = [
     url: "https://game8.co/games/Neverness-to-Everness/archives/592073",
     parserId: "game8",
   },
+  {
+    id: "nikki-game8-events",
+    game: "nikki",
+    url: "https://game8.co/games/Infinity-Nikki/archives/487445",
+    parserId: "game8",
+  },
 ];
 
 function toAdapter(spec: SourceSpec): Adapter {

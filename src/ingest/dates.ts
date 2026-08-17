@@ -148,6 +148,34 @@ export function parseShortSlashRange(
 }
 
 /**
+ * "Start: January 24, 2025 End: Permanent" → the start, and whatever the end
+ * half turns out to be.
+ *
+ * A labelled cell rather than a range: the two halves are separated by a `<br>`
+ * and each carries its own word. The colons are required, which is what stops
+ * the word "end" inside a description from splitting a cell that is really
+ * prose.
+ *
+ * An end half that is not a date ("Permanent", "TBD", "After maintenance")
+ * yields a null end rather than an invented one — the same outcome as
+ * `parseOpenRange`, and for the same reason.
+ */
+export function parseLabelledStartEnd(
+  input: string,
+): { start: ParsedInstant; end: ParsedInstant | null } | null {
+  const m = /^\s*start\s*[:：]\s*(.+?)(?:\s+end\s*[:：]\s*(.*?))?\s*$/i.exec(
+    input,
+  );
+  if (!m) return null;
+
+  const start = parseMonthDayYear(m[1] ?? "");
+  if (start === null) return null;
+
+  const endHalf = m[2];
+  return { start, end: endHalf === undefined ? null : parseMonthDayYear(endHalf) };
+}
+
+/**
  * A range whose start is a real date but whose end is not: "July 10, 2026 -
  * Permanent", "Jul. 24, 2026 - End of 4.6", or a lone start date.
  *
