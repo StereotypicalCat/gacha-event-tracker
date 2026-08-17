@@ -61,11 +61,26 @@ jobs:
             const feed = await Bun.file("public/data/events.v1.json").json();
             const games = new Set(feed.events.map((e) => e.game));
             console.log(`${feed.events.length} events across ${games.size} games`);
+            for (const s of feed.sources) {
+              console.log(`  ${s.sourceId.padEnd(24)} ${String(s.eventCount).padStart(3)}`);
+            }
             if (feed.events.length < 20) {
               throw new Error(`feed collapsed to ${feed.events.length} events`);
             }
             if (feed.events.some((e) => !e.startsAt)) {
               throw new Error("events without a start date");
+            }
+            // Per source, not just in total: nine healthy sources hide a tenth
+            // that has gone to zero, and the total stays comfortably over the
+            // floor while one game shows an empty calendar. A live snapshot
+            // that parsed to nothing is refused upstream and never stored, so
+            // zero here means the fixture stopped parsing — a regression in our
+            // code, not a quiet week for that game.
+            const empty = feed.sources.filter((s) => s.eventCount === 0);
+            if (empty.length > 0) {
+              throw new Error(
+                `sources yielding no events: ${empty.map((s) => s.sourceId).join(", ")}`,
+              );
             }
           '
 
