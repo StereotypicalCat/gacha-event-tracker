@@ -114,6 +114,32 @@ The heuristic assumes about an hour of play a day and says so. It never hides or
 it adds a flag the reader can ignore. **An event with no recorded effort never gets a warning**,
 because inferring an estimate in order to warn about it would be fabricating their input.
 
+**F13 — Your own games and your own events.**
+No feasible adapter set covers everyone. Fourteen games were named in the first release thread and
+the reader with the largest collection asked for exactly one thing — *"can you add a custom game
+option, we can input our own event description and time frames?"* — and, separately, said they would
+wait until "more are added **or we are able to customise it**." That is the tail no source list
+reaches, and it needs no scraping, no ToS question and no server.
+
+So a reader can define a game (a name and a lane colour) and enter events against it, or against a
+game the app already tracks when a source missed something. Their events sit in the same lists,
+timeline, sort and filters as scraped ones, and everything they can do to a scraped event — done,
+doing, effort, note, ignore, daily checklist — works identically.
+
+Four constraints, each protecting something that already exists:
+
+- **Their events are visibly theirs.** A hand-entered date is never attributed to a source and never
+  carries a source link. The reader must be able to tell, at a glance, which dates the app went and
+  found and which ones they typed.
+- **Their events never touch the ingest pipeline.** `sanitize.ts` and `merge.ts` exist for pages we
+  do not control; a reader's own typing is neither untrusted markup nor a second opinion to
+  reconcile. Nothing they enter is fetched, parsed, merged, scored or quarantined.
+- **Their IDs live in their own key space.** Never `${game}:${slug}:${date}` — see
+  `docs/DATA-MODEL.md` § Reader-authored key spaces.
+- **They are in the backup.** An export that omitted hand-entered events would be a lossy backup,
+  which is the same argument the code already makes for streaks. This is the *only* copy — there is
+  no server to restore from.
+
 **F8 — First-run game picker.**
 Before any events are shown, the reader picks which games they play. A calendar full of games they
 don't play is worse than an empty one — it buries the thing they came for. Nothing is preselected
@@ -144,9 +170,13 @@ proposition is trust in the dates.
 
 ## Out of scope for v1
 
-Accounts and sync; push notifications; per-event checklists or progress tracking; in-game resource
-or pull tracking; user-submitted events; native mobile apps (the web app installs to a home screen,
-which is enough); localization beyond English.
+Accounts and sync; push notifications; in-game resource or pull tracking; native mobile apps (the
+web app installs to a home screen, which is enough); localization beyond English.
+
+Two entries left this list after v1 shipped and readers used it. Per-event checklists became F12 and
+the daily strip; **user-submitted events became F13**, on the strength of the release thread — the
+reader juggling ten games asked for it twice and asked for nothing else, and no adapter roadmap
+answers them. The decision is recorded here rather than left implicit in the code.
 
 ## Success criteria
 

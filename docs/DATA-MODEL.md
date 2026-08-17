@@ -319,6 +319,63 @@ would stop a later parser improvement from ever reaching that event. This is the
 `progress` that changes what the app *shows* rather than recording what the reader did, which is
 why it lives beside their other notes rather than in the feed.
 
+### Reader-authored key spaces
+
+PRD F13 lets a reader define their own game and enter their own events. Those records get their own
+ID spaces, and the reason is the one this document keeps making:
+
+```
+mygame:<slug>        a game the reader defined      "mygame:limbus-company"
+myevent:<random>     an event the reader entered    "myevent:k3f9qa2m"
+```
+
+**A reader's event is never minted as `${game}:${slug}:${date}`.** That space is derived from source
+titles, and a reader can type a title identical to a scraped one — same game, same start date, same
+slug, same key. Two records under one key means one completion mark, one note and one streak
+silently belong to both, and the collision is invisible until someone notices their progress moving
+on its own. A random suffix makes that impossible rather than unlikely.
+
+The randomness buys a second property worth keeping: **renaming your own event does not move its
+ID.** A feed event's ID follows its source title, so a wiki renaming an event mints a new ID and
+reconciliation has to recognise the near-match to preserve marks. A reader's event has no source to
+follow, so its ID is assigned once at creation and never derived from anything they can edit.
+
+Three first segments are now reserved and **none of them may ever become a `GameId`**: `dailies`,
+`mygame`, `myevent`. A test asserts this against `GameId.options`, because the day that stops being
+true is the day two key spaces merge silently.
+
+```ts
+"gacha-tracker:v1:customGames"   // { [id]: { id, name, hue, at } }
+"gacha-tracker:v1:customEvents"  // { [id]: { id, game, title, type, summary,
+                                 //           startsAt, startPrecision,
+                                 //           endsAt, endPrecision, at, updatedAt } }
+```
+
+Reader-authored events reuse `progress`, `daily` and `ignored` unchanged, keyed by their `myevent:`
+id — everything the reader can say about a scraped event they can say about their own, with no
+second set of stores to keep in sync.
+
+Field rules mirror the feed's, because the reader deserves the same guarantees the parsers are held
+to:
+
+| Rule | Why |
+|---|---|
+| `endsAt` null pairs with `endPrecision: "unknown"` | The same invariant `GachaEvent` enforces. "I don't know when this ends" is a supported answer for a reader too, and a required one — otherwise entering an unannounced event forces them to invent a date |
+| A date with no time is `"day"` precision, a date with one is `"exact"` | So the UI's existing "accurate to the day only" note is honest about their input as well |
+| `endsAt` must be after `startsAt` | A backwards interval is a typo whoever made it |
+| `hue` must match `#rrggbb` | It reaches a `style` attribute, and an imported file is not necessarily one the reader wrote |
+| `regionScoped` is always false | They entered one instant, not a per-region map. Claiming otherwise would fabricate three timestamps out of one |
+
+There is deliberately **no `dailyTasks` for a custom game**, so it contributes no standing
+`dailies:<game>` chore. That list is the routine every player of a tracked game recognises; asking a
+reader to invent one is a form to fill in for a reminder they already have. Their events can still be
+marked as repeating, per event, like any other.
+
+**Deleting.** Removing your own event leaves any marks and logged days behind rather than reaching
+into three other stores on a single tap; they are inert, and the alternative is a misclick that
+deletes a streak. Removing a game that still has events is refused and says how many, rather than
+cascading.
+
 ### Migration from `completions`
 
 `completions` used membership to mean "done", which cannot express "started". `progress` replaces it
@@ -353,9 +410,25 @@ old key.
     "dailies:genshin": { "days": ["2026-08-14", "2026-08-15"], "at": "..." }
   },
   "ignored": { "zzz:some-event-i-skip:2026-08-19": { "at": "..." } },
+  "customGames": {
+    "mygame:limbus-company": { "id": "mygame:limbus-company", "name": "Limbus Company",
+                               "hue": "#c74b50", "at": "..." }
+  },
+  "customEvents": {
+    "myevent:k3f9qa2m": { "id": "myevent:k3f9qa2m", "game": "mygame:limbus-company",
+                          "title": "Walpurgisnacht", "type": "banner", "summary": null,
+                          "startsAt": "2026-08-20T00:00:00.000Z", "startPrecision": "day",
+                          "endsAt": "2026-09-03T00:00:00.000Z", "endPrecision": "day",
+                          "at": "...", "updatedAt": "..." }
+  },
   "prefs": { "region": "europe", "hiddenGames": [], "sort": "ending", "onboarded": true }
 }
 ```
+
+`customGames` and `customEvents` are additive keys, so a v1 export written before F13 simply lacks
+them — not an error, just a file from a device that had none. They merge by id like everything else,
+and because an event and the game it belongs to travel in the same file, an import never lands an
+event whose lane is missing.
 
 Import **merges** every set: a mark present in either the file or the current device survives, and
 import never removes one. `daily` merges as a **union of days per ID** — every day either side
