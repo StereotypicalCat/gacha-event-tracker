@@ -105,14 +105,14 @@ re-verify a sample against the live page afterward.
 ```
 src/shared/       schema.ts (the contract), time.ts, daily.ts, effort.ts, games.ts, feed.ts
                   custom.ts — reader-authored games and events, and their key spaces
-src/ingest/       html.ts, dates.ts (nine formats), merge.ts, sanitize.ts, robots.ts, snapshots.ts
+src/ingest/       html.ts, dates.ts (ten formats), merge.ts, sanitize.ts, robots.ts, snapshots.ts
   parsers/        game8.ts, wikigg.ts, akwiki.ts, fandom.ts — keyed by SITE, not game
   adapters/       index.ts — SOURCES registry binding url+game+parser, and the sanitize seam
 src/client/       React app, service worker, manifest
   state/          progress, daily log, ignores, prefs, sort — all localStorage
                   useCustom.ts — the reader's own games and events (PRD F13)
                   lens.ts — who sees which rows (focus, outstanding, next-to-expire); pure
-scripts/          build-feed.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
+scripts/          build-feed.ts, build-static.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
 test/             466 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
@@ -146,9 +146,10 @@ These come from how gacha games actually schedule things, and they cause most bu
 - **Skip, never guess.** Every function in `dates.ts` returns `null` rather than inferring a missing
   year, month, or end. `readColumnTable` drops a row it cannot date. An omitted event is a
   recoverable disappointment; a confidently wrong date is the failure this product exists to prevent.
-- **Parsers are keyed by site, not game.** One `game8` parser serves eight sources; `wikigg` and
-  `akwiki` serve one each — same host family, entirely different templates. Adding a source for a
-  known site is one `SOURCES` entry; a new site is a parser module.
+- **Parsers are keyed by site, not game.** One `game8` parser serves eight sources; `wikigg`,
+  `akwiki` and `fandom` serve one each — the first two share a host family and have entirely
+  different templates. Adding a source for a known site is one `SOURCES` entry; a new site is a
+  parser module.
 - **A source may publish more than one region's schedule.** Arknights' wiki lists CN and Global on
   every row, five months apart. Publish the one our readers are on and skip the row that lacks it —
   a CN date on a Global calendar is a confidently wrong date, not a near miss.

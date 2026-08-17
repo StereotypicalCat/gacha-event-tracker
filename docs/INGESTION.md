@@ -4,10 +4,13 @@ Six stages, run per source. Every stage writes its outcome to `ingest_runs` so a
 ago can be diagnosed without re-running.
 
 ```
-fetch → parse → merge → validate → reconcile → gate → publish
-                                                  │
-                                                  └──► quarantine
+fetch → parse → merge → validate → reconcile → gate and publish
+         │                                            │
+    (sanitize)                                        └──► quarantine
 ```
+
+Sanitizing is stage 2.5 rather than a stage of its own: it is wired into the adapter seam, so it
+runs on every source without the pipeline arranging it.
 
 ## No LLM
 
@@ -156,7 +159,8 @@ produced it.
 | Free-form prose with no table structure | Find a different source |
 | A clean table whose newest row is months old | **Not a source, an archive.** Check the *latest* date before writing anything: `bluearchive.fandom.com` parses perfectly and yields zero live events, which shows up as an empty lane and a permanently rejected snapshot rather than as an error |
 
-Game8 uses at least four page templates and a game's page may use any of them:
+Game8 uses at least seven page templates, a game's page may use any of them, and one page may mix
+several:
 
 1. **Label/value detail tables** — `Event Start` / `Event End` rows under a per-event `h3`, full
    dates with year. *(Genshin Impact)*
@@ -393,7 +397,8 @@ Every adapter ships:
 **Regenerating `.expected.json` from the parser makes the test self-consistent, not correct.** After
 an intentional change, re-verify a sample against the live page — and ideally extract the same data
 a second way (a throwaway script over the fixture) to confirm counts and dates independently. That
-independent check is what caught the exact event counts for both current adapters.
+independent check is what pinned the exact event counts on every adapter here, and it is what caught
+Endfield's real events sitting in a table the first pass never read.
 
 When a source changes shape, capture a new fixture **alongside** the old one and keep both — the old
 fixture is the regression test proving the parser still handles the previous format.
