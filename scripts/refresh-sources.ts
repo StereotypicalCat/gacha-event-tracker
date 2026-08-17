@@ -14,14 +14,27 @@
  *     after the last attempt. There is deliberately no retry: a retry is a
  *     second request, and the next cycle is minutes-cheap compared to being a
  *     bad guest.
+ *   - requests to one host are spaced, honouring its `Crawl-delay`. Eight of the
+ *     ten sources are game8.co pages, so without this one cycle is eight
+ *     back-to-back requests to a single site — inside the per-source floor and
+ *     still the behaviour an edge network throttles.
  *   - conditional requests always, so an unchanged page costs the wiki a 304.
  *   - a descriptive User-Agent carrying a contact URL.
  *
- * Failure policy: one wiki being down is a warning. The previous snapshot stays
- * in place and the feed keeps its events — a source outage must never blank the
- * calendar. Hard failures (bad arguments, an unwritable cache, a feed that will
- * not rebuild) exit non-zero so CI stops before committing anything.
+ * Failure policy has two tiers, because they want opposite things from CI:
+ *
+ *   - One wiki being down is a warning and exit 0. The previous snapshot stays
+ *     in place and the feed keeps its events — a source outage must never blank
+ *     the calendar, and the sources that did answer must still be committed.
+ *   - A source failing `BROKEN_AFTER_FAILURES` cycles in a row is not "down",
+ *     it is broken, and the feed has been quietly serving a stale fixture for a
+ *     day and a half. That is reported as `broken` and annotated, and the
+ *     workflow turns the run red *after* committing what did work. Exiting
+ *     non-zero here instead would skip the commit and throw the good pages away.
+ *   - Hard failures (bad arguments, every source failing, a feed that will not
+ *     rebuild) exit non-zero so CI stops before committing anything.
  */
+import { appendFile } from "node:fs/promises";
 import {
   ADAPTERS,
   adapterById,
@@ -54,6 +67,17 @@ export interface SourceOutcome {
   eventCount: number | null;
 }
 
+/**
+ * A source that has stopped answering for long enough that the feed is now
+ * knowingly stale for that game.
+ */
+export interface BrokenSource {
+  sourceId: string;
+  consecutiveFailures: number;
+  lastStatus: number | null;
+  lastConfirmedAt: string | null;
+}
+
 export interface RefreshSummary {
   outcomes: SourceOutcome[];
   /** Sources whose stored bytes changed — the only reason to commit. */
@@ -63,12 +87,23 @@ export interface RefreshSummary {
   /** Sources that answered (200 or 304). */
   confirmed: number;
   warnings: string[];
+  /**
+   * Sources failing for `BROKEN_AFTER_FAILURES` cycles running. Not a hard
+   * failure — the workflow reports it after the commit, so a broken source
+   * cannot cost a working one its snapshot.
+   */
+  broken: BrokenSource[];
   /** Set when the run should exit non-zero. */
   hardFailure: string | null;
 }
 
 export interface RobotsGate {
-  allows(url: string): Promise<{ allowed: boolean; reason: string }>;
+  allows(url: string): Promise<{
+    allowed: boolean;
+    reason: string;
+    /** From the host's `Crawl-delay`, when it states one. */
+    crawlDelayMs?: number | null;
+  }>;
 }
 
 export interface RefreshOptions {
@@ -79,6 +114,11 @@ export interface RefreshOptions {
   userAgent: string;
   /** Injected clock — the runner is testable, like the parsers it drives. */
   now: () => Date;
+  /**
+   * Injected timer, for the same reason as the clock: the per-host gap is real
+   * seconds on a runner and must cost a test nothing.
+   */
+  sleep: (ms: number) => Promise<void>;
   dryRun: boolean;
   only: string | null;
   timeoutMs: number;
@@ -90,6 +130,26 @@ export interface RefreshOptions {
 /** A drop this steep means the page changed shape, not that events ended. */
 const DROP_WARNING_RATIO = 0.5;
 
+/**
+ * Cycles of failure that separate "the wiki is down" from "this source is
+ * broken". At two cycles a day, three is a day and a half of a game's calendar
+ * silently coming from a checked-in fixture — long enough to be certain, short
+ * enough to still be worth hearing about.
+ */
+export const BROKEN_AFTER_FAILURES = 3;
+
+/**
+ * Gap between two requests to the same host when its robots.txt names none.
+ * The per-source floor is six hours, but eight sources share game8.co, so
+ * without this they arrive as one burst.
+ */
+export const DEFAULT_HOST_GAP_MS = 2_000;
+
+/** Per-cycle state shared across sources: which hosts we have already asked. */
+interface Cycle {
+  requestedHosts: Set<string>;
+}
+
 export async function runRefresh(
   options: RefreshOptions,
 ): Promise<RefreshSummary> {
@@ -99,8 +159,11 @@ export async function runRefresh(
     attempted: 0,
     confirmed: 0,
     warnings: [],
+    broken: [],
     hardFailure: null,
   };
+
+  const cycle: Cycle = { requestedHosts: new Set() };
 
   const selected =
     options.only === null
@@ -120,7 +183,7 @@ export async function runRefresh(
     // no summary and no record of what was already asked.
     let outcome: SourceOutcome;
     try {
-      outcome = await refreshOne(adapter, options);
+      outcome = await refreshOne(adapter, options, cycle);
     } catch (error) {
       outcome = {
         sourceId: adapter.id,
@@ -149,6 +212,22 @@ export async function runRefresh(
     options.log(
       `  ${adapter.id.padEnd(24)} ${outcome.result.padEnd(17)} ${outcome.note}`,
     );
+
+    // Read from the store rather than from this cycle's outcome: the streak is
+    // the point, and a source that has failed for days and is now skipped for
+    // the interval is still broken. A successful fetch resets it to zero, so
+    // this reports a standing condition, not one bad afternoon.
+    if (!options.dryRun) {
+      const health = await options.store.readState(adapter.id);
+      if (health.consecutiveFailures >= BROKEN_AFTER_FAILURES) {
+        summary.broken.push({
+          sourceId: adapter.id,
+          consecutiveFailures: health.consecutiveFailures,
+          lastStatus: health.lastStatus,
+          lastConfirmedAt: health.lastConfirmedAt,
+        });
+      }
+    }
   }
 
   // Every source failing is not "a wiki is down", it is us: no network, a bad
@@ -181,6 +260,7 @@ export async function runRefresh(
 async function refreshOne(
   adapter: Adapter,
   options: RefreshOptions,
+  cycle: Cycle,
 ): Promise<SourceOutcome> {
   const { store } = options;
   const now = options.now();
@@ -224,6 +304,15 @@ async function refreshOne(
     };
   }
 
+  // Space requests to a host we have already asked this cycle. This sits after
+  // the interval and robots gates on purpose: waiting on behalf of a source we
+  // then skip would buy the host nothing and cost the run a minute.
+  const host = new URL(adapter.url).host;
+  if (cycle.requestedHosts.has(host)) {
+    await options.sleep(decision.crawlDelayMs ?? DEFAULT_HOST_GAP_MS);
+  }
+  cycle.requestedHosts.add(host);
+
   let response: Response;
   try {
     response = await options.fetchImpl(adapter.url, {
@@ -266,7 +355,7 @@ async function refreshOne(
     return {
       sourceId: adapter.id,
       result: "failed",
-      note: `HTTP ${response.status}`,
+      note: `HTTP ${response.status}${describeRejection(response)}`,
       status: response.status,
       eventCount: meta?.eventCount ?? null,
     };
@@ -395,6 +484,112 @@ async function refreshOne(
   };
 }
 
+/**
+ * The few header words that tell a wiki being down from an edge network turning
+ * us away.
+ *
+ * `HTTP 403` alone cannot be acted on: it reads the same whether the page moved
+ * behind a login or whether a CDN has decided the runner's address is a bot
+ * farm. Naming the server in the note means the answer is in the run log and
+ * the step summary rather than in a request someone has to reproduce by hand.
+ */
+function describeRejection(response: Response): string {
+  // A header value is a string from a host we do not control, and this one ends
+  // up inside a `::warning::` workflow command and a markdown table cell. HTTP
+  // forbids a bare newline in a value, so this is belt and braces rather than a
+  // live hole — but a note is not worth trusting a stranger's bytes over.
+  const tidy = (value: string | null): string | null => {
+    if (value === null) return null;
+    const clean = value.replace(/[^\x20-\x7e]+/g, " ").trim().slice(0, 40);
+    return clean === "" ? null : clean;
+  };
+
+  const parts: string[] = [];
+  const server = tidy(response.headers.get("Server"));
+  if (server !== null) parts.push(server);
+  if (response.headers.get("CF-Ray") !== null) parts.push("cf-ray");
+  const retryAfter = tidy(response.headers.get("Retry-After"));
+  if (retryAfter !== null) parts.push(`retry-after ${retryAfter}`);
+  return parts.length === 0 ? "" : ` (${parts.join(", ")})`;
+}
+
+/**
+ * Workflow-command lines for a GitHub runner.
+ *
+ * Warnings printed to stdout are invisible unless someone opens the log, which
+ * is how six of seven sources failed every cycle for three days under a green
+ * tick. An annotation shows on the run page itself. `::error::` annotates
+ * without failing the step, which is what lets the commit still happen.
+ */
+export function annotations(summary: RefreshSummary): string[] {
+  const lines: string[] = [];
+  for (const b of summary.broken) {
+    lines.push(
+      `::error title=${b.sourceId} has stopped answering::` +
+        `${b.consecutiveFailures} cycles failing in a row; ` +
+        `last status ${b.lastStatus ?? "none"}; ` +
+        `last confirmed ${b.lastConfirmedAt ?? "never"}. ` +
+        `This game's calendar is being built from a checked-in fixture.`,
+    );
+  }
+  for (const warning of summary.warnings) {
+    lines.push(`::warning title=refresh::${warning}`);
+  }
+  return lines;
+}
+
+/** `$GITHUB_STEP_SUMMARY` markdown: one row per source, statuses included. */
+export function stepSummary(summary: RefreshSummary): string {
+  const cell = (text: string) => text.replaceAll("|", "\\|");
+  const rows = summary.outcomes.map(
+    (o) =>
+      `| \`${o.sourceId}\` | ${o.result} | ${o.status ?? "—"} | ` +
+      `${o.eventCount ?? "—"} | ${cell(o.note)} |`,
+  );
+
+  const head =
+    `### Refresh: ${summary.changed} changed, ` +
+    `${summary.confirmed}/${summary.attempted} confirmed, ` +
+    `${summary.broken.length} broken\n\n` +
+    `| source | result | status | events | note |\n` +
+    `| --- | --- | --- | --- | --- |\n`;
+
+  const tail =
+    summary.hardFailure === null
+      ? ""
+      : `\n**Hard failure:** ${summary.hardFailure}\n`;
+
+  return `${head}${rows.join("\n")}\n${tail}`;
+}
+
+/**
+ * `$GITHUB_OUTPUT` values the workflow branches on.
+ *
+ * `broken` is deliberately an output rather than an exit code: the workflow has
+ * to commit the sources that did work before it turns the run red.
+ */
+export function outputs(summary: RefreshSummary): string[] {
+  return [
+    `changed=${summary.changed}`,
+    `attempted=${summary.attempted}`,
+    `confirmed=${summary.confirmed}`,
+    `broken=${summary.broken.length}`,
+  ];
+}
+
+/** Append to a file named by an env var, if the runner set one. */
+async function appendToEnvFile(name: string, text: string): Promise<void> {
+  const path = process.env[name];
+  if (path === undefined || path === "") return;
+  try {
+    await appendFile(path, text.endsWith("\n") ? text : `${text}\n`);
+  } catch (error) {
+    // Reporting is not the job. A read-only summary file must not turn a
+    // successful refresh into a failed one.
+    console.warn(`could not write ${name}: ${String(error)}`);
+  }
+}
+
 /** Regenerate public/data/events.v1.json from whatever is now cached. */
 export async function rebuildFeedViaScript(): Promise<void> {
   const proc = Bun.spawn(["bun", "run", "scripts/build-feed.ts"], {
@@ -521,6 +716,7 @@ async function main(): Promise<number> {
     fetchImpl: (input, init) => fetch(input, init),
     userAgent: args.userAgent,
     now: () => new Date(),
+    sleep: (ms) => Bun.sleep(ms),
     dryRun: args.dryRun,
     only: args.only,
     timeoutMs: 20_000,
@@ -529,12 +725,27 @@ async function main(): Promise<number> {
   });
 
   console.log(
-    `\n${summary.changed} changed, ${summary.confirmed}/${summary.attempted} confirmed, ${summary.warnings.length} warnings`,
+    `\n${summary.changed} changed, ${summary.confirmed}/${summary.attempted} confirmed, ` +
+      `${summary.warnings.length} warnings, ${summary.broken.length} broken`,
   );
   for (const warning of summary.warnings) console.warn(`  ! ${warning}`);
+  for (const b of summary.broken) {
+    console.error(
+      `  !! ${b.sourceId} has failed ${b.consecutiveFailures} cycles running ` +
+        `(last confirmed ${b.lastConfirmedAt ?? "never"})`,
+    );
+  }
 
-  // The workflow reads this line to decide whether to commit; `git status` is
-  // the authority, but this makes a skipped commit legible in the log.
+  // Only on a runner: the `!` and `!!` lines above already said all of this to a
+  // human, and `::warning title=…::` in a terminal is noise that reads as a bug.
+  if (process.env["GITHUB_ACTIONS"] === "true") {
+    for (const line of annotations(summary)) console.log(line);
+  }
+  await appendToEnvFile("GITHUB_STEP_SUMMARY", stepSummary(summary));
+  await appendToEnvFile("GITHUB_OUTPUT", outputs(summary).join("\n"));
+
+  // Kept for a human reading the log; `git status` is what the workflow trusts
+  // to decide whether to commit.
   console.log(`changed=${summary.changed}`);
 
   if (summary.hardFailure !== null) {
@@ -542,6 +753,9 @@ async function main(): Promise<number> {
     return 1;
   }
 
+  // Broken sources exit 0 on purpose. The workflow reads the `broken` output and
+  // fails the run *after* committing, so one dead wiki cannot stop nine live
+  // ones from reaching the site.
   return 0;
 }
 

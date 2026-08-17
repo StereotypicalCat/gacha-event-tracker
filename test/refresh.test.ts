@@ -3,8 +3,13 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  annotations,
+  BROKEN_AFTER_FAILURES,
+  DEFAULT_HOST_GAP_MS,
+  outputs,
   parseArgs,
   runRefresh,
+  stepSummary,
   type RefreshOptions,
   type RobotsGate,
 } from "../scripts/refresh-sources.ts";
@@ -60,9 +65,15 @@ interface Call {
 
 function options(
   over: Partial<RefreshOptions> & { responder?: (call: Call) => Response },
-): { opts: RefreshOptions; calls: Call[]; rebuilds: { count: number } } {
+): {
+  opts: RefreshOptions;
+  calls: Call[];
+  rebuilds: { count: number };
+  naps: number[];
+} {
   const calls: Call[] = [];
   const rebuilds = { count: 0 };
+  const naps: number[] = [];
   const responder =
     over.responder ?? (() => new Response("<html><event></event></html>"));
 
@@ -83,6 +94,10 @@ function options(
     },
     userAgent: UA,
     now: () => NOW,
+    // Recorded, never waited: the per-host gap is real seconds on a runner.
+    sleep: async (ms: number) => {
+      naps.push(ms);
+    },
     dryRun: false,
     only: null,
     timeoutMs: 1000,
@@ -93,7 +108,7 @@ function options(
     ...over,
   };
 
-  return { opts, calls, rebuilds };
+  return { opts, calls, rebuilds, naps };
 }
 
 async function seed(html: string, at: string, eventCount: number | null) {
@@ -521,6 +536,251 @@ describe("a page that is not UTF-8", () => {
   });
 });
 
+describe("requests to one host are spaced", () => {
+  // Eight of the ten sources are game8.co pages. Each one is inside the
+  // six-hour-per-source floor and the burst is still the shape a CDN throttles.
+  const twoOnOneHost = () => [
+    adapter({ id: "genshin-game8-events", url: "https://game8.co/a" }),
+    adapter({ id: "hsr-game8-events", game: "hsr", url: "https://game8.co/b" }),
+  ];
+
+  test("the second request to a host waits", async () => {
+    const { opts, calls, naps } = options({ adapters: twoOnOneHost() });
+    await runRefresh(opts);
+
+    expect(calls).toHaveLength(2);
+    expect(naps).toEqual([DEFAULT_HOST_GAP_MS]);
+  });
+
+  test("the first request to a host does not", async () => {
+    const { opts, naps } = options({
+      adapters: [
+        adapter({ id: "genshin-game8-events", url: "https://game8.co/a" }),
+        adapter({
+          id: "endfield-wikigg-events",
+          game: "endfield",
+          url: "https://endfield.wiki.gg/wiki/Event",
+        }),
+      ],
+    });
+    await runRefresh(opts);
+    expect(naps).toEqual([]);
+  });
+
+  test("a host's own Crawl-delay wins over our default", async () => {
+    const { opts, naps } = options({
+      adapters: twoOnOneHost(),
+      robots: {
+        allows: async () => ({
+          allowed: true,
+          reason: "robots.txt ok",
+          crawlDelayMs: 10_000,
+        }),
+      },
+    });
+    await runRefresh(opts);
+    expect(naps).toEqual([10_000]);
+  });
+
+  test("a source we skip costs no wait", async () => {
+    // Sleeping on behalf of a request we are not about to make buys the host
+    // nothing and costs the cycle a minute.
+    await store.recordCheck("hsr-game8-events", {
+      at: NOW.toISOString(),
+      status: 200,
+      ok: true,
+    });
+    const { opts, calls, naps } = options({ adapters: twoOnOneHost() });
+    await runRefresh(opts);
+
+    expect(calls).toHaveLength(1);
+    expect(naps).toEqual([]);
+  });
+});
+
+describe("a source that has stopped answering", () => {
+  // Genshin is turned away; Endfield answers. A cycle where *every* source fails
+  // is already a hard failure, and this is the case that hid for three days: a
+  // green run carrying one live source and the rest of the games on fixtures.
+  const failing = () =>
+    options({
+      adapters: [
+        adapter(),
+        adapter({
+          id: "endfield-wikigg-events",
+          game: "endfield",
+          url: "https://endfield.wiki.gg/wiki/Event",
+        }),
+      ],
+      responder: (call) =>
+        call.url.includes("Genshin")
+          ? new Response("", {
+              status: 403,
+              headers: { Server: "cloudflare", "CF-Ray": "8f2a-CPH" },
+            })
+          : new Response("<html><event></event></html>"),
+    });
+
+  test("one bad cycle is a warning, not a verdict", async () => {
+    const summary = await runRefresh(failing().opts);
+    expect(summary.warnings).toHaveLength(1);
+    expect(summary.broken).toEqual([]);
+    expect(summary.hardFailure).toBeNull();
+  });
+
+  test("names what turned us away, so 403 can be acted on", async () => {
+    const summary = await runRefresh(failing().opts);
+    // "HTTP 403" alone reads the same whether the page moved behind a login or
+    // a CDN decided the runner is a bot farm.
+    expect(summary.outcomes[0]?.note).toContain("HTTP 403");
+    expect(summary.outcomes[0]?.note).toContain("cloudflare");
+    expect(summary.outcomes[0]?.note).toContain("cf-ray");
+  });
+
+  test("a verbose header cannot run away with the note", async () => {
+    // The note goes into a `::warning::` workflow command and a markdown table
+    // cell, and Server is a string from a host we do not control. A value
+    // carrying a control character is refused by the runtime — a `Response`
+    // cannot be constructed with one — so length is the part left to hold.
+    const { opts } = options({
+      responder: () =>
+        new Response("", {
+          status: 503,
+          headers: { Server: "cloudflare-".repeat(20) },
+        }),
+    });
+    const summary = await runRefresh(opts);
+    const note = summary.outcomes[0]?.note ?? "";
+
+    expect(note).toStartWith("HTTP 503 (cloudflare-");
+    expect(note.length).toBeLessThan(60);
+    for (const line of annotations({ ...summary, broken: [] })) {
+      expect(line).not.toInclude("\n");
+    }
+  });
+
+  test("three cycles running is broken, and still exits without a hard failure", async () => {
+    let summary = await runRefresh(failing().opts);
+    for (let i = 1; i < BROKEN_AFTER_FAILURES; i += 1) {
+      // Each cycle is a fresh run six hours later, so the interval is clear.
+      const later = new Date(NOW.getTime() + i * SIX_HOURS_MS);
+      summary = await runRefresh({ ...failing().opts, now: () => later });
+    }
+
+    expect(summary.broken).toHaveLength(1);
+    expect(summary.broken[0]?.consecutiveFailures).toBe(BROKEN_AFTER_FAILURES);
+    expect(summary.broken[0]?.lastStatus).toBe(403);
+    expect(summary.broken[0]?.lastConfirmedAt).toBeNull();
+    // Not a hard failure: the workflow has to commit the sources that did work
+    // before it turns the run red.
+    expect(summary.hardFailure).toBeNull();
+  });
+
+  test("stays broken while it is being skipped for the interval", async () => {
+    // The streak is the point. A source dead for days that happens to be inside
+    // its six-hour window this cycle has not recovered.
+    for (let i = 0; i < BROKEN_AFTER_FAILURES; i += 1) {
+      const at = new Date(NOW.getTime() + i * SIX_HOURS_MS);
+      await runRefresh({ ...failing().opts, now: () => at });
+    }
+    const soonAfter = new Date(
+      NOW.getTime() + (BROKEN_AFTER_FAILURES - 1) * SIX_HOURS_MS + 60_000,
+    );
+    const summary = await runRefresh({ ...failing().opts, now: () => soonAfter });
+
+    expect(summary.outcomes[0]?.result).toBe("skipped_interval");
+    expect(summary.broken).toHaveLength(1);
+  });
+
+  test("one good cycle clears it", async () => {
+    for (let i = 0; i < BROKEN_AFTER_FAILURES; i += 1) {
+      const at = new Date(NOW.getTime() + i * SIX_HOURS_MS);
+      await runRefresh({ ...failing().opts, now: () => at });
+    }
+    const recovered = new Date(
+      NOW.getTime() + BROKEN_AFTER_FAILURES * SIX_HOURS_MS,
+    );
+    const summary = await runRefresh({
+      ...options({}).opts,
+      now: () => recovered,
+    });
+
+    expect(summary.outcomes[0]?.result).toBe("fetched");
+    expect(summary.broken).toEqual([]);
+  });
+
+  test("a dry run reports no health, because it asked nothing", async () => {
+    for (let i = 0; i < BROKEN_AFTER_FAILURES; i += 1) {
+      const at = new Date(NOW.getTime() + i * SIX_HOURS_MS);
+      await runRefresh({ ...failing().opts, now: () => at });
+    }
+    const summary = await runRefresh(options({ dryRun: true }).opts);
+    expect(summary.broken).toEqual([]);
+  });
+});
+
+describe("what the runner reports to the runner", () => {
+  // Warnings on stdout are invisible unless someone opens the log, which is how
+  // six of seven sources failed every cycle for three days under a green tick.
+  const broken = {
+    outcomes: [
+      {
+        sourceId: "genshin-game8-events",
+        result: "failed" as const,
+        note: "HTTP 403 (cloudflare, cf-ray)",
+        status: 403,
+        eventCount: 9,
+      },
+    ],
+    changed: 0,
+    attempted: 1,
+    confirmed: 0,
+    warnings: ["genshin-game8-events: HTTP 403 (cloudflare, cf-ray)"],
+    broken: [
+      {
+        sourceId: "genshin-game8-events",
+        consecutiveFailures: 4,
+        lastStatus: 403,
+        lastConfirmedAt: "2026-08-14T05:27:00.000Z",
+      },
+    ],
+    hardFailure: null,
+  };
+
+  test("a broken source becomes an annotation on the run page", () => {
+    const lines = annotations(broken);
+    expect(lines[0]).toStartWith("::error title=genshin-game8-events");
+    expect(lines[0]).toContain("4 cycles failing");
+    expect(lines[0]).toContain("last status 403");
+    expect(lines.some((l) => l.startsWith("::warning"))).toBe(true);
+    // A newline inside an annotation truncates it at the runner.
+    for (const line of lines) expect(line).not.toInclude("\n");
+  });
+
+  test("nothing to say means no annotations", () => {
+    expect(annotations({ ...broken, warnings: [], broken: [] })).toEqual([]);
+  });
+
+  test("the step summary carries the status codes", () => {
+    const md = stepSummary(broken);
+    expect(md).toContain("1 broken");
+    expect(md).toContain("genshin-game8-events");
+    expect(md).toContain("403");
+    // A note holding a pipe would otherwise split the row into new columns.
+    expect(stepSummary({
+      ...broken,
+      outcomes: [{ ...broken.outcomes[0]!, note: "a | b" }],
+    })).toContain("a \\| b");
+  });
+
+  test("broken is an output, not an exit code", () => {
+    // Exiting non-zero would skip the commit and throw away the pages that did
+    // arrive; the workflow fails on this output after committing instead.
+    expect(outputs(broken)).toContain("broken=1");
+    expect(outputs(broken)).toContain("changed=0");
+  });
+});
+
 describe("the workflows that drive the refresh", () => {
   // These three defects live in YAML, and each one is silent: nothing fails,
   // the site just quietly carries wrong or stale data. Asserting on the file
@@ -566,6 +826,29 @@ describe("the workflows that drive the refresh", () => {
     expect(refresh).toMatch(/for attempt in/);
     expect(refresh).not.toContain("--force");
     expect(refresh).not.toContain("-f origin");
+  });
+
+  test("refresh.yml turns red on a broken source only after committing", async () => {
+    // Six of seven sources failed every cycle for three days and every run
+    // showed a green tick. Reporting it must not cost the sources that did work
+    // their snapshot, so the health check has to be the last step.
+    const refresh = await read("refresh.yml");
+    const health = refresh.indexOf("Report source health");
+    const commit = refresh.indexOf("Commit refreshed snapshots");
+    const publish = refresh.indexOf("Publish the refreshed feed");
+
+    expect(health).toBeGreaterThan(commit);
+    expect(health).toBeGreaterThan(publish);
+    expect(refresh.slice(health)).toContain("steps.refresh.outputs.broken");
+    expect(refresh.slice(health)).toContain("exit 1");
+  });
+
+  test("ci.yml fails when any one source yields no events", async () => {
+    // The total-event floor is blind to one source going to zero while nine
+    // others hold the number up, which shows the reader an empty calendar for
+    // that game.
+    const ci = await read("ci.yml");
+    expect(ci).toContain("eventCount === 0");
   });
 });
 

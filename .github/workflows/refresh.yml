@@ -71,6 +71,7 @@ jobs:
           restore-keys: refresh-state-
 
       - name: Refresh
+        id: refresh
         env:
           # Identify the crawler with a contact URL, per CLAUDE.md.
           REFRESH_CONTACT_URL: ${{ github.server_url }}/${{ github.repository }}
@@ -155,3 +156,28 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh workflow run ci.yml --ref "${{ github.ref_name }}"
+
+      # A source that has failed three cycles running is broken, not down: that
+      # game's calendar has been built from a checked-in fixture for a day and a
+      # half while every run showed a green tick. `bun run refresh` exits 0 on
+      # this so the steps above still commit and publish what did work; turning
+      # the run red is this step's job, and it is last for that reason.
+      #
+      # `always()` so it still reports when an earlier step failed — but note it
+      # cannot report when the Refresh step itself hard-failed, since the output
+      # is then unset and the job is already red on its own account.
+      - name: Report source health
+        if: always()
+        env:
+          BROKEN: ${{ steps.refresh.outputs.broken }}
+          REFRESH_OUTCOME: ${{ steps.refresh.outcome }}
+        run: |
+          if [ "$REFRESH_OUTCOME" != "success" ]; then
+            echo "refresh did not complete ($REFRESH_OUTCOME); no health to report"
+            exit 0
+          fi
+          if [ -n "$BROKEN" ] && [ "$BROKEN" != "0" ]; then
+            echo "::error::$BROKEN source(s) have stopped answering; see the job summary"
+            exit 1
+          fi
+          echo "every source is answering"

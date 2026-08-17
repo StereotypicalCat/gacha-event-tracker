@@ -177,10 +177,21 @@ section but must never claim the event title.
   permission we have. A 404 means no restrictions.
 - 20s timeout. **No retries**: a retry is a second request, and CLAUDE.md § Scraping conduct says
   one per source per cycle. A failed source waits for the next cycle instead.
+- **Space requests to a host we have already asked this cycle** — the host's `Crawl-delay` if it
+  states one, else `DEFAULT_HOST_GAP_MS` (2s). The wait is taken after the interval and robots gates,
+  so a source we then skip costs nothing.
 - Store raw bytes in `snapshots/<source-id>.html`, with hash/ETag/Last-Modified alongside it.
 
 On failure: increment the failure streak, leave published events untouched, end as `failed`. A
-source being down never mutates the feed.
+source being down never mutates the feed. A non-`ok` status also records what turned us away — the
+`Server` header, whether a `CF-Ray` was present, any `Retry-After` — because a bare `HTTP 403` reads
+identically whether the page moved behind a login or a CDN decided the runner is a bot farm.
+
+**The failure streak is read, not just written.** `consecutiveFailures` reaching
+`BROKEN_AFTER_FAILURES` (3, so ~36h at two cycles a day) promotes a source from "down" to `broken`:
+annotated on the run page, listed in the job summary with its status code, and counted in the
+`broken` step output that `refresh.yml` fails on *after* committing. See CLAUDE.md § Scraping
+conduct for why that ordering is load-bearing.
 
 **Built: `scripts/refresh-sources.ts`** (`bun run refresh`), scheduled by
 `.github/workflows/refresh.yml`. It takes its adapters, store, robots gate, fetch and clock by

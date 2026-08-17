@@ -180,6 +180,10 @@ Sources are community wikis. Treat them as a guest would:
 
 - Honor `robots.txt`; set a descriptive `User-Agent` with a contact URL.
 - One request per source per refresh cycle, minimum 6 hours apart.
+- **Space requests to one host**, honouring its `Crawl-delay` and defaulting to 2s. Eight of the ten
+  sources are game8.co pages, so the per-source floor alone still permits one cycle to arrive as
+  eight back-to-back requests to a single site — which is the shape an edge network throttles, and
+  what a burst looks like from the far end regardless of our intent.
 - Send `If-None-Match` / `If-Modified-Since`; treat `304` as "skip, unchanged".
 - Cache raw snapshots so re-parsing never re-fetches. **Iterate against fixtures, not the network.**
 - Record `sourceUrl` on every event and surface attribution in the UI.
@@ -207,8 +211,19 @@ load-bearing here and not only a cost decision. Note also that Reverse: 1999, Bl
 Umamusume and Nikke have **no wiki.gg wiki** — those subdomains 401.
 
 `scripts/refresh-sources.ts` enforces all of the above in code — the 6h floor, one request, no
-retries, conditional headers, robots (failing closed when `robots.txt` cannot be read). Anything
-that would make it fetch more often is a change to this section first.
+retries, conditional headers, per-host spacing, robots (failing closed when `robots.txt` cannot be
+read). Anything that would make it fetch more often is a change to this section first.
+
+**A source down is a warning; a source down for days is a broken build.** One wiki failing must
+never blank a calendar or stop the sources that did answer from being committed — so a failure is
+exit 0 and the previous snapshot stands. But a source that has failed `BROKEN_AFTER_FAILURES` (3)
+cycles running is not having a bad afternoon: that game's calendar has been quietly built from a
+checked-in fixture for a day and a half. The runner reports those as `broken` — a GitHub annotation,
+a row in the job summary with the status code, and a `broken` step output — and `refresh.yml` fails
+the run on it in a **final** step, after the commit and the CI dispatch. Exiting non-zero from the
+runner instead would skip the commit and throw away the pages that did arrive. This tier exists
+because six of seven sources failed every cycle for three days behind a green tick; a warning nobody
+opens the log to read is not a signal.
 
 ## Untrusted input
 
