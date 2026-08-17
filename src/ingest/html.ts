@@ -79,11 +79,18 @@ export interface ParagraphNode {
 export type DocNode =
   | { kind: "h2"; text: string }
   | { kind: "h3"; text: string }
+  | { kind: "h4"; text: string }
   | TableNode
   | ParagraphNode;
 
 /**
- * Walk a document in source order, yielding h2/h3 headings and tables.
+ * Walk a document in source order, yielding h2/h3/h4 headings and tables.
+ *
+ * h4 matters because it is sometimes the only thing separating a live table
+ * from a finished one — Game8's Persona 5 page puts its whole back catalogue
+ * under an `<h4>Finished Events</h4>` inside a collapsed accordion. A reader
+ * blind to h4 sees one uninterrupted run of tables and cannot tell where the
+ * live section stops.
  *
  * Pure: no network, no clock. Given identical input it always yields identical
  * output, which is what makes fixture tests meaningful.
@@ -93,14 +100,16 @@ export function scanDocument(rawHtml: string): DocNode[] {
   const nodes: DocNode[] = [];
 
   const re =
-    /<h2\b[^>]*>([\s\S]*?)<\/h2>|<h3\b[^>]*>([\s\S]*?)<\/h3>|<table\b[^>]*>([\s\S]*?)<\/table>|<p\b[^>]*>([\s\S]*?)<\/p>/gi;
+    /<h2\b[^>]*>([\s\S]*?)<\/h2>|<h3\b[^>]*>([\s\S]*?)<\/h3>|<h4\b[^>]*>([\s\S]*?)<\/h4>|<table\b[^>]*>([\s\S]*?)<\/table>|<p\b[^>]*>([\s\S]*?)<\/p>/gi;
 
   for (const m of html.matchAll(re)) {
-    const [whole, h2, h3, table, p] = m;
+    const [whole, h2, h3, h4, table, p] = m;
     if (h2 !== undefined) {
       nodes.push({ kind: "h2", text: text(h2) });
     } else if (h3 !== undefined) {
       nodes.push({ kind: "h3", text: text(h3) });
+    } else if (h4 !== undefined) {
+      nodes.push({ kind: "h4", text: text(h4) });
     } else if (table !== undefined) {
       nodes.push(readTable(table));
     } else if (p !== undefined) {

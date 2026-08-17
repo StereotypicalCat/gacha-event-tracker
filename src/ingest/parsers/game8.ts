@@ -53,6 +53,7 @@ const EXCLUDED_SECTIONS = [
   /past events/i,
   /previous events/i,
   /ended events/i,
+  /finished events/i,
 ];
 
 /** Label/value rows carrying a single boundary instant. */
@@ -97,10 +98,12 @@ export function parseGame8EventsPage(
     const node = nodes[i];
     if (node === undefined) continue;
 
-    // Sections are marked by h2 on some pages and h3 on others, so inclusion is
-    // tracked at whichever level actually names the section. A heading matching
-    // neither list leaves the current state alone — it is an event name.
-    if (node.kind === "h2" || node.kind === "h3") {
+    // Sections are marked by h2 on some pages, h3 or h4 on others, so inclusion
+    // is tracked at whichever level actually names the section — Persona 5's
+    // finished-events table is fenced off by nothing but an h4. A heading
+    // matching neither list leaves the current state alone — it is an event
+    // name.
+    if (node.kind === "h2" || node.kind === "h3" || node.kind === "h4") {
       const heading = node.text;
       if (EXCLUDED_SECTIONS.some((re) => re.test(heading))) {
         sectionIncluded = false;
@@ -108,7 +111,12 @@ export function parseGame8EventsPage(
       } else if (INCLUDED_SECTIONS.some((re) => re.test(heading))) {
         sectionIncluded = true;
         currentTitle = null;
-      } else {
+      } else if (node.kind !== "h4") {
+        // An unrecognised h2/h3 names an event. An unrecognised h4 does not —
+        // Genshin uses them for sub-headings *within* one event ("Availability
+        // Period", "Characters & Rewards for this Test Run"), so letting one
+        // claim the title would rename "Character Test Runs" to the label above
+        // its own date table.
         currentTitle = heading;
       }
       continue;
