@@ -1,5 +1,5 @@
-import { gameMeta } from "../../shared/games.ts";
-import type { GachaEvent } from "../../shared/schema.ts";
+import type { DisplayEvent } from "../../shared/custom.ts";
+import { useGameMeta } from "../state/gameMeta.tsx";
 import {
   formatRemaining,
   windowCaption,
@@ -10,7 +10,7 @@ import type { Status } from "../state/useProgress.ts";
 import { Meter, URGENCY_COLOR } from "./Meter.tsx";
 
 export interface RowEvent {
-  event: GachaEvent;
+  event: DisplayEvent;
   clock: EventClock;
 }
 
@@ -44,6 +44,7 @@ export function EventRow({
   onRestore,
   onOpen,
 }: EventRowProps) {
+  const gameMeta = useGameMeta();
   const { event, clock } = row;
   const game = gameMeta(event.game);
   const heat = URGENCY_COLOR[clock.urgency];

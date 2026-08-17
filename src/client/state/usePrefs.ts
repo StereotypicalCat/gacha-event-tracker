@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import type { GameId, Region } from "../../shared/schema.ts";
+import type { LaneId } from "../../shared/custom.ts";
+import type { Region } from "../../shared/schema.ts";
 import { guessRegion } from "../../shared/time.ts";
 import type { SortMode } from "./sort.ts";
 import { KEYS, readJson, writeJson } from "./storage.ts";
@@ -7,7 +8,7 @@ import { KEYS, readJson, writeJson } from "./storage.ts";
 export interface Prefs {
   region: Region;
   /** Games the reader has switched off. Stored as hidden so a newly added game shows up by default. */
-  hiddenGames: GameId[];
+  hiddenGames: LaneId[];
   /**
    * One game to look at right now, or null for all of them.
    *
@@ -16,7 +17,7 @@ export interface Prefs {
    * obeyed (`resolveFocus`), so it can never leave the reader on a blank page
    * with no visible cause.
    */
-  focusGame: GameId | null;
+  focusGame: LaneId | null;
   /** How the list is ordered. Deadline order is the default and the fallback. */
   sort: SortMode;
   /**
@@ -66,7 +67,7 @@ export function usePrefs() {
     setPrefs((prev) => ({ ...prev, ...patch }));
   }, []);
 
-  const toggleGame = useCallback((game: GameId) => {
+  const toggleGame = useCallback((game: LaneId) => {
     setPrefs((prev) => ({
       ...prev,
       hiddenGames: prev.hiddenGames.includes(game)

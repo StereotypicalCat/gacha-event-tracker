@@ -1,5 +1,5 @@
-import { gameMeta } from "../../shared/games.ts";
-import type { GameId } from "../../shared/schema.ts";
+import { useGameMeta } from "../state/gameMeta.tsx";
+import type { LaneId } from "../../shared/custom.ts";
 
 /**
  * One game at a time.
@@ -24,16 +24,17 @@ export function GameFocus({
   onAdvance,
 }: {
   /** Games the reader has switched on, in feed order. */
-  games: GameId[];
-  focus: GameId | null;
+  games: LaneId[];
+  focus: LaneId | null;
   /** Outstanding rows per game, so a chip says whether it is worth a visit. */
-  counts: Partial<Record<GameId, number>>;
+  counts: Partial<Record<LaneId, number>>;
   total: number;
   /** Where "next" goes — null means back to all games. */
-  next: GameId | null;
-  onFocus: (game: GameId | null) => void;
+  next: LaneId | null;
+  onFocus: (game: LaneId | null) => void;
   onAdvance: () => void;
 }) {
+  const gameMeta = useGameMeta();
   // With one game there is nothing to focus down to, and the bar would just be
   // a chip that does nothing.
   if (games.length < 2) return null;

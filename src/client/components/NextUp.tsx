@@ -1,4 +1,4 @@
-import { gameMeta } from "../../shared/games.ts";
+import { useGameMeta } from "../state/gameMeta.tsx";
 import { formatRemaining } from "../../shared/time.ts";
 import type { RowEvent } from "./EventRow.tsx";
 import { Meter, URGENCY_COLOR } from "./Meter.tsx";
@@ -26,6 +26,7 @@ export function NextUp({
   focused: string | null;
   onOpen: (id: string) => void;
 }) {
+  const gameMeta = useGameMeta();
   if (row === null) {
     return (
       <section className="border-b border-hairline px-4 py-8">

@@ -1,0 +1,246 @@
+import { describe, expect, test } from "bun:test";
+import {
+  asDisplayEvent,
+  CustomEvent,
+  CustomGame,
+  isCustomEventId,
+  isCustomGameId,
+  knownLane,
+  mintCustomEventId,
+  mintCustomGameId,
+  precisionOf,
+  RESERVED_ID_SEGMENTS,
+  type CustomGames,
+} from "../src/shared/custom.ts";
+import { metaFor } from "../src/shared/games.ts";
+import { dailiesId } from "../src/shared/daily.ts";
+import { eventId, GameId } from "../src/shared/schema.ts";
+import { clockFor } from "../src/shared/time.ts";
+
+const AT = "2026-08-17T12:00:00.000Z";
+
+function ownEvent(over: Partial<CustomEvent> = {}): CustomEvent {
+  return CustomEvent.parse({
+    id: "myevent:k3f9qa2m01",
+    game: "mygame:limbus-company",
+    title: "Walpurgisnacht",
+    type: "banner",
+    summary: null,
+    startsAt: "2026-08-20T00:00:00.000Z",
+    startPrecision: "day",
+    endsAt: "2026-09-03T00:00:00.000Z",
+    endPrecision: "day",
+    at: AT,
+    updatedAt: AT,
+    ...over,
+  });
+}
+
+describe("reserved id segments", () => {
+  test("no game id can ever occupy a reserved first segment", () => {
+    // Every id in the app is colon-separated and the first segment decides
+    // which key space it belongs to. The day a GameId is called "mygame" is the
+    // day two spaces merge silently, and localStorage has no other copy.
+    for (const reserved of RESERVED_ID_SEGMENTS) {
+      expect(GameId.options as readonly string[]).not.toContain(reserved);
+    }
+  });
+
+  test("the three spaces cannot produce the same key", () => {
+    const feed = eventId("genshin", "Walpurgisnacht", "2026-08-20T00:00:00.000Z");
+    const chore = dailiesId("genshin");
+    const own = mintCustomEventId(() => 0.5);
+    const ownGame = mintCustomGameId("Limbus Company");
+
+    const keys = [feed, chore, own, ownGame];
+    expect(new Set(keys).size).toBe(keys.length);
+    for (const key of keys) {
+      expect(key.split(":").length).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  test("a reader's event never collides with the scraped event it names", () => {
+    // The whole reason for a random suffix: they can type a tracked event's
+    // exact title and date. Under the feed's scheme that is byte-identical.
+    const scraped = eventId("genshin", "Windblume Festival", "2026-03-14T00:00:00.000Z");
+    const mine = mintCustomEventId(() => 0.123456);
+    expect(mine).not.toBe(scraped);
+    expect(isCustomEventId(mine)).toBe(true);
+    expect(isCustomEventId(scraped)).toBe(false);
+  });
+});
+
+describe("minting ids", () => {
+  test("a game id is slug-derived and disambiguated rather than overwritten", () => {
+    expect(mintCustomGameId("Limbus Company")).toBe("mygame:limbus-company");
+    // Two games called Nikke are two games.
+    expect(mintCustomGameId("Nikke", ["mygame:nikke"])).toBe("mygame:nikke-2");
+    expect(mintCustomGameId("Nikke", ["mygame:nikke", "mygame:nikke-2"])).toBe(
+      "mygame:nikke-3",
+    );
+  });
+
+  test("a game whose name slugifies to nothing still gets an id", () => {
+    expect(mintCustomGameId("???")).toBe("mygame:game");
+  });
+
+  test("event ids match their schema and vary with the source of randomness", () => {
+    const a = mintCustomEventId(() => 0.1);
+    const b = mintCustomEventId(() => 0.9);
+    expect(a).toMatch(/^myevent:[a-z0-9]{10}$/);
+    expect(b).toMatch(/^myevent:[a-z0-9]{10}$/);
+    expect(a).not.toBe(b);
+    expect(isCustomGameId(a)).toBe(false);
+  });
+});
+
+describe("CustomEvent", () => {
+  test("an unannounced end is expressible, and must pair with unknown", () => {
+    // A reader entering an event nobody has dated must not be forced to invent
+    // one — that is the failure this whole product is built against.
+    const open = ownEvent({ endsAt: null, endPrecision: "unknown" });
+    expect(open.endsAt).toBeNull();
+
+    expect(() =>
+      CustomEvent.parse({ ...ownEvent(), endsAt: null, endPrecision: "day" }),
+    ).toThrow();
+    expect(() =>
+      CustomEvent.parse({
+        ...ownEvent(),
+        endsAt: "2026-09-03T00:00:00.000Z",
+        endPrecision: "unknown",
+      }),
+    ).toThrow();
+  });
+
+  test("rejects an end before its start", () => {
+    expect(() =>
+      CustomEvent.parse({ ...ownEvent(), endsAt: "2026-08-19T00:00:00.000Z" }),
+    ).toThrow();
+  });
+
+  test("rejects an empty or oversized title", () => {
+    expect(() => CustomEvent.parse({ ...ownEvent(), title: "" })).toThrow();
+    expect(() =>
+      CustomEvent.parse({ ...ownEvent(), title: "x".repeat(201) }),
+    ).toThrow();
+  });
+});
+
+describe("CustomGame", () => {
+  test("a hue must be a hex colour, because it reaches a style attribute", () => {
+    // An imported file is not necessarily one this reader wrote.
+    const ok = CustomGame.parse({
+      id: "mygame:limbus-company",
+      name: "Limbus Company",
+      hue: "#C74B50",
+      at: AT,
+    });
+    expect(ok.hue).toBe("#C74B50");
+
+    for (const hue of ["red", "url(javascript:alert(1))", "#fff", "#12345g", ""]) {
+      expect(() =>
+        CustomGame.parse({ id: "mygame:x", name: "X", hue, at: AT }),
+      ).toThrow();
+    }
+  });
+
+  test("rejects an id from another key space", () => {
+    expect(() =>
+      CustomGame.parse({ id: "genshin", name: "Genshin", hue: "#4EA8DE", at: AT }),
+    ).toThrow();
+  });
+});
+
+describe("asDisplayEvent", () => {
+  test("carries no source and claims no region split", () => {
+    const shown = asDisplayEvent(ownEvent());
+    // Never attributed to a source: there is no page to send a sceptic to.
+    expect(shown.sourceUrl).toBeNull();
+    // One instant was entered, so inventing three would fabricate two of them.
+    expect(shown.regionScoped).toBe(false);
+    expect(shown.regionEnds).toBeNull();
+    expect(shown.extractionMethod).toBe("manual");
+    expect(shown.status).toBe("published");
+  });
+
+  test("runs on the same clock as a scraped event", () => {
+    // Not a second countdown implementation — the identical one.
+    const clock = clockFor(
+      asDisplayEvent(ownEvent()),
+      "europe",
+      Date.parse("2026-08-27T00:00:00.000Z"),
+    );
+    expect(clock.live).toBe(true);
+    expect(clock.msRemaining).toBe(7 * 24 * 60 * 60 * 1000);
+  });
+
+  test("an unannounced end yields no countdown, exactly as the feed's does", () => {
+    const clock = clockFor(
+      asDisplayEvent(ownEvent({ endsAt: null, endPrecision: "unknown" })),
+      "europe",
+      Date.parse("2026-08-27T00:00:00.000Z"),
+    );
+    expect(clock.msRemaining).toBeNull();
+    expect(clock.urgency).toBe("calm");
+  });
+});
+
+describe("precisionOf", () => {
+  test("a date with no time of day is day precision", () => {
+    // So the detail sheet's "accurate to the day only" note is honest about
+    // the reader's input too, rather than presenting midnight as their choice.
+    expect(precisionOf(false)).toBe("day");
+    expect(precisionOf(true)).toBe("exact");
+  });
+});
+
+describe("metaFor", () => {
+  const mine: CustomGames = {
+    "mygame:limbus-company": {
+      id: "mygame:limbus-company",
+      name: "Limbus Company",
+      hue: "#C74B50",
+      at: AT,
+    },
+  };
+
+  test("answers for a tracked game unchanged", () => {
+    expect(metaFor("genshin", mine).name).toBe("Genshin Impact");
+    expect(metaFor("genshin", mine).studio).toBe("HoYoverse");
+  });
+
+  test("answers for one the reader defined, with no studio or chore", () => {
+    const meta = metaFor("mygame:limbus-company", mine);
+    expect(meta.name).toBe("Limbus Company");
+    expect(meta.hue).toBe("#C74B50");
+    // Nothing to credit in the colophon and no routine we could name for them.
+    expect(meta.studio).toBe("");
+    expect(meta.dailyTasks).toBe("");
+  });
+
+  test("is total, so a lane that outlived its game cannot blank the page", () => {
+    // An import can carry an event whose game did not come with it.
+    const meta = metaFor("mygame:deleted", mine);
+    expect(meta.name).toBe("Unknown game");
+    expect(meta.hue).toMatch(/^#[0-9A-Fa-f]{6}$/);
+  });
+
+  test("shortens a long name rather than overflowing a chip", () => {
+    const long: CustomGames = {
+      "mygame:x": { id: "mygame:x", name: "Chaos Zero Nightmare", hue: "#123456", at: AT },
+    };
+    expect(metaFor("mygame:x", long).short.length).toBeLessThanOrEqual(12);
+  });
+});
+
+describe("knownLane", () => {
+  test("a tracked lane is always known; a reader's lane must still exist", () => {
+    const mine: CustomGames = {
+      "mygame:a": { id: "mygame:a", name: "A", hue: "#123456", at: AT },
+    };
+    expect(knownLane("genshin", mine)).toBe(true);
+    expect(knownLane("mygame:a", mine)).toBe(true);
+    expect(knownLane("mygame:gone", mine)).toBe(false);
+  });
+});

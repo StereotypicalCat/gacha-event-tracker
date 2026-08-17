@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { gameMeta } from "../../shared/games.ts";
-import type { GameId } from "../../shared/schema.ts";
+import { useGameMeta } from "../state/gameMeta.tsx";
+import type { LaneId } from "../../shared/custom.ts";
 
 /**
  * First run: pick your games.
@@ -15,12 +15,13 @@ export function Welcome({
   available,
   onConfirm,
 }: {
-  available: GameId[];
-  onConfirm: (chosen: GameId[]) => void;
+  available: LaneId[];
+  onConfirm: (chosen: LaneId[]) => void;
 }) {
-  const [chosen, setChosen] = useState<GameId[]>([]);
+  const gameMeta = useGameMeta();
+  const [chosen, setChosen] = useState<LaneId[]>([]);
 
-  const toggle = (id: GameId) =>
+  const toggle = (id: LaneId) =>
     setChosen((prev) =>
       prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id],
     );

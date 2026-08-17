@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { dailiesId, dayKey, msUntilReset, streakOf } from "../../shared/daily.ts";
-import { gameMeta } from "../../shared/games.ts";
-import type { GachaEvent, GameId, Region } from "../../shared/schema.ts";
+import { useGameMeta } from "../state/gameMeta.tsx";
+import type { DisplayEvent, LaneId } from "../../shared/custom.ts";
+import type { GameId, Region } from "../../shared/schema.ts";
 import { formatRemaining } from "../../shared/time.ts";
 import { Fireworks } from "./Fireworks.tsx";
 
@@ -29,23 +30,27 @@ export function Dailies({
   daysFor,
   onToggleDay,
 }: {
-  games: GameId[];
+  games: LaneId[];
   /**
    * Live events that repeat daily — detected, or marked by the reader — and
    * that the reader has not already finished or ignored. An event they marked
    * done has no line left to tick, and listing it is the app arguing with them.
    */
-  events: GachaEvent[];
+  events: DisplayEvent[];
   region: Region;
   now: number;
   daysFor: (id: string) => string[];
   onToggleDay: (id: string, day: string) => void;
 }) {
+  const gameMeta = useGameMeta();
   // Each game rolls on its own server clock, so "today" is asked per game
   // rather than once for the section — Endfield's European day can still be
   // yesterday's while every HoYo game has already turned over.
+  // Only tracked games have a standing chore — a lane the reader invented has
+  // no routine we could name for them (docs/DATA-MODEL.md § Reader-authored key
+  // spaces), so App passes tracked lanes here and this stays a total mapping.
   const chores = games.map((id) => ({
-    key: dailiesId(id),
+    key: dailiesId(id as GameId),
     game: gameMeta(id),
     today: dayKey(now, region, id),
     resetsIn: msUntilReset(now, region, id),

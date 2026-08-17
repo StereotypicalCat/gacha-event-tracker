@@ -3,7 +3,8 @@ import {
   msUntilReset,
   type DailySummary,
 } from "../../shared/daily.ts";
-import type { GameId, Region } from "../../shared/schema.ts";
+import type { LaneId } from "../../shared/custom.ts";
+import type { Region } from "../../shared/schema.ts";
 import { formatRemaining } from "../../shared/time.ts";
 
 /**
@@ -32,7 +33,7 @@ export function DailyChecklist({
   endsMs: number | null;
   region: Region;
   /** Whose reset clock the days are counted on — not every game shares one. */
-  game: GameId;
+  game: LaneId;
   now: number;
   logged: string[];
   onToggleDay: (day: string) => void;

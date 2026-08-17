@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { gameMeta } from "../../shared/games.ts";
+import { useGameMeta } from "../state/gameMeta.tsx";
 import { formatAbsolute, formatRemaining } from "../../shared/time.ts";
 import type { RowEvent } from "./EventRow.tsx";
 import { pressure, pressureReason, type Effort } from "../../shared/effort.ts";
@@ -52,6 +52,7 @@ export function EventDetail({
   onNote: (id: string, n: string) => void;
   onClose: () => void;
 }) {
+  const gameMeta = useGameMeta();
   const { event, clock } = row;
   const game = gameMeta(event.game);
   const heat = URGENCY_COLOR[clock.urgency];
@@ -217,14 +218,19 @@ export function EventDetail({
           >
             {completed ? "Mark not done" : "Mark done"}
           </button>
-          <a
-            href={event.sourceUrl}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="rounded-lg border border-hairline px-4 py-2.5 text-sm text-muted transition-colors hover:text-ink"
-          >
-            Source
-          </a>
+          {/* Nothing to link to when the reader typed this themselves, and a
+              dead "Source" button would imply somebody else vouched for the
+              date. Provenance is stated above instead. */}
+          {event.sourceUrl !== null && (
+            <a
+              href={event.sourceUrl}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="rounded-lg border border-hairline px-4 py-2.5 text-sm text-muted transition-colors hover:text-ink"
+            >
+              Source
+            </a>
+          )}
         </div>
 
         {/* Ignoring is not completing. "Done" keeps an event visible and

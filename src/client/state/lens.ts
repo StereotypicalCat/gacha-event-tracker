@@ -1,4 +1,4 @@
-import type { GameId } from "../../shared/schema.ts";
+import type { LaneId } from "../../shared/custom.ts";
 
 /**
  * Which rows each part of the page gets to see.
@@ -13,7 +13,7 @@ import type { GameId } from "../../shared/schema.ts";
 
 /** The shape every lens here needs. Structural so this module stays cheap. */
 interface Row {
-  event: { id: string; game: GameId };
+  event: { id: string; game: LaneId };
   clock: { msRemaining: number | null };
 }
 
@@ -71,9 +71,9 @@ export function firstToExpire<T extends Row>(rows: readonly T[]): T | null {
  * whose reason is a setting two screens away.
  */
 export function resolveFocus(
-  focus: GameId | null,
-  enabled: readonly GameId[],
-): GameId | null {
+  focus: LaneId | null,
+  enabled: readonly LaneId[],
+): LaneId | null {
   return focus !== null && enabled.includes(focus) ? focus : null;
 }
 
@@ -85,9 +85,9 @@ export function resolveFocus(
  * of the rotation except finding the "all" chip again.
  */
 export function advanceFocus(
-  focus: GameId | null,
-  enabled: readonly GameId[],
-): GameId | null {
+  focus: LaneId | null,
+  enabled: readonly LaneId[],
+): LaneId | null {
   if (enabled.length === 0) return null;
   const at = focus === null ? -1 : enabled.indexOf(focus);
   // An unknown focus (switched-off game) restarts the rotation rather than
@@ -98,8 +98,8 @@ export function advanceFocus(
 /** How many rows each game still has outstanding, for the focus chips. */
 export function countByGame<T extends Row>(
   rows: readonly T[],
-): Partial<Record<GameId, number>> {
-  const out: Partial<Record<GameId, number>> = {};
+): Partial<Record<LaneId, number>> {
+  const out: Partial<Record<LaneId, number>> = {};
   for (const row of rows) {
     out[row.event.game] = (out[row.event.game] ?? 0) + 1;
   }

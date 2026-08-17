@@ -1,4 +1,5 @@
-import type { GachaEvent, Region } from "./schema.ts";
+import type { DisplayEvent } from "./custom.ts";
+import type { Region } from "./schema.ts";
 
 /**
  * Time is this product's entire subject, so the vocabulary lives in one place:
@@ -28,8 +29,23 @@ export function guessRegion(
   return "europe";
 }
 
+/**
+ * The boundary fields these helpers read.
+ *
+ * Structural rather than `GachaEvent` so a reader's own event (PRD F13) runs on
+ * exactly the same clock as a scraped one — there is no second countdown
+ * implementation to keep honest.
+ */
+export type EndBearing = Pick<
+  DisplayEvent,
+  "endsAt" | "regionScoped" | "regionEnds"
+>;
+
 /** The end instant to show this user, honouring a region-scoped event. */
-export function effectiveEnd(event: GachaEvent, region: Region): string | null {
+export function effectiveEnd(
+  event: EndBearing,
+  region: Region,
+): string | null {
   if (event.endsAt === null) return null;
   if (!event.regionScoped || event.regionEnds === null) return event.endsAt;
   return event.regionEnds[region] ?? event.endsAt;
@@ -96,7 +112,7 @@ export interface EventClock {
 }
 
 export function clockFor(
-  event: GachaEvent,
+  event: EndBearing & Pick<DisplayEvent, "startsAt">,
   region: Region,
   now: number,
 ): EventClock {

@@ -26,8 +26,8 @@ import {
 } from "./state/lens.ts";
 import { clockFor, DAY, formatRemaining } from "../shared/time.ts";
 import { dailySummary, isDaily, resolveDaily } from "../shared/daily.ts";
-import { gameMeta } from "../shared/games.ts";
-import type { GameId } from "../shared/schema.ts";
+import { useGameMeta } from "./state/gameMeta.tsx";
+import type { LaneId } from "../shared/custom.ts";
 
 type View = "soon" | "calendar";
 
@@ -70,6 +70,7 @@ export function App() {
   // The event most recently ignored, so it can be put back without hunting for
   // a row that just disappeared.
   const [lastIgnored, setLastIgnored] = useState<{ id: string; title: string } | null>(null);
+  const gameMeta = useGameMeta();
   const now = useNow();
   const online = useOnline();
   const { prefs, update, toggleGame } = usePrefs();
@@ -151,7 +152,7 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, prefs.region, Math.floor(now / 60_000)]);
 
-  const games = useMemo<GameId[]>(
+  const games = useMemo<LaneId[]>(
     () => [...new Set(allRows.map((r) => r.event.game))],
     [allRows],
   );

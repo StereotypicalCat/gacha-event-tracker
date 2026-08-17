@@ -1,3 +1,4 @@
+import type { CustomGames, LaneId } from "./custom.ts";
 import type { GameId, Region } from "./schema.ts";
 
 export interface GameMeta {
@@ -71,4 +72,49 @@ export const GAME_LIST: GameMeta[] = Object.values(GAMES);
 
 export function gameMeta(id: GameId): GameMeta {
   return GAMES[id];
+}
+
+/**
+ * Meta for any lane, including one the reader invented (PRD F13).
+ *
+ * Pure, and total. Total matters: a lane id can outlive the game it names —
+ * an import can carry an event whose game did not come with it, and a reader
+ * can delete a game a stale render is still holding. Returning a neutral
+ * placeholder keeps that a visible oddity rather than a blank screen, which is
+ * the trade this codebase makes everywhere else in the client.
+ */
+export function metaFor(id: LaneId, custom: CustomGames): GameMeta {
+  const tracked = GAMES[id as GameId];
+  if (tracked !== undefined) return tracked;
+
+  const own = custom[id];
+  if (own !== undefined) {
+    return {
+      id: own.id as GameId,
+      name: own.name,
+      short: shortLabel(own.name),
+      hue: own.hue,
+      // Not credited in the colophon and contributing no standing chore: the
+      // colophon lists the sources we fetch, and this game has none. See
+      // docs/DATA-MODEL.md § Reader-authored key spaces.
+      studio: "",
+      dailyTasks: "",
+    };
+  }
+
+  return {
+    id: id as GameId,
+    name: "Unknown game",
+    short: "?",
+    hue: "#9AA3B8",
+    studio: "",
+    dailyTasks: "",
+  };
+}
+
+/** A name that still fits a narrow lane label or a chip. */
+export function shortLabel(name: string): string {
+  if (name.length <= 12) return name;
+  const first = name.split(/\s+/)[0] ?? name;
+  return first.length <= 12 ? first : `${name.slice(0, 11)}…`;
 }

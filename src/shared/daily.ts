@@ -1,4 +1,5 @@
 import { GAMES } from "./games.ts";
+import type { LaneId } from "./custom.ts";
 import type { GachaEvent, GameId, Region } from "./schema.ts";
 import { DAY, HOUR, REGION_RESET_UTC_OFFSET } from "./time.ts";
 
@@ -127,8 +128,12 @@ export function dailyOverride(
  * that *do* have their own server onto somebody else's clock, which is a
  * different bug in the same place.
  */
-export function serverOffsetUtc(region: Region, game?: GameId): number {
-  const override = game === undefined ? undefined : GAMES[game].resetOffsets?.[region];
+export function serverOffsetUtc(region: Region, game?: LaneId): number {
+  // A lane the reader invented (PRD F13) has no server map to know about, and
+  // neither does an id that has outlived its game, so both take the regional
+  // default rather than being looked up and crashing.
+  const override =
+    game === undefined ? undefined : GAMES[game as GameId]?.resetOffsets?.[region];
   return override ?? REGION_RESET_UTC_OFFSET[region];
 }
 
@@ -141,7 +146,7 @@ export function serverOffsetUtc(region: Region, game?: GameId): number {
  * but it is still the reader's streak moving under them. Treat a change here as
  * a data change, not a constant.
  */
-function shift(region: Region, game?: GameId): number {
+function shift(region: Region, game?: LaneId): number {
   return serverOffsetUtc(region, game) * HOUR - RESET_HOUR_LOCAL * HOUR;
 }
 
@@ -155,18 +160,18 @@ function shift(region: Region, game?: GameId): number {
  * generic "what day is it here?" — still gets the regional answer. Anything
  * that reads or writes a tick should pass it.
  */
-export function dayKey(ms: number, region: Region, game?: GameId): string {
+export function dayKey(ms: number, region: Region, game?: LaneId): string {
   return new Date(ms + shift(region, game)).toISOString().slice(0, 10);
 }
 
 /** The next reset instant strictly after `ms`. */
-export function nextResetMs(ms: number, region: Region, game?: GameId): number {
+export function nextResetMs(ms: number, region: Region, game?: LaneId): number {
   const s = shift(region, game);
   return Math.floor((ms + s) / DAY) * DAY + DAY - s;
 }
 
 /** How long the reader has left to do today's dailies. */
-export function msUntilReset(ms: number, region: Region, game?: GameId): number {
+export function msUntilReset(ms: number, region: Region, game?: LaneId): number {
   return nextResetMs(ms, region, game) - ms;
 }
 
@@ -181,7 +186,7 @@ export function dailyDays(
   startsMs: number,
   endsMs: number | null,
   region: Region,
-  game?: GameId,
+  game?: LaneId,
 ): string[] | null {
   if (endsMs === null) return null;
 
@@ -230,7 +235,7 @@ export function dailySummary(input: {
   endsMs: number | null;
   region: Region;
   /** Whose reset clock this runs on. Omitted falls back to the region's. */
-  game?: GameId | undefined;
+  game?: LaneId | undefined;
   now: number;
   logged: readonly string[];
 }): DailySummary {

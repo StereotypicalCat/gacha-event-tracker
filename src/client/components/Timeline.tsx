@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
-import { gameMeta } from "../../shared/games.ts";
-import type { GameId } from "../../shared/schema.ts";
+import { useGameMeta } from "../state/gameMeta.tsx";
+import type { LaneId } from "../../shared/custom.ts";
 import { DAY } from "../../shared/time.ts";
 import type { RowEvent } from "./EventRow.tsx";
 import { URGENCY_COLOR } from "./Meter.tsx";
@@ -42,6 +42,7 @@ export function Timeline({
    */
   isDone: (id: string) => boolean;
 }) {
+  const gameMeta = useGameMeta();
   const scroller = useRef<HTMLDivElement>(null);
 
   const ends = rows.map((r) => r.clock.endsMs ?? r.clock.startsMs + 14 * DAY);
@@ -75,7 +76,7 @@ export function Timeline({
     );
   }
 
-  const byGame = new Map<GameId, RowEvent[]>();
+  const byGame = new Map<LaneId, RowEvent[]>();
   for (const row of rows) {
     byGame.set(row.event.game, [...(byGame.get(row.event.game) ?? []), row]);
   }

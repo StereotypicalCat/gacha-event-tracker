@@ -1,5 +1,6 @@
-import type { GameId, Region } from "../../shared/schema.ts";
-import { gameMeta } from "../../shared/games.ts";
+import type { LaneId } from "../../shared/custom.ts";
+import type { Region } from "../../shared/schema.ts";
+import { useGameMeta } from "../state/gameMeta.tsx";
 import type { Prefs } from "../state/usePrefs.ts";
 
 const REGIONS: Array<{ id: Region; label: string }> = [
@@ -17,14 +18,15 @@ export function Controls({
   onExport,
   onImport,
 }: {
-  games: GameId[];
+  games: LaneId[];
   prefs: Prefs;
-  onToggleGame: (g: GameId) => void;
+  onToggleGame: (g: LaneId) => void;
   onUpdate: (p: Partial<Prefs>) => void;
   ignoredCount: number;
   onExport: () => void;
   onImport: (file: File) => void;
 }) {
+  const gameMeta = useGameMeta();
   return (
     <section className="border-t border-hairline px-4 py-5">
       <p className="eyebrow">Games</p>
