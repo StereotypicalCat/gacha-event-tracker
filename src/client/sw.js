@@ -1,5 +1,6 @@
 /*
- * Service worker: keep the app usable without a network.
+ * Service worker: keep the app usable without a network, and hand a reader the
+ * next version when there is one.
  *
  * This app is a good offline candidate — the reader's question ("what expires
  * next?") is answered entirely by data already on the device, and countdowns
@@ -11,14 +12,37 @@
  *   feed (events.json)   network-first with cache fallback — fresher is better,
  *                        but stale events beat a blank screen
  *
- * Bump CACHE_VERSION on any shell change; old caches are deleted on activate.
+ * Serving the shell cache-first is also what makes a deploy invisible: the
+ * reader this app is built for leaves the tab open for days, so without a
+ * deliberate handshake they keep running the bundle they first loaded. So this
+ * worker installs quietly, waits, and steps in only when the page asks — see
+ * `message` below and src/client/state/useAppUpdate.ts.
  */
 
-// v2: reader-authored games and events (PRD F13) changed main.js. The shell is
-// served cache-first, so without this bump a returning reader keeps the old
-// bundle and none of the new UI reaches them — the page looks unchanged and
-// nothing anywhere says why.
-const CACHE_VERSION = "event-clock-v2";
+/*
+ * Replaced at build time with a hash of the built shell (scripts/build-static.ts).
+ *
+ * Its whole job is to make this file's bytes differ when the app differs: the
+ * browser decides an update exists by byte-comparing sw.js, so a deploy that
+ * left this file untouched would never be offered to anyone. Left literal in an
+ * unbuilt copy, where it is a harmless constant.
+ */
+const BUILD = "__BUILD__";
+/*
+ * Exposed rather than merely declared, for two reasons: it is the quickest way
+ * to see which build a device is actually running (devtools → Application →
+ * Service Workers → inspect), and a constant nothing reads is a constant the
+ * next person deletes as dead code — which would silently end update detection.
+ */
+self.BUILD = BUILD;
+/*
+ * The cache's name, not the app's version — and deliberately *not* derived from
+ * BUILD. Everything in here is refetched on install, so a deploy does not need
+ * a new bucket; giving it one would throw away the cached feed, which is the
+ * copy an offline reader is reading. Bump it only to abandon a cache whose
+ * shape changed.
+ */
+const CACHE_NAME = "event-clock-v2";
 // Paths are derived from the registration scope, so the same worker is
 // correct at a domain root and under a subpath (GitHub Pages) alike.
 const BASE = new URL("./", self.registration.scope);
@@ -26,16 +50,15 @@ const at = (path) => new URL(path, BASE).toString();
 const SHELL = ["", "index.html", "styles.css", "main.js"].map(at);
 const FEED = new URL("data/events.v1.json", BASE).pathname;
 const FONT_HOSTS = new Set(["fonts.googleapis.com", "fonts.gstatic.com"]);
+/** What a page sends to ask a waiting worker to take over now. */
+const SKIP_WAITING = "skip-waiting";
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches
-      .open(CACHE_VERSION)
-      // addAll is atomic — one 404 would leave nothing cached, so failures are
-      // tolerated per-item and the fetch handler fills gaps later.
-      .then((cache) => Promise.allSettled(SHELL.map((url) => cache.add(url))))
-      .then(() => self.skipWaiting()),
-  );
+  // No skipWaiting here. Taking over an open page unasked means the running
+  // bundle and the cached shell come from two different builds, and the reader
+  // is told nothing about either. A first install has no worker to wait for and
+  // activates immediately regardless.
+  event.waitUntil(precache());
 });
 
 self.addEventListener("activate", (event) => {
@@ -44,11 +67,47 @@ self.addEventListener("activate", (event) => {
       .keys()
       .then((keys) =>
         Promise.all(
-          keys.filter((k) => k !== CACHE_VERSION).map((k) => caches.delete(k)),
+          keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)),
         ),
       )
       .then(() => self.clients.claim()),
   );
+});
+
+/**
+ * Store the shell this worker was built with.
+ *
+ * Not `cache.addAll`: it is atomic, so one 404 would leave nothing cached at
+ * all. Each item is allowed to fail on its own and the fetch handler fills the
+ * gap later.
+ *
+ * `cache: "reload"` because none of these URLs are fingerprinted — main.js is
+ * main.js at every version, and the HTTP cache would happily hand this brand
+ * new worker the previous deploy's copy of it.
+ */
+async function precache() {
+  const cache = await caches.open(CACHE_NAME);
+  await Promise.allSettled(
+    SHELL.map(async (url) => {
+      const response = await fetch(new Request(url, { cache: "reload" }));
+      if (response.ok) await cache.put(url, response);
+    }),
+  );
+}
+
+/**
+ * The one thing a page can ask of a worker that is waiting: step in now.
+ *
+ * Sent when the reader taps Reload on the update notice. The page reloads on
+ * `controllerchange` rather than on send, so this message is the whole
+ * handshake — and it exists only because the reader asked, which is why
+ * `install` does not do it unprompted.
+ */
+self.addEventListener("message", (event) => {
+  const data = event.data;
+  if (typeof data === "object" && data !== null && data.type === SKIP_WAITING) {
+    void self.skipWaiting();
+  }
 });
 
 self.addEventListener("fetch", (event) => {
@@ -80,7 +139,7 @@ self.addEventListener("fetch", (event) => {
  * the freshest events we ever saw; a failure falls back to that copy.
  */
 async function feedFirst(request) {
-  const cache = await caches.open(CACHE_VERSION);
+  const cache = await caches.open(CACHE_NAME);
   try {
     const response = await fetch(request);
     if (response.ok) await cache.put(request, response.clone());
@@ -102,7 +161,7 @@ async function feedFirst(request) {
  * next visit without ever blocking this one.
  */
 async function shellFirst(request) {
-  const cache = await caches.open(CACHE_VERSION);
+  const cache = await caches.open(CACHE_NAME);
   const cached = await cache.match(request, { ignoreSearch: true });
 
   const network = fetch(request)

@@ -20,7 +20,9 @@ A single-page web app that answers three questions:
 - Not an account system. There is no login, no profile, no cloud sync.
 - Not a wiki. It does not explain how to complete an event, only that it exists and when it ends.
 - Not a notification service. No push, no email, no background alerts. (A browser-local reminder
-  is a plausible v2; it is out of scope for v1.)
+  is a plausible v2; it is out of scope for v1.) F14 is not an exception to this: it is the open page
+  disclosing something about *itself*, in the tab, while the reader is looking at it — nothing is
+  delivered anywhere, and the app is never told to wake anybody up.
 - Not a damage calculator, build planner, or pull tracker.
 
 ## Users
@@ -162,6 +164,25 @@ data must never be presented as current.
 The sources that compile these calendars, and the studios that make the games, are named on the same
 screen as the data rather than one navigation step away. The page states plainly that it is
 unofficial and unaffiliated, and that the source page is the authority when the two disagree.
+
+**F14 — Say when a new version of the app is ready.**
+F10 caches the shell so the app survives losing signal, and the same cache is why a reader who never
+closes the tab keeps running the version they first loaded. A new game, a repaired parser or a
+corrected date then reaches their device and sits there unused, with the page looking unchanged and
+nothing saying why. **Presenting an old app as current is the same failure as presenting old events
+as current** (F7), so it is disclosed the same way: a notice on any screen, with one action that
+reloads into the new version.
+
+It is an offer, not a swap. The app never reloads itself — doing so mid-sentence while someone types
+in their own event (F13) would cost them work to save the app a tap. It says what a reload costs
+(their place on the page) and what it does not (everything they have marked, typed or ticked lives in
+`localStorage`, not in the bundle). Dismissing is free and the offer returns on the next load, which
+is also why it need not nag.
+
+A first install is not an update and is not announced — nothing is being replaced, and telling a
+first-time reader a new version is available would be false. Neither is a feed refresh: new events
+arrive without a reload, and calling that a new version would train readers to dismiss the notice
+unread.
 
 **F7 — Freshness disclosure.**
 The footer shows when the feed was last updated, per game. If a game's data is more than 48 hours

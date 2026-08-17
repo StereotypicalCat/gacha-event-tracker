@@ -11,7 +11,9 @@ import { Welcome } from "./components/Welcome.tsx";
 import { Colophon } from "./components/Colophon.tsx";
 import { Legend } from "./components/Legend.tsx";
 import { Toast } from "./components/Toast.tsx";
+import { UpdateNotice } from "./components/UpdateNotice.tsx";
 import { KEYS } from "./state/storage.ts";
+import { useAppUpdate } from "./state/useAppUpdate.ts";
 import { useMarkSet } from "./state/useMarkSet.ts";
 import { useProgress } from "./state/useProgress.ts";
 import { useDailyLog, type DailyLogMap } from "./state/useDailyLog.ts";
@@ -553,10 +555,26 @@ export function App() {
   );
 }
 
+/**
+ * Every screen goes through here, which is why the update notice lives here
+ * rather than beside the list: a reader who is being told "events unavailable"
+ * or is still picking their games needs the offer at least as much as one
+ * reading a calendar — a bundle too old for the feed it just downloaded
+ * (`fetchFeed`'s schemaVersion refusal) lands on exactly that error screen, and
+ * a reload is the fix.
+ */
 function Shell({ children }: { children: React.ReactNode }) {
+  const update = useAppUpdate();
   return (
     <div className="mx-auto min-h-full max-w-2xl border-hairline sm:border-x">
       {children}
+      {update.available && (
+        <UpdateNotice
+          applying={update.applying}
+          onApply={update.apply}
+          onDismiss={update.dismiss}
+        />
+      )}
     </div>
   );
 }

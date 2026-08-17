@@ -269,6 +269,25 @@ A lane may now be a game the reader invented, so `gameMeta` is a context resolve
 and total) rather than a direct lookup — a lane can outlive its game when an import carries an event
 whose game did not come with it.
 
+## Shipping a new version
+
+The shell is cached cache-first, so a reader with the tab open keeps the bundle they first loaded.
+An old app presented as current is the same failure as old events presented as current, so a waiting
+version is disclosed and reloaded on a tap (PRD F14, `docs/ARCHITECTURE.md` § Shipping a new version
+to an open page). Four things hold it up:
+
+- **`sw.js` must not `skipWaiting()` on install.** It activates only on the `skip-waiting` message
+  the reader's tap sends. Claiming an open page unasked runs the old bundle against the new cache and
+  says nothing.
+- **`__BUILD__` must stay in `sw.js`.** `scripts/build-static.ts` substitutes a hash of the built
+  shell for it, which is what makes a deploy's worker bytes differ and therefore detectable. It
+  throws if the placeholder is gone — do not "fix" that by dropping the substitution. There is no
+  `CACHE_VERSION` bump ritual any more; the cache name is a namespace, and per-build names would
+  discard the stored feed an offline reader is reading.
+- **The feed is not part of the build id.** It changes twice a day and needs no reload; announcing it
+  as a new version teaches readers to dismiss the notice unread.
+- **The app never reloads itself.** Someone may be mid-way through typing an event in.
+
 ## Conventions
 
 - **Zod schemas are the single source of truth for types.** Derive with `z.infer<>`; never

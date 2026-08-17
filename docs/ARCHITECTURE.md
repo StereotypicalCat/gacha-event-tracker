@@ -95,6 +95,7 @@ src/
       Controls.tsx      games, region, export/import(F4, F5, F6)
       Welcome.tsx       first-run game picker       (F8)
       Toast.tsx         undo an ignore
+      UpdateNotice      a newer app is installed and waiting  (F14)
       Colophon.tsx      credit, disclaimer, repo link
     state/
       storage.ts        namespaced, versioned localStorage
@@ -104,9 +105,11 @@ src/
       usePrefs.ts       region, filters, focus, onboarding flags
       sort.ts           deadline order, or what you're partway through
       lens.ts           who sees which rows — focus, outstanding, next-to-expire
+      useAppUpdate.ts   is a newer build waiting, and taking it   (F14)
 serve.ts                static server + /api/health              ✓ built
 scripts/
   build-feed.ts         fixtures → public/data/events.v1.json     ✓ built
+  build-static.ts       shell + worker into public/, build-stamped ✓ built
   parse-fixture.ts      run one adapter offline                   ✓ built
 fixtures/<game>/        checked-in raw HTML + expected parse output
 ```
@@ -199,6 +202,51 @@ The service worker caches the shell and webfonts (cache-first) and the feed (net
 back to the last copy seen). Countdowns run off the device clock, so the app stays useful with no
 network. Offline state is surfaced in the header and above the footer — stale data must never be
 presented as current.
+
+### Shipping a new version to an open page
+
+A cache-first shell is what makes the offline story work and what makes a deploy invisible: the
+reader this app is built for leaves the tab open for days, so a new game, a repaired parser or a
+corrected date reaches their device and then sits there unused. Presenting an old app as current is
+the same failure as presenting old events as current, so it is disclosed the same way.
+
+```
+build:static ──► sw.js stamped with a hash of the built shell
+                        │
+browser byte-compares sw.js on navigation, hourly, and when the tab is
+revealed (registration.update)
+                        │
+   bytes differ ──► new worker installs, precaches, and WAITS
+                        │
+   registration.waiting ≠ null and a controller exists
+                        │
+   UpdateNotice: "A new version of Event Clock is ready."  [Reload] [×]
+                        │
+   Reload ──► postMessage {type:"skip-waiting"} ──► worker activates
+          ──► controllerchange ──► location.reload()
+```
+
+Four properties this depends on, each of them load-bearing:
+
+- **The worker never calls `skipWaiting()` on install.** Claiming an open page unasked leaves the
+  running bundle and the cached shell on two different builds, with nothing on screen saying so. It
+  activates only on the message the reader's tap sends. A first install has no worker to wait for and
+  activates immediately regardless — and is deliberately *not* announced, since nothing is being
+  replaced.
+- **The build id is derived, not remembered.** `scripts/build-static.ts` hashes the built shell
+  (`index.html`, `main.js`, `styles.css`, `sw.js` source) and substitutes it for `__BUILD__` in the
+  worker, so any shell change alters the worker's bytes and is therefore offered. The predecessor was
+  a hand-bumped `CACHE_VERSION`, which had already been forgotten once. The substitution **throws**
+  if the placeholder is gone, because the failure mode is silent.
+- **The feed is not part of the id.** It is rewritten twice a day and served network-first, so new
+  events reach an open page without a reload. Calling that a new version would teach readers to
+  dismiss the notice unread.
+- **The cache name does not move with the build.** Everything in it is refetched (`cache: "reload"`,
+  since none of these URLs are fingerprinted) on install, so a per-build bucket would buy nothing and
+  would discard the stored feed — the copy an offline reader is reading.
+
+`src/client/state/useAppUpdate.ts` holds the client half; `sw.js` and the hook cannot import each
+other, so `test/update.test.tsx` pins both ends of the `skip-waiting` handshake and the placeholder.
 
 ## Deliberate non-choices
 

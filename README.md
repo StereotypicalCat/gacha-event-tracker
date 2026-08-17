@@ -190,6 +190,14 @@ offline is shown in the header and above the footer, because stale data must nev
 
 It installs to a home screen as a standalone app.
 
+## Updates
+
+Because the shell is cached, a tab left open keeps running the version it loaded — so when a newer
+one has been fetched and is ready, the app says so and offers to reload. You choose the moment: the
+only thing a reload costs is your place on the page. Everything you have marked, typed or ticked
+lives in your browser, not in the bundle, so it survives untouched. Dismiss it and the offer comes
+back next time you open the app.
+
 ## Conduct
 
 Sources are community wikis, treated as a guest would: `robots.txt` honoured, a descriptive
