@@ -13,8 +13,8 @@ A web app that aggregates live and upcoming events across popular gacha games, p
 calendar, sorts them by end date or by what the reader is partway through, tracks day-by-day
 progress on events that repeat daily, and lets a user mark events completed.
 
-**Status: working app, refreshing itself on a schedule.** Schema, three parsers, ten sources across
-nine games, the full interface, offline support, a static server, a Docker image and CI all exist and
+**Status: working app, refreshing itself on a schedule.** Schema, four parsers, eleven sources across
+ten games, the full interface, offline support, a static server, a Docker image and CI all exist and
 are tested. The refresh runner (`bun run refresh`) fetches, caches raw snapshots and rebuilds the
 feed; `.github/workflows/refresh.yml` runs it twice a day and commits only when a page actually
 changed. The SQLite layer and the review queue are still specified in `docs/` but not built, so the
@@ -83,7 +83,7 @@ re-verify a sample against the live page afterward.
 src/shared/       schema.ts (the contract), time.ts, daily.ts, effort.ts, games.ts, feed.ts
                   custom.ts — reader-authored games and events, and their key spaces
 src/ingest/       html.ts, dates.ts (nine formats), merge.ts, sanitize.ts, robots.ts, snapshots.ts
-  parsers/        game8.ts, wikigg.ts, akwiki.ts — keyed by SITE, not game
+  parsers/        game8.ts, wikigg.ts, akwiki.ts, fandom.ts — keyed by SITE, not game
   adapters/       index.ts — SOURCES registry binding url+game+parser, and the sanitize seam
 src/client/       React app, service worker, manifest
   state/          progress, daily log, ignores, prefs, sort — all localStorage
@@ -91,7 +91,7 @@ src/client/       React app, service worker, manifest
                   lens.ts — who sees which rows (focus, outstanding, next-to-expire); pure
 scripts/          build-feed.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             401 tests
+test/             466 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
@@ -190,9 +190,9 @@ Sources are community wikis. Treat them as a guest would:
 
 - Honor `robots.txt`; set a descriptive `User-Agent` with a contact URL.
 - One request per source per refresh cycle, minimum 6 hours apart.
-- **Space requests to one host**, honouring its `Crawl-delay` and defaulting to 2s. Eight of the ten
-  sources are game8.co pages, so the per-source floor alone still permits one cycle to arrive as
-  eight back-to-back requests to a single site — which is the shape an edge network throttles, and
+- **Space requests to one host**, honouring its `Crawl-delay` and defaulting to 2s. Eight of the
+  eleven sources are game8.co pages, so the per-source floor alone still permits one cycle to arrive
+  as eight back-to-back requests to a single site — which is the shape an edge network throttles, and
   what a burst looks like from the far end regardless of our intent.
 - Send `If-None-Match` / `If-Modified-Since`; treat `304` as "skip, unchanged".
 - Cache raw snapshots so re-parsing never re-fetches. **Iterate against fixtures, not the network.**
@@ -224,7 +224,7 @@ A source whose ToS forbids automated access does not get an adapter. Flag it and
 |---|---|
 | `azurlane.koumakan.jp` | **Declined.** `Content-Signal: ai-input=no` — an explicit refusal of collecting content as model input, which is what capturing a fixture to read amounts to. Stronger than game8's or wiki.gg's signal. Find Azur Lane another source |
 | `uma.moe` | **Declined.** Data comes from an API behind a Cloudflare Turnstile proof header; an adapter would mean defeating a deliberate access control. The `robots.txt` is permissive, but the gate is not in `robots.txt` |
-| `reverse1999.fandom.com` | **Declined for now.** `robots.txt` returns 403, and an unreadable robots means "do not fetch" — a permission we could not read is not a permission we have |
+| `reverse1999.fandom.com` | **Built** (2026-08-17), via `api.php`, not the wiki page — see § Fandom below |
 | `bluearchive.wiki`, `prydwen.gg`, `gametora.com` | **Cleared, unbuilt.** `User-agent: *` allows the paths we would want. prydwen sets `Crawl-delay: 10`, far below our one-per-6h |
 
 wiki.gg hosts (`arknights`, `endfield`) carry `Content-Signal: search=yes, ai-train=no, use=reference`
@@ -232,6 +232,27 @@ with `Allow: /`, and disallow `ClaudeBot` and other AI crawlers by name. Our fet
 trains nothing, and no LLM reads the page content — constraint 2 is what keeps that true, so it is
 load-bearing here and not only a cost decision. Note also that Reverse: 1999, Blue Archive,
 Umamusume and Nikke have **no wiki.gg wiki** — those subdomains 401.
+
+**Fandom: read the API, never the page.** `reverse1999.fandom.com/wiki/Events` answers a non-browser
+client with a Cloudflare managed challenge — HTTP 403, `Just a moment…`, "Enable JavaScript" — and so
+does `/robots.txt` itself, from a datacenter address. Browser-shaped headers or a JS-executing client
+would get past both and **must not be used**: that is defeating a deliberate access control, the same
+reason `uma.moe` was declined above.
+
+What makes this source legitimate anyway is that the wiki publishes a second, sanctioned surface. Its
+`robots.txt` — read in a browser, where it serves fine — has no `Disallow: /` for `*` and explicitly
+**allows** `/api.php?action=`, and that endpoint answers our real `User-Agent` with a `200` and a JSON
+body. So the adapter fetches `api.php?action=parse&page=Events`, with no impersonation anywhere: our
+own headers, on a path the site put in writing. The only namespaces `*` is refused are `Special:`,
+`User:`, `Template:` and `Help:`, none of which we want; `parsers/fandom.ts` skips `Special:` links
+for that reason.
+
+One consequence to keep in mind: because `/robots.txt` is unreadable from a challenged address, the
+robots gate **fails closed there and the source is skipped**. That is a warning line rather than a
+broken build — `skipped_robots` does not touch the failure streak, and the run only hard-fails if
+*every* source is blocked — so the scheduled refresh simply never updates this game, and the feed
+falls back to the checked-in fixture. Refreshing it means running `bun run refresh` from an address
+Fandom serves, which is how its first snapshot was taken.
 
 `scripts/refresh-sources.ts` enforces all of the above in code — the 6h floor, one request, no
 retries, conditional headers, per-host spacing, robots (failing closed when `robots.txt` cannot be

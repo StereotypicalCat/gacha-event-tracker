@@ -48,10 +48,27 @@ Consequences worth internalising:
 | `game8` | game8.co article calendars | Genshin, Star Rail, Wuthering Waves, ZZZ, Endfield, NTE, Infinity Nikki, Persona 5: The Phantom X |
 | `wikigg` | wiki.gg MediaWiki `mp-event` templates | Endfield |
 | `akwiki` | arknights.wiki.gg's `mrfz-wtable` "Ongoing/upcoming" table | Arknights |
+| `fandom` | Fandom wikis via the MediaWiki `action=parse` API — `Event \| Time Period \| Version` wikitables | Reverse: 1999 |
 
 `wikigg` is the better shape by a distance: it emits ISO timestamps with one timer per server
 region, so its events carry exact precision and real `regionEnds`. Prefer a source like that over a
 prose wiki when both exist, and give it a higher `priority`.
+
+`fandom` is the only parser whose body is not HTML: it reads an `action=parse` JSON envelope and
+takes the rendered wikitext out of `parse.text`. That is not a preference — the rendered page is
+behind a Cloudflare challenge and the API is the surface the wiki's `robots.txt` allows, so the
+adapter's URL is an API call and the stored snapshot is JSON despite its `.html` name (every body
+`snapshots/` keeps is named `<id>.html`, whatever its content type). Its `canParse` therefore checks
+the envelope as well as the table, because an error payload or a challenge page must fail loudly
+rather than parse to zero events. Two page facts drive the rest of it:
+
+- **The title is the row's `<b>`, never the cell text.** The cell leads with a banner image, and a
+  missing image renders as a red link reading `File:<Event> Banner.png` — which a cell-text reader
+  publishes as the event's name.
+- **These pages are archives, not schedules.** All five tables list every event since version 1.1
+  (154 rows, six of them unfinished when the fixture was captured), with no "ongoing" section to
+  anchor on. Inclusion is therefore decided against `ctx.now`, the one parser here that does so;
+  `akwiki` and `game8` can gate on a heading instead, and should where one exists.
 
 `akwiki` shares a host family with `wikigg` and nothing else — arknights.wiki.gg has no `mp-event`
 cards, so the two are separate modules rather than one parser with a branch. Two things about that
@@ -247,7 +264,7 @@ Three constraints it holds:
   repair and drop emits a note whose default sink is `console.warn` — silence is not something a
   future caller gets for free (§ Silent drops).
 - **It does not move event IDs.** An ID is recomputed only when sanitizing actually changed the
-  title *and* the incoming ID was minted the standard way. All seven fixtures pass through with
+  title *and* the incoming ID was minted the standard way. All eleven fixtures pass through with
   zero repairs and byte-identical output, which is the regression guard: IDs are localStorage keys
   and moving one orphans a reader's marks with no server-side recovery.
 

@@ -84,6 +84,18 @@ const SOURCES: SourceSpec[] = [
     url: "https://game8.co/games/Persona-5-Phantom-X/archives/532244",
     parserId: "game8",
   },
+  {
+    id: "r1999-fandom-events",
+    game: "r1999",
+    // The MediaWiki API, not `/wiki/Events`. The rendered page answers a
+    // non-browser client with a Cloudflare interstitial, while this wiki's
+    // robots.txt allows `/api.php?action=` for `User-agent: *` and the endpoint
+    // serves our real User-Agent a 200. See `parsers/fandom.ts` for the full
+    // reasoning; the short version is that this is the surface the site put in
+    // writing, reached without pretending to be anything we are not.
+    url: "https://reverse1999.fandom.com/api.php?action=parse&page=Events&prop=text&formatversion=2&format=json",
+    parserId: "fandom",
+  },
 ];
 
 function toAdapter(spec: SourceSpec): Adapter {
