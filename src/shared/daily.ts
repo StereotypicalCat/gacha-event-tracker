@@ -25,7 +25,7 @@ import { DAY, HOUR, REGION_RESET_UTC_OFFSET } from "./time.ts";
 export const RESET_HOUR_LOCAL = 4;
 
 /**
- * A 180-day event is already a parse error (see CLAUDE.md § Domain rules), so
+ * A 180-day event is already a parse error (see AGENTS.md § Domain rules), so
  * this only ever fires on data that is wrong; it exists so a bad end date
  * cannot make the client allocate an unbounded array.
  */

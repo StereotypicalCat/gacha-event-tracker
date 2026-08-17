@@ -6,7 +6,7 @@ name: Refresh sources
 # any of it, it just hands CI fresher input.
 #
 # Twelve hours apart is deliberately well clear of the six-hour-per-source floor
-# in CLAUDE.md § Scraping conduct, and the runner enforces that floor itself, so
+# in AGENTS.md § Scraping conduct, and the runner enforces that floor itself, so
 # a manual dispatch on top of a scheduled run cannot double up on a wiki.
 on:
   schedule:
@@ -73,7 +73,7 @@ jobs:
       - name: Refresh
         id: refresh
         env:
-          # Identify the crawler with a contact URL, per CLAUDE.md.
+          # Identify the crawler with a contact URL, per AGENTS.md.
           REFRESH_CONTACT_URL: ${{ github.server_url }}/${{ github.repository }}
           # Passed through the environment rather than interpolated into the
           # run script, so a dispatch input cannot become shell.

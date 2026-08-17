@@ -118,7 +118,7 @@ function toAdapter(spec: SourceSpec): Adapter {
       // keeps parsers what they are — pure readers of one site's markup.
       //
       // `sanitizeEvents` logs to console.warn by default, so a repaired or
-      // dropped event is never silent (CLAUDE.md § Silent drops).
+      // dropped event is never silent (AGENTS.md § Silent drops).
       return sanitizeEvents(parser.parse(html, ctx), {
         sourceId: ctx.sourceId,
         fallbackUrl: ctx.sourceUrl,

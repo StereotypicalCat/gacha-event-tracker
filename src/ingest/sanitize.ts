@@ -16,7 +16,7 @@ import { decodeEntities } from "./html.ts";
  *     sanitiser's job stops at prose and URLs.
  *  2. **Clean, do not drop.** A hostile title is truncated and stripped, not
  *     rejected — an event vanishing without a trace is the failure mode this
- *     codebase fears most (CLAUDE.md § Silent drops). The one unrecoverable
+ *     codebase fears most (AGENTS.md § Silent drops). The one unrecoverable
  *     case is a title that sanitises to nothing, and that emits a note the
  *     caller is expected to surface.
  *  3. **Never throw on junk.** Malformed entities, lone surrogates, absurd code

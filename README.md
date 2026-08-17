@@ -213,7 +213,7 @@ page is sanitized at the ingest boundary before it reaches the feed, the browser
 
 | Document | Covers |
 |---|---|
-| `CLAUDE.md` | Working agreements, domain rules, conventions |
+| `AGENTS.md` | Working agreements, domain rules, conventions (`CLAUDE.md` points here) |
 | `docs/PRD.md` | What this is, who for, what's out of scope |
 | `docs/ARCHITECTURE.md` | Process shape, routes, deployment |
 | `docs/DATA-MODEL.md` | Event schema, SQLite tables, client storage |

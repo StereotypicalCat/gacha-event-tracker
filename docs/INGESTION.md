@@ -175,7 +175,7 @@ section but must never claim the event title.
 - Honor `robots.txt`; cache parsed robots per host for 24h. **Fail closed** — a `robots.txt` that
   5xxs or times out means "do not fetch", because a permission we could not read is not a
   permission we have. A 404 means no restrictions.
-- 20s timeout. **No retries**: a retry is a second request, and CLAUDE.md § Scraping conduct says
+- 20s timeout. **No retries**: a retry is a second request, and AGENTS.md § Scraping conduct says
   one per source per cycle. A failed source waits for the next cycle instead.
 - **Only `200` is a page** (plus `304` for "unchanged"). Not `response.ok` — that admits the whole
   2xx range, and `202 Accepted` is what an edge bot-manager answers with while it serves a challenge
@@ -195,7 +195,7 @@ identically whether the page moved behind a login or a CDN decided the runner is
 **The failure streak is read, not just written.** `consecutiveFailures` reaching
 `BROKEN_AFTER_FAILURES` (3, so ~36h at two cycles a day) promotes a source from "down" to `broken`:
 annotated on the run page, listed in the job summary with its status code, and counted in the
-`broken` step output that `refresh.yml` fails on *after* committing. See CLAUDE.md § Scraping
+`broken` step output that `refresh.yml` fails on *after* committing. See AGENTS.md § Scraping
 conduct for why that ordering is load-bearing.
 
 **Built: `scripts/refresh-sources.ts`** (`bun run refresh`), scheduled by

@@ -55,7 +55,7 @@ requirements are the same:
   sources are a single entry in `SOURCES`, with no new parsing code.
 - Source-timezone → UTC, region offsets, and ID construction happen in the parser's event builder.
 
-**The three domain rules that break new adapters**, from `CLAUDE.md`:
+**The three domain rules that break new adapters**, from `AGENTS.md`:
 
 1. Everything stored as UTC ISO 8601.
 2. Banners are usually one global end instant; story and login events usually end at each region's

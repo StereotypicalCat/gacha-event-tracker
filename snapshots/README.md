@@ -12,7 +12,7 @@ Raw pages, exactly as fetched. `scripts/refresh-sources.ts` writes them; nothing
 what those bytes are in — the `Content-Type` header, else a `<meta charset>` in the page, else
 UTF-8 — and `bytes` is the served length. A page in Shift_JIS or Latin-1 decoded as UTF-8 would be
 stored as a field of U+FFFD with the original bytes gone; re-parsing could never recover it, and the
-mojibake would reach `slugify`, moving every event ID for that source (CLAUDE.md § Event IDs are
+mojibake would reach `slugify`, moving every event ID for that source (AGENTS.md § Event IDs are
 localStorage keys).
 
 Every file is written to a sibling `.tmp-*` and renamed into place, body before metadata, so an
@@ -23,7 +23,7 @@ directory, so otherwise a run killed mid-write would pin a half-page in git fore
 Three reasons this is committed rather than cached:
 
 - **Re-parsing never re-fetches.** Iterating on a parser reads these files, not the wikis
-  (CLAUDE.md § Scraping conduct).
+  (AGENTS.md § Scraping conduct).
 - **A refresh is reviewable.** The commit diff is the page diff, so "an event vanished" is a
   question you can answer from git rather than from a wiki that has since changed again.
 - **The build stays offline.** `bun run build:feed` parses whichever of these exists and falls back

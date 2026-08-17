@@ -91,7 +91,7 @@ first thing to find out.
 2. `bun run refresh --dry-run` locally to see the plan and the robots verdict per source without
    making a request.
 3. If Game8 is being refused, that is a scraping-conduct question before it is a code question —
-   re-read `CLAUDE.md` § Scraping conduct and decide, rather than working around it.
+   re-read `AGENTS.md` § Scraping conduct and decide, rather than working around it.
 4. Regardless of cause: surface it in the UI. `Colophon.tsx` already receives `staleCount`, and
    `App.tsx` computes `staleSources` at a two-day threshold. Verify a reader actually sees that
    banner today, because if five of six games are on four-day-old fixtures, the app is currently
@@ -177,7 +177,7 @@ So this is a **default and framing problem**, not a missing-feature problem.
    the minimum end date rather than the head of the list — under "doing first" those differ.
 2. Cap the "Running now" section at a handful of rows with an explicit "show all N" expander, rather
    than rendering 21. Grouping stays as-is; this is truncation of the view, not a re-sort, so the
-   deadline-order guarantee in `CLAUDE.md` § Conventions is untouched.
+   deadline-order guarantee in `AGENTS.md` § Conventions is untouched.
 3. **Persist the view.** `const [view, setView] = useState<View>("soon")` in `App.tsx:68` is
    component state, so every reload throws the reader back to the list even if they chose the
    timeline last time. It belongs in `prefs` next to `sort` and `focusGame`.
@@ -239,7 +239,7 @@ scraping, no ToS question, and no server.
 2. **Never mint a user event's ID the standard way.** `${game}:${slug}:${date}` and `dailies:<game>`
    are live key spaces and a collision corrupts real marks. Give user events their own prefix, and
    run the **schema-guardian** agent on the change — this is exactly the class of change
-   `CLAUDE.md` § Event IDs flags.
+   `AGENTS.md` § Event IDs flags.
 3. **Mark provenance in the UI.** A hand-entered date must be visibly the reader's own, never
    attributed to a source, and must not flow into merge or sanitisation. The trust boundary at
    `src/ingest/sanitize.ts` is for pages we do not control; this is a different path entirely.
@@ -265,7 +265,7 @@ scraping, no ToS question, and no server.
   "I haven't touched Wuwa, zzz, HSR and arknights in a long time," and a third reader's plan to play
   one gacha in concentrated bursts. The `status` ("partway through") and `effort` fields plus the
   "doing first" sort already serve this. Resist adding a "you haven't played X in N days" nudge:
-  `CLAUDE.md` draws a hard line between what the app *shows* and what it *tells you to do*, and
+  `AGENTS.md` draws a hard line between what the app *shows* and what it *tells you to do*, and
   nagging someone about a game they consciously dropped is the app arguing with them.
 - **The daily-checklist feature got no signal at all** — not one comment, positive or negative, in 26.
   It shipped detection-off and experimental two days ago, which is the right posture. Do not invest

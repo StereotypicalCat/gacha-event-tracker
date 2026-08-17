@@ -44,7 +44,7 @@ source (wiki.gg) turned out to publish ISO timestamps with per-region timers.
   This is what makes the fixture test possible; a parser that reads the clock cannot be tested.
 - Implement `canParse` as a *structural* check, and do not over-fit it. Game8's own pages differ in
   attribute quote style, so `class="a-table"` would falsely reject half of them.
-- Get the domain rules right — they are in `CLAUDE.md` § Domain rules and they are where adapters
+- Get the domain rules right — they are in `AGENTS.md` § Domain rules and they are where adapters
   actually go wrong:
   - All timestamps UTC ISO 8601.
   - Banners are usually global (`regionScoped: false`); story/login events usually follow per-region

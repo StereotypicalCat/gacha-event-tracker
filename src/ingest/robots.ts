@@ -2,7 +2,7 @@
  * robots.txt: parsing, matching, and a per-host cache.
  *
  * Sources are community wikis and this project's standing rule is to behave as
- * a guest would (CLAUDE.md § Scraping conduct). That starts with actually
+ * a guest would (AGENTS.md § Scraping conduct). That starts with actually
  * reading robots.txt rather than assuming a path is fair game.
  *
  * Parsing is a pure function over text, deliberately separated from fetching,

@@ -186,7 +186,7 @@ Allow: /wiki/Event
 
 describe("the sources we actually fetch", () => {
   // Game8 opts out of AI-training crawlers by name and leaves everyone else
-  // alone (CLAUDE.md § Scraping conduct). If that ever changes, this is where
+  // alone (AGENTS.md § Scraping conduct). If that ever changes, this is where
   // it should be noticed.
   const game8 = parseRobots(`
 User-agent: GPTBot

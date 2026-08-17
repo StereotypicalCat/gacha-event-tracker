@@ -3,7 +3,7 @@
  *
  * Every fetched page is stored verbatim on disk so that re-parsing — which is
  * the thing we actually iterate on — never costs the source another request
- * (CLAUDE.md § Scraping conduct). A snapshot plus its metadata is also what
+ * (AGENTS.md § Scraping conduct). A snapshot plus its metadata is also what
  * makes a conditional request possible on the next cycle: we keep the ETag and
  * Last-Modified the server gave us and hand them back.
  *
@@ -119,7 +119,7 @@ export interface DecodedBody {
  * comes back as a field of U+FFFD. That is not merely ugly: mojibake in a title
  * flows through `slugify` into the event ID, which is a localStorage key, so a
  * mis-decoded fetch silently orphans every completion mark for that source
- * (CLAUDE.md § Event IDs are localStorage keys).
+ * (AGENTS.md § Event IDs are localStorage keys).
  *
  * Header first, then a `<meta charset>` sniff, then UTF-8. An encoding label
  * the runtime does not know falls back to UTF-8 rather than throwing — the raw
@@ -275,7 +275,7 @@ export class SnapshotStore {
   /**
    * Has enough time passed to fetch this source again?
    *
-   * The floor is six hours per source (CLAUDE.md). A source we have never
+   * The floor is six hours per source (AGENTS.md). A source we have never
    * checked is always due.
    */
   isDue(state: SnapshotState, nowMs: number, minIntervalMs: number): boolean {
@@ -300,7 +300,7 @@ export class SnapshotStore {
    * one. The validators are the exception: a server is free to rotate an ETag
    * while serving the very same bytes, and keeping the old one would mean
    * sending a stale `If-None-Match` forever — every cycle costing the wiki a
-   * full body where a 304 was the whole point (CLAUDE.md § Scraping conduct).
+   * full body where a 304 was the whole point (AGENTS.md § Scraping conduct).
    * So the metadata is refreshed, and `changed` stays false.
    */
   async save(sourceId: string, input: SaveInput): Promise<SaveResult> {
