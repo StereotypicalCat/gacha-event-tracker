@@ -21,6 +21,21 @@ import {
 
 const DIR = ".github/ISSUE_TEMPLATE";
 
+/**
+ * Whether the README is in this context at all.
+ *
+ * The image build runs this suite as its gate, and `.dockerignore` excludes the
+ * README along with `docs/` and `AGENTS.md` — deliberately, so that editing a
+ * doc does not invalidate the layer that installs, tests and builds. `.github/`
+ * is copied in for the opposite reason, which is why every other check here runs
+ * there unchanged.
+ *
+ * So the README check stands down where the file was left out on purpose, rather
+ * than failing the image on the absence of something that context does not ship.
+ * It still runs in CI and locally, which is where a README link gets edited.
+ */
+const HAS_README = await Bun.file("README.md").exists();
+
 type Field = {
   type: string;
   id?: string;
@@ -122,7 +137,7 @@ describe("the app's links into them", () => {
     expect(params.get("refreshed")).toBe("15 Aug 2026, 04:12 — 2 days ago");
   });
 
-  test("every template link in the README names a template that exists", async () => {
+  test.skipIf(!HAS_README)("every template link in the README names a template that exists", async () => {
     // A `?template=` that names nothing lands the reader on the chooser instead,
     // which looks close enough to working that nobody reports it.
     const readme = await Bun.file("README.md").text();
