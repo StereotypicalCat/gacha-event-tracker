@@ -191,6 +191,21 @@ rate, and do not add an LLM that consumes page content.
 
 A source whose ToS forbids automated access does not get an adapter. Flag it and ask.
 
+**Sources assessed and declined** (2026-08-17), so these are not re-litigated each pass:
+
+| Source | Verdict |
+|---|---|
+| `azurlane.koumakan.jp` | **Declined.** `Content-Signal: ai-input=no` — an explicit refusal of collecting content as model input, which is what capturing a fixture to read amounts to. Stronger than game8's or wiki.gg's signal. Find Azur Lane another source |
+| `uma.moe` | **Declined.** Data comes from an API behind a Cloudflare Turnstile proof header; an adapter would mean defeating a deliberate access control. The `robots.txt` is permissive, but the gate is not in `robots.txt` |
+| `reverse1999.fandom.com` | **Declined for now.** `robots.txt` returns 403, and an unreadable robots means "do not fetch" — a permission we could not read is not a permission we have |
+| `bluearchive.wiki`, `prydwen.gg`, `gametora.com` | **Cleared, unbuilt.** `User-agent: *` allows the paths we would want. prydwen sets `Crawl-delay: 10`, far below our one-per-6h |
+
+wiki.gg hosts (`arknights`, `endfield`) carry `Content-Signal: search=yes, ai-train=no, use=reference`
+with `Allow: /`, and disallow `ClaudeBot` and other AI crawlers by name. Our fetcher is neither: it
+trains nothing, and no LLM reads the page content — constraint 2 is what keeps that true, so it is
+load-bearing here and not only a cost decision. Note also that Reverse: 1999, Blue Archive,
+Umamusume and Nikke have **no wiki.gg wiki** — those subdomains 401.
+
 `scripts/refresh-sources.ts` enforces all of the above in code — the 6h floor, one request, no
 retries, conditional headers, robots (failing closed when `robots.txt` cannot be read). Anything
 that would make it fetch more often is a change to this section first.
