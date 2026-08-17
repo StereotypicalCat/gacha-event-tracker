@@ -141,8 +141,16 @@ export function EventForm({
   const start = fields(initial?.startsAt ?? null);
   const end = fields(initial?.endsAt ?? null);
 
+  // The reader's own games first, and so the default too. Someone filling this
+  // in by hand is usually doing it *because* the game isn't tracked; making
+  // them scroll past nine that are gets the common case backwards. Stable
+  // within each group, so the tracked ones keep their feed order.
+  const ordered = [...lanes].sort(
+    (a, b) => Number(isCustomGameId(b)) - Number(isCustomGameId(a)),
+  );
+
   const [game, setGame] = useState<LaneId>(
-    initial?.game ?? lanes[0] ?? Object.keys(customGames)[0] ?? "",
+    initial?.game ?? ordered[0] ?? Object.keys(customGames)[0] ?? "",
   );
   const [title, setTitle] = useState(initial?.title ?? "");
   const [type, setType] = useState<EventType>(initial?.type ?? "other");
@@ -198,7 +206,7 @@ export function EventForm({
           onChange={(e) => setGame(e.target.value)}
           className={inputClass()}
         >
-          {lanes.map((id) => (
+          {ordered.map((id) => (
             <option key={id} value={id}>
               {gameMeta(id).name}
               {isCustomGameId(id) ? " (yours)" : ""}

@@ -96,6 +96,44 @@ describe("EventForm", () => {
     expect(html).toContain("I don&#x27;t know when it ends");
   });
 
+  test("puts the reader's own games at the top of the picker, and defaults to one", () => {
+    // Someone entering an event by hand is usually doing it because the game
+    // isn't tracked. Two of theirs to prove the group order, not just a swap.
+    const twoOfMine: CustomGames = {
+      ...GAMES,
+      "mygame:silver-palace": {
+        id: "mygame:silver-palace",
+        name: "Silver Palace",
+        hue: "#5C7CE0",
+        at: AT,
+      },
+    };
+    const html = renderToStaticMarkup(
+      <GameMetaProvider value={(id) => metaFor(id, twoOfMine)}>
+        <EventForm
+          lanes={["genshin", "hsr", "mygame:limbus-company", "mygame:silver-palace"]}
+          customGames={twoOfMine}
+          onSave={() => {}}
+          onCancel={() => {}}
+        />
+      </GameMetaProvider>,
+    );
+
+    // The game picker is the first select; the second is the event kind.
+    const picker = html.slice(0, html.indexOf("</select>"));
+    const order = [...picker.matchAll(/<option value="([^"]+)"/g)].map((m) => m[1]);
+    expect(order).toEqual([
+      "mygame:limbus-company",
+      "mygame:silver-palace",
+      // Tracked games keep their feed order behind them — the sort groups, it
+      // does not reshuffle.
+      "genshin",
+      "hsr",
+    ]);
+    // The default follows the top of the list rather than staying on Genshin.
+    expect(html).toContain('value="mygame:limbus-company" selected');
+  });
+
   test("lets an event be filed under a tracked game too", () => {
     // A source can miss an event in a game we do cover.
     const html = render(
