@@ -14,8 +14,8 @@ are no users.
                     │        │                                     │
                     │        ▼                                     │
                     │   ingest pipeline                            │
-                    │   fetch → parse → validate                   │
-                    │        → reconcile → gate → publish          │
+                    │   fetch → parse → merge → validate           │
+                    │        → reconcile → gate and publish        │
                     │        │                    │                │
                     │        │                    └──► quarantine  │
                     │        ▼                          │          │
@@ -31,9 +31,15 @@ are no users.
                         browser fetch            browser render
                                   │
                                   ▼
-                        localStorage: completions,
-                        filters, region  ← never leaves the device
+                        localStorage: progress, daily, ignored,
+                        prefs, the reader's own games and events
+                                         ← never leaves the device
 ```
+
+**That is the design, and the scheduler half of it is not built yet.** What runs today is
+`scripts/refresh-sources.ts` on a GitHub Actions cron, writing snapshots to disk, and a feed built
+from those files rather than from SQLite — see § Today. The stages, the layering and the review gate
+are unchanged by that; only what wakes them up and where they land is.
 
 The pipeline makes no third-party API calls beyond fetching source pages. There is no inference
 anywhere, at ingest time or in a request path.
@@ -57,22 +63,30 @@ src/
     scheduler.ts        timer + jitter + per-source lock          [not built]
     pipeline.ts         the 6 stages, orchestration only          [not built]
     html.ts             flat-table HTML reader (no dependency)    ✓ built
-    dates.ts            six deterministic date formats            ✓ built
+    dates.ts            ten deterministic date formats            ✓ built
     merge.ts            cross-source dedupe, corroboration        ✓ built
+    sanitize.ts         the trust boundary — stage 2.5            ✓ built
+    robots.ts           robots.txt parsing, matching, host cache  ✓ built
+    snapshots.ts        raw snapshot cache + conditional headers  ✓ built
     validate.ts         zod parse + calendar sanity rules         [not built]
     reconcile.ts        diff vs published, confidence, conflicts  [not built]
     parsers/
       types.ts          SourceParser interface                    ✓ built
       game8.ts          game8.co article calendars                ✓ built
       wikigg.ts         wiki.gg mp-event templates                ✓ built
+      akwiki.ts         arknights.wiki.gg mrfz-wtable             ✓ built
+      fandom.ts         Fandom via the action=parse API           ✓ built
       index.ts          parser registry                           ✓ built
     adapters/
       types.ts          Adapter interface, ParseContext           ✓ built
-      index.ts          SOURCES registry, parseGame()             ✓ built
+      index.ts          SOURCES registry, parseGame(), sanitize   ✓ built
   shared/
     schema.ts           zod schemas — the contract, both sides    ✓ built
     time.ts             clocks, urgency, region resets, captions  ✓ built
     games.ts            per-game name, hue, and reset clock       ✓ built
+    daily.ts            which events repeat, and game-day keys    ✓ built
+    effort.ts           effort estimates and the runway heuristic ✓ built
+    custom.ts           the reader's own games and events (F13)   ✓ built
     feed.ts             the /api/events.json wire contract        ✓ built
   client/                                                         ✓ all built
     main.tsx            render + service worker registration
@@ -96,6 +110,8 @@ src/
       Welcome.tsx       first-run game picker       (F8)
       Toast.tsx         undo an ignore
       UpdateNotice      a newer app is installed and waiting  (F14)
+      YourOwn.tsx       the reader's own games, in settings   (F13)
+      CustomForms.tsx   the game and event forms behind it    (F13)
       Colophon.tsx      credit, disclaimer, repo link
     state/
       storage.ts        namespaced, versioned localStorage
@@ -103,6 +119,8 @@ src/
       useProgress.ts    status, effort, note, daily override  (F12)
       useDailyLog.ts    which game-days are ticked off
       usePrefs.ts       region, filters, focus, onboarding flags
+      useCustom.ts      the reader's own games and events     (F13)
+      gameMeta.tsx      lane id → name, label, hue; resolves custom lanes too
       sort.ts           deadline order, or what you're partway through
       lens.ts           who sees which rows — focus, outstanding, next-to-expire
       useAppUpdate.ts   is a newer build waiting, and taking it   (F14)
@@ -111,7 +129,9 @@ scripts/
   build-feed.ts         fixtures → public/data/events.v1.json     ✓ built
   build-static.ts       shell + worker into public/, build-stamped ✓ built
   parse-fixture.ts      run one adapter offline                   ✓ built
+  refresh-sources.ts    fetch, cache, rebuild — the only network   ✓ built
 fixtures/<game>/        checked-in raw HTML + expected parse output
+snapshots/              the current page per source, rewritten by refresh
 ```
 
 ## Request paths
@@ -142,21 +162,24 @@ in that area needs an explicit auth story first.
 
 1. **Scheduler** wakes every 6h (± jitter). For each source not fetched within its `minIntervalMs`,
    it acquires a per-source lock row and enqueues a run.
-2. **Pipeline** executes the seven stages in `docs/INGESTION.md`. Every stage writes to
+2. **Pipeline** executes the six stages in `docs/INGESTION.md`. Every stage writes to
    `ingest_runs` so a failure is diagnosable after the fact without re-running.
 3. **Publish** upserts into `events` by stable ID, bumping `version` and `updatedAt` when any field
    changed. Events that vanish from a source are *not* deleted — they are marked
    `status = 'delisted'` so a source outage cannot silently empty the calendar.
-4. **Client** fetches the feed, merges the completion set from `localStorage` by event ID, and
-   renders. Merge is a client-side join; the server never learns what the user completed.
+4. **Client** fetches the feed, joins it against `localStorage` by event ID — progress, ticked
+   days, ignores, and the reader's own events — and renders. That join is client-side only; the
+   server never learns what the reader completed, skipped, or typed in.
 
 ## Concurrency and failure
 
 - One in-flight run per source, enforced by a lock row with a stale-lock timeout of 15 minutes.
 - A source that fails keeps its previously published events. A failed run never deletes or blanks
   data — worst case, the game's lane goes stale and gets a warning badge (F7).
-- Three consecutive failures for one source raises its `health` to `failing` in `/api/health`. It
-  does not stop the schedule; a wiki being down for a day is normal.
+- Three consecutive failures for one source raises its `health` to `failing` in `/api/health`, and
+  is what the refresh runner reports as `broken`. It never stops the schedule or the commit — a wiki
+  being down for an afternoon is normal — but it does fail the run afterwards, because at two cycles
+  a day that game's calendar has been served from a checked-in fixture for a day and a half.
 - Raw snapshots are cached by content hash, so a parser change is always evaluated offline against
   stored pages rather than by re-fetching.
 
@@ -179,11 +202,20 @@ seeded SQLite file and cost nothing.
 
 ### Today
 
-`serve.ts` serves `public/` plus `/api/health`, and the feed is generated offline from fixtures by
-`bun run build:feed`. It emits exactly the shape `/api/events.json` will, so the real server slots in
-without the client changing. Reads are confined to `public/` by resolving the path and checking it
-stays inside the root — string-matching `..` is not enough, because encodings and URL normalisation
-both change what the string looks like.
+`serve.ts` serves `public/` plus `/api/health`, and the feed is generated offline by
+`bun run build:feed` from `snapshots/`, falling back to `fixtures/` for a source with no snapshot. It
+emits exactly the shape `/api/events.json` will, so the real server slots in without the client
+changing. Reads are confined to `public/` by resolving the path and checking it stays inside the root
+— string-matching `..` is not enough, because encodings and URL normalisation both change what the
+string looks like.
+
+`scripts/refresh-sources.ts` (`bun run refresh`) is what fills `snapshots/`, and it is the only code
+here that touches the network. `.github/workflows/refresh.yml` runs it at 05:27 and 17:27 UTC and
+commits only when a page actually changed. It stands in for the unbuilt scheduler and enforces the
+same conduct in code — the 6h floor, one request, no retries, conditional headers, per-host spacing,
+robots failing closed. A source that has failed `BROKEN_AFTER_FAILURES` (3) cycles running is
+reported as `broken` and fails the run *after* the commit; see `AGENTS.md` § Scraping conduct for why
+that ordering is load-bearing.
 
 `Dockerfile` builds and serves this; the image runs typecheck and tests during build, ships no source
 or toolchain, and runs unprivileged. `.github/workflows/ci.yml` and `.gitlab-ci.yml` run the same
@@ -250,7 +282,7 @@ other, so `test/update.test.tsx` pins both ends of the `skip-waiting` handshake 
 
 ## Deliberate non-choices
 
-- **No ORM.** `bun:sqlite` plus hand-written SQL in `queries.ts`. The schema is six tables.
+- **No ORM.** `bun:sqlite` plus hand-written SQL in `queries.ts`. The schema is five tables.
 - **No Redis / job queue.** The scheduler is a timer and a lock row. Restarting the process resumes
   cleanly because state is in SQLite.
 - **No server-side rendering.** The feed is small and cacheable; a static SPA is enough.
