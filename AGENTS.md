@@ -115,7 +115,7 @@ src/client/       React app, service worker, manifest
                   zoom.ts — the timeline's scale ladder; pure
 scripts/          build-feed.ts, build-static.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             579 tests
+test/             591 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
@@ -201,10 +201,15 @@ Two more key spaces have the same property, for the same reason:
   at 05:00, not 04:00, so its day rolls at 10:00 UTC on its single UTC-5 server. Do not encode that
   as a bent `resetOffsets` value: shifting a game's stated server offset to land the right instant
   would misreport the server clock to everything else that asks for it. Both fields are absent for
-  every game that takes the default, which is why adding the second one moved nobody's day keys. Every day-key function takes an
-  optional `game` — **anything reading or writing a tick must pass it**, or it writes under one
-  clock and reads under another. A day that drops out of `dailyDays` renders no pip, so a tick on it
-  becomes unreachable; check real fixture windows before changing an offset.
+  every game that takes the default, which is why adding the second one moved nobody's day keys.
+  Neither field can express a server whose offset *shifts*: Fate/Grand Order's English server runs
+  on US Pacific, which observes daylight saving, and one fixed number is wrong for half the year in
+  either direction — so `fgo` takes the default and `games.ts` says why. Reaching for a value anyway
+  would re-label day keys twice a year, which is the one thing this whole section exists to prevent.
+  Every day-key function takes an optional `game` — **anything reading or writing a tick must pass
+  it**, or it writes under one clock and reads under another. A day that drops out of `dailyDays`
+  renders no pip, so a tick on it becomes unreachable; check real fixture windows before changing an
+  offset.
 
 The sanitizer at the ingest boundary recomputes an event ID only when a sanitized title actually
 changed *and* the ID was minted the standard way. If a change to it starts moving IDs on real
@@ -253,6 +258,7 @@ A source whose ToS forbids automated access does not get an adapter. Flag it and
 | `reverse1999.fandom.com` | **Built** (2026-08-17), via `api.php`, not the wiki page — see § Fandom below |
 | `bluearchive.fandom.com` | **Declined.** Fetches and parses fine; the page is the problem. Its `Event/Event_List` is a JP-server archive whose newest entry ended 2026-02-18, so all 88 rows are history and it yields **zero** live or upcoming events. An adapter would put an empty lane on the calendar and, because the runner rejects a body that parses to nothing, report a broken source forever. Same failure as the Infinity Nikki Game8 page, further along |
 | `bluearchive.wiki` | **Built** (2026-08-17), from the rendered `/wiki/Events` page — see § Blue Archive below |
+| `fategrandorder.fandom.com` | **Built** (2026-08-18), via `api.php` like Reverse: 1999 — but off `Event_List_(US)`, **not** `Event_List`, which is the Japanese server. See § Fandom below |
 | `holodori.wiki` | **Built** (2026-08-18), from the rendered `/wiki/Events` page. Miraheze again, so the same call as Blue Archive; CC BY-SA 4.0, no `Content-Signal`, no `Crawl-delay` for `*` |
 | `prydwen.gg`, `gametora.com` | **Cleared, unbuilt.** `User-agent: *` allows the paths we would want. prydwen sets `Crawl-delay: 10`, far below our one-per-6h |
 
@@ -287,6 +293,30 @@ broken build — `skipped_robots` does not touch the failure streak, and the run
 *every* source is blocked — so the scheduled refresh simply never updates this game, and the feed
 falls back to the checked-in fixture. Refreshing it means running `bun run refresh` from an address
 Fandom serves, which is how its first snapshot was taken.
+
+**Two Fandom sources now, and the second one's page is chosen, not obvious.**
+`fategrandorder.fandom.com` publishes two schedules: `Event_List` opens "This page lists all Events
+in Fate/Grand Order Japan", and `Event_List_(US)` is the English server. They run months apart, each
+links the other, and reading the Japanese one on an English calendar is the `akwiki` CN column again
+— it was how this source first landed, and every date it published was a JP date. The adapter is
+pointed at `page=Event_List_(US)` and a test asserts it; `parsers/fandom.ts` carries the reasoning.
+
+Three more things about that page, all of them ways to publish or lose a date:
+
+- **Its sections are fenced by pictures.** `ONGOING EVENTS`, `FUTURE EVENTS` and `PAST EVENTS` are
+  banner images with the label drawn in a positioned `<div>` over them — no heading, no id. Only the
+  ongoing section is parsed, and `canParse` asserts both of the dividers that bound it, so a
+  redesign fails the source rather than emptying the lane.
+- **The other two sections cannot be dated, and that is the whole reason they are skipped.**
+  `FUTURE EVENTS` gives an ETA of `August 2026` — a month with no day, and a day is half an event
+  ID. `PAST EVENTS` is 111 monthly tables that state no year anywhere; the *Japanese* page's
+  equivalents carry it in a `MMYYYY` table id, which is a difference easily assumed away.
+- **Every duration names a zone and no clock** — `August 12, 2026 ~ August 26, 2026 PDT`. So the
+  boundaries stay on the day the page states rather than being shifted into UTC: there is no time of
+  day to anchor a conversion to, and the start's day is part of the event ID. That `PDT` is also the
+  evidence that the English server is one machine on US Pacific — see `games.ts`, where it does
+  *not* become a `resetOffsets` entry, because Pacific observes daylight saving and that field holds
+  one fixed number.
 
 **Blue Archive: the page, never the API — the opposite call to Fandom.** `bluearchive.wiki` is a
 Miraheze wiki, and Miraheze's `robots.txt` **disallows** `/w/` and `/*?action=`. So the route

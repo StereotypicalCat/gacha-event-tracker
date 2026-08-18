@@ -51,7 +51,7 @@ Consequences worth internalising:
 | `game8` | game8.co article calendars | Genshin, Star Rail, Wuthering Waves, ZZZ, Endfield, NTE, Infinity Nikki, Persona 5: The Phantom X |
 | `wikigg` | wiki.gg MediaWiki `mp-event` templates | Endfield |
 | `akwiki` | arknights.wiki.gg's `mrfz-wtable` "Ongoing/upcoming" table | Arknights |
-| `fandom` | Fandom wikis via the MediaWiki `action=parse` API — `Event \| Time Period \| Version` wikitables | Reverse: 1999, Fate/Grand Order |
+| `fandom` | Fandom wikis via the MediaWiki `action=parse` API — two page templates: `Event \| Time Period \| Version` wikitables, and FGO's picture-fenced `ONGOING EVENTS` blocks | Reverse: 1999, Fate/Grand Order |
 | `bawiki` | bluearchive.wiki's rendered `/wiki/Events` — a JP/Global tabber over `Name (EN) \| Start date \| End date \| Notes` wikitables | Blue Archive |
 | `holodoriwiki` | holodori.wiki's rendered `/wiki/Events` — `Current Events` and `Past Events` wikitables over `Event \| Type \| Start Date \| End Date` | hololive Dreams |
 
@@ -74,6 +74,26 @@ rather than parse to zero events. Two page facts drive the rest of it:
   (154 rows, six of them unfinished when the fixture was captured), with no "ongoing" section to
   anchor on. Inclusion is therefore decided against `ctx.now`, the one parser here that does so;
   `akwiki` and `game8` can gate on a heading instead, and should where one exists.
+
+The second Fandom source, Fate/Grand Order, shares the envelope and nothing else, so `fandom` is one
+parser over two templates the way `game8` is one over seven. `canParse` and the parse branch both
+route on the same check, and the differences are worth knowing before touching either:
+
+- **The page is a choice.** `fategrandorder.fandom.com` publishes `Event_List` (Japanese server) and
+  `Event_List_(US)` (English), months apart and cross-linked. The adapter reads the `(US)` one; a
+  test asserts the URL, because this source shipped once off the Japanese page and every date it
+  published was wrong by a server. AGENTS.md § Fandom has the rest.
+- **Sections are fenced by pictures, not headings.** `ONGOING EVENTS`, `FUTURE EVENTS` and
+  `PAST EVENTS` are banner images with the label in a positioned `<div>`. Only the ongoing section
+  is read, and `canParse` asserts both dividers bounding it.
+- **The other two sections are undatable, which is why they are skipped rather than filtered.**
+  Upcoming rows give a month and no day; the 111 past tables state no year at all — unlike the
+  Japanese page's, which carry it in a `MMYYYY` table id.
+- **Durations name a zone but no clock** (`August 12, 2026 ~ August 26, 2026 PDT`), so the stated
+  calendar day is kept as-is: there is no time of day for a UTC conversion to anchor to, and the
+  start's day is half the event ID.
+- **`(US)` is stripped from the title and kept in the URL.** It disambiguates the English article
+  from the Japanese one, so it belongs to the article's name and not to the event's.
 
 `bawiki` is the mirror image of `fandom`: same MediaWiki software, opposite conclusion about which
 surface to read. bluearchive.wiki is Miraheze, whose `robots.txt` disallows `/w/` and `/*?action=`,
@@ -111,7 +131,7 @@ All live in `src/ingest/dates.ts`, each returning null rather than inferring any
 |---|---|---|
 | `parseMonthDayYear` | `August 12, 2026` | Genshin detail rows |
 | `parseMonthDayRange` | `August 12 - September 21, 2026` (year on the end only) | Genshin, NTE |
-| `parseFullRange` | `Aug. 14, 2026 - Aug. 24, 2026` (a year each side) | Star Rail, Wuthering Waves |
+| `parseFullRange` | `Aug. 14, 2026 - Aug. 24, 2026` (a year each side) | Star Rail, Wuthering Waves, Fate/Grand Order |
 | `parseShortSlashRange` | `08/09/26 - 08/30/26` | Endfield |
 | `parseSlashDateTimeRange` | `2021/01/16 04:00 - 2021/01/31 03:59` | Genshin past events |
 | `parseLabelledStartEnd` | `Start: January 24, 2025 End: Permanent` | Infinity Nikki |
@@ -177,6 +197,7 @@ produced it.
 | Label/value or column tables with full dates including a year | Good — an existing parser may already handle it |
 | Dates without a year, or no end date at all | **Unsupportable** — yields nothing rather than guessing |
 | Free-form prose with no table structure | Find a different source |
+| One wiki, two servers' schedules | **Read which one before writing anything.** Three sources here publish both: `akwiki` in a CN column, `bawiki` in a JP tab, `fategrandorder.fandom.com` on a whole separate page that says so in its first sentence. Every one of them parses cleanly and every one of them is months wrong for our readers |
 | A clean table whose newest row is months old | **Not a source, an archive.** Check the *latest* date before writing anything: `bluearchive.fandom.com` parses perfectly and yields zero live events, which shows up as an empty lane and a permanently rejected snapshot rather than as an error |
 
 Game8 uses at least seven page templates, a game's page may use any of them, and one page may mix
