@@ -109,7 +109,9 @@ const SOURCES: SourceSpec[] = [
   {
     id: "fgo-fandom-events",
     game: "fgo",
-    url: "https://fategrandorder.fandom.com/api.php?action=parse&page=Event_List&prop=text&formatversion=2&format=json",
+    // `Event_List` is the Japanese server and `Event_List_(US)` is ours; they
+    // run months apart. See parsers/fandom.ts § the English-server half.
+    url: "https://fategrandorder.fandom.com/api.php?action=parse&page=Event_List_(US)&prop=text&formatversion=2&format=json",
     parserId: "fandom",
   },
   {

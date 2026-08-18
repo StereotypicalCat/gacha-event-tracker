@@ -1,5 +1,5 @@
 import { eventId, type GachaEvent } from "../../shared/schema.ts";
-import { parseMonthDayRange, parseOpenRange, parseOrdinalDateTimeRange } from "../dates.ts";
+import { parseFullRange, parseOrdinalDateTimeRange } from "../dates.ts";
 import { text } from "../html.ts";
 import type { ParseContext } from "../adapters/types.ts";
 import { inferType } from "./game8.ts";
@@ -59,8 +59,29 @@ const EDIT_SECTION = /<span\b[^>]*class="[^"]*mw-editsection[^"]*"[^>]*>[\s\S]*?
  */
 const ARTICLE_LINK = /<a\b[^>]*href="(\/wiki\/(?!Special:)[^"#?]+)"/i;
 
-const FGO_TABLE = /<table\b[^>]*id="(\d{2})(\d{4})"[^>]*class="[^"]*wikitable"[^>]*>([\s\S]*?)<\/table>/gi;
-const FGO_ROW_BLOCK = /<th\b[^>]*colspan="2"[^>]*>([\s\S]*?)<\/th>[\s\S]*?<td\b[^>]*>([\s\S]*?)<\/td>\s*<td\b[^>]*>([\s\S]*?)<\/td>/gi;
+/**
+ * `Event_List_(US)` fences its three sections with banner images that carry
+ * their label in an absolutely-positioned `<div>` drawn over the picture. That
+ * label is the only thing in the markup naming a section — there is no heading
+ * and no id — so it is what inclusion is decided on.
+ */
+const FGO_ONGOING_DIVIDER = />\s*ONGOING EVENTS\s*</i;
+const FGO_FUTURE_DIVIDER = />\s*FUTURE EVENTS\s*</i;
+
+/** The title link, and the duration line, inside one ongoing block. */
+const FGO_TITLE_LINK = /<a\b[^>]*href="(\/wiki\/(?!Special:)[^"#?]+)"[^>]*>([^<]*)<\/a>/i;
+const FGO_DURATION = /<b>\s*Duration:\s*<\/b>([^<]*)/i;
+
+/**
+ * The wiki disambiguates an English article from its Japanese counterpart by
+ * appending `(US)` to the article name — `Archetype Inception Chapter Release`
+ * exists twice, once per server. Every row this source publishes therefore
+ * carries the suffix, which makes it constant noise on a calendar that shows
+ * one server's schedule and names no other. It is stripped here rather than in
+ * the sanitizer because it is a fact about *this page's naming convention*,
+ * which is a parser's job to know.
+ */
+const FGO_ARTICLE_SUFFIX = /\s*\(US\)\s*$/;
 
 /** The rendered HTML inside an `action=parse` response, or null. */
 export function renderedHtml(body: string): string | null {
@@ -72,66 +93,116 @@ export function renderedHtml(body: string): string | null {
   }
 
   const html = (payload as { parse?: { text?: unknown } } | null)?.parse?.text;
-  if (typeof html === "object" && html !== null && '*' in html) {
-    return (html as any)['*'] as string;
-  }
   return typeof html === "string" ? html : null;
 }
 
-function parseFgoEventsPage(rendered: string, ctx: ParseContext): GachaEvent[] {
+/**
+ * True for `Event_List_(US)`, and the gate on the branch below.
+ *
+ * Every anchor the FGO reader depends on, asserted together: the two dividers
+ * that fence the ongoing section, and the label carrying its dates. Asserting
+ * them here rather than discovering them missing mid-parse is what turns a
+ * template change into a stalled source — the runner rejects a body that parses
+ * worse than the one it holds — instead of a lane that quietly goes empty.
+ */
+function isFgoEventList(rendered: string): boolean {
+  return (
+    FGO_ONGOING_DIVIDER.test(rendered) &&
+    FGO_FUTURE_DIVIDER.test(rendered) &&
+    FGO_DURATION.test(rendered)
+  );
+}
+
+/**
+ * The English-server half of the Fate/Grand Order wiki.
+ *
+ * **The page is chosen, not incidental.** This wiki publishes two schedules:
+ * `Event_List` opens "This page lists all Events in Fate/Grand Order Japan",
+ * and `Event_List_(US)` is the English server. They run months apart and the
+ * Japanese one is the trap — the same hazard as the CN column on `akwiki` and
+ * the JP tab on `bawiki`, and the same answer: publish the server our readers
+ * are on. Each page links the other, so landing on the wrong one is easy and
+ * silent.
+ *
+ * **Only the ongoing section is parsed**, of the three the page fences off:
+ *
+ * - `ONGOING EVENTS` — one `<h2>` per event with a `<b>Duration:</b>` line
+ *   stating both boundaries. This is the section with dates in it.
+ * - `FUTURE EVENTS` — an `Upcoming Events | ETA` table whose ETA column reads
+ *   `August 2026`. A month with no day is not a start date, and a start date is
+ *   half of an event id, so these are skipped rather than pinned to the 1st.
+ * - `PAST EVENTS` — 111 monthly tables of finished events. Unlike the Japanese
+ *   page, whose equivalent tables carry the month in a `MMYYYY` table id, these
+ *   state no year anywhere in the markup. Undatable, and history regardless.
+ *
+ * **The dates state a zone but no clock.** Every duration ends `PDT`, which is
+ * what makes the single Pacific-time server visible, but the boundaries are
+ * bare calendar days. So they are read as day precision on the day the page
+ * states and *not* shifted into UTC: with no time of day to anchor, converting
+ * would move the stated day for a fact the page never published. `PDT` is also
+ * a daylight abbreviation the page swaps for `PST` in winter, which is exactly
+ * the shifting-offset case `NAMED_ZONE_OFFSET_MS` refuses to carry.
+ *
+ * **The section is sliced by index, then split on `<h2>`.** A single regex
+ * spanning heading-to-duration needs nested lazy quantifiers, and on a 620KB
+ * body those backtrack catastrophically the moment one of the anchors stops
+ * matching — a renamed `Duration:` label would hang the refresh runner instead
+ * of yielding nothing. Bounded character classes cannot do that.
+ */
+function parseFgoOngoingEvents(
+  rendered: string,
+  ctx: ParseContext,
+): GachaEvent[] {
   const flat = rendered.replace(EDIT_SECTION, "").replace(/\s+/g, " ");
+
+  const start = flat.search(FGO_ONGOING_DIVIDER);
+  if (start === -1) return [];
+  const rest = flat.slice(start);
+  const end = rest.search(FGO_FUTURE_DIVIDER);
+  // Both dividers are asserted by `canParse`. Bailing rather than reading to
+  // the end of the body keeps a renamed divider from sweeping the whole past
+  // archive into the ongoing section.
+  if (end === -1) return [];
+
   const nowMs = Date.parse(ctx.now);
   const out: GachaEvent[] = [];
 
-  const ONGOING_BLOCK = /<h2\b[^>]*>[\s\S]*?<a\b[^>]*href="(\/wiki\/(?!Special:)[^"#?]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?<\/h2>[\s\S]*?<b>Duration:<\/b>\s*([\s\S]*?)(?:<\/p>|<br\s*\/?>)/gi;
+  for (const block of rest.slice(0, end).split(/<h2\b/i).slice(1)) {
+    const link = FGO_TITLE_LINK.exec(block);
+    if (link === null) continue;
 
-  for (const match of flat.matchAll(ONGOING_BLOCK)) {
-    const href = match[1] ?? "";
-    const titleHtml = match[2] ?? "";
-    const title = text(titleHtml).normalize("NFKC").trim();
-    if (!title || /permanent/i.test(title)) continue;
+    const title = text(link[2] ?? "").replace(FGO_ARTICLE_SUFFIX, "");
+    if (title === "") continue;
 
-    let rawDate = text(match[3] ?? "").replace(/&#160;/g, " ").replace(/~/g, "-").replace(/JST/i, "").trim();
-    if (!rawDate) continue;
+    const duration = FGO_DURATION.exec(block);
+    if (duration === null) continue;
 
-    rawDate = rawDate.replace(/(,\s*\d{4})\s*-/, " -");
+    // The page separates the two boundaries with a tilde. Everything else about
+    // the line — both years stated, trailing zone — `parseFullRange` already
+    // reads, and it returns null rather than inferring a missing half.
+    const range = parseFullRange(text(duration[1] ?? "").replace(/~/g, "-"));
+    if (range === null) continue;
+    if (range.end.iso <= range.start.iso) continue;
 
-    const parts = rawDate.split(/[-–—]/).map((s) => s.trim());
-    let start: any = null;
-    let end: any = null;
-
-    if (parts.length === 1 && parts[0]) {
-      const openMatch = parseOpenRange(parts[0]);
-      if (openMatch) {
-        start = openMatch.start;
-        end = null;
-      }
-    } else if (parts.length >= 2 && parts[0] && parts[1]) {
-      const rangeMatch = parseMonthDayRange(rawDate);
-      if (rangeMatch) {
-        start = rangeMatch.start;
-        end = rangeMatch.end;
-      }
-    }
-
-    if (!start) continue;
-    if (end && end.iso <= start.iso) continue;
-    const endMs = end ? Date.parse(end.iso) : Date.parse(start.iso) + 86400000;
-    if (endMs < nowMs) continue;
+    // "Ongoing" is maintained by hand and goes stale before anyone moves a row,
+    // so the heading vouching for an event is not enough on its own.
+    if (Date.parse(range.end.iso) < nowMs) continue;
 
     out.push({
-      id: eventId(ctx.game, title, start.iso),
+      id: eventId(ctx.game, title, range.start.iso),
       game: ctx.game,
       title,
       type: inferType(title),
       summary: null,
-      startsAt: start.iso,
-      startPrecision: start.precision,
-      endsAt: end ? end.iso : null,
-      endPrecision: end ? end.precision : "unknown",
+      startsAt: range.start.iso,
+      startPrecision: range.start.precision,
+      endsAt: range.end.iso,
+      endPrecision: range.end.precision,
+      // One worldwide server on Pacific time — the `PDT` on every duration is
+      // the evidence — so there is no per-region end to scope.
       regionScoped: false,
       regionEnds: null,
-      sourceUrl: new URL(href, ctx.sourceUrl).toString(),
+      sourceUrl: new URL(link[1] ?? "", ctx.sourceUrl).toString(),
       sourceId: ctx.sourceId,
       status: "published",
       confidence: 0.95,
@@ -142,83 +213,6 @@ function parseFgoEventsPage(rendered: string, ctx: ParseContext): GachaEvent[] {
     });
   }
 
-  for (const tableMatch of flat.matchAll(FGO_TABLE)) {
-    const tableYear = parseInt(tableMatch[2]!, 10);
-    const innerHtml = tableMatch[3] ?? "";
-
-    for (const blockMatch of innerHtml.matchAll(FGO_ROW_BLOCK)) {
-      const thHtml = blockMatch[1] ?? "";
-      const imgTdHtml = blockMatch[2] ?? "";
-      const dateTdHtml = blockMatch[3] ?? "";
-
-      // Normalize NFKC immediately so it matches the sanitizer's fixed point.
-      const title = text(thHtml).normalize("NFKC").trim();
-      if (!title) continue;
-
-      let rawDate = text(dateTdHtml).replace(/&#160;/g, " ").replace(/~/g, "-").trim();
-      if (!rawDate) continue;
-
-      const parts = rawDate.split(/[-–—]/).map((s) => s.trim());
-      let start: any = null;
-      let end: any = null;
-
-      if (parts.length === 1 && parts[0]) {
-        const openMatch = parseOpenRange(parts[0] + ", " + tableYear);
-        if (openMatch) {
-          start = openMatch.start;
-          end = null;
-        }
-      } else if (parts.length >= 2 && parts[0] && parts[1]) {
-        const mStart = /([A-Za-z]+)/.exec(parts[0])?.[1]?.toLowerCase() || "";
-        const mEnd = /([A-Za-z]+)/.exec(parts[1])?.[1]?.toLowerCase() || "";
-        const monthsList = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
-        const startM = monthsList.findIndex((x) => mStart.startsWith(x));
-        const endM = monthsList.findIndex((x) => mEnd.startsWith(x));
-        
-        let endYear = tableYear;
-        if (startM > -1 && endM > -1 && startM > endM) {
-          endYear = tableYear + 1;
-        }
-
-        const rangeStr = parts[0] + " - " + parts[1] + ", " + endYear;
-        const rangeMatch = parseMonthDayRange(rangeStr);
-        if (rangeMatch) {
-          start = rangeMatch.start;
-          end = rangeMatch.end;
-        }
-      }
-
-      if (!start) continue;
-      if (/permanent/i.test(title)) continue;
-      if (end && end.iso <= start.iso) continue;
-      const endMs = end ? Date.parse(end.iso) : Date.parse(start.iso) + 86400000;
-      if (endMs < nowMs) continue;
-
-      const href = ARTICLE_LINK.exec(thHtml)?.[1] || ARTICLE_LINK.exec(imgTdHtml)?.[1];
-
-      out.push({
-        id: eventId(ctx.game, title, start.iso),
-        game: ctx.game,
-        title,
-        type: inferType(title),
-        summary: null,
-        startsAt: start.iso,
-        startPrecision: start.precision,
-        endsAt: end ? end.iso : null,
-        endPrecision: end ? end.precision : "unknown",
-        regionScoped: false,
-        regionEnds: null,
-        sourceUrl: href === undefined ? ctx.sourceUrl : new URL(href, ctx.sourceUrl).toString(),
-        sourceId: ctx.sourceId,
-        status: "published",
-        confidence: 0.95,
-        extractionMethod: "parser",
-        version: 1,
-        firstSeenAt: ctx.now,
-        updatedAt: ctx.now,
-      });
-    }
-  }
   return out;
 }
 
@@ -229,10 +223,13 @@ export function parseFandomEventsPage(
   const rendered = renderedHtml(body);
   if (rendered === null) return [];
 
-  // Branch for FGO
-  if (/<table\b[^>]*id="\d{6}"[^>]*class="[^"]*wikitable"/i.test(rendered)) {
-    const events = parseFgoEventsPage(rendered, ctx);
-    return events.sort((a, b) =>
+  // Two Fandom wikis, two page templates, one host family — the same split
+  // `game8.ts` carries for seven shapes. The divider layout is what tells them
+  // apart, and `canParse` asserts it, so a template change fails the source
+  // loudly instead of routing an FGO page through the `Time Period` reader and
+  // emptying the lane.
+  if (isFgoEventList(rendered)) {
+    return parseFgoOngoingEvents(rendered, ctx).sort((a, b) =>
       a.startsAt === b.startsAt
         ? a.id.localeCompare(b.id)
         : a.startsAt.localeCompare(b.startsAt),
@@ -337,9 +334,9 @@ export const fandomParser: SourceParser = {
     // the Cloudflare interstitial the plain page serves would all land here.
     const rendered = renderedHtml(body);
     if (rendered === null) return false;
-    const isStandard = /class="[^"]*wikitable/.test(rendered) && /Time Period/i.test(rendered);
-    const isFgo = /<table\b[^>]*id="\d{6}"[^>]*class="[^"]*wikitable"/i.test(rendered);
-    return isStandard || isFgo;
+    const isTimePeriodTable =
+      /class="[^"]*wikitable/.test(rendered) && /Time Period/i.test(rendered);
+    return isTimePeriodTable || isFgoEventList(rendered);
   },
   parse: parseFandomEventsPage,
 };

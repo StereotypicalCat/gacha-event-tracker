@@ -919,3 +919,142 @@ describe("hololive Dreams wiki", () => {
     }
   });
 });
+
+describe("Fate/Grand Order wiki", () => {
+  const fixture = "fixtures/fgo/fandom-events-2026-08-18";
+  const fgo = adapter("fgo-fandom-events");
+
+  /** The page's three section dividers, as it draws them. */
+  const divider = (label: string) =>
+    `<div style="position: absolute;"><b><span style="color:#fff;">${label}</span></b></div>`;
+
+  const block = (title: string, duration: string) =>
+    `<h2><span class="mw-headline"><a href="/wiki/${title.replace(/ /g, "_")}"` +
+    ` title="${title}">${title}</a></span></h2>` +
+    `<p><b>Duration:</b> ${duration}</p>`;
+
+  const envelope = (inner: string) =>
+    JSON.stringify({ parse: { title: "Event List (US)", text: inner } });
+
+  function parse(inner: string) {
+    return fgo.parse(envelope(inner), {
+      now: NOW,
+      sourceUrl: fgo.url,
+      sourceId: fgo.id,
+      game: fgo.game,
+    });
+  }
+
+  test("reads the English server, and the source url says so", () => {
+    // The wiki publishes two schedules months apart — `Event_List` opens "This
+    // page lists all Events in Fate/Grand Order Japan" — and the adapter must
+    // be pointed at the other one. A JP date on an English calendar is the
+    // akwiki CN column again.
+    expect(fgo.url).toContain("Event_List_(US)");
+    expect(fgo.url).not.toMatch(/page=Event_List&/);
+  });
+
+  test("publishes every ongoing event on the page and nothing else", async () => {
+    // Counted independently off the fixture: four `<h2>` blocks carry a
+    // `Duration:` line, all four between the ONGOING and FUTURE dividers.
+    const events = await runAdapter(fgo, fixture);
+    expect(events.map((e) => e.title)).toEqual([
+      "FGO Summer 2026 Event",
+      "Archetype Inception Chapter Release",
+      "Ordeal Call III Clear Support Campaign",
+      "Archetype Inception Part 3 Release Campaign",
+    ]);
+  });
+
+  test("skips the FUTURE section, whose ETAs are a month with no day", async () => {
+    // "August 2026" is not a start date, and a start date is half of an event
+    // id. The upcoming table names events we would otherwise want.
+    const events = await runAdapter(fgo, fixture);
+    for (const e of events) {
+      expect(e.title).not.toMatch(/Back to School|Downloads Campaign/);
+      // Nothing on this page reaches us without both boundaries stated.
+      expect(e.endsAt).not.toBeNull();
+      expect(e.startPrecision).toBe("day");
+      expect(e.endPrecision).toBe("day");
+    }
+  });
+
+  test("skips the PAST section, 111 tables the page states no year for", async () => {
+    const events = await runAdapter(fgo, fixture);
+    expect(events).toHaveLength(4);
+    for (const e of events) expect(e.title).not.toMatch(/Part 2 Release/);
+  });
+
+  test("strips the (US) article suffix from the title, never from the url", async () => {
+    // The suffix disambiguates the English article from the Japanese one. It
+    // is the article's name, so it stays in the link, and it is noise on a
+    // calendar that shows one server, so it leaves the title.
+    const [summer] = await runAdapter(fgo, fixture);
+    expect(summer?.title).toBe("FGO Summer 2026 Event");
+    expect(summer?.sourceUrl).toBe(
+      "https://fategrandorder.fandom.com/wiki/FGO_Summer_2026_Event_(US)",
+    );
+    expect(summer?.id).toBe("fgo:fgo-summer-2026-event:2026-07-15");
+  });
+
+  test("keeps the day the page states rather than shifting it out of PDT", async () => {
+    // The durations name a zone but no clock, so there is no time of day to
+    // anchor a conversion to — and the day is half the event id.
+    const [summer] = await runAdapter(fgo, fixture);
+    expect(summer?.startsAt).toBe("2026-07-15T00:00:00.000Z");
+    expect(summer?.endsAt).toBe("2026-09-01T00:00:00.000Z");
+  });
+
+  test("drops an ongoing row the wiki has not got round to moving", () => {
+    // "Ongoing" is maintained by hand. holodori.wiki taught this one.
+    const events = parse(
+      divider("ONGOING EVENTS") +
+        block("Finished Campaign", "June 1, 2026 ~ July 1, 2026 PDT") +
+        block("Live Campaign", "August 1, 2026 ~ September 1, 2026 PDT") +
+        divider("FUTURE EVENTS"),
+    );
+    expect(events.map((e) => e.title)).toEqual(["Live Campaign"]);
+  });
+
+  test("skips a duration missing a boundary rather than inventing one", () => {
+    const events = parse(
+      divider("ONGOING EVENTS") +
+        block("Open Ended", "August 1, 2026 ~ TBD PDT") +
+        block("No Year", "August 1 ~ September 1 PDT") +
+        divider("FUTURE EVENTS"),
+    );
+    expect(events).toEqual([]);
+  });
+
+  test("yields nothing for the Japanese page, and canParse says why", () => {
+    // `Event_List` has no dividers and no `Duration:` label on its archive
+    // tables. Refusing it in `canParse` is what makes the runner reject the
+    // body and hold the previous snapshot, instead of the lane going empty.
+    const japanese =
+      '<div><p>This page lists all Events in Fate/Grand Order Japan.</p>' +
+      '<table id="082026" class="wikitable"><tr><th colspan="2">Azrael Mausoleum</th></tr>' +
+      "<tr><td></td><td>August 2 ~ August 12</td></tr></table></div>";
+    expect(fandomParser.canParse(envelope(japanese))).toBe(false);
+    // And the seam turns that refusal into a loud failure rather than an
+    // empty list, which is what makes the runner hold the previous snapshot.
+    expect(() => parse(japanese)).toThrow(/redesigned/);
+  });
+
+  test("a renamed divider fails the source instead of emptying the lane", async () => {
+    const html = JSON.parse(
+      await Bun.file(`${fixture}.html`).text(),
+    ).parse.text as string;
+    expect(fandomParser.canParse(envelope(html))).toBe(true);
+    expect(
+      fandomParser.canParse(envelope(html.replace("ONGOING EVENTS", "LIVE NOW"))),
+    ).toBe(false);
+  });
+
+  test("reports one global end rather than inventing per-region ones", async () => {
+    // One worldwide server on Pacific time — the PDT on every duration.
+    for (const e of await runAdapter(fgo, fixture)) {
+      expect(e.regionScoped).toBe(false);
+      expect(e.regionEnds).toBeNull();
+    }
+  });
+});
