@@ -5,6 +5,7 @@ import { guessRegion } from "../../shared/time.ts";
 import type { SortMode } from "./sort.ts";
 import { KEYS, readJson, writeJson } from "./storage.ts";
 import type { TimelineGroup } from "./lanes.ts";
+import { DEFAULT_THEME_CHOICE, type ThemeChoice } from "./theme.ts";
 import { DEFAULT_DAY_WIDTH } from "./zoom.ts";
 
 /**
@@ -98,6 +99,16 @@ export interface Prefs {
   showCompleted: boolean;
   /** Reveal events the reader has ignored, so they can be restored. */
   showIgnored: boolean;
+  /**
+   * Which ground the app is drawn on: `dark`, `light`, or `system` to follow
+   * the device.
+   *
+   * Dark is the default and not a placeholder — see `DEFAULT_THEME_CHOICE`. The
+   * value only decides colour: nothing about what is shown, sorted, counted or
+   * stored changes with it, which is why it can be flipped mid-read with
+   * nothing to save.
+   */
+  theme: ThemeChoice;
   /** False until the reader confirms or changes the guessed region. */
   regionConfirmed: boolean;
   /** False until the reader has picked their games on first run. */
@@ -116,6 +127,7 @@ function defaults(): Prefs {
     detectDaily: false,
     showCompleted: true,
     showIgnored: false,
+    theme: DEFAULT_THEME_CHOICE,
     regionConfirmed: false,
     onboarded: false,
   };

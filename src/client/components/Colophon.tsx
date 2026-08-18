@@ -1,4 +1,4 @@
-import { gameMeta } from "../../shared/games.ts";
+import { useGameMeta } from "../state/gameMeta.tsx";
 import { freshness, type SourceHealth } from "../../shared/feed.ts";
 import { formatAbsolute, formatRemaining } from "../../shared/time.ts";
 
@@ -128,7 +128,13 @@ export function Colophon({
   sources: SourceHealth[];
   now: number;
 }) {
-  const games = [...new Set(sources.map((s) => s.game))].map(gameMeta);
+  // The tree's resolver rather than the module lookup: it is the one that
+  // answers for a reader's own games, and the one that reads a hue for the
+  // theme the page is in.
+  const gameMeta = useGameMeta();
+  const games = [...new Set(sources.map((s) => s.game))].map((id) =>
+    gameMeta(id),
+  );
   const studios = [...new Set(games.map((g) => g.studio))];
   const { refreshedAt, stale } = freshness(sources, now);
 
@@ -282,6 +288,26 @@ export function Colophon({
         {"."}
       </p>
 
+      {IDEA_CREDITS.length > 0 && (
+        <p className="mt-2">
+          Additional ideas and design from{" "}
+          {IDEA_CREDITS.map((c, i) => (
+            <span key={c.handle}>
+              {i > 0 && (i === IDEA_CREDITS.length - 1 ? " and " : ", ")}
+              <a
+                href={c.url}
+                target="_blank"
+                rel="noreferrer noopener"
+                className={LINK}
+              >
+                {c.handle}
+              </a>
+            </span>
+          ))}
+          {"."}
+        </p>
+      )}
+
       <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
         <a
           href={AUTHOR.github}
@@ -302,26 +328,6 @@ export function Colophon({
           Source code
         </a>
       </p>
-
-      {IDEA_CREDITS.length > 0 && (
-        <p className="mt-2">
-          Additional ideas and design from{" "}
-          {IDEA_CREDITS.map((c, i) => (
-            <span key={c.handle}>
-              {i > 0 && (i === IDEA_CREDITS.length - 1 ? " and " : ", ")}
-              <a
-                href={c.url}
-                target="_blank"
-                rel="noreferrer noopener"
-                className={LINK}
-              >
-                {c.handle}
-              </a>
-            </span>
-          ))}
-          {"."}
-        </p>
-      )}
 
       {/*
         Placed under the disclaimer that admits dates can be wrong, because that

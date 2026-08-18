@@ -31,6 +31,7 @@ import {
 import { clockFor, formatRemaining } from "../shared/time.ts";
 import { dailySummary, isDaily, resolveDaily } from "../shared/daily.ts";
 import { GameMetaProvider, type MetaResolver } from "./state/gameMeta.tsx";
+import { metaOnTheme, useTheme } from "./state/theme.ts";
 import {
   isCustomGameId,
   type CustomEvents,
@@ -108,16 +109,26 @@ export function App() {
   const prog = useProgress();
   const daily = useDailyLog();
   const custom = useCustom();
+  // Colour only: which ground the page is drawn on, written to the document by
+  // the hook. Nothing else in the app asks what it is — the tokens in
+  // styles.css answer for every component — except the hues below.
+  const theme = useTheme(prefs.theme);
   /**
    * How every lane in this tree is named and coloured.
    *
    * App owns it because App is the only thing holding the reader's own games,
    * and hands it down rather than letting components import a lookup that can
    * only ever answer for the tracked ones.
+   *
+   * It is also where a hue meets the theme. A hue is data — ours in `games.ts`,
+   * theirs in their browser — and all of it was picked against the dark ground,
+   * so on paper the bright ones need darkening to stay readable. Doing it here
+   * means every lane label, chip, rail and bar in the tree gets the adjusted
+   * answer without a single component knowing a theme exists.
    */
   const gameMeta = useMemo<MetaResolver>(
-    () => (id) => metaFor(id, custom.games),
-    [custom.games],
+    () => (id) => metaOnTheme(metaFor(id, custom.games), theme),
+    [custom.games, theme],
   );
   // "Completed" is now one status among several; the rest of the UI still asks
   // this question a lot, so keep a cheap shorthand.
