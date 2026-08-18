@@ -373,7 +373,11 @@ function parseRange(
 export function inferType(title: string): EventType {
   const t = title.toLowerCase();
   if (/\brerun\b/.test(t)) return "rerun";
-  if (/\b(banner|wish|warp|convene|gacha)\b/.test(t)) return "banner";
+  // Every game names its gacha something else — "Summoning Campaign" is the
+  // Fate/Grand Order one, and it is the whole of that page's banner vocabulary.
+  if (/\b(banner|wish|warp|convene|gacha|summon(?:ing)?)\b/.test(t)) {
+    return "banner";
+  }
   if (/\b(login|log-in|sign-in|check-in|daily bonus)\b/.test(t)) return "login";
   if (/\b(challenge|trial|onslaught|abyss|tower|test runs?|clash|combat)\b/.test(t))
     return "challenge";

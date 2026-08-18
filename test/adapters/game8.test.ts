@@ -178,6 +178,7 @@ describe("inferType", () => {
     ["Gold Clash", "challenge"],
     ["Seize the Day Login Bonus", "login"],
     ["Epitome Invocation Banner", "banner"],
+    ["Chaldea Boys Collection Summoning Campaign", "banner"],
     ["Mutual Aid in Bloom: Into the Frostlands", "other"],
   ];
   test.each(cases)("%s → %s", (title, expected) => {
