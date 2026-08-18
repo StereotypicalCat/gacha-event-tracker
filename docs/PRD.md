@@ -51,13 +51,14 @@ event, because a missing event sends them to a wiki while a wrong one makes them
 | Neverness to Everness | `nte` |
 
 Added since launch, on the strength of the release thread (`docs/FEEDBACK.md` § P1): Infinity Nikki
-(`nikki`), Persona 5: The Phantom X (`p5x`), Reverse: 1999 (`r1999`), Blue Archive (`ba`).
+(`nikki`), Persona 5: The Phantom X (`p5x`), Reverse: 1999 (`r1999`), Blue Archive (`ba`),
+Fate/Grand Order (`fgo`), hololive Dreams (`holodori`).
 **`GameId` in `src/shared/schema.ts` is the live answer** and `SOURCES` says which of them actually
 have a source — this table is the launch scope, not a roster to keep in sync.
 
 Adding a game must require no change to `GachaEvent` — only a `GameId` entry, its `games.ts`
 metadata, and a source registration. That is the test of whether the data model is right, and it has
-held: the eleven games here have cost the event schema nothing. Per-game *metadata* does occasionally
+held: the thirteen games here have cost the event schema nothing. Per-game *metadata* does occasionally
 grow (Reverse: 1999 needed `resetHourLocal` for a 05:00 reset), which is a different file and moves
 no stored key. A game may have several sources; see `docs/INGESTION.md` § Three layers.
 

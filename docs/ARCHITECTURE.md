@@ -77,6 +77,7 @@ src/
       akwiki.ts         arknights.wiki.gg mrfz-wtable             ✓ built
       fandom.ts         Fandom via the action=parse API           ✓ built
       bawiki.ts         bluearchive.wiki JP/Global tabber         ✓ built
+      holodori.ts       holodori.wiki Current/Past Events tables   ✓ built
       index.ts          parser registry                           ✓ built
     adapters/
       types.ts          Adapter interface, ParseContext           ✓ built

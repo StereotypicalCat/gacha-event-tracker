@@ -36,8 +36,8 @@ A web app that aggregates live and upcoming events across popular gacha games, p
 calendar, sorts them by end date or by what the reader is partway through, tracks day-by-day
 progress on events that repeat daily, and lets a user mark events completed.
 
-**Status: working app, refreshing itself on a schedule.** Schema, five parsers, twelve sources across
-eleven games, the full interface, offline support, a static server, a Docker image and CI all exist and
+**Status: working app, refreshing itself on a schedule.** Schema, six parsers, fourteen sources across
+thirteen games, the full interface, offline support, a static server, a Docker image and CI all exist and
 are tested. The refresh runner (`bun run refresh`) fetches, caches raw snapshots and rebuilds the
 feed; `.github/workflows/refresh.yml` runs it twice a day and commits only when a page actually
 changed. The SQLite layer and the review queue are still specified in `docs/` but not built, so the
@@ -105,8 +105,8 @@ re-verify a sample against the live page afterward.
 ```
 src/shared/       schema.ts (the contract), time.ts, daily.ts, effort.ts, games.ts, feed.ts
                   custom.ts — reader-authored games and events, and their key spaces
-src/ingest/       html.ts, dates.ts (eleven formats), merge.ts, sanitize.ts, robots.ts, snapshots.ts
-  parsers/        game8.ts, wikigg.ts, akwiki.ts, fandom.ts, bawiki.ts — keyed by SITE, not game
+src/ingest/       html.ts, dates.ts (twelve formats), merge.ts, sanitize.ts, robots.ts, snapshots.ts
+  parsers/        game8.ts, wikigg.ts, akwiki.ts, fandom.ts, bawiki.ts, holodori.ts — keyed by SITE, not game
   adapters/       index.ts — SOURCES registry binding url+game+parser, and the sanitize seam
 src/client/       React app, service worker, manifest
   state/          progress, daily log, ignores, prefs, sort — all localStorage
@@ -114,7 +114,7 @@ src/client/       React app, service worker, manifest
                   lens.ts — who sees which rows (focus, outstanding, next-to-expire); pure
 scripts/          build-feed.ts, build-static.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             536 tests
+test/             560 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
@@ -146,10 +146,11 @@ These come from how gacha games actually schedule things, and they cause most bu
 - **Skip, never guess.** Every function in `dates.ts` returns `null` rather than inferring a missing
   year, month, or end. `readColumnTable` drops a row it cannot date. An omitted event is a
   recoverable disappointment; a confidently wrong date is the failure this product exists to prevent.
-- **Parsers are keyed by site, not game.** One `game8` parser serves eight sources; `wikigg`,
-  `akwiki`, `fandom` and `bawiki` serve one each — the first two share a host family and have
-  entirely different templates. Adding a source for a known site is one `SOURCES` entry; a new site is
-  a parser module.
+- **Parsers are keyed by site, not game.** One `game8` parser serves eight sources and `fandom` two;
+  `wikigg`, `akwiki`, `bawiki` and `holodoriwiki` serve one each — the first two share a host family
+  and have entirely different templates, and the last two are both Miraheze wikis whose page
+  templates have nothing in common. Adding a source for a known site is one `SOURCES` entry; a new
+  site is a parser module.
 - **A source may publish more than one region's schedule.** Arknights' wiki lists CN and Global on
   every row, five months apart. Publish the one our readers are on and skip the row that lacks it —
   a CN date on a Global calendar is a confidently wrong date, not a near miss.
@@ -215,7 +216,7 @@ Sources are community wikis. Treat them as a guest would:
 - Honor `robots.txt`; set a descriptive `User-Agent` with a contact URL.
 - One request per source per refresh cycle, minimum 6 hours apart.
 - **Space requests to one host**, honouring its `Crawl-delay` and defaulting to 2s. Eight of the
-  twelve sources are game8.co pages, so the per-source floor alone still permits one cycle to arrive
+  fourteen sources are game8.co pages, so the per-source floor alone still permits one cycle to arrive
   as eight back-to-back requests to a single site — which is the shape an edge network throttles, and
   what a burst looks like from the far end regardless of our intent.
 - Send `If-None-Match` / `If-Modified-Since`; treat `304` as "skip, unchanged".
@@ -251,6 +252,7 @@ A source whose ToS forbids automated access does not get an adapter. Flag it and
 | `reverse1999.fandom.com` | **Built** (2026-08-17), via `api.php`, not the wiki page — see § Fandom below |
 | `bluearchive.fandom.com` | **Declined.** Fetches and parses fine; the page is the problem. Its `Event/Event_List` is a JP-server archive whose newest entry ended 2026-02-18, so all 88 rows are history and it yields **zero** live or upcoming events. An adapter would put an empty lane on the calendar and, because the runner rejects a body that parses to nothing, report a broken source forever. Same failure as the Infinity Nikki Game8 page, further along |
 | `bluearchive.wiki` | **Built** (2026-08-17), from the rendered `/wiki/Events` page — see § Blue Archive below |
+| `holodori.wiki` | **Built** (2026-08-18), from the rendered `/wiki/Events` page. Miraheze again, so the same call as Blue Archive; CC BY-SA 4.0, no `Content-Signal`, no `Crawl-delay` for `*` |
 | `prydwen.gg`, `gametora.com` | **Cleared, unbuilt.** `User-agent: *` allows the paths we would want. prydwen sets `Crawl-delay: 10`, far below our one-per-6h |
 
 `.github/ISSUE_TEMPLATE/feature_request.yml` points readers at that table by heading, so a source
@@ -312,6 +314,31 @@ confidently wrong date:
   offset assumed and the start's day is part of the event ID. Attendance bonuses would be a real
   dailies source if a zone is ever stated. For the same reason `ba` has no `resetOffsets`: Blue
   Archive Global does run one worldwide server, but nothing in this source says on what clock.
+
+**hololive Dreams: the same Miraheze call as Blue Archive, and the opposite data.** `holodori.wiki`
+is Miraheze too, so `/wiki/Events` is the surface `*` is allowed and `/w/` and `?action=` are closed
+— `parsers/holodori.ts` takes the route `bawiki.ts` takes, for the reason it takes it. What differs
+is the quality of what is there, and three things are worth knowing:
+
+- **It states its timezone on every cell.** Every boundary is `08/17/2026 8:00PM (JST)`, which makes
+  this the only wiki source here publishing `exact` precision on both sides without a per-region
+  timer. `parseSlashClockZone` **requires** the zone rather than defaulting to UTC, so a row that
+  ever loses it drops out instead of landing nine hours off. That is also where `holodori`'s
+  `resetOffsets` of UTC+9 comes from — evidenced, not assumed; see docs/DATA-MODEL.md.
+- **Inclusion is fenced by an `<h2>`, and the two tables are identical.** `Current Events` and
+  `Past Events` have the same columns, so a reader that took every `wikitable` would put the back
+  catalogue on the calendar with nothing to mark it. Rows are checked against `ctx.now` on top of
+  the heading, because "Current" is maintained by hand and goes stale before anyone moves a row.
+- **Every event title is still a red link.** The wiki has no article for any of them yet, so each
+  links to `?action=edit&redlink=1` — a create-page form, and a `?action=` URL this wiki's
+  robots.txt disallows. The parser refuses a href with a query and falls back to the events page;
+  when the articles exist, they get linked with no change.
+
+Two rows on the page are not events and are meant to be missing. `Beginner Mission` runs
+`Game Launch` → `Unknown`: no start means no event ID, and a permanent tutorial chore is not what a
+calendar of deadlines is for. An `Unknown` **end** is kept, though — that is `endsAt: null`, and
+unlike `bawiki.ts` this parser does not drop a started-but-undated row, because the heading has
+already said the event is running.
 
 `scripts/refresh-sources.ts` enforces all of the above in code — the 6h floor, one request, no
 retries, conditional headers, per-host spacing, robots (failing closed when `robots.txt` cannot be

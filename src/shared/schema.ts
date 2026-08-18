@@ -13,6 +13,7 @@ export const GameId = z.enum([
   "r1999", // Reverse: 1999
   "ba", // Blue Archive
   "fgo", // Fate/Grand Order
+  "holodori", // hololive Dreams
 ]);
 export type GameId = z.infer<typeof GameId>;
 

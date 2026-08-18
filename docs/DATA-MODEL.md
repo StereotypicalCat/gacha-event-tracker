@@ -260,12 +260,21 @@ reader cannot see.
 | Endfield, Europe | 04:00 | UTC-5 (on the Americas server) | 09:00 | 11:00 / 10:00 |
 | Endfield, Asia / Americas | 04:00 | regional default | 20:00 / 09:00 | — |
 | Reverse: 1999, all regions | **05:00** | UTC-5 (one global server) | 10:00 | 12:00 / 11:00 |
+| hololive Dreams, all regions | 04:00 | UTC+9 (one worldwide server) | 19:00 | 21:00 / 20:00 |
 
-Arknights is the one game whose override covers **all three** regions, and it is not a blanket
-per-game offset of the kind this section warns about below: the game genuinely runs a single Global
-server for every region we model. The offset is read off the source rather than assumed — every
-ending event on arknights.wiki.gg carries an exact end of `10:59:59Z`, which is `03:59:59` at UTC-7,
-one second before a 04:00 reset.
+Arknights and hololive Dreams are the games whose override covers **all three** regions, and neither
+is a blanket per-game offset of the kind this section warns about below: both genuinely run a single
+worldwide server for every region we model. Arknights' offset is read off the source rather than
+assumed — every ending event on arknights.wiki.gg carries an exact end of `10:59:59Z`, which is
+`03:59:59` at UTC-7, one second before a 04:00 reset.
+
+hololive Dreams is read the same way and is the cleaner case of the two, because the source states
+its zone outright: every boundary on holodori.wiki carries `(JST)`, the game launched worldwide
+simultaneously on one service, and `Training Support Missions` ends at `3:59AM JST` — one minute
+before a 04:00 local reset. Only the offset is overridden; the hour is the default. It also cost
+nothing to add, which is the point worth carrying to the next game: an override that arrives with
+the game moves nobody, while the same override added a year later re-labels every tick already
+logged under the old clock. Get it right at introduction or accept a migration.
 
 Infinity Nikki, P5X and Blue Archive carry **no `resetOffsets` entry**, so they take the regional
 default. That is an assumption, not a verified server map — none of the three sources states one.

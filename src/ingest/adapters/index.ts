@@ -112,6 +112,15 @@ const SOURCES: SourceSpec[] = [
     url: "https://fategrandorder.fandom.com/api.php?action=parse&page=Event_List&prop=text&formatversion=2&format=json",
     parserId: "fandom",
   },
+  {
+    id: "holodori-holodoriwiki-events",
+    game: "holodori",
+    // The rendered page, the same call as `ba-bawiki-events` above and for the
+    // same reason: holodori.wiki is Miraheze, so `/w/` and `?action=` are the
+    // closed routes here and `/wiki/` is the one `*` is allowed.
+    url: "https://holodori.wiki/wiki/Events",
+    parserId: "holodoriwiki",
+  },
 ];
 
 function toAdapter(spec: SourceSpec): Adapter {

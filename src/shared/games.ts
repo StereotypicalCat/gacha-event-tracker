@@ -95,6 +95,16 @@ export const GAMES: Record<GameId, GameMeta> = {
   // readers' day keys, and a wrong guess ticks the wrong box every night.
   ba: { id: "ba", name: "Blue Archive", short: "Blue Archive", hue: "#3FCBDD" , studio: "Nexon Games", dailyTasks: "Daily missions, AP" },
   fgo: { id: "fgo", name: "Fate/Grand Order", short: "FGO", hue: "#1D3A8F", studio: "Lasengle", dailyTasks: "Daily missions, AP" },
+  // hololive Dreams runs a single worldwide service on a Japanese clock, and
+  // both halves of that come from the source rather than from habit: every
+  // boundary on holodori.wiki is stated once, in `(JST)`, with no per-region
+  // column anywhere, and the game launched worldwide simultaneously. The reset
+  // hour is evidenced the way Arknights' is — `Training Support Missions` ends
+  // at 3:59AM JST, one minute before a 04:00 local reset — so the default hour
+  // stands and only the offset is overridden. Setting it now costs nothing: no
+  // reader has a day key for a game the app has never shipped, whereas adding
+  // the same override later would re-label ticks they had already logged.
+  holodori: { id: "holodori", name: "hololive Dreams", short: "holodori", hue: "#5FD3F3", studio: "QualiArts / COVER", dailyTasks: "Daily missions, stamina", resetOffsets: { asia: 9, america: 9, europe: 9 } },
 };
 
 export const GAME_LIST: GameMeta[] = Object.values(GAMES);

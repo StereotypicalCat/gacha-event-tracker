@@ -8,6 +8,7 @@ import {
   parseMonthDayYear,
   parseOpenRange,
   parseOrdinalDateTimeRange,
+  parseSlashClockZone,
   parseSlashDateTimeRange,
   parseYearFirstSlashRange,
 } from "../src/ingest/dates.ts";
@@ -365,5 +366,53 @@ describe("parseIsoDay", () => {
     expect(parseIsoDay("2026")).toBeNull();
     expect(parseIsoDay("TBA")).toBeNull();
     expect(parseIsoDay("")).toBeNull();
+  });
+});
+
+describe("parseSlashClockZone", () => {
+  test("converts a stated JST wall clock to UTC", () => {
+    expect(parseSlashClockZone("08/17/2026 8:00PM (JST)")).toEqual({
+      iso: "2026-08-17T11:00:00.000Z",
+      precision: "exact",
+    });
+  });
+
+  test("a small-hours JST boundary lands on the previous UTC day", () => {
+    // The shift that makes storing the source's own wall clock unusable.
+    expect(parseSlashClockZone("08/30/2026 3:59AM (JST)")?.iso).toBe(
+      "2026-08-29T18:59:00.000Z",
+    );
+  });
+
+  test("12PM is noon and 12AM is midnight", () => {
+    expect(parseSlashClockZone("08/20/2026 12:00PM (JST)")?.iso).toBe(
+      "2026-08-20T03:00:00.000Z",
+    );
+    expect(parseSlashClockZone("08/21/2026 12:00AM (JST)")?.iso).toBe(
+      "2026-08-20T15:00:00.000Z",
+    );
+  });
+
+  test("an unstated or unknown zone is null, never UTC", () => {
+    expect(parseSlashClockZone("08/20/2026 12:00PM")).toBeNull();
+    // Not in the table, and deliberately: `CST` names three different zones.
+    expect(parseSlashClockZone("08/20/2026 12:00PM (CST)")).toBeNull();
+  });
+
+  test("rejects a non-date and an impossible calendar day", () => {
+    expect(parseSlashClockZone("Game Launch")).toBeNull();
+    expect(parseSlashClockZone("Unknown")).toBeNull();
+    // Validated on the stated local fields, before the offset shifts anything:
+    // converting first would quietly turn Feb 30 into a real instant in March.
+    expect(parseSlashClockZone("02/30/2026 12:00PM (JST)")).toBeNull();
+    expect(parseSlashClockZone("08/20/2026 13:00PM (JST)")).toBeNull();
+  });
+
+  test("is a whole-cell reader, not a scanner", () => {
+    // Anchored at both ends: letting this match mid-prose is how a reader
+    // starts finding dates inside sentences.
+    expect(
+      parseSlashClockZone("Starts 08/20/2026 12:00PM (JST) after maintenance"),
+    ).toBeNull();
   });
 });

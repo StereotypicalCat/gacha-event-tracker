@@ -51,8 +51,9 @@ Consequences worth internalising:
 | `game8` | game8.co article calendars | Genshin, Star Rail, Wuthering Waves, ZZZ, Endfield, NTE, Infinity Nikki, Persona 5: The Phantom X |
 | `wikigg` | wiki.gg MediaWiki `mp-event` templates | Endfield |
 | `akwiki` | arknights.wiki.gg's `mrfz-wtable` "Ongoing/upcoming" table | Arknights |
-| `fandom` | Fandom wikis via the MediaWiki `action=parse` API — `Event \| Time Period \| Version` wikitables | Reverse: 1999 |
+| `fandom` | Fandom wikis via the MediaWiki `action=parse` API — `Event \| Time Period \| Version` wikitables | Reverse: 1999, Fate/Grand Order |
 | `bawiki` | bluearchive.wiki's rendered `/wiki/Events` — a JP/Global tabber over `Name (EN) \| Start date \| End date \| Notes` wikitables | Blue Archive |
+| `holodoriwiki` | holodori.wiki's rendered `/wiki/Events` — `Current Events` and `Past Events` wikitables over `Event \| Type \| Start Date \| End Date` | hololive Dreams |
 
 `wikigg` is the better shape by a distance: it emits ISO timestamps with one timer per server
 region, so its events carry exact precision and real `regionEnds`. Prefer a source like that over a
@@ -118,6 +119,7 @@ All live in `src/ingest/dates.ts`, each returning null rather than inferring any
 | `parseYearFirstSlashRange` | `2026/07/30 – 2026/08/20` (year first, so field order is not inferred) | Arknights |
 | `parseOrdinalDateTimeRange` | `November 9th, 05:00 - December 4th, 2023, 04:59 (UTC-5)` (ordinal days, stated offset) | Reverse: 1999 |
 | `parseIsoDay` | `2026-08-04` (one boundary per column, so nothing to split) | Blue Archive |
+| `parseSlashClockZone` | `08/17/2026 8:00PM (JST)` (one boundary per column, 12-hour clock, **named** zone) | hololive Dreams |
 | `parseOpenRange` | `Jul. 24, 2026 - End of 4.6`, `July 10, 2026 - Permanent` | Star Rail, Wuthering Waves |
 
 `parseOpenRange` is tried last because it is the most permissive — it accepts any leading full date

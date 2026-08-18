@@ -410,3 +410,72 @@ export function parseSlashDateTimeRange(
     end: { iso: endIso, precision: "exact" },
   };
 }
+
+/**
+ * Named timezone abbreviations this file will convert from, in milliseconds.
+ *
+ * Deliberately only the ones a source actually states, and deliberately only
+ * ones with a fixed offset. An abbreviation absent here parses to null, which
+ * is the same answer this file gives every other missing fact — and the reason
+ * the map is not pre-populated with the obvious candidates is that half of them
+ * are not fixed: `CST` names three different zones and `PT` shifts by an hour
+ * twice a year, so a plausible-looking entry is a wrong date waiting for the
+ * source to use it.
+ */
+const NAMED_ZONE_OFFSET_MS: Record<string, number> = {
+  // Japan observes no daylight saving, so UTC+9 holds all year.
+  jst: 9 * 60 * 60 * 1000,
+};
+
+/**
+ * "08/17/2026 8:00PM (JST)" → 2026-08-17T11:00:00.000Z, exact precision.
+ *
+ * One boundary, not a range: the hololive Dreams wiki gives Start Date and End
+ * Date their own columns, so there is nothing to split and the whole cell is
+ * anchored at both ends.
+ *
+ * Three things separate this from the readers above:
+ *
+ * - **A 12-hour clock**, which is the detail most likely to be got wrong
+ *   silently. `12:00PM` is noon and `12:00AM` is midnight — the hour is not
+ *   `12 + 12` in the first case and not `12` in the second — and a naive
+ *   reading puts an event's start twelve hours out without ever failing.
+ * - **The zone is named, not offset.** `parseOrdinalDateTimeRange` reads a
+ *   stated `(UTC-5)`; here the source writes `(JST)`, so the abbreviation is
+ *   resolved through `NAMED_ZONE_OFFSET_MS` and an unrecognised one returns
+ *   null rather than being read as UTC.
+ * - **The zone is required.** A cell stating a wall clock and no zone is a
+ *   missing fact, and this page always states one — so the day a row loses it,
+ *   that row should vanish rather than silently land nine hours off.
+ *
+ * Month-first, like `parseShortSlashRange`: the source is written for an
+ * English-speaking audience and its own rows settle it — `08/17/2026` and
+ * `08/27/2026` are both readable either way, but `08/30/2026` is not a day-first
+ * date at all.
+ */
+export function parseSlashClockZone(input: string): ParsedInstant | null {
+  const re =
+    /^\s*(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})\s*([AP])M\s*\(([A-Za-z]+)\)\s*$/i;
+  const m = re.exec(input);
+  if (!m) return null;
+
+  const offsetMs = NAMED_ZONE_OFFSET_MS[(m[7] ?? "").toLowerCase()];
+  if (offsetMs === undefined) return null;
+
+  const hour12 = Number(m[4]);
+  if (hour12 < 1 || hour12 > 12) return null;
+  const pm = (m[6] ?? "").toUpperCase() === "P";
+  // Noon and midnight are the two readings a 12-hour clock gets wrong: 12PM is
+  // hour 12 and 12AM is hour 0, so the wrap happens before the PM shift.
+  const hour = (hour12 % 12) + (pm ? 12 : 0);
+
+  const value = offsetIso(
+    Number(m[3]),
+    Number(m[1]),
+    Number(m[2]),
+    hour,
+    Number(m[5]),
+    offsetMs,
+  );
+  return value === null ? null : { iso: value, precision: "exact" };
+}
