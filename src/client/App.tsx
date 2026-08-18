@@ -353,6 +353,30 @@ export function App() {
     );
   }
 
+  /**
+   * Working through games one at a time, which is how someone with four of them
+   * actually plays: clear one, move on.
+   *
+   * It goes at the top of the column it filters, and past `lg` the checklist's
+   * column is the rail: the bar rides with the deadlines and the dailies it
+   * narrows, pinned and still above every one of them, instead of spending the
+   * full width of a wide screen on a row of chips and pushing "next to expire"
+   * — the answer the reader came for — down the page to make room. On a phone,
+   * and on the timeline, which has no rail, that same rule puts it back at the
+   * top of the page. Rendered once per view, never twice on one page.
+   */
+  const focusBar = (
+    <GameFocus
+      games={enabled}
+      focus={focus}
+      counts={perGame}
+      total={scopedTodo.length}
+      next={advanceFocus(focus, enabled)}
+      onFocus={(focusGame) => update({ focusGame })}
+      onAdvance={() => update({ focusGame: advanceFocus(focus, enabled) })}
+    />
+  );
+
   return (
     <GameMetaProvider value={gameMeta}>
     <Shell>
@@ -401,19 +425,6 @@ export function App() {
         </div>
       </header>
 
-      {/* Working through games one at a time, which is how someone with four
-          of them actually plays: clear one, move on. Above everything it
-          filters, so what it is doing to the page is never a mystery. */}
-      <GameFocus
-        games={enabled}
-        focus={focus}
-        counts={perGame}
-        total={scopedTodo.length}
-        next={advanceFocus(focus, enabled)}
-        onFocus={(focusGame) => update({ focusGame })}
-        onAdvance={() => update({ focusGame: advanceFocus(focus, enabled) })}
-      />
-
       {view === "soon" ? (
         /*
          * Two columns once the screen has room for them, and the split is the
@@ -421,7 +432,8 @@ export function App() {
          * *telling* the reader to do on the left, what it is *showing* them on
          * the right. The deadlines and tonight's dailies are instructions, they
          * are short, and they are what the reader came for — so on a wide
-         * screen they stop scrolling away and stay pinned beside the list.
+         * screen they stop scrolling away and stay pinned beside the list, with
+         * the focus bar that narrows them at the top of the same column.
          *
          * Below `lg` this is one column in exactly the old order, because on a
          * phone the same argument produces the same answer: put them first.
@@ -433,6 +445,8 @@ export function App() {
                 full-height divider would spend most of its length walling off
                 an empty gap. It travels with the panel as that pins. */}
             <div className="scroll-pane lg:sticky lg:top-0 lg:max-h-screen lg:overflow-y-auto lg:border-r lg:border-hairline">
+          {focusBar}
+
           <NextUp
             rows={headline}
             focused={focus === null ? null : gameMeta(focus).name}
@@ -510,17 +524,21 @@ export function App() {
           </div>
         </div>
       ) : (
-        <Timeline
-          rows={visible}
-          now={now}
-          // Snapped here rather than trusted: a stored number arrives from an
-          // export written by another version of the ladder, or from a file a
-          // reader edited, and a board one pixel wide is not a preference.
-          dayWidth={snapDayWidth(prefs.timelineDayWidth)}
-          onZoom={(timelineDayWidth) => update({ timelineDayWidth })}
-          onOpen={setOpenId}
-          isDone={isDone}
-        />
+        <>
+          {focusBar}
+
+          <Timeline
+            rows={visible}
+            now={now}
+            // Snapped here rather than trusted: a stored number arrives from an
+            // export written by another version of the ladder, or from a file a
+            // reader edited, and a board one pixel wide is not a preference.
+            dayWidth={snapDayWidth(prefs.timelineDayWidth)}
+            onZoom={(timelineDayWidth) => update({ timelineDayWidth })}
+            onOpen={setOpenId}
+            isDone={isDone}
+          />
+        </>
       )}
 
       <Controls
