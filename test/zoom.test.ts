@@ -27,7 +27,7 @@ describe("snapDayWidth", () => {
     // close to what its reader chose.
     expect(snapDayWidth(10)).toBe(9);
     expect(snapDayWidth(7)).toBe(6);
-    expect(snapDayWidth(1000)).toBe(48);
+    expect(snapDayWidth(1000)).toBe(DAY_WIDTHS[DAY_WIDTHS.length - 1]!);
     // Exactly between two steps takes the wider one: ties go to the more
     // legible board.
     expect(snapDayWidth(11)).toBe(13);
@@ -54,6 +54,18 @@ describe("stepDayWidth", () => {
     const narrowest = DAY_WIDTHS[0]!;
     expect(stepDayWidth(widest, 1)).toBe(widest);
     expect(stepDayWidth(narrowest, -1)).toBe(narrowest);
+  });
+
+  test("the close end goes past a week on screen", () => {
+    // Several events routinely end within a day of each other, and the reader
+    // has to be able to tell those ends apart — at 48px a day they are a few
+    // pixels between.
+    expect(canStep(48, 1)).toBe(true);
+    expect(stepDayWidth(48, 1)).toBe(72);
+    const widest = DAY_WIDTHS[DAY_WIDTHS.length - 1]!;
+    // A single day wider than a fingertip, so a one-day event is readable and
+    // tappable rather than the 34px minimum bar.
+    expect(widest).toBeGreaterThanOrEqual(96);
   });
 
   test("canStep says when a control has nowhere left to go", () => {

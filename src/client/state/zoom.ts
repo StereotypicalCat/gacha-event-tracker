@@ -9,8 +9,17 @@
  * `prefs` stores the chosen value and the two must agree on what is valid.
  */
 
-/** The ladder, in px per day. Roughly a third wider at each step. */
-export const DAY_WIDTHS = [6, 9, 13, 20, 32, 48] as const;
+/**
+ * The ladder, in px per day. Roughly half again wider at each step.
+ *
+ * It runs from a quarter of calendar on one screen to a single day being wider
+ * than a finger. The close end is not decoration: several events routinely end
+ * within a day of each other, and at 48px a day their bar ends are a few pixels
+ * apart — which is the moment a reader is asking the board the one question it
+ * exists to answer, and being told to squint. Going in further separates them,
+ * and gives a one-day event a bar wide enough to read and to tap.
+ */
+export const DAY_WIDTHS = [6, 9, 13, 20, 32, 48, 72, 108] as const;
 
 /**
  * The scale the board opens at for a reader who has never touched the control.
