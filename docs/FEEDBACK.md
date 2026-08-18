@@ -307,8 +307,10 @@ diagnosis in each item still holds — what changed is whether it has been acted
 | P1b Calendar → Timeline | **Done.** The tab reads "Timeline" |
 | P1c more games | **Done, four of them.** Infinity Nikki, Persona 5: The Phantom X, Reverse: 1999, Blue Archive — one commit each. Of the games named in the thread, Azur Lane and Umamusume are **declined on conduct** rather than pending, and the declined and cleared-but-unbuilt candidates are recorded in `AGENTS.md` § Scraping conduct so they are not re-litigated |
 | P1c roadmap in the colophon | **Not done** |
-| P2 colour and screenshot | **Not done** |
+| P2 colour and screenshot | **Layout done** (2026-08-18), colour untouched. The palette was left alone deliberately — the two-axis system was not what made the screenshot read as unfinished, a dense single column on a wide screen was. Past `lg` the page is now a pinned deadline rail beside the lists, the timeline is a board with its axis and names pinned, and the footer and settings are columns. The screenshot still wants reshooting |
 | P2 custom events | **Done.** PRD F13 first, then the code; `mygame:` / `myevent:` key spaces, in the export |
 
-So the outstanding work is P1b's three client changes, the colophon roadmap, the colour pass, and
-P0's build assertion — the cheapest items on the list are the ones still open.
+So the outstanding work is the colophon roadmap, P0's build assertion, and a reshoot of the promo
+screenshot. P1b is closed. The colour pass is open in name only: the palette was examined and left
+alone with the reasoning above, so what is left of P2 is the screenshot, which is now worth taking
+from a wide window.

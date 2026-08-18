@@ -63,7 +63,7 @@ no stored key. A game may have several sources; see `docs/INGESTION.md` § Three
 
 ### Features
 
-**F1 — Calendar view (default).**
+**F1 — Timeline view.**
 A horizontal timeline, one lane per game, spanning a scrollable date range with "today" pinned as a
 vertical marker. Each event is a bar from `startsAt` to `endsAt`. Bars are colored by game, and
 completed events render at reduced opacity with a check. Clicking a bar opens a detail panel with
@@ -72,21 +72,28 @@ title, type, exact start/end in the user's local timezone, source link, and a co
 An event with `endsAt: null` renders as a bar with a frayed right edge and the label "end date
 unknown" — it must be visually distinct from an event that ends far in the future.
 
+It is a board rather than a stretch of page: its own pane, scrolling in both directions, with the
+date axis pinned to the top and every name — the lane's and the event's — pinned to the left edge.
+Those three used to scroll away together, which made a wide window worse rather than better: more
+calendar on screen, and nothing left saying which day, whose game, or which event was being read. A
+six-week bar starts weeks off-screen, so a name that rides off with its own start date leaves a
+coloured rectangle behind.
+
 **F2 — Ends-soonest list.**
 A flat list of all *currently running* events sorted ascending by end date, with a relative
 countdown ("ends in 2 days", "ends in 4 hours"). Under 24 hours, the row is emphasized. This is the
 view that justifies the app, and it is one tap from the timeline.
-
-**The list is capped and offers the rest.** Two games already run to twenty-one live events, and a
-reader who tried exactly that said the list stopped being usable. Each section shows a handful with
-an explicit "show all N". This truncates the *view* only: the order is untouched, and the rows below
-the cut are still counted in the header, still on the timeline, and one tap away.
 
 **Which view opens is the reader's answer, not ours.** This spec said "calendar (default)" and the
 app shipped opening on the list; both were a decision made on the reader's behalf and then forgotten
 on every reload. So the first run asks (F8) and the answer is stored in `prefs.view`. The list is
 what the question ships pre-answered with — a reader cannot choose between two layouts they have not
 seen, and it is the view that answers "what expires next" in one look.
+
+**The list is capped and offers the rest.** Two games already run to twenty-one live events, and a
+reader who tried exactly that said the list stopped being usable. Each section shows a handful with
+an explicit "show all N". This truncates the *view* only: the order is untouched, and the rows below
+the cut are still counted in the header, still on the timeline, and one tap away.
 
 **F3 — Mark completed.**
 A toggle on every event, in both views. State is written to `localStorage` immediately and

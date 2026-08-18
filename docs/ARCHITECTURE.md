@@ -100,7 +100,7 @@ src/
       EventRow.tsx      row + meter + caption       (F2, F3)
       Meter.tsx         the depletion meter
       Legend.tsx        what the bars and colours mean
-      Timeline.tsx      calendar lanes              (F1)
+      Timeline.tsx      the board: pinned axis, lanes, bars   (F1)
       EventDetail.tsx   detail sheet, ignore action (F9)
       ProgressControls  status, effort, note        (F12)
       Dailies.tsx       today's strip, per-game reset clocks
