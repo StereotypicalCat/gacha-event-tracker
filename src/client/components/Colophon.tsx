@@ -43,6 +43,25 @@ const LINK =
   "text-muted underline decoration-hairline underline-offset-2 transition-colors duration-150 hover:text-ink hover:decoration-near";
 
 /**
+ * Forks whose ideas ended up here.
+ *
+ * Ideas and design, not code — nothing in this list carries a licence
+ * obligation, which is why it sits here as thanks rather than in NOTICE with
+ * the terms. Handles rather than names: a handle is verifiable and stable, and
+ * whoever is behind a fork does not always publish a name to credit.
+ *
+ * Unlike the source and studio credits above, this one cannot be derived from
+ * the feed — nothing in the data knows a fork exists. Hardcoded on purpose;
+ * adding another is one line.
+ */
+export const IDEA_CREDITS = [
+  {
+    handle: "phuduong85",
+    url: "https://github.com/phuduong85/gacha-event-tracker",
+  },
+] as const;
+
+/**
  * How many lagging games to name before summarising the rest.
  *
  * Naming them is the point — a reader can act on a name — but past a handful the
@@ -242,6 +261,26 @@ export function Colophon({
         </a>
         {"."}
       </p>
+
+      {IDEA_CREDITS.length > 0 && (
+        <p className="mt-2">
+          Additional ideas and design from{" "}
+          {IDEA_CREDITS.map((c, i) => (
+            <span key={c.handle}>
+              {i > 0 && (i === IDEA_CREDITS.length - 1 ? " and " : ", ")}
+              <a
+                href={c.url}
+                target="_blank"
+                rel="noreferrer noopener"
+                className={LINK}
+              >
+                {c.handle}
+              </a>
+            </span>
+          ))}
+          {"."}
+        </p>
+      )}
 
       <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
         <a
