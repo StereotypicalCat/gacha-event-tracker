@@ -73,7 +73,7 @@ An event with `endsAt: null` renders as a bar with a frayed right edge and the l
 unknown" — it must be visually distinct from an event that ends far in the future.
 
 It is a board rather than a stretch of page: its own pane, scrolling in both directions, with the
-date axis pinned to the top and every name — the lane's and the event's — pinned to the left edge.
+date axis pinned to the top and every name — the lane's and the event's — pinned to the left.
 Those three used to scroll away together, which made a wide window worse rather than better: more
 calendar on screen, and nothing left saying which day, whose game, or which event was being read. A
 six-week bar starts weeks off-screen, so a name that rides off with its own start date leaves a
@@ -87,8 +87,8 @@ view that justifies the app, and it is one tap from the timeline.
 **Which view opens is the reader's answer, not ours.** This spec said "calendar (default)" and the
 app shipped opening on the list; both were a decision made on the reader's behalf and then forgotten
 on every reload. So the first run asks (F8) and the answer is stored in `prefs.view`. The list is
-what the question ships pre-answered with — a reader cannot choose between two layouts they have not
-seen, and it is the view that answers "what expires next" in one look.
+what the question ships pre-answered with — a reader cannot choose between two layouts they have
+not seen, and it is the view that answers "what expires next" in one look.
 
 **The list is capped and offers the rest.** Two games already run to twenty-one live events, and a
 reader who tried exactly that said the list stopped being usable. Each section shows a handful with
