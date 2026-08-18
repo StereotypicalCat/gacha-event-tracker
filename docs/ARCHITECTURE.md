@@ -125,6 +125,7 @@ src/
       gameMeta.tsx      lane id → name, label, hue; resolves custom lanes too
       sort.ts           deadline order, or what you're partway through
       lens.ts           who sees which rows — focus, outstanding, next-to-expire
+      zoom.ts           the timeline's scale ladder; pure
       useAppUpdate.ts   is a newer build waiting, and taking it   (F14)
 serve.ts                static server + /api/health              ✓ built
 scripts/

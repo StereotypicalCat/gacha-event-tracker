@@ -80,6 +80,16 @@ calendar on screen, and nothing left saying which day, whose game, or which even
 six-week bar starts weeks off-screen, so a name that rides off with its own start date leaves a
 coloured rectangle behind.
 
+**The reader sets the scale.** A patch cycle is six weeks and a login campaign can run for months,
+so no single density answers both "what am I in the middle of this week?" and "how do the next three
+months line up?". A pair of controls steps through a ladder of day widths, and the choice is
+remembered (`prefs.timelineDayWidth`) — the same argument as the view tabs: a reader who has said how
+they want to read this should not have to say it again on the next load. Two things it has to get
+right. Zooming holds the middle of the view still, because rescaling around the left edge of a
+three-month board throws away whatever the reader had scrolled to. And the dated ticks thin out as
+the scale shrinks, since a week is 42px at the widest setting and the dates would sit on top of one
+another; the gridlines stay weekly either way, because they carry the rhythm rather than the reading.
+
 **The board draws at most two months of past.** A standing login campaign can have been running for
 half a year, and drawing from the earliest start bought months of empty calendar that nobody scrolls
 back through and that pushed every other bar off to the right. An event older than the board keeps

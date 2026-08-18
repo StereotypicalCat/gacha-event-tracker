@@ -1,11 +1,10 @@
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { useGameMeta } from "../state/gameMeta.tsx";
 import type { LaneId } from "../../shared/custom.ts";
 import { DAY } from "../../shared/time.ts";
 import type { RowEvent } from "./EventRow.tsx";
 import { URGENCY_COLOR } from "./Meter.tsx";
-
-const DAY_WIDTH = 13; // px per day — dense enough to see a patch cycle at once
+import { canStep, stepDayWidth, weekLabelStep } from "../state/zoom.ts";
 
 /**
  * How far in from the left edge of the board a pinned label sits.
@@ -62,11 +61,16 @@ const OPEN_INSET = 28;
 export function Timeline({
   rows,
   now,
+  dayWidth,
+  onZoom,
   onOpen,
   isDone,
 }: {
   rows: RowEvent[];
   now: number;
+  /** How wide one day is, in px. Snapped to the ladder in `state/zoom.ts`. */
+  dayWidth: number;
+  onZoom: (dayWidth: number) => void;
   onOpen: (id: string) => void;
   /**
    * Asked rather than derived from the progress store: an entry exists there
@@ -82,9 +86,9 @@ export function Timeline({
   const starts = rows.map((r) => r.clock.startsMs);
   const { min, max } = boardWindow(starts, ends, now);
   const totalDays = Math.ceil((max - min) / DAY);
-  const chartWidth = totalDays * DAY_WIDTH;
+  const chartWidth = totalDays * dayWidth;
   /** One coordinate space for everything: bars, gridlines and the now rule. */
-  const x = (ms: number) => ((ms - min) / DAY) * DAY_WIDTH;
+  const x = (ms: number) => ((ms - min) / DAY) * dayWidth;
 
   // Open at today rather than at the far past, with a little of the past week
   // still on screen — an event that began three days ago is context, not
@@ -94,8 +98,39 @@ export function Timeline({
   const jumpToNow = (behavior: ScrollBehavior) =>
     scroller.current?.scrollTo({ left: openAt, behavior });
 
-  useEffect(() => {
-    jumpToNow("instant");
+  /**
+   * A moment in time to hold still through the next re-render, and where in the
+   * pane to hold it. Set when the reader zooms: rescaling around the left edge
+   * of the scroll area would throw whatever they were reading off the screen,
+   * and re-opening at today would undo the scrolling they did to get there.
+   */
+  const hold = useRef<{ ms: number; px: number } | null>(null);
+
+  const zoom = (by: 1 | -1) => {
+    const el = scroller.current;
+    if (el !== null) {
+      // The middle of the view is what a reader is looking at, so that is what
+      // stays put.
+      const px = el.clientWidth / 2;
+      hold.current = { ms: min + ((el.scrollLeft + px) / dayWidth) * DAY, px };
+    }
+    onZoom(stepDayWidth(dayWidth, by));
+  };
+
+  // Before paint, so a zoom never shows a frame at the wrong offset.
+  useLayoutEffect(() => {
+    const el = scroller.current;
+    if (el === null) return;
+    const anchor = hold.current;
+    if (anchor !== null) {
+      hold.current = null;
+      el.scrollLeft = Math.max(0, x(anchor.ms) - anchor.px);
+      return;
+    }
+    // Open at today rather than at the far past: it is what they came for.
+    // Keyed on the rounded offset so it runs when the range changes, not every
+    // second — re-scrolling on each tick would fight the reader's own scrolling.
+    el.scrollTo({ left: openAt, behavior: "instant" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openAt]);
 
@@ -114,6 +149,9 @@ export function Timeline({
 
   const months = monthBoundaries(min, max);
   const weeks = weekBoundaries(min, max);
+  // Every Monday is right at the default scale and illegible at the widest zoom
+  // out, where the dates would sit on top of each other.
+  const labelEvery = weekLabelStep(dayWidth);
 
   return (
     <>
@@ -122,13 +160,33 @@ export function Timeline({
           calendar and cover the very dates it sends you back to. */}
       <div className="flex items-center justify-between gap-3 border-b border-hairline px-4 py-2.5">
         <p className="eyebrow">One lane per game</p>
-        <button
-          type="button"
-          onClick={() => jumpToNow("smooth")}
-          className="text-[0.6875rem] font-medium text-faint transition-colors duration-150 hover:text-ink"
-        >
-          Jump to today
-        </button>
+
+        <div className="flex items-center gap-3">
+          <div role="group" aria-label="Scale" className="flex items-center gap-1">
+            <ScaleButton
+              label="Show a longer stretch of time"
+              disabled={!canStep(dayWidth, -1)}
+              onClick={() => zoom(-1)}
+            >
+              −
+            </ScaleButton>
+            <ScaleButton
+              label="Show a shorter stretch of time in more detail"
+              disabled={!canStep(dayWidth, 1)}
+              onClick={() => zoom(1)}
+            >
+              +
+            </ScaleButton>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => jumpToNow("smooth")}
+            className="text-[0.6875rem] font-medium text-faint transition-colors duration-150 hover:text-ink"
+          >
+            Jump to today
+          </button>
+        </div>
       </div>
 
       <div
@@ -181,15 +239,17 @@ export function Timeline({
                 {m.label}
               </span>
             ))}
-            {weeks.map((ms) => (
-              <span
-                key={ms}
-                className="tnum absolute bottom-1 whitespace-nowrap pl-1.5 text-[0.625rem] leading-none text-faint"
-                style={{ left: x(ms) }}
-              >
-                {dayLabel(ms)}
-              </span>
-            ))}
+            {weeks.map((ms, i) =>
+              i % labelEvery === 0 ? (
+                <span
+                  key={ms}
+                  className="tnum absolute bottom-1 whitespace-nowrap pl-1.5 text-[0.625rem] leading-none text-faint"
+                  style={{ left: x(ms) }}
+                >
+                  {dayLabel(ms)}
+                </span>
+              ) : null,
+            )}
           </div>
 
           <div className="space-y-7 pb-10 pt-5">
@@ -294,6 +354,38 @@ export function boardWindow(
     min: Math.max(earliest, now - PAST_LIMIT),
     max: Math.max(...ends, now) + 2 * DAY,
   };
+}
+
+/**
+ * One step of the scale control.
+ *
+ * Labelled by what it does to the board rather than "zoom in" and "zoom out",
+ * which say what happens to the picture and leave the reader to work out what
+ * that means for the dates.
+ */
+function ScaleButton({
+  label,
+  disabled,
+  onClick,
+  children,
+}: {
+  label: string;
+  disabled: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      className="grid size-6 place-items-center rounded-md border border-hairline text-xs font-semibold leading-none text-muted transition-colors duration-150 hover:border-faint hover:text-ink disabled:cursor-not-allowed disabled:border-hairline/60 disabled:text-faint/50 disabled:hover:text-faint/50"
+    >
+      {children}
+    </button>
+  );
 }
 
 /**

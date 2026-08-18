@@ -4,6 +4,7 @@ import type { Region } from "../../shared/schema.ts";
 import { guessRegion } from "../../shared/time.ts";
 import type { SortMode } from "./sort.ts";
 import { KEYS, readJson, writeJson } from "./storage.ts";
+import { DEFAULT_DAY_WIDTH } from "./zoom.ts";
 
 /**
  * Which of the two views the reader is looking at.
@@ -63,6 +64,15 @@ export interface Prefs {
    */
   view: View;
   /**
+   * How wide one day is on the timeline, in px.
+   *
+   * Stored as the measurement rather than a step number, so the ladder in
+   * `state/zoom.ts` can change without silently rescaling boards that were set
+   * before it did. Read through `snapDayWidth`, which is what makes a value
+   * from an older export — or a corrupted one — land on something renderable.
+   */
+  timelineDayWidth: number;
+  /**
    * Whether to guess which events repeat daily from what the source printed.
    * Off leaves only the ones the reader marked themselves; it never discards a
    * mark or a logged day, so it is reversible.
@@ -88,6 +98,7 @@ function defaults(): Prefs {
     focusGame: null,
     sort: "ending",
     view: "soon",
+    timelineDayWidth: DEFAULT_DAY_WIDTH,
     detectDaily: false,
     showCompleted: true,
     showIgnored: false,

@@ -18,6 +18,7 @@ import { useMarkSet } from "./state/useMarkSet.ts";
 import { useProgress } from "./state/useProgress.ts";
 import { useDailyLog, type DailyLogMap } from "./state/useDailyLog.ts";
 import { adoptNewLanes, usePrefs, type View } from "./state/usePrefs.ts";
+import { snapDayWidth } from "./state/zoom.ts";
 import { useCustom } from "./state/useCustom.ts";
 import { compareRows, SORT_MODES, type Activity, type SortMode } from "./state/sort.ts";
 import {
@@ -509,7 +510,17 @@ export function App() {
           </div>
         </div>
       ) : (
-        <Timeline rows={visible} now={now} onOpen={setOpenId} isDone={isDone} />
+        <Timeline
+          rows={visible}
+          now={now}
+          // Snapped here rather than trusted: a stored number arrives from an
+          // export written by another version of the ladder, or from a file a
+          // reader edited, and a board one pixel wide is not a preference.
+          dayWidth={snapDayWidth(prefs.timelineDayWidth)}
+          onZoom={(timelineDayWidth) => update({ timelineDayWidth })}
+          onOpen={setOpenId}
+          isDone={isDone}
+        />
       )}
 
       <Controls

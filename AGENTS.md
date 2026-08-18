@@ -112,9 +112,10 @@ src/client/       React app, service worker, manifest
   state/          progress, daily log, ignores, prefs, sort — all localStorage
                   useCustom.ts — the reader's own games and events (PRD F13)
                   lens.ts — who sees which rows (focus, outstanding, next-to-expire); pure
+                  zoom.ts — the timeline's scale ladder; pure
 scripts/          build-feed.ts, build-static.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             560 tests
+test/             579 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
