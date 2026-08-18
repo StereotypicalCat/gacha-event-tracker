@@ -20,6 +20,7 @@ between repairing a rule and rediscovering it the expensive way.
 | `docs/INGESTION.md` | The six pipeline stages, the parser/adapter/merge layering, date formats, the review gate | Adding a source, writing or repairing a parser, or changing the fetch runner |
 | `docs/ARCHITECTURE.md` | Process shape, file layout, request paths, offline and update mechanics | Moving files, adding a route, or changing the service worker |
 | `docs/FEEDBACK.md` | What readers actually said about the first release, and the work it argues for | Deciding what to build next |
+| `docs/SOURCES.md` | Which sites publish a usable schedule for the games we still do not cover, and what is wrong with the ones that do not | Picking the next game to add, or assessing a source request |
 
 Two rules that follow from that:
 
