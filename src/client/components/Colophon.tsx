@@ -43,21 +43,29 @@ const LINK =
   "text-muted underline decoration-hairline underline-offset-2 transition-colors duration-150 hover:text-ink hover:decoration-near";
 
 /**
- * Forks whose ideas ended up here.
+ * People whose ideas ended up here.
  *
  * Ideas and design, not code — nothing in this list carries a licence
  * obligation, which is why it sits here as thanks rather than in NOTICE with
  * the terms. Handles rather than names: a handle is verifiable and stable, and
- * whoever is behind a fork does not always publish a name to credit.
+ * someone who suggests something under a handle has not offered a name to use.
+ *
+ * `handle` renders verbatim, so it carries its own platform — a bare handle is
+ * GitHub, `u/` is Reddit. That beats a `platform` field nobody would keep
+ * consistent for a list this short.
  *
  * Unlike the source and studio credits above, this one cannot be derived from
- * the feed — nothing in the data knows a fork exists. Hardcoded on purpose;
- * adding another is one line.
+ * the feed — nothing in the data knows these people exist. Hardcoded on
+ * purpose; adding another is one line.
  */
 export const IDEA_CREDITS = [
   {
     handle: "phuduong85",
     url: "https://github.com/phuduong85/gacha-event-tracker",
+  },
+  {
+    handle: "u/eriatilox",
+    url: "https://www.reddit.com/user/eriatilox/",
   },
 ] as const;
 
