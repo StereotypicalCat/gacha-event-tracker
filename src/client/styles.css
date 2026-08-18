@@ -9,6 +9,10 @@
  * Keeping them separate is what lets one glance answer "whose event is this?"
  * and "how long have I got?" at the same time. Never colour an urgency element
  * with a game hue, or vice versa.
+ *
+ * Heat is tokens, so it is re-struck per theme below. Hue is data and cannot be
+ * — it comes from games.ts and from the reader's own games — so it is read for
+ * the theme in state/theme.ts instead, on its way to the elements that apply it.
  */
 @theme {
   /* Ground is deep blue-black, not neutral near-black — the whole surface
@@ -18,8 +22,20 @@
   --color-raised: #232739;
   --color-hairline: #2c3145;
   --color-ink: #e9ebf3;
+  /* The far end of `ink`: what a solid ink button goes to under the cursor.
+     A token rather than `white` because on a light ground ink is nearly black,
+     and "brighter" there means darker. */
+  --color-ink-strong: #ffffff;
   --color-muted: #888fa6;
   --color-faint: #5a6178;
+  /* The veil behind a modal. Carries its own alpha rather than being written
+     `bg-ground/80` at the call site, because the two themes need different
+     amounts of it — see the light block. */
+  --color-scrim: rgb(18 20 28 / 0.8);
+  /* Where the page's light comes from: the top of the body gradient. Lighter
+     than the ground in the dark theme, and lighter still in the light one, so
+     the surface reads as lit from above in both. */
+  --color-glow: #1a1e2c;
 
   /* Heat ramp: monotonic in salience, dim → blue → amber → red. */
   --color-calm: #55607f;
@@ -31,8 +47,56 @@
   --font-body: "Public Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
+/*
+ * Dark is what this app is, and what it stays unless a reader says otherwise:
+ * the tokens above are the defaults, and light is an override that only applies
+ * once `data-theme="light"` is on the root. Nothing here reads
+ * `prefers-color-scheme` — a reader whose laptop is in light mode has said
+ * something about their laptop, not about this page, and the answer we act on
+ * is the one they gave us (`prefs.theme`, resolved in state/theme.ts).
+ *
+ * Every value below is a *token* override. No component knows which theme it is
+ * in; they all name `ink`, `hairline`, `soon`, and get an answer that suits the
+ * ground they are standing on. The two exceptions, both unavoidable, are the
+ * game hues — reader data, adjusted in state/theme.ts — and the pre-paint
+ * script in index.html.
+ */
 :root {
   color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  /* Paper under daylight, not white: the same cool blue cast as the dark
+     ground, so the heat ramp and the game hues still sit on a neutral that is
+     slightly blue rather than fighting a pure grey. Cards go *up* to white
+     from here, which is the one place the ladder inverts — `raised` is a tint
+     rather than a lift, because on a light ground the way to mark a surface as
+     interactive is to shade it, not to brighten it. */
+  --color-ground: #edf0f7;
+  --color-surface: #ffffff;
+  --color-raised: #dfe4f0;
+  --color-hairline: #c9d1e2;
+  --color-ink: #151824;
+  --color-ink-strong: #000000;
+  --color-muted: #535b73;
+  --color-faint: #767e94;
+  /* Darker than the ground and much thinner than the dark theme's veil: a
+     light scrim over a light page states nothing, and 80% of it would wash the
+     page out rather than push it back. */
+  --color-scrim: rgb(26 31 48 / 0.42);
+  --color-glow: #ffffff;
+
+  /* The ramp again, re-struck for a light ground. Every step keeps its meaning
+     and its ordering; what changes is that each one is now dark enough to read
+     as small text on `ground` (≥ 4.5:1), which the dark theme's values are
+     nowhere near — `soon` in particular is 1.9:1 on paper, and urgency the
+     reader cannot read is not urgency. */
+  --color-calm: #8a92a8;
+  --color-near: #2b62c6;
+  --color-soon: #8a6008;
+  --color-critical: #c81e3c;
 }
 
 html,
@@ -51,7 +115,7 @@ body {
      rather than a flat fill. Subtle enough not to fight the data. */
   background-image: radial-gradient(
     120% 70% at 50% -10%,
-    #1a1e2c 0%,
+    var(--color-glow) 0%,
     var(--color-ground) 60%
   );
   background-attachment: fixed;

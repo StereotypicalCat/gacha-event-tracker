@@ -100,7 +100,7 @@ export function EventDetail({
         type="button"
         aria-label="Close details"
         onClick={onClose}
-        className="absolute inset-0 bg-ground/80 backdrop-blur-sm"
+        className="absolute inset-0 bg-scrim backdrop-blur-sm"
       />
       <div
         role="dialog"
@@ -297,7 +297,7 @@ export function EventDetail({
             className={`flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${
               completed
                 ? "border-hairline text-muted hover:text-ink"
-                : "border-transparent bg-ink text-ground hover:bg-white"
+                : "border-transparent bg-ink text-ground hover:bg-ink-strong"
             }`}
           >
             {completed ? "Mark not done" : "Mark done"}

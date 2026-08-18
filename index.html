@@ -12,20 +12,56 @@
     <meta name="theme-color" content="#12141c" />
 
     <!--
-      This page is already dark. Two signals, because they cover different
-      readers:
+      This page ships dark and offers light; both are drawn deliberately, and
+      neither wants a third party guessing at one from the other.
 
-      color-scheme tells the browser (and well-behaved extensions) that a dark
-      rendering is intended, so form controls and scrollbars come out dark and
-      nothing tries to synthesise a light theme.
+      color-scheme states the default rendering, so form controls and scrollbars
+      come out dark before any stylesheet has loaded. It is only the default:
+      styles.css sets the real `color-scheme` property per theme, and that wins.
 
-      darkreader-lock is Dark Reader's documented opt-out. Without it Dark
-      Reader inverts an already-dark palette, which wrecks the urgency ramp —
-      the colours in this UI carry meaning, so having them re-mapped is not a
-      cosmetic problem.
+      darkreader-lock is Dark Reader's documented opt-out, and it still applies
+      now that there is a light theme — arguably more. The colours in this UI
+      carry meaning (the urgency ramp, the per-game hues), and an extension
+      re-mapping them breaks the reading, whichever ground it starts from. A
+      reader who wants light has a control in settings that was designed.
     -->
     <meta name="color-scheme" content="dark" />
     <meta name="darkreader-lock" />
+
+    <!--
+      The theme, before first paint.
+
+      Dark is the default and needs nothing: it is what the stylesheet says with
+      no attribute set. A reader who chose light is the case this exists for —
+      without it they get a dark page for as long as the bundle takes to arrive
+      and mount, on every single load, which is a flash of the thing they
+      switched off.
+
+      It reads the same stored key as the app (`state/storage.ts`) and applies
+      the same attribute (`state/theme.ts`), and it cannot import either, so a
+      test pins the three copies together. Wrapped in try/catch and doing
+      nothing on failure: a reader with storage disabled gets the default theme,
+      never a blank page.
+    -->
+    <script>
+      (function () {
+        try {
+          var prefs = JSON.parse(
+            localStorage.getItem("gacha-tracker:v1:prefs") || "{}",
+          );
+          var light =
+            prefs.theme === "light" ||
+            (prefs.theme === "system" &&
+              window.matchMedia("(prefers-color-scheme: light)").matches);
+          if (!light) return;
+          document.documentElement.dataset.theme = "light";
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute("content", "#edf0f7");
+        } catch (e) {
+          /* No stored preference we can read: the default stands. */
+        }
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

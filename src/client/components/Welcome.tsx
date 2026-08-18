@@ -119,7 +119,7 @@ export function Welcome({
           type="button"
           disabled={chosen.length === 0}
           onClick={() => onConfirm(chosen, view)}
-          className="rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-ground transition-colors duration-150 hover:bg-white disabled:cursor-not-allowed disabled:bg-raised disabled:text-faint"
+          className="rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-ground transition-colors duration-150 hover:bg-ink-strong disabled:cursor-not-allowed disabled:bg-raised disabled:text-faint"
         >
           {chosen.length === 0
             ? "Pick at least one game"
