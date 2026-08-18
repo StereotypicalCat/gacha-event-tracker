@@ -282,26 +282,6 @@ export function Colophon({
         {"."}
       </p>
 
-      {IDEA_CREDITS.length > 0 && (
-        <p className="mt-2">
-          Additional ideas and design from{" "}
-          {IDEA_CREDITS.map((c, i) => (
-            <span key={c.handle}>
-              {i > 0 && (i === IDEA_CREDITS.length - 1 ? " and " : ", ")}
-              <a
-                href={c.url}
-                target="_blank"
-                rel="noreferrer noopener"
-                className={LINK}
-              >
-                {c.handle}
-              </a>
-            </span>
-          ))}
-          {"."}
-        </p>
-      )}
-
       <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
         <a
           href={AUTHOR.github}
@@ -322,6 +302,26 @@ export function Colophon({
           Source code
         </a>
       </p>
+
+      {IDEA_CREDITS.length > 0 && (
+        <p className="mt-2">
+          Additional ideas and design from{" "}
+          {IDEA_CREDITS.map((c, i) => (
+            <span key={c.handle}>
+              {i > 0 && (i === IDEA_CREDITS.length - 1 ? " and " : ", ")}
+              <a
+                href={c.url}
+                target="_blank"
+                rel="noreferrer noopener"
+                className={LINK}
+              >
+                {c.handle}
+              </a>
+            </span>
+          ))}
+          {"."}
+        </p>
+      )}
 
       {/*
         Placed under the disclaimer that admits dates can be wrong, because that
