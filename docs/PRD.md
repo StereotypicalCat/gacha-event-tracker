@@ -187,8 +187,22 @@ Before any events are shown, the reader picks which games they play, and how the
 them. A calendar full of games they
 don't play is worse than an empty one — it buries the thing they came for. Nothing is preselected
 and the button stays disabled until something is chosen; guessing on their behalf and hoping they
-notice is worse than asking. The choice is stored as *hidden* games, the inverse, so a game added
-later appears by default rather than staying invisible forever.
+notice is worse than asking. The choice is stored as *hidden* games, the inverse — which is a storage
+shape, not a policy: what happens to a game added later is decided separately, below.
+
+**A game added later arrives switched off.** Adding a source is our decision, not the reader's, and
+someone who plays two games did not ask for the other twelve; a calendar that fills itself up is the
+thing this screen exists to prevent. `prefs.knownGames` records every lane a reader has been offered,
+and a lane missing from it is recorded and hidden on sight. The games chips in settings list every
+lane, on or off, which is where they take a new one up — and the cost of this is real and worth
+stating: a reader whose game finally arrives is not told, so the roadmap line in the colophon
+(`docs/FEEDBACK.md` P1c) matters more, not less.
+
+An absent `knownGames` means *unrecorded*, never *offered nothing* — every reader who installed
+before it existed is in that state, and reading it the other way would switch off every game they
+already read. The first pass records what is already on their screen and changes nothing else.
+Lanes the reader invented (`mygame:`) are recorded but never hidden: typing a game in is asking for
+it.
 
 The view question (F2) sits under it, with each option drawn rather than only described — the words
 "list" and "timeline" mean nothing until you have seen this app's version of them. Unlike the games,

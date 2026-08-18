@@ -17,7 +17,7 @@ import { useAppUpdate } from "./state/useAppUpdate.ts";
 import { useMarkSet } from "./state/useMarkSet.ts";
 import { useProgress } from "./state/useProgress.ts";
 import { useDailyLog, type DailyLogMap } from "./state/useDailyLog.ts";
-import { usePrefs, type View } from "./state/usePrefs.ts";
+import { adoptNewLanes, usePrefs, type View } from "./state/usePrefs.ts";
 import { useCustom } from "./state/useCustom.ts";
 import { compareRows, SORT_MODES, type Activity, type SortMode } from "./state/sort.ts";
 import {
@@ -206,6 +206,26 @@ export function App() {
     [allRows, custom.lanes],
   );
 
+  /**
+   * A lane the reader has never been offered starts switched off.
+   *
+   * Adding a source is our decision, not theirs, and a reader who plays two
+   * games did not ask for the other twelve. So a lane that is new to *them*
+   * is recorded and hidden, and the games chips in settings are where they
+   * take it up — the one place that lists every lane, on or off.
+   *
+   * The seeding branch is the whole reason this is safe: an existing reader
+   * has no `knownGames` at all, and treating that as "has been offered
+   * nothing" would switch off every game they already read. Absent means
+   * unrecorded, so the first pass records what is already on their screen and
+   * changes nothing else.
+   */
+  useEffect(() => {
+    if (state.status !== "ready") return;
+    const patch = adoptNewLanes(games, prefs.knownGames, prefs.hiddenGames);
+    if (patch !== null) update(patch);
+  }, [state.status, games, prefs.knownGames, prefs.hiddenGames, update]);
+
   /** Games the reader plays, in feed order. The focus bar rotates through these. */
   const enabled = useMemo(
     () => games.filter((g) => !prefs.hiddenGames.includes(g)),
@@ -311,8 +331,8 @@ export function App() {
   }
 
   // First run: ask which games before showing a calendar full of ones they
-  // don't play. Stored as hiddenGames (the inverse) so a game added later shows
-  // up by default rather than staying invisible.
+  // don't play. Stored as hiddenGames (the inverse); what happens to a game
+  // added *later* is decided by `knownGames` above, not by this shape.
   if (!prefs.onboarded) {
     return (
       <GameMetaProvider value={gameMeta}>

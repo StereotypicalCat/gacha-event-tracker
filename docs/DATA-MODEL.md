@@ -200,8 +200,12 @@ Namespaced, versioned, and small. Nothing here ever goes to the server.
 "gacha-tracker:v1:progress"     // { [eventId]: { status?, effort?, note?, at } }
 "gacha-tracker:v1:daily"        // { [id]: { days: ["2026-08-15", ...], at } }
 "gacha-tracker:v1:ignored"      // { [eventId]: { at } }  — "stop showing me this"
-"gacha-tracker:v1:prefs"        // { region, hiddenGames[], focusGame, sort, view, detectDaily,
-                                //   showCompleted, showIgnored, regionConfirmed, onboarded }
+"gacha-tracker:v1:prefs"        // { region, hiddenGames[], knownGames[]?, focusGame, sort, view,
+                                //   detectDaily, showCompleted, showIgnored, regionConfirmed,
+                                //   onboarded }
+                                // knownGames is every lane the reader has been offered. Absent
+                                // means unrecorded, not "offered nothing" — see PRD F8; a lane
+                                // missing from it is new to them and arrives switched off.
 "gacha-tracker:v1:completions"  // SUPERSEDED — read once to migrate, never written
 ```
 

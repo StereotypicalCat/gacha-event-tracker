@@ -470,6 +470,13 @@ to an open page). Four things hold it up:
   on the timeline — so the *sorting groups, it never reorders* rule below holds for what is hidden
   exactly as it does for what is shown. Expanding is per-visit state, not a stored preference: it is
   something a reader does while reading one list, not a statement about how the app should work.
+- **A game we add arrives switched off, and `knownGames` absent means *unrecorded*.** Adding a
+  source is our decision; a reader who plays two games did not ask for the other twelve. So a lane
+  missing from `prefs.knownGames` is new *to them* and is hidden on sight (`adoptNewLanes`, PRD F8).
+  The trap is the other reading: every install from before this existed has no `knownGames` at all,
+  and treating that as "has been offered nothing" switches off every game they already read. Seeding
+  records what is on their screen and changes nothing else. Lanes they invented (`mygame:`) are
+  recorded but never hidden.
 - **Which view opens is the reader's answer.** `prefs.view` is asked once on the first run (PRD F8)
   and written by the tabs from then on. It was component state, which meant a reader who preferred
   the timeline was put back on the list by every reload, with nothing to blame but the app

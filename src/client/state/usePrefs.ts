@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { LaneId } from "../../shared/custom.ts";
+import { isCustomGameId, type LaneId } from "../../shared/custom.ts";
 import type { Region } from "../../shared/schema.ts";
 import { guessRegion } from "../../shared/time.ts";
 import type { SortMode } from "./sort.ts";
@@ -17,8 +17,33 @@ export type View = "soon" | "timeline";
 
 export interface Prefs {
   region: Region;
-  /** Games the reader has switched off. Stored as hidden so a newly added game shows up by default. */
+  /**
+   * Games the reader has switched off.
+   *
+   * Still stored as the inverse, but no longer because a new game should
+   * appear by default — see `knownGames`, which is what decides that now. It
+   * stays the inverse because it is what every existing device has written
+   * down, and rewriting a live key space to say the same thing differently
+   * costs a migration and buys nothing.
+   */
   hiddenGames: LaneId[];
+  /**
+   * Every lane this reader has been offered.
+   *
+   * A game we add is a game they never asked for. Turning eleven lanes into
+   * fourteen under someone who plays two is not a feature arriving, it is
+   * their calendar filling with events they will never open — so a lane that
+   * is new *to them* arrives switched off, and the games chips in settings are
+   * where they take it up.
+   *
+   * Absent means "never recorded", which is not the same as "has been offered
+   * nothing": every existing reader is in that state, and seeding it from
+   * what is on screen is what stops this from switching their games off the
+   * first time they load a build that has it. Their own games (`mygame:`) are
+   * recorded here too but never auto-hidden — they asked for those by typing
+   * them in.
+   */
+  knownGames?: LaneId[];
   /**
    * One game to look at right now, or null for all of them.
    *
@@ -68,6 +93,44 @@ function defaults(): Prefs {
     showIgnored: false,
     regionConfirmed: false,
     onboarded: false,
+  };
+}
+
+/**
+ * What to record and what to switch off when the set of lanes changes.
+ *
+ * Pure and separate from the hook because it decides whether a reader's games
+ * get switched off, which is the kind of thing that should be provable rather
+ * than watched for. Returns `null` when there is nothing to do, so the caller
+ * writes to storage only when something actually changed.
+ *
+ * Two cases it must not get wrong:
+ *
+ * - **`known` absent.** Every reader who installed before this existed is in
+ *   that state, and it means "unrecorded", not "has been offered nothing".
+ *   Seeding records what is already on their screen and switches nothing off.
+ * - **A lane they invented.** `mygame:` lanes are the reader asking for a game
+ *   by typing it in, so they are recorded but never hidden. Only a lane that
+ *   arrived because we added a source turns up switched off.
+ */
+export function adoptNewLanes(
+  lanes: readonly LaneId[],
+  known: readonly LaneId[] | undefined,
+  hidden: readonly LaneId[],
+): Partial<Prefs> | null {
+  // An empty list is a feed that has not arrived, not a reader with no games.
+  if (lanes.length === 0) return null;
+  if (known === undefined) return { knownGames: [...lanes] };
+
+  const fresh = lanes.filter((lane) => !known.includes(lane));
+  if (fresh.length === 0) return null;
+
+  const unasked = fresh.filter(
+    (lane) => !isCustomGameId(lane) && !hidden.includes(lane),
+  );
+  return {
+    knownGames: [...known, ...fresh],
+    hiddenGames: [...hidden, ...unasked],
   };
 }
 

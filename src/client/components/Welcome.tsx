@@ -135,8 +135,9 @@ export function Welcome({
       </div>
 
       <p className="mt-auto pt-10 text-xs leading-relaxed text-faint">
-        More games are coming as sources are added. Anything you switch on later
-        shows up automatically.
+        More games are coming as sources are added. A new one stays switched off
+        until you ask for it — you'll find it in settings, at the bottom of the
+        page.
       </p>
     </div>
   );
