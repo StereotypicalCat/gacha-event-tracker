@@ -535,6 +535,8 @@ export function App() {
             // reader edited, and a board one pixel wide is not a preference.
             dayWidth={snapDayWidth(prefs.timelineDayWidth)}
             onZoom={(timelineDayWidth) => update({ timelineDayWidth })}
+            group={prefs.timelineGroup}
+            onGroup={(timelineGroup) => update({ timelineGroup })}
             onOpen={setOpenId}
             isDone={isDone}
           />

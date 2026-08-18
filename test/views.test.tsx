@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import { NextUp } from "../src/client/components/NextUp.tsx";
-import { boardWindow } from "../src/client/components/Timeline.tsx";
+import { boardWindow, Timeline } from "../src/client/components/Timeline.tsx";
 import { Welcome } from "../src/client/components/Welcome.tsx";
 import { timelineLanes } from "../src/client/state/lanes.ts";
 import { GameMetaProvider } from "../src/client/state/gameMeta.tsx";
@@ -199,5 +199,56 @@ describe("timelineLanes", () => {
   test("an empty board is no lanes, not one empty lane", () => {
     expect(timelineLanes([], "ending")).toEqual([]);
     expect(timelineLanes([], "game")).toEqual([]);
+  });
+});
+
+describe("Timeline stacking", () => {
+  const rows = [
+    row("Closing Ceremony", "genshin", 100),
+    row("Second Wind", "hsr", 6),
+  ];
+
+  const board = (group: "game" | "ending") =>
+    render(
+      <Timeline
+        rows={rows}
+        now={NOW}
+        dayWidth={13}
+        onZoom={() => {}}
+        group={group}
+        onGroup={() => {}}
+        onOpen={() => {}}
+        isDone={() => false}
+      />,
+    );
+
+  test("both stackings plot every event", () => {
+    for (const group of ["game", "ending"] as const) {
+      const html = board(group);
+      expect(html).toContain("Closing Ceremony");
+      expect(html).toContain("Second Wind");
+    }
+  });
+
+  test("the merged board names each bar's game, since no heading does", () => {
+    // Colour cannot carry it once every game shares one stack, and a reader
+    // who cannot tell whose event is ending tonight has not been told the
+    // thing they came for.
+    const html = board("ending");
+    expect(html).toContain(metaFor("hsr", {}).short);
+    expect(html).toContain(metaFor("genshin", {}).short);
+    // Deadline order, across games.
+    expect(html.indexOf("Second Wind")).toBeLessThan(
+      html.indexOf("Closing Ceremony"),
+    );
+  });
+
+  test("the reader can see which stacking they are on", () => {
+    // The control is the only thing on the board saying which of the two
+    // shapes they are reading, so it has to say it, not just accept a tap.
+    const pressed = (group: "game" | "ending") =>
+      /aria-pressed="true"[\s\S]*?>([^<]+)</.exec(board(group))?.[1];
+    expect(pressed("game")).toBe("By game");
+    expect(pressed("ending")).toBe("Ending soonest");
   });
 });

@@ -1,9 +1,13 @@
 import { useLayoutEffect, useRef } from "react";
 import { useGameMeta } from "../state/gameMeta.tsx";
-import type { LaneId } from "../../shared/custom.ts";
 import { DAY } from "../../shared/time.ts";
 import type { RowEvent } from "./EventRow.tsx";
 import { URGENCY_COLOR } from "./Meter.tsx";
+import {
+  timelineLanes,
+  TIMELINE_GROUPS,
+  type TimelineGroup,
+} from "../state/lanes.ts";
 import { canStep, stepDayWidth, weekLabelStep } from "../state/zoom.ts";
 
 /**
@@ -45,6 +49,20 @@ const PAST_LIMIT = 60 * DAY;
 /** Where the now rule sits when the board opens: a little in from the edge. */
 const OPEN_INSET = 28;
 
+/** The narrowest a bar is drawn, so a two-day event is still a target. */
+const MIN_BAR = 34;
+
+/**
+ * How wide a bar has to be before the merged board tags it with its game.
+ *
+ * The tag is what replaces the lane heading, so it wants to be on every bar —
+ * but a bar narrower than this has no room for the tag *and* a title, and what
+ * a reader gets is a truncated game name reading as a broken word. Below the
+ * threshold the hue and the tooltip carry it, which is what a two-day bar could
+ * say about itself anyway.
+ */
+const TAG_FROM = 96;
+
 /**
  * One lane per game, bars spanning start→end, today pinned as a rule.
  *
@@ -63,6 +81,8 @@ export function Timeline({
   now,
   dayWidth,
   onZoom,
+  group,
+  onGroup,
   onOpen,
   isDone,
 }: {
@@ -71,6 +91,9 @@ export function Timeline({
   /** How wide one day is, in px. Snapped to the ladder in `state/zoom.ts`. */
   dayWidth: number;
   onZoom: (dayWidth: number) => void;
+  /** How the bars are stacked: a lane per game, or one deadline queue. */
+  group: TimelineGroup;
+  onGroup: (group: TimelineGroup) => void;
   onOpen: (id: string) => void;
   /**
    * Asked rather than derived from the progress store: an entry exists there
@@ -142,10 +165,7 @@ export function Timeline({
     );
   }
 
-  const byGame = new Map<LaneId, RowEvent[]>();
-  for (const row of rows) {
-    byGame.set(row.event.game, [...(byGame.get(row.event.game) ?? []), row]);
-  }
+  const lanes = timelineLanes(rows, group);
 
   const months = monthBoundaries(min, max);
   const weeks = weekBoundaries(min, max);
@@ -159,7 +179,7 @@ export function Timeline({
           floating over the chart: pinned inside, it would sit on top of the
           calendar and cover the very dates it sends you back to. */}
       <div className="flex items-center justify-between gap-3 border-b border-hairline px-4 py-2.5">
-        <p className="eyebrow">One lane per game</p>
+        <StackControl value={group} onChange={onGroup} />
 
         <div className="flex items-center gap-3">
           <div role="group" aria-label="Scale" className="flex items-center gap-1">
@@ -253,23 +273,28 @@ export function Timeline({
           </div>
 
           <div className="space-y-7 pb-10 pt-5">
-            {[...byGame.entries()].map(([gameId, events]) => {
-              const game = gameMeta(gameId);
+            {lanes.map((lane) => {
+              const heading = lane.game === null ? null : gameMeta(lane.game);
               return (
-                <div key={gameId}>
+                <div key={lane.id}>
                   {/* On its own line and pinned to the left edge, so the lane
                       keeps its name at any scroll position without a frozen
-                      column standing on top of the calendar. */}
-                  <p
-                    className="eyebrow sticky left-0 z-20 mb-2.5 w-fit bg-ground pr-2 text-[0.625rem]"
-                    style={{ color: game.hue, paddingLeft: PIN }}
-                    title={game.name}
-                  >
-                    {game.short}
-                  </p>
+                      column standing on top of the calendar. Absent on the
+                      merged board, where there is no one game to name — each
+                      bar carries its own instead. */}
+                  {heading !== null && (
+                    <p
+                      className="eyebrow sticky left-0 z-20 mb-2.5 w-fit bg-ground pr-2 text-[0.625rem]"
+                      style={{ color: heading.hue, paddingLeft: PIN }}
+                      title={heading.name}
+                    >
+                      {heading.short}
+                    </p>
+                  )}
 
                   <div className="relative space-y-2">
-                    {events.map(({ event, clock }) => {
+                    {lane.rows.map(({ event, clock }) => {
+                      const game = gameMeta(event.game);
                       const unknownEnd = clock.endsMs === null;
                       // Only clipped if it began before the rendered window,
                       // which reaches a week past the oldest running event — so
@@ -278,19 +303,28 @@ export function Timeline({
                       const clippedStart = clock.startsMs < min;
                       const left = Math.max(x(clock.startsMs), 0);
                       const right = x(clock.endsMs ?? clock.startsMs + 14 * DAY);
+                      const width = Math.max(right - left, MIN_BAR);
                       const done = isDone(event.id);
                       return (
                         <button
                           key={event.id}
                           type="button"
                           onClick={() => onOpen(event.id)}
-                          title={event.title}
+                          // The game is in the tooltip on the merged board
+                          // because the bar can be too narrow to show the tag
+                          // it carries, and colour alone is not an answer once
+                          // thirteen games share one stack.
+                          title={
+                            heading === null
+                              ? `${game.name} — ${event.title}`
+                              : event.title
+                          }
                           className={`relative flex h-9 items-center gap-2 rounded-[5px] px-3 text-left text-[0.75rem] font-medium transition-opacity hover:opacity-100 ${
                             done ? "opacity-35" : "opacity-90"
                           }`}
                           style={{
                             marginLeft: left,
-                            width: Math.max(right - left, 34),
+                            width,
                             background: `color-mix(in srgb, ${game.hue} 22%, var(--color-surface))`,
                             // No start edge to draw when the bar begins before
                             // the view does.
@@ -307,10 +341,18 @@ export function Timeline({
                           {/* Sticky clamps to the bar's own box, so a name can
                               never wander outside the event it belongs to. */}
                           <span
-                            className="sticky truncate"
+                            className="sticky flex min-w-0 items-center gap-1.5 truncate"
                             style={{ left: PIN }}
                           >
-                            {event.title}
+                            {heading === null && width >= TAG_FROM && (
+                              <span
+                                className="eyebrow shrink-0 text-[0.5625rem]"
+                                style={{ color: game.hue }}
+                              >
+                                {game.short}
+                              </span>
+                            )}
+                            <span className="min-w-0 truncate">{event.title}</span>
                           </span>
                           <span
                             aria-hidden
@@ -354,6 +396,47 @@ export function boardWindow(
     min: Math.max(earliest, now - PAST_LIMIT),
     max: Math.max(...ends, now) + 2 * DAY,
   };
+}
+
+/**
+ * Lanes, or one queue.
+ *
+ * Sits in the board's own header rather than down in settings, for the reason
+ * the list's sort control does: it is something a reader reaches for while
+ * looking at the board, not a preference they go and configure. It reads as a
+ * pair of pills rather than the view tabs' segmented control, because it
+ * reshapes the thing below it instead of replacing it.
+ */
+function StackControl({
+  value,
+  onChange,
+}: {
+  value: TimelineGroup;
+  onChange: (group: TimelineGroup) => void;
+}) {
+  return (
+    <div role="group" aria-label="Stack the timeline" className="flex gap-1">
+      {TIMELINE_GROUPS.map((mode) => {
+        const on = value === mode.id;
+        return (
+          <button
+            key={mode.id}
+            type="button"
+            onClick={() => onChange(mode.id)}
+            aria-pressed={on}
+            title={mode.hint}
+            className={`rounded-full border px-2.5 py-1 text-[0.6875rem] font-medium transition-colors ${
+              on
+                ? "border-ink/60 text-ink"
+                : "border-transparent text-faint hover:text-muted"
+            }`}
+          >
+            {mode.label}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 /**
