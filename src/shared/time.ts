@@ -1,5 +1,6 @@
-import type { DisplayEvent } from "./custom.ts";
-import type { Region } from "./schema.ts";
+import type { DisplayEvent, LaneId } from "./custom.ts";
+import { GAMES } from "./games.ts";
+import type { GameId, Region } from "./schema.ts";
 
 /**
  * Time is this product's entire subject, so the vocabulary lives in one place:
@@ -19,6 +20,66 @@ export const REGION_RESET_UTC_OFFSET: Record<Region, number> = {
   america: -5,
   europe: 1,
 };
+
+/**
+ * Gacha servers roll the day at 04:00 local server time, not midnight — a
+ * player finishing at 02:00 is still on the previous day's dailies. Getting
+ * this wrong ticks the wrong box for four hours every night.
+ */
+export const RESET_HOUR_LOCAL = 4;
+
+/**
+ * The UTC offset of the server clock a reader's day rolls on.
+ *
+ * The reader's region is always the question; a game can just answer it
+ * differently. Most run a server per region and take the default. One that
+ * serves two regions off a single machine lists the regions that differ in
+ * `resetOffsets` — Endfield's European players sit on the Americas server, so
+ * `europe` resolves to UTC-5 there and to UTC+1 everywhere else.
+ *
+ * A blanket per-game offset would be the wrong shape: it would drag the regions
+ * that *do* have their own server onto somebody else's clock, which is a
+ * different bug in the same place.
+ */
+export function serverOffsetUtc(region: Region, game?: LaneId): number {
+  // A lane the reader invented (PRD F13) has no server map to know about, and
+  // neither does an id that has outlived its game, so both take the regional
+  // default rather than being looked up and crashing.
+  const override =
+    game === undefined ? undefined : GAMES[game as GameId]?.resetOffsets?.[region];
+  return override ?? REGION_RESET_UTC_OFFSET[region];
+}
+
+/**
+ * The hour of its own server day a game rolls over on.
+ *
+ * Almost always `RESET_HOUR_LOCAL`. A game that resets on a different hour says
+ * so in `resetHourLocal` (`games.ts`) — Reverse: 1999 rolls at 05:00 — and that
+ * cannot be folded into `serverOffsetUtc`: shifting a game's stated offset to
+ * land the right reset instant would misreport the server clock to everything
+ * else that asks for it.
+ *
+ * A lane the reader invented has no server to know about and takes the default,
+ * for the same reason `serverOffsetUtc` does.
+ */
+export function resetHourFor(game?: LaneId): number {
+  const override =
+    game === undefined ? undefined : GAMES[game as GameId]?.resetHourLocal;
+  return override ?? RESET_HOUR_LOCAL;
+}
+
+/**
+ * Offset from UTC midnight to this game's reset instant.
+ *
+ * `dayKey` and everything downstream of it is a **localStorage key**. Moving the
+ * reset hour, a region offset, or a game's own override re-labels the game-day
+ * some already-logged ticks fall in — at most by one day, and never by deleting
+ * one, but it is still the reader's streak moving under them. Treat a change
+ * here as a data change, not a constant.
+ */
+export function resetShiftMs(region: Region, game?: LaneId): number {
+  return serverOffsetUtc(region, game) * HOUR - resetHourFor(game) * HOUR;
+}
 
 export function guessRegion(
   timeZoneOffsetMinutes: number = -new Date().getTimezoneOffset(),
