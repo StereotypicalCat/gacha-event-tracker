@@ -66,8 +66,8 @@ no stored key. A game may have several sources; see `docs/INGESTION.md` § Three
 ### Features
 
 **F1 — Timeline view.**
-A horizontal timeline, one lane per game, spanning a scrollable date range with "today" pinned as a
-vertical marker. Each event is a bar from `startsAt` to `endsAt`. Bars are colored by game, and
+A horizontal timeline, by default one lane per game, spanning a scrollable date range with "today"
+pinned as a vertical marker. Each event is a bar from `startsAt` to `endsAt`. Bars are colored by game, and
 completed events render at reduced opacity with a check. Clicking a bar opens a detail panel with
 title, type, exact start/end in the user's local timezone, source link, and a completion toggle.
 
@@ -80,6 +80,20 @@ Those three used to scroll away together, which made a wide window worse rather 
 calendar on screen, and nothing left saying which day, whose game, or which event was being read. A
 six-week bar starts weeks off-screen, so a name that rides off with its own start date leaves a
 coloured rectangle behind.
+
+**The reader chooses how it stacks.** Lanes keep a game's events adjacent and comparable, which is
+what makes the board readable for someone playing four of them — but that reader also has one queue
+of deadlines, and lanes scatter it: what ends tonight sits three lanes below what ends next month,
+and no scroll position puts them side by side. So a pair of pills in the board's header switches
+between **By game** and **Ending soonest**, and the choice is remembered (`prefs.timelineGroup`,
+default `"game"` — the board every existing reader already has). Merged, the order is
+`endingSoonestFirst`, the same comparator behind the list's "Ending soonest" (F2), so the two views
+cannot mean different things by the same words and an unannounced end still sorts behind every dated
+one rather than claiming a place in the queue. Merged there is also no lane heading to say whose
+event a bar is, and hue alone cannot answer that once thirteen games share a stack — so each bar
+carries its game's short name, with the full name in its tooltip. A bar too narrow for a tag and a
+title both keeps the title: a chopped game name reads as a broken word, and the hue and the tooltip
+still answer it.
 
 **The reader sets the scale.** A patch cycle is six weeks and a login campaign can run for months,
 so no single density answers both "what am I in the middle of this week?" and "how do the next three

@@ -126,6 +126,7 @@ src/
       sort.ts           deadline order, or what you're partway through
       lens.ts           who sees which rows — focus, outstanding, next-to-expire
       zoom.ts           the timeline's scale ladder; pure
+      lanes.ts          how the timeline stacks — lanes, or one deadline queue; pure
       useAppUpdate.ts   is a newer build waiting, and taking it   (F14)
 serve.ts                static server + /api/health              ✓ built
 scripts/

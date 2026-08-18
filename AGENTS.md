@@ -113,9 +113,10 @@ src/client/       React app, service worker, manifest
                   useCustom.ts — the reader's own games and events (PRD F13)
                   lens.ts — who sees which rows (focus, outstanding, next-to-expire); pure
                   zoom.ts — the timeline's scale ladder; pure
+                  lanes.ts — how the timeline stacks: a lane per game, or one deadline queue; pure
 scripts/          build-feed.ts, build-static.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             599 tests
+test/             606 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
