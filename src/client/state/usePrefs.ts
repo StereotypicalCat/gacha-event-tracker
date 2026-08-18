@@ -4,6 +4,7 @@ import type { Region } from "../../shared/schema.ts";
 import { guessRegion } from "../../shared/time.ts";
 import type { SortMode } from "./sort.ts";
 import { KEYS, readJson, writeJson } from "./storage.ts";
+import type { TimelineGroup } from "./lanes.ts";
 import { DEFAULT_DAY_WIDTH } from "./zoom.ts";
 
 /**
@@ -73,6 +74,18 @@ export interface Prefs {
    */
   timelineDayWidth: number;
   /**
+   * How the timeline stacks its bars: a lane per game, or every game together
+   * in deadline order.
+   *
+   * Remembered for the same reason `view` and `timelineDayWidth` are — it is
+   * the reader's answer to "how do I read this?", and a board that went back to
+   * lanes on every reload would make them say it again each time.
+   *
+   * Defaults to `"game"`, which is the board every existing reader already has.
+   * A stored pref wins, so shipping this moves nobody's view.
+   */
+  timelineGroup: TimelineGroup;
+  /**
    * Whether to guess which events repeat daily from what the source printed.
    * Off leaves only the ones the reader marked themselves; it never discards a
    * mark or a logged day, so it is reversible.
@@ -99,6 +112,7 @@ function defaults(): Prefs {
     sort: "ending",
     view: "soon",
     timelineDayWidth: DEFAULT_DAY_WIDTH,
+    timelineGroup: "game",
     detectDaily: false,
     showCompleted: true,
     showIgnored: false,

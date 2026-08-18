@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { NextUp } from "../src/client/components/NextUp.tsx";
 import { boardWindow } from "../src/client/components/Timeline.tsx";
 import { Welcome } from "../src/client/components/Welcome.tsx";
+import { timelineLanes } from "../src/client/state/lanes.ts";
 import { GameMetaProvider } from "../src/client/state/gameMeta.tsx";
 import { metaFor } from "../src/shared/games.ts";
 import { clockFor } from "../src/shared/time.ts";
@@ -149,5 +150,54 @@ describe("Timeline window", () => {
     const { min, max } = boardWindow([NOW + 30 * DAY], [NOW + 40 * DAY], NOW);
     expect(min).toBeLessThan(NOW);
     expect(max).toBeGreaterThan(NOW);
+  });
+});
+
+describe("timelineLanes", () => {
+  // Deliberately not in deadline order, and with a game interleaved, so the
+  // two modes cannot both pass by accident.
+  const rows = [
+    row("Closing Ceremony", "genshin", 100),
+    row("Second Wind", "hsr", 6),
+    row("Third Rail", "genshin", 30),
+    row("Open Ended", "zzz", null),
+  ];
+
+  test("by game: a lane each, and the order inside one is left alone", () => {
+    // The rows arrive sorted by whatever the reader chose in the list.
+    // Grouping them is not a licence to re-sort within a game.
+    const lanes = timelineLanes(rows, "game");
+    expect(lanes.map((l) => l.game)).toEqual(["genshin", "hsr", "zzz"]);
+    expect(lanes[0]?.rows.map((r) => r.event.title)).toEqual([
+      "Closing Ceremony",
+      "Third Rail",
+    ]);
+  });
+
+  test("ending soonest: every game in one stack, deadline order", () => {
+    const lanes = timelineLanes(rows, "ending");
+    expect(lanes).toHaveLength(1);
+    // No heading to name the game, so the renderer has to say it per bar.
+    expect(lanes[0]?.game).toBeNull();
+    expect(lanes[0]?.rows.map((r) => r.event.title)).toEqual([
+      "Second Wind",
+      "Third Rail",
+      "Closing Ceremony",
+      // An unannounced end is still on the board, behind every dated one — it
+      // is real, but it is not a deadline.
+      "Open Ended",
+    ]);
+  });
+
+  test("neither mode loses a row", () => {
+    for (const mode of ["game", "ending"] as const) {
+      const plotted = timelineLanes(rows, mode).flatMap((l) => l.rows);
+      expect(plotted).toHaveLength(rows.length);
+    }
+  });
+
+  test("an empty board is no lanes, not one empty lane", () => {
+    expect(timelineLanes([], "ending")).toEqual([]);
+    expect(timelineLanes([], "game")).toEqual([]);
   });
 });
