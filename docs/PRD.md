@@ -105,6 +105,12 @@ three-month board throws away whatever the reader had scrolled to. And the dated
 the scale shrinks, since a week is 42px at the widest setting and the dates would sit on top of one
 another; the gridlines stay weekly either way, because they carry the rhythm rather than the reading.
 
+The close end of the ladder goes to a day being wider than a fingertip (108px). That is not a
+flourish: events routinely end within a day of each other, and at a scale where their bar ends are a
+few pixels apart the board is being asked the one question it exists to answer and telling the
+reader to squint. It also gives a one-day event a bar to read and to tap rather than the 34px
+minimum every short bar collapses to.
+
 **The board draws at most two months of past.** A standing login campaign can have been running for
 half a year, and drawing from the earliest start bought months of empty calendar that nobody scrolls
 back through and that pushed every other bar off to the right. An event older than the board keeps
