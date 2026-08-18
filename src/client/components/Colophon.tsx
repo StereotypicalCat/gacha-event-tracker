@@ -67,6 +67,18 @@ export const IDEA_CREDITS = [
     handle: "u/eriatilox",
     url: "https://www.reddit.com/user/eriatilox/",
   },
+  {
+    handle: "u/lotus_lunaris",
+    url: "https://www.reddit.com/user/lotus_lunaris/",
+  },
+  {
+    handle: "u/Neoragex13",
+    url: "https://www.reddit.com/user/Neoragex13/",
+  },
+  {
+    handle: "u/ShiroWaffles",
+    url: "https://www.reddit.com/user/ShiroWaffles/",
+  },
 ] as const;
 
 /**
