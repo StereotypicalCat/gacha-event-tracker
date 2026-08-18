@@ -290,3 +290,14 @@ body {
   scrollbar-width: thin;
   scrollbar-color: var(--color-hairline) transparent;
 }
+
+/*
+ * Panes that scroll in both directions — the timeline board, and the pinned
+ * deadline rail on a wide screen. Same quiet bar chrome as `.scroll-x`, but the
+ * overflow itself is left to the element, because both of those only become
+ * scrollers at a breakpoint.
+ */
+.scroll-pane {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-hairline) transparent;
+}

@@ -335,9 +335,9 @@ export function App() {
   return (
     <GameMetaProvider value={gameMeta}>
     <Shell>
-      <header className="flex items-center justify-between px-4 pb-3 pt-5">
+      <header className="flex items-center justify-between gap-4 border-b border-hairline px-4 pb-3 pt-5">
         <div>
-          <p className="font-display text-[0.9375rem] font-bold tracking-[0.02em]">
+          <p className="font-display text-[0.9375rem] font-bold tracking-[0.02em] lg:text-lg">
             EVENT<span className="text-near">CLOCK</span>
           </p>
           <p className="mt-0.5 flex items-center gap-1.5 text-xs text-faint">
@@ -391,7 +391,24 @@ export function App() {
       />
 
       {view === "soon" ? (
-        <>
+        /*
+         * Two columns once the screen has room for them, and the split is the
+         * one this codebase already draws everywhere else: what the page is
+         * *telling* the reader to do on the left, what it is *showing* them on
+         * the right. The deadlines and tonight's dailies are instructions, they
+         * are short, and they are what the reader came for — so on a wide
+         * screen they stop scrolling away and stay pinned beside the list.
+         *
+         * Below `lg` this is one column in exactly the old order, because on a
+         * phone the same argument produces the same answer: put them first.
+         */
+        <div className="lg:grid lg:grid-cols-[20rem_minmax(0,1fr)] xl:grid-cols-[22rem_minmax(0,1fr)]">
+          <aside>
+            {/* The rule belongs to the panel, not to the column: the deadlines
+                and the dailies are short and the list beside them is long, so a
+                full-height divider would spend most of its length walling off
+                an empty gap. It travels with the panel as that pins. */}
+            <div className="scroll-pane lg:sticky lg:top-0 lg:max-h-screen lg:overflow-y-auto lg:border-r lg:border-hairline">
           <NextUp
             rows={headline}
             focused={focus === null ? null : gameMeta(focus).name}
@@ -413,7 +430,10 @@ export function App() {
             daysFor={daily.daysFor}
             onToggleDay={daily.toggleDay}
           />
+            </div>
+          </aside>
 
+          <div className="min-w-0">
           {live.length > 0 && (
             <Section
               legend
@@ -463,7 +483,8 @@ export function App() {
                 : "Nothing to show. Every game is switched off, or you've finished everything and hidden completed events."}
             </p>
           )}
-        </>
+          </div>
+        </div>
       ) : (
         <Timeline rows={visible} now={now} onOpen={setOpenId} isDone={isDone} />
       )}
@@ -575,7 +596,7 @@ export function App() {
 function Shell({ children }: { children: React.ReactNode }) {
   const update = useAppUpdate();
   return (
-    <div className="mx-auto min-h-full max-w-2xl border-hairline sm:border-x">
+    <div className="mx-auto min-h-full max-w-2xl border-hairline sm:border-x lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl">
       {children}
       {update.available && (
         <UpdateNotice

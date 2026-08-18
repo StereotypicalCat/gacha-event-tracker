@@ -433,6 +433,11 @@ to an open page). Four things hold it up:
 - Keep old fixtures when a source changes shape — the old one is the regression test proving the
   parser still handles the previous format. Fixtures are pinned and permanent; `snapshots/` is the
   current page and gets overwritten. Do not conflate them.
+- **The page is two columns past `lg`, and the split is the one below.** What the page *tells* the
+  reader to do — the next deadlines, tonight's dailies — pins to a rail on the left and stays put
+  while the lists it *shows* them scroll beside it. Below that breakpoint it is one column in the
+  same order. The rail's rule belongs to the panel, not the column: the panel is short and the list
+  is long, so a full-height divider would spend most of its length walling off a gap.
 - **Truncating a list is not re-sorting it.** Each section shows `LIST_CAP` rows and offers "show
   all N". The rows below the cut keep their place in the order, stay counted in the header, and stay
   on the timeline — so the deadline guarantee two bullets down holds for what is hidden exactly as it

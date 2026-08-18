@@ -109,120 +109,128 @@ export function Colophon({
 
   return (
     <footer className="border-t border-hairline px-4 pb-12 pt-6 text-xs leading-relaxed text-faint">
-      <p>
-        Dates are shown in your local time. Every event links to the page it came
-        from — check there before the last hours.
-      </p>
+      {/* Three columns once there is room: the age of the data, who compiled
+          it, and what it is not. Stacked they are a long scroll of small grey
+          text that a reader gives up on before reaching the disclaimer, which
+          is the one part that has to be read. */}
+      <div className="lg:grid lg:grid-cols-3 lg:gap-x-10">
+        <div>
+          <p>
+            Dates are shown in your local time. Every event links to the page it came
+            from — check there before the last hours.
+          </p>
 
-      {/*
-        Stated on every load, not only when something is wrong. A page that says
-        nothing about its own age reads as current, and "how old is this?" is the
-        question a reader has to be able to answer before trusting a countdown
-        (PRD F7). The date is absolute *and* relative on purpose: the relative
-        half is what gets read, the absolute half is what can be checked.
-      */}
-      <p className="mt-2">
-        <span className="text-muted">Event data last refreshed</span>{" "}
-        {refreshedAt === null ? (
-          "— no source has been fetched yet."
-        ) : (
-          <>
-            <time dateTime={refreshedAt} className="text-muted">
-              {formatAbsolute(refreshedAt, true)}
-            </time>
-            {` — ${ago} ago.`}
-          </>
-        )}
-      </p>
+          {/*
+            Stated on every load, not only when something is wrong. A page that says
+            nothing about its own age reads as current, and "how old is this?" is the
+            question a reader has to be able to answer before trusting a countdown
+            (PRD F7). The date is absolute *and* relative on purpose: the relative
+            half is what gets read, the absolute half is what can be checked.
+          */}
+          <p className="mt-2">
+            <span className="text-muted">Event data last refreshed</span>{" "}
+            {refreshedAt === null ? (
+              "— no source has been fetched yet."
+            ) : (
+              <>
+                <time dateTime={refreshedAt} className="text-muted">
+                  {formatAbsolute(refreshedAt, true)}
+                </time>
+                {` — ${ago} ago.`}
+              </>
+            )}
+          </p>
 
-      {stale.length > 0 && (
-        // Named per game rather than counted, because a count is not something a
-        // reader can act on: knowing *which* lane is behind tells them which
-        // source page to go and check, which is the whole remedy on offer.
-        //
-        // Except when the answer is "all of them", which is what a refresh that
-        // stopped running looks like. Ten names each repeating the same age is
-        // less readable than the count this replaced, and the headline above
-        // already gives the date — so that case gets a sentence, not a list.
-        <p className="mt-2 text-soon">
-          {stale.length === games.length ? (
-            `Nothing has refreshed in over two days, so any end date here may have moved.`
-          ) : (
-            <>
-              {stale.length === 1 ? "This game has" : "These games have"} not
-              refreshed in over two days, so some of their end dates may have
-              moved:{" "}
-              {stale.slice(0, STALE_NAMES).map((s, i, shown) => (
-                <span key={s.game}>
-                  {i > 0 && (i === shown.length - 1 && stale.length <= STALE_NAMES ? " and " : ", ")}
-                  {gameMeta(s.game).name}
-                  {s.lastSuccessAt === null
-                    ? " (never)"
-                    : ` (${formatRemaining(now - Date.parse(s.lastSuccessAt))} ago)`}
-                </span>
-              ))}
-              {stale.length > STALE_NAMES &&
-                ` and ${stale.length - STALE_NAMES} other game${
-                  stale.length - STALE_NAMES > 1 ? "s" : ""
-                }`}
-              {"."}
-            </>
+          {stale.length > 0 && (
+            // Named per game rather than counted, because a count is not something a
+            // reader can act on: knowing *which* lane is behind tells them which
+            // source page to go and check, which is the whole remedy on offer.
+            //
+            // Except when the answer is "all of them", which is what a refresh that
+            // stopped running looks like. Ten names each repeating the same age is
+            // less readable than the count this replaced, and the headline above
+            // already gives the date — so that case gets a sentence, not a list.
+            <p className="mt-2 text-soon">
+              {stale.length === games.length ? (
+                `Nothing has refreshed in over two days, so any end date here may have moved.`
+              ) : (
+                <>
+                  {stale.length === 1 ? "This game has" : "These games have"} not
+                  refreshed in over two days, so some of their end dates may have
+                  moved:{" "}
+                  {stale.slice(0, STALE_NAMES).map((s, i, shown) => (
+                    <span key={s.game}>
+                      {i > 0 && (i === shown.length - 1 && stale.length <= STALE_NAMES ? " and " : ", ")}
+                      {gameMeta(s.game).name}
+                      {s.lastSuccessAt === null
+                        ? " (never)"
+                        : ` (${formatRemaining(now - Date.parse(s.lastSuccessAt))} ago)`}
+                    </span>
+                  ))}
+                  {stale.length > STALE_NAMES &&
+                    ` and ${stale.length - STALE_NAMES} other game${
+                      stale.length - STALE_NAMES > 1 ? "s" : ""
+                    }`}
+                  {"."}
+                </>
+              )}
+            </p>
           )}
-        </p>
-      )}
+        </div>
 
-      <div className="mt-5">
-        <p className="eyebrow">With thanks to</p>
-        <p className="mt-1.5">
-          {sites.map((site, i) => (
-            <span key={site.name}>
-              {i > 0 && (i === sites.length - 1 ? " and " : ", ")}
-              <a
-                href={site.url}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="text-muted underline decoration-hairline underline-offset-2 transition-colors duration-150 hover:text-ink hover:decoration-near"
-              >
-                {site.name}
-              </a>
-            </span>
-          ))}
-          {", whose editors compile and maintain the event calendars this reads from. The schedules are their work; this page only rearranges them."}
-        </p>
-        <p className="mt-2">
-          And to{" "}
-          {studios.map((studio, i) => (
-            <span key={studio}>
-              {i > 0 && (i === studios.length - 1 ? " and " : ", ")}
-              {studio}
-            </span>
-          ))}
-          , who make the games worth keeping track of —{" "}
-          {games.map((game, i) => (
-            <span key={game.id}>
-              {i > 0 && ", "}
-              <span style={{ color: game.hue }}>{game.name}</span>
-            </span>
-          ))}
-          {"."}
-        </p>
+        <div className="mt-5 lg:mt-0">
+          <p className="eyebrow">With thanks to</p>
+          <p className="mt-1.5">
+            {sites.map((site, i) => (
+              <span key={site.name}>
+                {i > 0 && (i === sites.length - 1 ? " and " : ", ")}
+                <a
+                  href={site.url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="text-muted underline decoration-hairline underline-offset-2 transition-colors duration-150 hover:text-ink hover:decoration-near"
+                >
+                  {site.name}
+                </a>
+              </span>
+            ))}
+            {", whose editors compile and maintain the event calendars this reads from. The schedules are their work; this page only rearranges them."}
+          </p>
+          <p className="mt-2">
+            And to{" "}
+            {studios.map((studio, i) => (
+              <span key={studio}>
+                {i > 0 && (i === studios.length - 1 ? " and " : ", ")}
+                {studio}
+              </span>
+            ))}
+            , who make the games worth keeping track of —{" "}
+            {games.map((game, i) => (
+              <span key={game.id}>
+                {i > 0 && ", "}
+                <span style={{ color: game.hue }}>{game.name}</span>
+              </span>
+            ))}
+            {"."}
+          </p>
+        </div>
+
+        <div className="mt-5 border-t border-hairline pt-4 lg:mt-0 lg:border-t-0 lg:pt-0">
+          <p>
+            <strong className="font-semibold text-muted">Not affiliated</strong>{" "}
+            with {named.join(", ")}, or any other publisher or source named here.
+            This is an unofficial fan-made tool, not endorsed by or connected to
+            any of them. All game names, event names and trademarks belong to their
+            respective owners.
+          </p>
+          <p className="mt-2">
+            Event dates can be wrong or go out of date. Treat the source page as
+            the authority, not this one.
+          </p>
+        </div>
       </div>
 
-      <div className="mt-5 border-t border-hairline pt-4">
-        <p>
-          <strong className="font-semibold text-muted">Not affiliated</strong>{" "}
-          with {named.join(", ")}, or any other publisher or source named here.
-          This is an unofficial fan-made tool, not endorsed by or connected to
-          any of them. All game names, event names and trademarks belong to their
-          respective owners.
-        </p>
-        <p className="mt-2">
-          Event dates can be wrong or go out of date. Treat the source page as
-          the authority, not this one.
-        </p>
-      </div>
-
-      <p className="mt-5">
+      <p className="mt-6 border-t border-hairline pt-5">
         Built by{" "}
         <a
           href={AUTHOR.site}

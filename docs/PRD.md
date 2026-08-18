@@ -28,6 +28,11 @@ A single-page web app that answers three questions:
 ## Users
 
 One persona: a player of 2–5 gacha games who checks in a few times a week, most often on mobile.
+
+Most often is not only, and the desktop layout is not the phone layout stretched. Past `lg` the page
+splits: what it is *telling* the reader to do — the next deadlines, tonight's dailies — pins to a
+rail on the left and stays put, while the lists it is *showing* them scroll beside it. Below that
+breakpoint the same split produces the same answer in one column: instructions first.
 They care about accuracy of end dates above everything else — a wrong date is worse than a missing
 event, because a missing event sends them to a wiki while a wrong one makes them miss content.
 
