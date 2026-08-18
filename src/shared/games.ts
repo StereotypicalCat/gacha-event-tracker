@@ -94,7 +94,16 @@ export const GAMES: Record<GameId, GameMeta> = {
   // has to come from a source that states the clock. Inventing one moves real
   // readers' day keys, and a wrong guess ticks the wrong box every night.
   ba: { id: "ba", name: "Blue Archive", short: "Blue Archive", hue: "#3FCBDD" , studio: "Nexon Games", dailyTasks: "Daily missions, AP" },
-  fgo: { id: "fgo", name: "Fate/Grand Order", short: "FGO", hue: "#1D3A8F", studio: "Lasengle", dailyTasks: "Daily missions, AP" },
+  // No `resetOffsets`, and this one is a gap in the field rather than a gap in
+  // the evidence. The English server is a single worldwide machine on US
+  // Pacific time — every duration on the wiki's `Event_List_(US)` says so — but
+  // Pacific observes daylight saving, and the page itself alternates `PDT` and
+  // `PST` across the year. `resetOffsets` is one fixed number per region, so
+  // there is no honest value: -7 is wrong all winter and -8 all summer, and
+  // either way it re-labels day keys twice a year for readers who have logged
+  // ticks under the other one. A game whose server clock shifts needs a field
+  // that can shift with it — see the note in AGENTS.md § Event IDs.
+  fgo: { id: "fgo", name: "Fate/Grand Order", short: "FGO", hue: "#1D3A8F", studio: "Lasengle", dailyTasks: "Daily Quests, AP" },
   // hololive Dreams runs a single worldwide service on a Japanese clock, and
   // both halves of that come from the source rather than from habit: every
   // boundary on holodori.wiki is stated once, in `(JST)`, with no per-region
