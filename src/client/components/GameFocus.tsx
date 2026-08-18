@@ -53,10 +53,15 @@ export function GameFocus({
         </button>
       </div>
 
+      {/* A scrolling strip where the bar is as wide as the page, wrapped rows
+          where it is a 20rem rail: a thirteen-game reader would otherwise get
+          four chips and a hairline scrollbar, and a game you cannot see is a
+          game you will not focus. The rail is short and the list beside it is
+          long, so the rows cost nothing that column was using. */}
       <div
         role="group"
         aria-label="Focus on one game"
-        className="scroll-x -mx-4 mt-2 flex gap-1.5 px-4 pb-1"
+        className="scroll-x -mx-4 mt-2 flex gap-1.5 px-4 pb-1 lg:flex-wrap"
       >
         <Chip
           label="All"
