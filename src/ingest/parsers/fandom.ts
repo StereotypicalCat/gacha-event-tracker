@@ -88,7 +88,7 @@ function parseFgoEventsPage(rendered: string, ctx: ParseContext): GachaEvent[] {
   for (const match of flat.matchAll(ONGOING_BLOCK)) {
     const href = match[1] ?? "";
     const titleHtml = match[2] ?? "";
-    const title = text(titleHtml).trim();
+    const title = text(titleHtml).normalize("NFKC").trim();
     if (!title || /permanent/i.test(title)) continue;
 
     let rawDate = text(match[3] ?? "").replace(/&#160;/g, " ").replace(/~/g, "-").replace(/JST/i, "").trim();
@@ -151,7 +151,8 @@ function parseFgoEventsPage(rendered: string, ctx: ParseContext): GachaEvent[] {
       const imgTdHtml = blockMatch[2] ?? "";
       const dateTdHtml = blockMatch[3] ?? "";
 
-      const title = text(thHtml).trim();
+      // Normalize NFKC immediately so it matches the sanitizer's fixed point.
+      const title = text(thHtml).normalize("NFKC").trim();
       if (!title) continue;
 
       let rawDate = text(dateTdHtml).replace(/&#160;/g, " ").replace(/~/g, "-").trim();
