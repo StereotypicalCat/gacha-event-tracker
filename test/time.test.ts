@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { GachaEvent } from "../src/shared/schema.ts";
+import { dailyDays, dayKey } from "../src/shared/daily.ts";
 import {
   clockFor,
   DAY,
+  dayStartMs,
   endingSoonestFirst,
   formatRemaining,
   HOUR,
@@ -59,10 +61,13 @@ describe("urgency", () => {
 
 describe("clockFor", () => {
   test("reports progress through the window", () => {
+    // Both boundaries are day-precision, so both land on the Europe reset
+    // (04:00 on a UTC+1 server = 03:00Z) rather than on UTC midnight. The
+    // window is still ten days; it just starts and finishes three hours later.
     const c = clockFor(event(), "europe", NOW);
     expect(c.live).toBe(true);
-    expect(c.progress).toBeCloseTo(0.55, 2);
-    expect(c.msRemaining).toBe(Date.parse("2026-08-20T00:00:00.000Z") - NOW);
+    expect(c.progress).toBeCloseTo(0.5375, 3);
+    expect(c.msRemaining).toBe(Date.parse("2026-08-20T03:00:00.000Z") - NOW);
   });
 
   test("an unannounced end is never urgent and has no progress", () => {
@@ -80,6 +85,9 @@ describe("clockFor", () => {
   });
 
   test("resolves a region-scoped end to the reader's region", () => {
+    // Note the event is day-precision: a `regionEnds` value is still taken
+    // verbatim, because the map only exists when a source printed a timer per
+    // server. Re-anchoring it to a reset would throw that instant away.
     const c = clockFor(
       event({
         regionScoped: true,
@@ -120,5 +128,107 @@ describe("endingSoonestFirst", () => {
       "unknown",
       "upcoming",
     ]);
+  });
+});
+
+describe("a day-precision boundary", () => {
+  /**
+   * The bug this describes: a source that prints "August 19, 2026" and no time
+   * is stored as 00:00Z, and counting down to that literally expires the event
+   * at the moment the *UTC* day opens. A European Wuthering Waves player's day
+   * opens at 04:00 on a UTC+1 server, so the app called an event over three
+   * hours before the game did — and the game was the one the reader believed.
+   */
+  const dated = (endsAt: string, overrides: Partial<GachaEvent> = {}) =>
+    event({ endsAt, endPrecision: "day", ...overrides });
+
+  test("resolves to the game's reset, not to UTC midnight", () => {
+    const c = clockFor(dated("2026-08-19T00:00:00.000Z"), "europe", NOW);
+    expect(c.endsMs).toBe(Date.parse("2026-08-19T03:00:00.000Z"));
+    expect(c.endsMs! - Date.parse("2026-08-19T00:00:00.000Z")).toBe(3 * HOUR);
+  });
+
+  test("lands on a different instant in each region, from the same date", () => {
+    const at = (region: "asia" | "america" | "europe") =>
+      clockFor(dated("2026-08-19T00:00:00.000Z"), region, NOW).endsMs;
+    // 04:00 local on UTC+8, UTC-5 and UTC+1 servers respectively. Reading the
+    // printed date as UTC is wrong for all three, and by up to nine hours.
+    expect(at("asia")).toBe(Date.parse("2026-08-18T20:00:00.000Z"));
+    expect(at("america")).toBe(Date.parse("2026-08-19T09:00:00.000Z"));
+    expect(at("europe")).toBe(Date.parse("2026-08-19T03:00:00.000Z"));
+  });
+
+  test("follows a game that states its own server map or reset hour", () => {
+    // Endfield serves Europe off the Americas machine (UTC-5), and Reverse:
+    // 1999 rolls at 05:00 on a single UTC-5 server. Both already move day keys;
+    // an end date printed for those games moves with them.
+    const end = "2026-08-19T00:00:00.000Z";
+    expect(clockFor(dated(end, { game: "endfield" }), "europe", NOW).endsMs).toBe(
+      Date.parse("2026-08-19T09:00:00.000Z"),
+    );
+    expect(clockFor(dated(end, { game: "r1999" }), "europe", NOW).endsMs).toBe(
+      Date.parse("2026-08-19T10:00:00.000Z"),
+    );
+  });
+
+  test("leaves an exact boundary exactly where the source put it", () => {
+    const c = clockFor(
+      event({
+        startsAt: "2026-08-10T11:00:00.000Z",
+        startPrecision: "exact",
+        endsAt: "2026-08-19T10:59:59.000Z",
+        endPrecision: "exact",
+      }),
+      "europe",
+      NOW,
+    );
+    expect(c.startsMs).toBe(Date.parse("2026-08-10T11:00:00.000Z"));
+    expect(c.endsMs).toBe(Date.parse("2026-08-19T10:59:59.000Z"));
+  });
+
+  test("leaves an event the reader typed in alone", () => {
+    // `readerInstant` already resolved this to the instant they meant, in their
+    // own timezone — the end of the day they named, not a parser declining to
+    // guess a time. Anchoring it would move a date they stated themselves.
+    const typed = "2026-08-19T21:59:59.000Z";
+    const c = clockFor(
+      dated(typed, { extractionMethod: "manual", sourceId: "you" }),
+      "europe",
+      NOW,
+    );
+    expect(c.endsMs).toBe(Date.parse(typed));
+  });
+
+  test("an unannounced end is still unannounced", () => {
+    const c = clockFor(event({ endsAt: null, endPrecision: "unknown" }), "asia", NOW);
+    expect(c.endsMs).toBeNull();
+  });
+
+  test("puts the checklist on the days the reader can actually claim", () => {
+    // The window now starts on a reset, so the first pip is the day the source
+    // named. Read as UTC midnight it opened three hours early, which put a
+    // phantom pip on the day *before* the event for every region ahead of UTC.
+    const c = clockFor(
+      event({ startsAt: "2026-08-10T00:00:00.000Z", endsAt: "2026-08-13T00:00:00.000Z" }),
+      "europe",
+      NOW,
+    );
+    expect(dailyDays(c.startsMs, c.endsMs, "europe", "genshin")).toEqual([
+      "2026-08-10",
+      "2026-08-11",
+      "2026-08-12",
+    ]);
+  });
+});
+
+describe("dayStartMs", () => {
+  test("is the instant dayKey names, for every region and game", () => {
+    for (const region of ["asia", "america", "europe"] as const) {
+      for (const game of [undefined, "genshin", "endfield", "r1999"] as const) {
+        const start = dayStartMs("2026-08-19", region, game);
+        expect(dayKey(start, region, game)).toBe("2026-08-19");
+        expect(dayKey(start - 1, region, game)).toBe("2026-08-18");
+      }
+    }
   });
 });

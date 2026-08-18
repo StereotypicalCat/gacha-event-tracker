@@ -287,6 +287,12 @@ The app's entire value is that the dates are right. Therefore:
 - An event whose confidence is below threshold, or whose sources disagree, is not published at all
   until a human approves it.
 - Every event links to its source so a skeptical user can verify in one click.
+- **A date with no time is resolved on the game's clock, never on UTC's.** Most sources print
+  "August 19, 2026" and no time of day, which is stored as 00:00Z — a placeholder, not an instant.
+  The countdown reads it as that game-day's server reset for the reader's region, because a literal
+  reading retires an event up to nine hours before the game does and the reader is standing in the
+  game while we say it. This is a reading of the date the source printed, not a time invented for
+  it, and the detail sheet says as much.
 
 An empty calendar is a recoverable disappointment. A confidently wrong end date is the failure this
 product exists to prevent.

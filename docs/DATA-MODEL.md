@@ -79,6 +79,23 @@ true`, with `regionEnds` carrying the three resolved UTC instants. The client pi
 user's stored region (PRD F5). Collapsing these into a single timestamp loses up to 13 hours of
 accuracy and will make the countdown wrong for two thirds of users.
 
+**`startPrecision` / `endPrecision`, and what 00:00Z means.** A source that prints a calendar date
+and no time of day gets `"day"` precision, and the instant stored alongside it is that date at
+00:00Z. That timestamp is a **placeholder for "somewhere in this day", not a claim that the day
+begins at UTC midnight** — the parser has declined to invent a time, exactly as it declines to
+invent a date. Nothing downstream may read it as an instant: `clockFor` in `src/shared/time.ts`
+resolves a day-precision boundary to the reset that opens that game-day on the reader's server
+(`dayStartMs`), which is the same clock `daily.ts` keys every tick by, and the countdown and the
+detail sheet both run off that. Read literally instead, the stored value expires an event up to nine
+hours early — the whole of Asia and Europe — which is how a Wuthering Waves event dated "August 19"
+was called over three hours before the game ended it.
+
+Two boundaries are exempt, for the same reason in both directions. A `regionEnds` value is taken
+verbatim: that map only exists because a source published a timer per server, so it is already the
+instant, and re-anchoring it would throw a stated fact away. And an event the reader typed in
+(`extractionMethod: "manual"`) is taken verbatim too: `readerInstant` resolved it to the instant
+*they* meant, in their own timezone, when they entered it.
+
 **`confidence`** is assigned by the parser and adjusted during merge and reconciliation — see
 `docs/INGESTION.md` § Scoring. It records how firmly the sources pinned the event down.
 
@@ -392,7 +409,7 @@ to:
 | Rule | Why |
 |---|---|
 | `endsAt` null pairs with `endPrecision: "unknown"` | The same invariant `GachaEvent` enforces. "I don't know when this ends" is a supported answer for a reader too, and a required one — otherwise entering an unannounced event forces them to invent a date |
-| A date with no time is `"day"` precision, a date with one is `"exact"` | So the UI's existing "accurate to the day only" note is honest about their input as well |
+| A date with no time is `"day"` precision, a date with one is `"exact"` | So the UI's existing "accurate to the day only" note is honest about their input as well. Their day-precision boundary is still *their* instant, though — `readerInstant` puts a start at 00:00 and an end at 23:59:59 in their own timezone, so unlike a parser's placeholder it is never re-anchored to a server reset |
 | `endsAt` must be after `startsAt` | A backwards interval is a typo whoever made it |
 | `hue` must match `#rrggbb` | It reaches a `style` attribute, and an imported file is not necessarily one the reader wrote |
 | `regionScoped` is always false | They entered one instant, not a per-region map. Claiming otherwise would fabricate three timestamps out of one |

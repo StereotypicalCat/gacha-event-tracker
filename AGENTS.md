@@ -115,7 +115,7 @@ src/client/       React app, service worker, manifest
                   zoom.ts — the timeline's scale ladder; pure
 scripts/          build-feed.ts, build-static.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             591 tests
+test/             599 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
@@ -137,6 +137,19 @@ These come from how gacha games actually schedule things, and they cause most bu
   `endsAt: null` and `endPrecision: "unknown"`. **Never invent a plausible date to satisfy a
   non-null type.** This is the worst failure mode this codebase has, because the user's entire
   reason for visiting is trusting the end date.
+- **A date with no time of day is stored as 00:00Z, and that is a placeholder, not an instant.**
+  Most sources print `August 19, 2026` and nothing else, so `dates.ts` returns `precision: "day"` at
+  UTC midnight because it has to return something. Counting down to it literally turns the
+  placeholder into a claim the source never made — that the day opens in UTC — and retires an event
+  up to nine hours before the game does, while the reader is standing in the game watching a longer
+  timer. So `clockFor` (`src/shared/time.ts`) resolves a day-precision boundary to the reset that
+  opens that game-day on the reader's server, via `dayStartMs`: the same clock `daily.ts` keys every
+  tick by, and the only fact we hold about a game's day. Two boundaries are never re-anchored — a
+  `regionEnds` value, which exists precisely because the source stated an instant per server, and an
+  event the reader typed in, which `readerInstant` already resolved in their own timezone. This is a
+  *reading* of the printed date, not an invented time, and it changes nothing stored: the feed,
+  every event ID and the parsers are untouched, so it is one resolution at the point where the
+  region is finally known.
 - **Patch cycles are ~6 weeks.** Any event over 180 days is a parse error, not a long event. The
   validator and the tests both reject it.
 
@@ -193,6 +206,10 @@ Two more key spaces have the same property, for the same reason:
 - **Game-day keys** (`dayKey`) are `YYYY-MM-DD` in *server-reset space*, not UTC — the day rolls at
   04:00 local server time. They are storage keys *and* they are compared with `<` and sorted, so the
   format is fixed. Changing the reset hour or the offsets moves every reader's streak by a day.
+  The clock those keys are cut on — `RESET_HOUR_LOCAL`, `serverOffsetUtc`, `resetHourFor`,
+  `resetShiftMs` — lives in `time.ts`, not `daily.ts`, because the countdown resolves day-precision
+  boundaries on the same grid (§ Domain rules). Ticks are no longer its only caller, so a change
+  there now moves a reader's streak **and** every undated end date at once.
   A game whose server map differs lists the affected regions in `resetOffsets` (`games.ts`) —
   Endfield serves Europe off the Americas machine, so `europe` is UTC-5 there and its reset is
   09:00 UTC, not 03:00. Keep that override **per region**: a blanket per-game offset drags the

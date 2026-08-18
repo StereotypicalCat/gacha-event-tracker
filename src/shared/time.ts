@@ -1,6 +1,6 @@
 import type { DisplayEvent, LaneId } from "./custom.ts";
 import { GAMES } from "./games.ts";
-import type { GameId, Region } from "./schema.ts";
+import type { GameId, Precision, Region } from "./schema.ts";
 
 /**
  * Time is this product's entire subject, so the vocabulary lives in one place:
@@ -81,6 +81,14 @@ export function resetShiftMs(region: Region, game?: LaneId): number {
   return serverOffsetUtc(region, game) * HOUR - resetHourFor(game) * HOUR;
 }
 
+/**
+ * The instant the game-day labelled `day` (`YYYY-MM-DD`) opens on — the inverse
+ * of `dayKey`.
+ */
+export function dayStartMs(day: string, region: Region, game?: LaneId): number {
+  return Date.parse(`${day}T00:00:00.000Z`) - resetShiftMs(region, game);
+}
+
 export function guessRegion(
   timeZoneOffsetMinutes: number = -new Date().getTimezoneOffset(),
 ): Region {
@@ -99,17 +107,86 @@ export function guessRegion(
  */
 export type EndBearing = Pick<
   DisplayEvent,
-  "endsAt" | "regionScoped" | "regionEnds"
+  "endsAt" | "endPrecision" | "regionScoped" | "regionEnds"
 >;
+
+/**
+ * The end to show this user, honouring a region-scoped event, with the
+ * precision that boundary was actually stated to.
+ *
+ * A `regionEnds` value is read as `exact` whatever `endPrecision` says about the
+ * fallback: the map only exists because the source published a timer per server
+ * (wiki.gg does; see AGENTS.md § Working on parsers), so there is a real instant
+ * in it and nothing left to resolve.
+ */
+function endBoundary(
+  event: EndBearing,
+  region: Region,
+): { iso: string; precision: Precision } | null {
+  const stated =
+    event.regionScoped && event.regionEnds !== null
+      ? event.regionEnds[region]
+      : undefined;
+  if (stated !== undefined && stated !== null) {
+    return { iso: stated, precision: "exact" };
+  }
+  return event.endsAt === null
+    ? null
+    : { iso: event.endsAt, precision: event.endPrecision };
+}
 
 /** The end instant to show this user, honouring a region-scoped event. */
 export function effectiveEnd(
   event: EndBearing,
   region: Region,
 ): string | null {
-  if (event.endsAt === null) return null;
-  if (!event.regionScoped || event.regionEnds === null) return event.endsAt;
-  return event.regionEnds[region] ?? event.endsAt;
+  return endBoundary(event, region)?.iso ?? null;
+}
+
+/** Everything the clock reads off an event. */
+export type Clockable = EndBearing &
+  Pick<
+    DisplayEvent,
+    "startsAt" | "startPrecision" | "game" | "extractionMethod"
+  >;
+
+/**
+ * The instant a stated boundary actually falls on.
+ *
+ * An `exact` boundary is already an instant and is returned untouched. A `day`
+ * one is not an instant at all: the source printed a calendar date and no time,
+ * and `dates.ts` stores the only faithful reading of that — 00:00Z, a placeholder
+ * for "somewhere in this day" rather than a claim about when the day starts.
+ *
+ * Counting down to that placeholder turns it into exactly the claim it was not:
+ * that the day begins at UTC midnight, which is nobody's day. It is wrong for
+ * every reader by their server's distance from UTC, and always in the direction
+ * of expiring an event early for the two regions that run ahead of it. Wuthering
+ * Waves events dated "August 19, 2026" were still running three hours after this
+ * countdown had retired them, because a European player's day opens at 04:00 on
+ * a UTC+1 server.
+ *
+ * So a day-precision boundary resolves to the reset that opens that game-day on
+ * the clock the game actually rolls on — the one fact we do hold about a game's
+ * day, and the same one `daily.ts` already keys every tick by. That is a reading
+ * of the date the source printed, not a time invented for it: the calendar day
+ * is still the source's, and an end whose day is genuinely unannounced is still
+ * `null`.
+ *
+ * A reader's own event (PRD F13) is left alone even at day precision. Its
+ * boundary is not a parser declining to guess — `readerInstant` resolved it to
+ * the instant they meant, in their own timezone, when they typed it.
+ */
+function boundaryMs(
+  iso: string,
+  precision: Precision,
+  event: Pick<Clockable, "game" | "extractionMethod">,
+  region: Region,
+): number {
+  if (precision !== "day" || event.extractionMethod !== "parser") {
+    return Date.parse(iso);
+  }
+  return dayStartMs(iso.slice(0, 10), region, event.game);
 }
 
 export type Urgency = "expired" | "critical" | "soon" | "near" | "calm";
@@ -173,13 +250,13 @@ export interface EventClock {
 }
 
 export function clockFor(
-  event: EndBearing & Pick<DisplayEvent, "startsAt">,
+  event: Clockable,
   region: Region,
   now: number,
 ): EventClock {
-  const startsMs = Date.parse(event.startsAt);
-  const end = effectiveEnd(event, region);
-  const endsMs = end === null ? null : Date.parse(end);
+  const startsMs = boundaryMs(event.startsAt, event.startPrecision, event, region);
+  const end = endBoundary(event, region);
+  const endsMs = end === null ? null : boundaryMs(end.iso, end.precision, event, region);
 
   const msRemaining = endsMs === null ? null : endsMs - now;
   const upcoming = now < startsMs;

@@ -142,6 +142,14 @@ All live in `src/ingest/dates.ts`, each returning null rather than inferring any
 | `parseSlashClockZone` | `08/17/2026 8:00PM (JST)` (one boundary per column, 12-hour clock, **named** zone) | hololive Dreams |
 | `parseOpenRange` | `Jul. 24, 2026 - End of 4.6`, `July 10, 2026 - Permanent` | Star Rail, Wuthering Waves |
 
+**A day-precision result is 00:00Z, and that is a placeholder rather than a time.** Every reader
+above returns `precision: "day"` when the source printed no clock, and stores the date at UTC
+midnight because it has to store *something*. It is not a statement that the event begins or ends
+then, and nothing may count down to it literally: `clockFor` resolves a day-precision boundary to
+that game-day's server reset for the reader's region (`docs/DATA-MODEL.md` § Field notes). The
+parsers are unaffected by this and must stay so — resolving here would need a region the parser does
+not have, and would bake one reader's server into the stored feed.
+
 `parseOpenRange` is tried last because it is the most permissive — it accepts any leading full date
 and reports no end.
 
