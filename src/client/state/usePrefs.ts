@@ -5,6 +5,16 @@ import { guessRegion } from "../../shared/time.ts";
 import type { SortMode } from "./sort.ts";
 import { KEYS, readJson, writeJson } from "./storage.ts";
 
+/**
+ * Which of the two views the reader is looking at.
+ *
+ * Lives here rather than in `App` because it is the reader's answer to "how do
+ * I read this?", and component state loses it on every reload — a reader who
+ * prefers the timeline was being put back on the list each time they opened the
+ * page, with nothing to blame but the app forgetting.
+ */
+export type View = "soon" | "timeline";
+
 export interface Prefs {
   region: Region;
   /** Games the reader has switched off. Stored as hidden so a newly added game shows up by default. */
@@ -20,6 +30,13 @@ export interface Prefs {
   focusGame: LaneId | null;
   /** How the list is ordered. Deadline order is the default and the fallback. */
   sort: SortMode;
+  /**
+   * The view they were last reading. The list is the default: the page's whole
+   * claim is answering "what expires next" in one look, and the timeline
+   * answers "when is everything" — a slower question. One tap moves between
+   * them and the choice is remembered from then on.
+   */
+  view: View;
   /**
    * Whether to guess which events repeat daily from what the source printed.
    * Off leaves only the ones the reader marked themselves; it never discards a
@@ -45,6 +62,7 @@ function defaults(): Prefs {
     hiddenGames: [],
     focusGame: null,
     sort: "ending",
+    view: "soon",
     detectDaily: false,
     showCompleted: true,
     showIgnored: false,

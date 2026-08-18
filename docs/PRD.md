@@ -70,8 +70,13 @@ unknown" — it must be visually distinct from an event that ends far in the fut
 **F2 — Ends-soonest list.**
 A flat list of all *currently running* events sorted ascending by end date, with a relative
 countdown ("ends in 2 days", "ends in 4 hours"). Under 24 hours, the row is emphasized. This is the
-view that justifies the app; it should be reachable in one tap from the calendar and is the better
-default on narrow screens.
+view that justifies the app, and it is one tap from the timeline.
+
+**Which view opens is the reader's answer, not ours.** This spec said "calendar (default)" and the
+app shipped opening on the list; both were a decision made on the reader's behalf and then forgotten
+on every reload. So the first run asks (F8) and the answer is stored in `prefs.view`. The list is
+what the question ships pre-answered with — a reader cannot choose between two layouts they have not
+seen, and it is the view that answers "what expires next" in one look.
 
 **F3 — Mark completed.**
 A toggle on every event, in both views. State is written to `localStorage` immediately and
@@ -149,12 +154,18 @@ Four constraints, each protecting something that already exists:
   which is the same argument the code already makes for streaks. This is the *only* copy — there is
   no server to restore from.
 
-**F8 — First-run game picker.**
-Before any events are shown, the reader picks which games they play. A calendar full of games they
+**F8 — First-run setup.**
+Before any events are shown, the reader picks which games they play, and how they want to read
+them. A calendar full of games they
 don't play is worse than an empty one — it buries the thing they came for. Nothing is preselected
 and the button stays disabled until something is chosen; guessing on their behalf and hoping they
 notice is worse than asking. The choice is stored as *hidden* games, the inverse, so a game added
 later appears by default rather than staying invisible forever.
+
+The view question (F2) sits under it, with each option drawn rather than only described — the words
+"list" and "timeline" mean nothing until you have seen this app's version of them. Unlike the games,
+it arrives already answered, and the screen says where to change it afterwards: the tabs are small
+text in a corner, which is the one control a first-time reader will not find on their own.
 
 **F9 — Ignore an event.**
 Distinct from completing one. "Done" keeps an event visible and counted; "not interested" removes it

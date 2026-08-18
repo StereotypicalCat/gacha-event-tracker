@@ -303,7 +303,7 @@ diagnosis in each item still holds — what changed is whether it has been acted
 | P1a Arknights | **Done.** `arknights-akwiki-events`, via the new `akwiki` parser |
 | P1b `NextUp` → three | **Done** (2026-08-18). One headline and two behind it, off `nextToExpire` |
 | P1b cap the long list | **Not done.** No "show all N" expander |
-| P1b persist `view` | **Not done.** Still `useState` in `App.tsx` |
+| P1b persist `view` | **Done** (2026-08-18). `prefs.view`, and the first run now asks which one to open on (PRD F8) |
 | P1b Calendar → Timeline | **Done.** The tab reads "Timeline" |
 | P1c more games | **Done, four of them.** Infinity Nikki, Persona 5: The Phantom X, Reverse: 1999, Blue Archive — one commit each. Of the games named in the thread, Azur Lane and Umamusume are **declined on conduct** rather than pending, and the declined and cleared-but-unbuilt candidates are recorded in `AGENTS.md` § Scraping conduct so they are not re-litigated |
 | P1c roadmap in the colophon | **Not done** |

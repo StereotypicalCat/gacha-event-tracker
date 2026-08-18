@@ -114,7 +114,7 @@ src/client/       React app, service worker, manifest
                   lens.ts — who sees which rows (focus, outstanding, next-to-expire); pure
 scripts/          build-feed.ts, build-static.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             517 tests
+test/             536 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
@@ -433,6 +433,10 @@ to an open page). Four things hold it up:
 - Keep old fixtures when a source changes shape — the old one is the regression test proving the
   parser still handles the previous format. Fixtures are pinned and permanent; `snapshots/` is the
   current page and gets overwritten. Do not conflate them.
+- **Which view opens is the reader's answer.** `prefs.view` is asked once on the first run (PRD F8)
+  and written by the tabs from then on. It was component state, which meant a reader who preferred
+  the timeline was put back on the list by every reload, with nothing to blame but the app
+  forgetting. The stored answer is theirs; do not add a heuristic that overrides it.
 - **A list row is one target.** The event row opens the event and does nothing else — status,
   effort, notes and the daily checklist all live in the detail sheet. A second control inside a
   full-bleed row target is a mis-tap waiting to happen, and a decorative chevron says "this opens"

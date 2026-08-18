@@ -108,7 +108,7 @@ src/
       Fireworks.tsx     the burst when the last daily lands
       GameFocus.tsx     one game at a time          (F4a)
       Controls.tsx      games, region, export/import(F4, F5, F6)
-      Welcome.tsx       first-run game picker       (F8)
+      Welcome.tsx       first-run games and view    (F8)
       Toast.tsx         undo an ignore
       UpdateNotice      a newer app is installed and waiting  (F14)
       YourOwn.tsx       the reader's own games, in settings   (F13)
@@ -119,7 +119,7 @@ src/
       useMarkSet.ts     ignores (and the superseded completions shape)
       useProgress.ts    status, effort, note, daily override  (F12)
       useDailyLog.ts    which game-days are ticked off
-      usePrefs.ts       region, filters, focus, onboarding flags
+      usePrefs.ts       region, filters, focus, view, onboarding flags
       useCustom.ts      the reader's own games and events     (F13)
       gameMeta.tsx      lane id → name, label, hue; resolves custom lanes too
       sort.ts           deadline order, or what you're partway through

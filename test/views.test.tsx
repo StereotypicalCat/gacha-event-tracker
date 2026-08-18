@@ -1,17 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import { NextUp } from "../src/client/components/NextUp.tsx";
+import { Welcome } from "../src/client/components/Welcome.tsx";
 import { GameMetaProvider } from "../src/client/state/gameMeta.tsx";
 import { metaFor } from "../src/shared/games.ts";
 import { clockFor } from "../src/shared/time.ts";
 import { GachaEvent, type GameId } from "../src/shared/schema.ts";
 
 /**
- * Static-render checks on the headline panel.
+ * Static-render checks on the two surfaces a reader meets first.
  *
- * Not a substitute for using the thing, but they pin the claims it makes: it
- * leads with the closest deadline, it carries the ones behind it, and it never
- * dresses an unannounced end up as a countdown.
+ * Not a substitute for using the thing, but they pin the claims each one makes:
+ * the headline carries the deadlines behind the closest one, and the first run
+ * asks how the reader wants to read the app rather than deciding for them.
  */
 
 const NOW = Date.parse("2026-08-17T12:00:00.000Z");
@@ -93,5 +94,29 @@ describe("NextUp", () => {
     );
     expect(html).toContain("unknown");
     expect(html).toContain("no end date");
+  });
+});
+
+describe("Welcome (first run)", () => {
+  const html = () =>
+    render(<Welcome available={["genshin", "hsr"]} onConfirm={() => {}} />);
+
+  test("asks how the reader wants to see their events", () => {
+    expect(html()).toContain("How do you want to see them?");
+    expect(html()).toContain("Ending soon");
+    expect(html()).toContain("Timeline");
+  });
+
+  test("says where the choice lives afterwards", () => {
+    // The tabs are small text in a corner — the one control a first-time reader
+    // will not find on their own, so the screen that sets it says where it is.
+    expect(html()).toContain("top right");
+  });
+
+  test("opens on the list, with the choice already answered", () => {
+    // Games stay unanswered because only the reader knows which ones they play.
+    // This one has a defensible default, and a reader cannot choose between two
+    // layouts they have not seen yet.
+    expect(html()).toContain('aria-checked="true"');
   });
 });

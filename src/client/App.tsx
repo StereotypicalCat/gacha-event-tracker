@@ -17,7 +17,7 @@ import { useAppUpdate } from "./state/useAppUpdate.ts";
 import { useMarkSet } from "./state/useMarkSet.ts";
 import { useProgress } from "./state/useProgress.ts";
 import { useDailyLog, type DailyLogMap } from "./state/useDailyLog.ts";
-import { usePrefs } from "./state/usePrefs.ts";
+import { usePrefs, type View } from "./state/usePrefs.ts";
 import { useCustom } from "./state/useCustom.ts";
 import { compareRows, SORT_MODES, type Activity, type SortMode } from "./state/sort.ts";
 import {
@@ -37,8 +37,6 @@ import {
   type LaneId,
 } from "../shared/custom.ts";
 import { metaFor } from "../shared/games.ts";
-
-type View = "soon" | "timeline";
 
 /**
  * How many deadlines the headline carries.
@@ -83,7 +81,6 @@ function useNow(intervalMs = 1000): number {
 
 export function App() {
   const [state, setState] = useState<FeedState>({ status: "loading" });
-  const [view, setView] = useState<View>("soon");
   const [openId, setOpenId] = useState<string | null>(null);
   // The event most recently ignored, so it can be put back without hunting for
   // a row that just disappeared.
@@ -91,6 +88,10 @@ export function App() {
   const now = useNow();
   const online = useOnline();
   const { prefs, update, toggleGame } = usePrefs();
+  // Their answer from the first run, or their last tap on the tabs. Reading it
+  // from `prefs` is what stops a reload putting a timeline reader back on the
+  // list they did not choose.
+  const view = prefs.view;
   const ignored = useMarkSet(KEYS.ignored);
   const prog = useProgress();
   const daily = useDailyLog();
@@ -292,10 +293,11 @@ export function App() {
         <Shell>
           <Welcome
             available={games}
-            onConfirm={(chosen) =>
+            onConfirm={(chosen, chosenView) =>
               update({
                 onboarded: true,
                 hiddenGames: games.filter((g) => !chosen.includes(g)),
+                view: chosenView,
               })
             }
           />
@@ -338,7 +340,7 @@ export function App() {
               key={id}
               role="tab"
               aria-selected={view === id}
-              onClick={() => setView(id)}
+              onClick={() => update({ view: id })}
               className={`rounded-[6px] px-2.5 py-1.5 text-xs font-medium transition-colors ${
                 view === id ? "bg-raised text-ink" : "text-faint hover:text-muted"
               }`}

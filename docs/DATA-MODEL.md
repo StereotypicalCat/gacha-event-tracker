@@ -200,7 +200,7 @@ Namespaced, versioned, and small. Nothing here ever goes to the server.
 "gacha-tracker:v1:progress"     // { [eventId]: { status?, effort?, note?, at } }
 "gacha-tracker:v1:daily"        // { [id]: { days: ["2026-08-15", ...], at } }
 "gacha-tracker:v1:ignored"      // { [eventId]: { at } }  — "stop showing me this"
-"gacha-tracker:v1:prefs"        // { region, hiddenGames[], focusGame, sort, detectDaily,
+"gacha-tracker:v1:prefs"        // { region, hiddenGames[], focusGame, sort, view, detectDaily,
                                 //   showCompleted, showIgnored, regionConfirmed, onboarded }
 "gacha-tracker:v1:completions"  // SUPERSEDED — read once to migrate, never written
 ```
