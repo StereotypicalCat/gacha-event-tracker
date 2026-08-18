@@ -28,6 +28,21 @@ const HALF_DAY_LEAD = 12 * 60 * 60 * 1000;
  */
 const PAST_LEAD = 7 * DAY;
 
+/**
+ * The oldest date the board will draw, however long an event has been running.
+ *
+ * A standing login campaign can have started half a year ago, and the window
+ * was drawn from the earliest start — so one such event bought months of empty
+ * calendar to the left of everything else, which nobody scrolls back through
+ * and which the reader pays for in every bar being pushed off to the right.
+ * Two months is a patch cycle and a half: enough that a running event's start
+ * is usually still on the board, and past the point where the answer stops
+ * changing what anyone does today. A bar that begins before this keeps its
+ * faded left edge, which is the same honesty the mask already carried — the
+ * event is older than the board, not newly started at its edge.
+ */
+const PAST_LIMIT = 60 * DAY;
+
 /** Where the now rule sits when the board opens: a little in from the edge. */
 const OPEN_INSET = 28;
 
@@ -65,13 +80,7 @@ export function Timeline({
 
   const ends = rows.map((r) => r.clock.endsMs ?? r.clock.startsMs + 14 * DAY);
   const starts = rows.map((r) => r.clock.startsMs);
-
-  // The window covers the past too, so a reader can scroll back to see when a
-  // running event began — but it *opens* scrolled to now, because that is what
-  // they came for. Rendering from the earliest start alone buried today
-  // off-screen; clamping to now made the past unreachable. This does both.
-  const min = Math.min(...starts, now) - PAST_LEAD;
-  const max = Math.max(...ends, now) + 2 * DAY;
+  const { min, max } = boardWindow(starts, ends, now);
   const totalDays = Math.ceil((max - min) / DAY);
   const chartWidth = totalDays * DAY_WIDTH;
   /** One coordinate space for everything: bars, gridlines and the now rule. */
@@ -183,7 +192,7 @@ export function Timeline({
             ))}
           </div>
 
-          <div className="space-y-5 pb-8 pt-4">
+          <div className="space-y-7 pb-10 pt-5">
             {[...byGame.entries()].map(([gameId, events]) => {
               const game = gameMeta(gameId);
               return (
@@ -192,14 +201,14 @@ export function Timeline({
                       keeps its name at any scroll position without a frozen
                       column standing on top of the calendar. */}
                   <p
-                    className="eyebrow sticky left-0 z-20 mb-1.5 w-fit bg-ground pr-2 text-[0.625rem]"
+                    className="eyebrow sticky left-0 z-20 mb-2.5 w-fit bg-ground pr-2 text-[0.625rem]"
                     style={{ color: game.hue, paddingLeft: PIN }}
                     title={game.name}
                   >
                     {game.short}
                   </p>
 
-                  <div className="relative space-y-1">
+                  <div className="relative space-y-2">
                     {events.map(({ event, clock }) => {
                       const unknownEnd = clock.endsMs === null;
                       // Only clipped if it began before the rendered window,
@@ -216,18 +225,18 @@ export function Timeline({
                           type="button"
                           onClick={() => onOpen(event.id)}
                           title={event.title}
-                          className={`relative flex h-7 items-center rounded-[4px] px-2 text-left text-[0.6875rem] font-medium transition-opacity hover:opacity-100 ${
+                          className={`relative flex h-9 items-center gap-2 rounded-[5px] px-3 text-left text-[0.75rem] font-medium transition-opacity hover:opacity-100 ${
                             done ? "opacity-35" : "opacity-90"
                           }`}
                           style={{
                             marginLeft: left,
-                            width: Math.max(right - left, 26),
+                            width: Math.max(right - left, 34),
                             background: `color-mix(in srgb, ${game.hue} 22%, var(--color-surface))`,
                             // No start edge to draw when the bar begins before
                             // the view does.
                             borderLeft: clippedStart
                               ? undefined
-                              : `2px solid ${game.hue}`,
+                              : `3px solid ${game.hue}`,
                             // Frayed right = end unannounced; faded left =
                             // started before the window. Both are honest about
                             // what is not shown.
@@ -260,6 +269,31 @@ export function Timeline({
       </div>
     </>
   );
+}
+
+/**
+ * The span of time the board draws.
+ *
+ * It covers the past too, so a reader can scroll back to see when a running
+ * event began — but it *opens* scrolled to now, because that is what they came
+ * for. Rendering from the earliest start alone buried today off-screen; clamping
+ * to now made the past unreachable; and an event that has been running for half
+ * a year bought months of empty calendar that pushed everything else right.
+ * `PAST_LIMIT` is the floor under that last case.
+ *
+ * Pure, and separate from the component, because it decides what a reader can
+ * and cannot see — which is worth a test rather than a rendering.
+ */
+export function boardWindow(
+  starts: readonly number[],
+  ends: readonly number[],
+  now: number,
+): { min: number; max: number } {
+  const earliest = Math.min(...starts, now) - PAST_LEAD;
+  return {
+    min: Math.max(earliest, now - PAST_LIMIT),
+    max: Math.max(...ends, now) + 2 * DAY,
+  };
 }
 
 /**

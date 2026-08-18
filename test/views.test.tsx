@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import { NextUp } from "../src/client/components/NextUp.tsx";
+import { boardWindow } from "../src/client/components/Timeline.tsx";
 import { Welcome } from "../src/client/components/Welcome.tsx";
 import { GameMetaProvider } from "../src/client/state/gameMeta.tsx";
 import { metaFor } from "../src/shared/games.ts";
@@ -118,5 +119,35 @@ describe("Welcome (first run)", () => {
     // This one has a defensible default, and a reader cannot choose between two
     // layouts they have not seen yet.
     expect(html()).toContain('aria-checked="true"');
+  });
+});
+
+describe("Timeline window", () => {
+  const DAY = 86_400_000;
+
+  test("reaches a week past the oldest running event", () => {
+    // So "when did this start?" is answerable without the reader hunting for
+    // an edge, and so a bar that began days ago shows its real start.
+    const started = NOW - 20 * DAY;
+    const { min } = boardWindow([started], [NOW + 5 * DAY], NOW);
+    expect(min).toBe(started - 7 * DAY);
+  });
+
+  test("stops two months back however long something has been running", () => {
+    // A standing login campaign can have started half a year ago. Drawing from
+    // its start bought months of empty calendar that nobody scrolls through and
+    // pushed every other bar off to the right.
+    const ancient = NOW - 200 * DAY;
+    const { min } = boardWindow([ancient, NOW - 3 * DAY], [NOW + 5 * DAY], NOW);
+    expect(min).toBe(NOW - 60 * DAY);
+    // The bar is then older than the board, which is what the faded left edge
+    // says — it must not be redrawn as though it started at the edge.
+    expect(ancient).toBeLessThan(min);
+  });
+
+  test("today is on the board even when everything is still to come", () => {
+    const { min, max } = boardWindow([NOW + 30 * DAY], [NOW + 40 * DAY], NOW);
+    expect(min).toBeLessThan(NOW);
+    expect(max).toBeGreaterThan(NOW);
   });
 });

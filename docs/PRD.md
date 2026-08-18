@@ -80,6 +80,12 @@ calendar on screen, and nothing left saying which day, whose game, or which even
 six-week bar starts weeks off-screen, so a name that rides off with its own start date leaves a
 coloured rectangle behind.
 
+**The board draws at most two months of past.** A standing login campaign can have been running for
+half a year, and drawing from the earliest start bought months of empty calendar that nobody scrolls
+back through and that pushed every other bar off to the right. An event older than the board keeps
+its faded left edge rather than being redrawn as though it started at the edge — the same honesty
+the frayed right edge carries for an unannounced end.
+
 **F2 — Ends-soonest list.**
 A flat list of all *currently running* events sorted ascending by end date, with a relative
 countdown ("ends in 2 days", "ends in 4 hours"). Under 24 hours, the row is emphasized. This is the
