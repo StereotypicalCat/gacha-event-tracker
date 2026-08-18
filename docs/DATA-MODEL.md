@@ -219,7 +219,7 @@ Namespaced, versioned, and small. Nothing here ever goes to the server.
 "gacha-tracker:v1:ignored"      // { [eventId]: { at } }  — "stop showing me this"
 "gacha-tracker:v1:prefs"        // { region, hiddenGames[], knownGames[]?, focusGame, sort, view,
                                 //   timelineDayWidth, timelineGroup, detectDaily, showCompleted,
-                                //   showIgnored, regionConfirmed, onboarded }
+                                //   showIgnored, theme, regionConfirmed, onboarded }
                                 // timelineDayWidth is px per day on the board, stored as the
                                 // measurement rather than a step number and read through
                                 // snapDayWidth — so a value from an older ladder still opens
@@ -230,6 +230,10 @@ Namespaced, versioned, and small. Nothing here ever goes to the server.
                                 // knownGames is every lane the reader has been offered. Absent
                                 // means unrecorded, not "offered nothing" — see PRD F8; a lane
                                 // missing from it is new to them and arrives switched off.
+                                // theme is "dark" | "light" | "system", defaulting to dark — see
+                                // PRD F15. It is read by the app *and* by a pre-paint script in
+                                // index.html, which is the only thing outside the client bundle
+                                // that touches a key in this space.
 "gacha-tracker:v1:completions"  // SUPERSEDED — read once to migrate, never written
 ```
 

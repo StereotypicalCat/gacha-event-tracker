@@ -120,7 +120,8 @@ src/
       useMarkSet.ts     ignores (and the superseded completions shape)
       useProgress.ts    status, effort, note, daily override  (F12)
       useDailyLog.ts    which game-days are ticked off
-      usePrefs.ts       region, filters, focus, view, onboarding flags
+      usePrefs.ts       region, filters, focus, view, theme, onboarding flags
+      theme.ts          dark/light: resolving it, applying it, hues on paper
       useCustom.ts      the reader's own games and events     (F13)
       gameMeta.tsx      lane id → name, label, hue; resolves custom lanes too
       sort.ts           deadline order, or what you're partway through
@@ -238,6 +239,24 @@ The service worker caches the shell and webfonts (cache-first) and the feed (net
 back to the last copy seen). Countdowns run off the device clock, so the app stays useful with no
 network. Offline state is surfaced in the header and above the footer — stale data must never be
 presented as current.
+
+### The theme, before the bundle arrives
+
+The page is drawn dark by default and light when the reader has asked for it (PRD F15). Which one
+is decided by one attribute on `<html>`: `styles.css` holds the dark tokens on `:root` and
+re-strikes them under `:root[data-theme="light"]`, so nothing in React knows a theme exists and no
+component holds a colour of its own.
+
+Setting that attribute is the one part React cannot do in time. It mounts after the bundle has
+downloaded and parsed, which on a cold cache is long enough to show a reader who chose light a
+dark page, on every single load. So a small inline script in `index.html` reads the same
+`localStorage` prefs key the app does, sets the same attribute, and updates `<meta
+name="theme-color">` — before first paint, and with a `try`/`catch` so storage being unavailable
+costs the reader the default theme rather than the page.
+
+That makes the theme's ground colour a fact written in three files that cannot import each other:
+the stylesheet, `state/theme.ts` (which needs it for the meta tag), and the shell. `test/theme.test.ts`
+pins the three together rather than trusting them to be edited at the same time.
 
 ### Shipping a new version to an open page
 

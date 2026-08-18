@@ -284,6 +284,37 @@ The footer shows when the feed was last updated, per game. If a game's data is m
 stale, its lane carries a warning badge. Never present stale data as current — the whole value
 proposition is trust in the dates.
 
+**F15 — Light mode, with dark still the default.**
+The app is a lit instrument panel and that is what it should be on first sight, but it is also read
+on a train in daylight and by people who find a dark UI harder rather than moodier. A public fork
+worked a theme toggle out first and is credited for the idea in the colophon. So the ground is
+the reader's choice: **Dark**, **Light**, or **System** to follow the device, in settings next to the
+region — both are "how do I read this?" and neither changes what the page knows.
+
+Dark is what it ships as, and deliberately not `System`. A reader whose laptop is in light mode has
+said something about their laptop, not about this page; defaulting to the device would also move
+every existing reader the first time they loaded a build that had this, which is the `knownGames`
+mistake in a different costume (F8). Choosing `System` is one tap, and from then on it *is* their
+answer.
+
+Three things the light theme has to get right, because they are what a second palette usually gets
+wrong:
+
+- **It is a re-strike, not an inversion.** Every colour in the UI is a token, and light redefines the
+  tokens rather than adding a second set of rules to components. Nothing in the app asks which theme
+  it is in, so a new component cannot forget to support one.
+- **Urgency still reads.** The heat ramp carries meaning, and the dark theme's amber is 1.9:1 on
+  paper — an urgency the reader cannot read is not urgency. Every step is re-struck to clear 4.5:1
+  against the light ground, keeping its order and its meaning.
+- **A game keeps its colour.** The hues are identity (F1) and were all picked against a near-black
+  ground; on paper the bright ones vanish. They are darkened until they read, along the same hue, so
+  Wuthering Waves is still the green one — including the hues a reader picked for a game they
+  invented (F13).
+
+Switching is instant, costs nothing and saves nothing: no reload, and nothing marked, typed or
+ticked is touched. And it survives the load it is chosen on — the shell sets the theme before first
+paint, so a reader on light is never shown a dark page while the bundle downloads.
+
 ## Out of scope for v1
 
 Accounts and sync; push notifications; in-game resource or pull tracking; native mobile apps (the

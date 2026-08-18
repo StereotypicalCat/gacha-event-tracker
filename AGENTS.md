@@ -115,9 +115,10 @@ src/client/       React app, service worker, manifest
                   lens.ts — who sees which rows (focus, outstanding, next-to-expire); pure
                   zoom.ts — the timeline's scale ladder; pure
                   lanes.ts — how the timeline stacks: a lane per game, or one deadline queue; pure
+                  theme.ts — dark or light, and what a game hue reads as on each
 scripts/          build-feed.ts, build-static.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             607 tests
+test/             620 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
@@ -510,6 +511,18 @@ to an open page). Four things hold it up:
 - Keep old fixtures when a source changes shape — the old one is the regression test proving the
   parser still handles the previous format. Fixtures are pinned and permanent; `snapshots/` is the
   current page and gets overwritten. Do not conflate them.
+- **Colour is a token, and every token has two answers.** The app ships dark and offers light
+  (PRD F15), and the whole difference is a set of custom properties re-struck under
+  `:root[data-theme="light"]` in `styles.css`. So a component names `ink`, `hairline` or `soon` and
+  never a colour: a literal — `bg-white`, a hex, a hardcoded scrim — is a component that looks
+  right in one theme and wrong in the other, and nothing will tell you which. The two things that
+  genuinely cannot be tokens are the game hues, which are *data* (`games.ts`, and the reader's own),
+  and the pre-paint script in `index.html`; both are handled in `src/client/state/theme.ts` and
+  pinned by `test/theme.test.ts`.
+  Two rules follow. **The heat ramp must stay readable on whichever ground it is on** — it carries
+  meaning, and the dark theme's amber is 1.9:1 on paper, so each step is re-struck rather than
+  reused. And **the dark theme does not move**: `readableHue` returns dark untouched by
+  construction, because adding a theme is not a licence to redraw the one that shipped.
 - **The page is two columns past `lg`, and the split is the one below.** What the page *tells* the
   reader to do — the next deadlines, tonight's dailies — pins to a rail on the left and stays put
   while the lists it *shows* them scroll beside it. Below that breakpoint it is one column in the
