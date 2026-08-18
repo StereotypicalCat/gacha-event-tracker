@@ -21,6 +21,13 @@ export const REGION_RESET_UTC_OFFSET: Record<Region, number> = {
   europe: 1,
 };
 
+/** What a region is called when the reader is shown one. */
+export const REGION_LABEL: Record<Region, string> = {
+  america: "America",
+  europe: "Europe",
+  asia: "Asia",
+};
+
 /**
  * Gacha servers roll the day at 04:00 local server time, not midnight — a
  * player finishing at 02:00 is still on the previous day's dailies. Getting
@@ -224,8 +231,16 @@ export function formatRemaining(msRemaining: number): string {
   return `${seconds}s`;
 }
 
-/** Absolute date for the detail view, in the reader's own timezone. */
-export function formatAbsolute(iso: string, withTime: boolean): string {
+/**
+ * Absolute date for the detail view, in the reader's own timezone.
+ *
+ * Takes an instant rather than only an ISO string so a caller with a resolved
+ * boundary can print the one the countdown is counting to. A day-precision date
+ * read straight off the event says 00:00Z, which renders as the *previous* day
+ * to every reader west of UTC — the sheet would then name one day while the
+ * timer beside it ran to another.
+ */
+export function formatAbsolute(iso: string | number, withTime: boolean): string {
   const d = new Date(iso);
   const date = d.toLocaleDateString(undefined, {
     weekday: "short",

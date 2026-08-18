@@ -8,7 +8,11 @@ import {
 } from "../../shared/custom.ts";
 import type { EventDraft } from "../state/useCustom.ts";
 import { EventForm } from "./CustomForms.tsx";
-import { formatAbsolute, formatRemaining } from "../../shared/time.ts";
+import {
+  formatAbsolute,
+  formatRemaining,
+  REGION_LABEL,
+} from "../../shared/time.ts";
 import type { RowEvent } from "./EventRow.tsx";
 import { pressure, pressureReason, type Effort } from "../../shared/effort.ts";
 import type { Status } from "../state/useProgress.ts";
@@ -132,14 +136,17 @@ export function EventDetail({
         </div>
 
         <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+          {/* Off the clock, not off the event: a day-precision boundary is
+              resolved to the game's reset there, and printing the stored
+              00:00Z instead would name a different day to the countdown. */}
           <Field label="Starts">
-            {formatAbsolute(event.startsAt, event.startPrecision === "exact")}
+            {formatAbsolute(clock.startsMs, event.startPrecision === "exact")}
           </Field>
           <Field label="Ends">
-            {event.endsAt === null ? (
+            {clock.endsMs === null ? (
               <span className="text-faint">Not announced</span>
             ) : (
-              formatAbsolute(event.endsAt, event.endPrecision === "exact")
+              formatAbsolute(clock.endsMs, event.endPrecision === "exact")
             )}
           </Field>
           <Field label="Remaining">
@@ -267,8 +274,10 @@ export function EventDetail({
 
         {event.endPrecision === "day" && event.endsAt !== null && (
           <p className="mt-3 text-xs leading-relaxed text-faint">
-            The source gave a date but no time of day, so this end is accurate to
-            the day only. Check in-game before the last hours.
+            The source gave a date but no time of day, so this counts down to
+            that day's {REGION_LABEL[region]} server reset — where these usually land, but a
+            reading rather than a stated time. Check in-game before the last
+            hours.
           </p>
         )}
 

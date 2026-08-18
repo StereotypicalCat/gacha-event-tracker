@@ -1,14 +1,13 @@
 import type { LaneId } from "../../shared/custom.ts";
 import type { Region } from "../../shared/schema.ts";
+import { REGION_LABEL } from "../../shared/time.ts";
 import { useGameMeta } from "../state/gameMeta.tsx";
 import type { Prefs } from "../state/usePrefs.ts";
 import { YourOwn } from "./YourOwn.tsx";
 
-const REGIONS: Array<{ id: Region; label: string }> = [
-  { id: "america", label: "America" },
-  { id: "europe", label: "Europe" },
-  { id: "asia", label: "Asia" },
-];
+const REGIONS: Array<{ id: Region; label: string }> = (
+  ["america", "europe", "asia"] as const
+).map((id) => ({ id, label: REGION_LABEL[id] }));
 
 export function Controls({
   games,
