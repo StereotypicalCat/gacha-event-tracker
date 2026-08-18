@@ -440,9 +440,9 @@ to an open page). Four things hold it up:
   is long, so a full-height divider would spend most of its length walling off a gap.
 - **Truncating a list is not re-sorting it.** Each section shows `LIST_CAP` rows and offers "show
   all N". The rows below the cut keep their place in the order, stay counted in the header, and stay
-  on the timeline — so the deadline guarantee two bullets down holds for what is hidden exactly as it
-  does for what is shown. Expanding is per-visit state, not a stored preference: it is something a
-  reader does while reading one list, not a statement about how the app should work.
+  on the timeline — so the *sorting groups, it never reorders* rule below holds for what is hidden
+  exactly as it does for what is shown. Expanding is per-visit state, not a stored preference: it is
+  something a reader does while reading one list, not a statement about how the app should work.
 - **Which view opens is the reader's answer.** `prefs.view` is asked once on the first run (PRD F8)
   and written by the tabs from then on. It was component state, which meant a reader who preferred
   the timeline was put back on the list by every reload, with nothing to blame but the app
