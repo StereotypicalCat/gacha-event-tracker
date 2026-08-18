@@ -48,6 +48,17 @@ import { metaFor } from "../shared/games.ts";
 const HEADLINE_DEADLINES = 3;
 
 /**
+ * How many rows a section shows before it offers the rest.
+ *
+ * Two games already run to twenty-one live events and every game added doubles
+ * down on that, which is the point at which a list stops being read at all.
+ * This truncates the *view* and nothing else: the order is untouched, the
+ * hidden rows are still counted in the header, still on the timeline, and one
+ * tap away here.
+ */
+const LIST_CAP = 6;
+
+/**
  * Connection state. Offline is not an error here — the service worker serves
  * the last feed it saw and countdowns run off the local clock — but it does
  * change what the reader can trust, so it is surfaced rather than hidden.
@@ -267,6 +278,21 @@ export function App() {
 
   const openRow = allRows.find((r) => r.event.id === openId) ?? null;
 
+  /** One row, wired up. Both lists render the same thing from the same props. */
+  const renderRow = (row: RowEvent) => (
+    <EventRow
+      key={row.event.id}
+      row={row}
+      completed={isDone(row.event.id)}
+      status={prog.progress[row.event.id]?.status}
+      effort={prog.progress[row.event.id]?.effort}
+      daily={dailyBadge(row)}
+      ignored={isIgnored(row.event.id)}
+      onRestore={(id) => ignored.toggle(id)}
+      onOpen={setOpenId}
+    />
+  );
+
   if (state.status === "loading") {
     return <Shell><p className="px-4 py-16 text-sm text-muted">Loading events…</p></Shell>;
   }
@@ -408,19 +434,7 @@ export function App() {
                 ) : undefined
               }
             >
-              {live.map((row) => (
-                <EventRow
-                  key={row.event.id}
-                  row={row}
-                  completed={isDone(row.event.id)}
-                  status={prog.progress[row.event.id]?.status}
-                  effort={prog.progress[row.event.id]?.effort}
-                  daily={dailyBadge(row)}
-                  ignored={isIgnored(row.event.id)}
-                  onRestore={(id) => ignored.toggle(id)}
-                  onOpen={setOpenId}
-                />
-              ))}
+              <EventList rows={live} render={renderRow} />
             </Section>
           )}
 
@@ -438,19 +452,7 @@ export function App() {
                 ) : undefined
               }
             >
-              {upcoming.map((row) => (
-                <EventRow
-                  key={row.event.id}
-                  row={row}
-                  completed={isDone(row.event.id)}
-                  status={prog.progress[row.event.id]?.status}
-                  effort={prog.progress[row.event.id]?.effort}
-                  daily={dailyBadge(row)}
-                  ignored={isIgnored(row.event.id)}
-                  onRestore={(id) => ignored.toggle(id)}
-                  onOpen={setOpenId}
-                />
-              ))}
+              <EventList rows={upcoming} render={renderRow} />
             </Section>
           )}
 
@@ -607,8 +609,50 @@ function Section({
         {action ?? (hint !== undefined && <p className="text-xs text-faint">{hint}</p>)}
       </div>
       {legend === true && <Legend />}
-      <ul className="border-t border-hairline">{children}</ul>
+      {children}
     </section>
+  );
+}
+
+/**
+ * A list of events, capped at a length someone will actually read.
+ *
+ * The reader who asked for this had two games switched on and twenty-one live
+ * events, and said the list stopped being usable — so the default view shows a
+ * handful and offers the rest. What it must never do is *reorder*: this slices
+ * the front off a list that is already in the order the reader chose, so the
+ * deadline guarantee holds for what is shown and what is hidden alike.
+ *
+ * Expanding is per-visit rather than a stored preference: it is an action taken
+ * while reading one list, not a statement about how they want the app to work.
+ */
+function EventList({
+  rows,
+  render,
+}: {
+  rows: RowEvent[];
+  render: (row: RowEvent) => React.ReactNode;
+}) {
+  const [showAll, setShowAll] = useState(false);
+  const shown = showAll ? rows : rows.slice(0, LIST_CAP);
+  const hidden = rows.length - shown.length;
+
+  return (
+    <>
+      <ul className="border-t border-hairline">{shown.map(render)}</ul>
+      {rows.length > LIST_CAP && (
+        <button
+          type="button"
+          onClick={() => setShowAll((v) => !v)}
+          className="w-full border-b border-hairline px-4 py-3 text-left text-xs font-medium text-muted transition-colors duration-150 hover:text-ink"
+        >
+          {showAll ? "Show fewer" : `Show all ${rows.length}`}
+          {!showAll && (
+            <span className="text-faint">{` · ${hidden} more below the cut`}</span>
+          )}
+        </button>
+      )}
+    </>
   );
 }
 

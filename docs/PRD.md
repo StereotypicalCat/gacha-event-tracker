@@ -72,6 +72,11 @@ A flat list of all *currently running* events sorted ascending by end date, with
 countdown ("ends in 2 days", "ends in 4 hours"). Under 24 hours, the row is emphasized. This is the
 view that justifies the app, and it is one tap from the timeline.
 
+**The list is capped and offers the rest.** Two games already run to twenty-one live events, and a
+reader who tried exactly that said the list stopped being usable. Each section shows a handful with
+an explicit "show all N". This truncates the *view* only: the order is untouched, and the rows below
+the cut are still counted in the header, still on the timeline, and one tap away.
+
 **Which view opens is the reader's answer, not ours.** This spec said "calendar (default)" and the
 app shipped opening on the list; both were a decision made on the reader's behalf and then forgotten
 on every reload. So the first run asks (F8) and the answer is stored in `prefs.view`. The list is
