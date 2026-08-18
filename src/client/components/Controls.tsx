@@ -2,12 +2,24 @@ import type { LaneId } from "../../shared/custom.ts";
 import type { Region } from "../../shared/schema.ts";
 import { REGION_LABEL } from "../../shared/time.ts";
 import { useGameMeta } from "../state/gameMeta.tsx";
+import type { ThemeChoice } from "../state/theme.ts";
 import type { Prefs } from "../state/usePrefs.ts";
 import { YourOwn } from "./YourOwn.tsx";
 
 const REGIONS: Array<{ id: Region; label: string }> = (
   ["america", "europe", "asia"] as const
 ).map((id) => ({ id, label: REGION_LABEL[id] }));
+
+/**
+ * Dark first, because that is what the app is and what this control is offered
+ * *from*; `System` last, because it is the answer that defers rather than
+ * decides.
+ */
+const THEMES: Array<{ id: ThemeChoice; label: string }> = [
+  { id: "dark", label: "Dark" },
+  { id: "light", label: "Light" },
+  { id: "system", label: "System" },
+];
 
 export function Controls({
   games,
@@ -81,6 +93,31 @@ export function Controls({
                     }`}
                   >
                     {r.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Next to the region rather than off in a corner: both are
+                "how do I read this?", and neither changes what the page
+                knows. Switching is instant and costs nothing — no reload, and
+                nothing marked, typed or ticked is touched. */}
+            <div>
+              <p className="eyebrow">Appearance</p>
+              <div className="mt-2 flex gap-1.5">
+                {THEMES.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => onUpdate({ theme: t.id })}
+                    aria-pressed={prefs.theme === t.id}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      prefs.theme === t.id
+                        ? "border-ink/70 text-ink"
+                        : "border-hairline text-faint hover:text-muted"
+                    }`}
+                  >
+                    {t.label}
                   </button>
                 ))}
               </div>
