@@ -165,7 +165,7 @@ function ViewChoice({
   hues: string[];
 }) {
   const options: Array<{ id: View; label: string; hint: string }> = [
-    { id: "soon", label: "Ending soon", hint: "A list, closest deadline first." },
+    { id: "soon", label: "Checklist", hint: "A list, closest deadline first." },
     { id: "timeline", label: "Timeline", hint: "Bars per game, today pinned." },
   ];
 

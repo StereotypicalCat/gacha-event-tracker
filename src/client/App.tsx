@@ -356,9 +356,12 @@ export function App() {
           aria-label="View"
           className="flex rounded-lg border border-hairline p-0.5"
         >
+          {/* The id is a stored value (`prefs.view`) and the label is copy, so
+              they are allowed to drift: renaming the tab must not silently move
+              every reader to the other view. */}
           {(
             [
-              ["soon", "Ending soon"],
+              ["soon", "Checklist"],
               ["timeline", "Timeline"],
             ] as const
           ).map(([id, label]) => (

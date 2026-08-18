@@ -86,10 +86,14 @@ back through and that pushed every other bar off to the right. An event older th
 its faded left edge rather than being redrawn as though it started at the edge — the same honesty
 the frayed right edge carries for an unannounced end.
 
-**F2 — Ends-soonest list.**
+**F2 — Checklist (the ends-soonest list).**
 A flat list of all *currently running* events sorted ascending by end date, with a relative
 countdown ("ends in 2 days", "ends in 4 hours"). Under 24 hours, the row is emphasized. This is the
 view that justifies the app, and it is one tap from the timeline.
+
+The tab reads **Checklist**, which is what a reader with four games is doing with it: working down a
+list of jobs with deadlines. Its stored id stays `"soon"` — that value is in `prefs.view` on real
+devices, and renaming a label must never move a reader to the other view.
 
 **Which view opens is the reader's answer, not ours.** This spec said "calendar (default)" and the
 app shipped opening on the list; both were a decision made on the reader's behalf and then forgotten

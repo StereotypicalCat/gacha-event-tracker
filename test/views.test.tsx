@@ -104,7 +104,7 @@ describe("Welcome (first run)", () => {
 
   test("asks how the reader wants to see their events", () => {
     expect(html()).toContain("How do you want to see them?");
-    expect(html()).toContain("Ending soon");
+    expect(html()).toContain("Checklist");
     expect(html()).toContain("Timeline");
   });
 
