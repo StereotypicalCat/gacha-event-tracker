@@ -511,7 +511,10 @@ to an open page). Four things hold it up:
 - **The page is two columns past `lg`, and the split is the one below.** What the page *tells* the
   reader to do — the next deadlines, tonight's dailies — pins to a rail on the left and stays put
   while the lists it *shows* them scroll beside it. Below that breakpoint it is one column in the
-  same order. The rail's rule belongs to the panel, not the column: the panel is short and the list
+  same order. The focus bar goes at the top of that rail rather than full-width above both columns:
+  it narrows what the rail holds, and a wide row of chips above everything pushes the headline
+  deadline down the page. On a phone, and on the timeline, which has no rail, it is back at the top
+  of the page — one render site per view, never both at once. The rail's rule belongs to the panel, not the column: the panel is short and the list
   is long, so a full-height divider would spend most of its length walling off a gap.
 - **Truncating a list is not re-sorting it.** Each section shows `LIST_CAP` rows and offers "show
   all N". The rows below the cut keep their place in the order, stay counted in the header, and stay

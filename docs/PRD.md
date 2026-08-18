@@ -31,8 +31,9 @@ One persona: a player of 2–5 gacha games who checks in a few times a week, mos
 
 Most often is not only, and the desktop layout is not the phone layout stretched. Past `lg` the page
 splits: what it is *telling* the reader to do — the next deadlines, tonight's dailies — pins to a
-rail on the left and stays put, while the lists it is *showing* them scroll beside it. Below that
-breakpoint the same split produces the same answer in one column: instructions first.
+rail on the left and stays put, while the lists it is *showing* them scroll beside it. The focus bar
+(F4a) rides at the top of that rail, because it narrows what is in it. Below that breakpoint the same
+split produces the same answer in one column: instructions first.
 They care about accuracy of end dates above everything else — a wrong date is worse than a missing
 event, because a missing event sends them to a wiki while a wrong one makes them miss content.
 
@@ -131,9 +132,13 @@ tool for the thing a player of four games actually does while reading: clear one
 next. Doing that with the on/off switches costs two taps per game and leaves the settings panel no
 longer describing what they play.
 
-So focus is a **lens over the filter, not a second filter**: a bar at the top of the page, above
-everything it affects, narrowing every view — headline, dailies, lists, calendar and counts — to one
-game, with a "next game" control that steps through them and ends by returning to all. It never
+So focus is a **lens over the filter, not a second filter**: a bar above everything it affects,
+narrowing every view — headline, dailies, lists, calendar and counts — to one game, with a "next
+game" control that steps through them and ends by returning to all. "Above everything it affects" is
+the top of the page on a phone and on the timeline, and past `lg` it is the top of the checklist's
+rail: there the bar pins with the deadlines and dailies it narrows, rather than spending the full
+width of a wide screen on a row of chips and pushing "next to expire" — the answer the reader opened
+the page for — below the fold to make room. It never
 changes `hiddenGames`, "All" is always one tap away, and a focus on a game that is switched off or
 has left the feed is ignored rather than obeyed, so it can never strand the reader on a blank page
 whose cause is elsewhere. Each chip carries that game's outstanding count, so a game with nothing
