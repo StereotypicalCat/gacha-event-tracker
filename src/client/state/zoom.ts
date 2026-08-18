@@ -15,11 +15,18 @@ export const DAY_WIDTHS = [6, 9, 13, 20, 32, 48] as const;
 /**
  * The scale the board opens at for a reader who has never touched the control.
  *
- * Thirteen px/day is a little over a quarter on a laptop and a patch cycle on a
- * phone — dense enough that a bar's length reads as a duration rather than a
- * dash, wide enough that most event names fit inside their own bar.
+ * Two steps up from where it used to sit. Thirteen px/day opened on about a
+ * quarter of calendar, and a quarter is more time than these schedules are
+ * written in: a patch is six weeks, so most bars were short enough that the
+ * length stopped reading as a duration and the title stopped fitting inside the
+ * bar it belonged to. Thirty-two opens on roughly a patch cycle on a laptop —
+ * bars long enough to compare by eye, and wide enough to carry their own name.
+ * The longer view is one press of − away, and that answer is remembered.
+ *
+ * This moves new readers only: `prefs` is written on every load, so anyone who
+ * has opened the app has a `timelineDayWidth` of their own and keeps it.
  */
-export const DEFAULT_DAY_WIDTH = 13;
+export const DEFAULT_DAY_WIDTH = 32;
 
 /**
  * The nearest valid scale to a stored number.
