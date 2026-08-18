@@ -94,6 +94,7 @@ export const GAMES: Record<GameId, GameMeta> = {
   // has to come from a source that states the clock. Inventing one moves real
   // readers' day keys, and a wrong guess ticks the wrong box every night.
   ba: { id: "ba", name: "Blue Archive", short: "Blue Archive", hue: "#3FCBDD" , studio: "Nexon Games", dailyTasks: "Daily missions, AP" },
+  fgo: { id: "fgo", name: "Fate/Grand Order", short: "FGO", hue: "#1D3A8F", studio: "Lasengle", dailyTasks: "Daily missions, AP" },
 };
 
 export const GAME_LIST: GameMeta[] = Object.values(GAMES);

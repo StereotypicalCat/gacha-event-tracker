@@ -39,6 +39,7 @@ const CASES: Array<{ adapter: Adapter; fixture: string }> = [
   // its content type. The fixture is the bytes the fetcher would store.
   { adapter: adapter("r1999-fandom-events"), fixture: "fixtures/r1999/fandom-events-2026-08-17" },
   { adapter: adapter("ba-bawiki-events"), fixture: "fixtures/ba/bawiki-events-2026-08-17" },
+  { adapter: adapter("fgo-fandom-events"), fixture: "fixtures/fgo/fandom-events-2026-08-18" },
 ];
 
 async function runAdapter(adapter: Adapter, fixture: string) {

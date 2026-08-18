@@ -106,6 +106,12 @@ const SOURCES: SourceSpec[] = [
     url: "https://bluearchive.wiki/wiki/Events",
     parserId: "bawiki",
   },
+  {
+    id: "fgo-fandom-events",
+    game: "fgo",
+    url: "https://fategrandorder.fandom.com/api.php?action=parse&page=Event_List&prop=text&formatversion=2&format=json",
+    parserId: "fandom",
+  },
 ];
 
 function toAdapter(spec: SourceSpec): Adapter {
