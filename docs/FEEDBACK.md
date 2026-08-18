@@ -301,7 +301,7 @@ diagnosis in each item still holds — what changed is whether it has been acted
 |---|---|
 | P0 refresh pipeline | **Diagnosed, half acted on.** game8.co answers a GitHub Actions runner with `202` and a bot-management body, so those eight sources have only ever built from fixtures in CI — see `AGENTS.md` § Scraping conduct, including why it is not to be worked around. The `broken` tier now makes a source failing three cycles fail the run. Step 5 (a build assertion on snapshot age) is **not built** |
 | P1a Arknights | **Done.** `arknights-akwiki-events`, via the new `akwiki` parser |
-| P1b `NextUp` → three | **Not done.** Still one row |
+| P1b `NextUp` → three | **Done** (2026-08-18). One headline and two behind it, off `nextToExpire` |
 | P1b cap the long list | **Not done.** No "show all N" expander |
 | P1b persist `view` | **Not done.** Still `useState` in `App.tsx` |
 | P1b Calendar → Timeline | **Done.** The tab reads "Timeline" |

@@ -23,7 +23,7 @@ import { compareRows, SORT_MODES, type Activity, type SortMode } from "./state/s
 import {
   advanceFocus,
   countByGame,
-  firstToExpire,
+  nextToExpire,
   outstanding,
   resolveFocus,
 } from "./state/lens.ts";
@@ -39,6 +39,15 @@ import {
 import { metaFor } from "../shared/games.ts";
 
 type View = "soon" | "timeline";
+
+/**
+ * How many deadlines the headline carries.
+ *
+ * One was the whole panel, and one is what a reader who has just finished it
+ * needs replacing. Three is what they asked for: enough to plan an evening
+ * around, few enough that the closest one still owns the page.
+ */
+const HEADLINE_DEADLINES = 3;
 
 /**
  * Connection state. Offline is not an error here — the service worker serves
@@ -245,7 +254,7 @@ export function App() {
    * them on screen, not keep nagging me about them.
    */
   const todo = outstanding(live, isDone, isIgnored);
-  const next = firstToExpire(todo);
+  const headline = nextToExpire(todo, HEADLINE_DEADLINES);
 
   // Counted across every game the reader plays, not just the focused one — a
   // chip has to say what is waiting behind it to be worth tapping.
@@ -356,7 +365,7 @@ export function App() {
       {view === "soon" ? (
         <>
           <NextUp
-            row={next}
+            rows={headline}
             focused={focus === null ? null : gameMeta(focus).name}
             onOpen={setOpenId}
           />

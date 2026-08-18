@@ -96,7 +96,7 @@ src/
     sw.js               offline: shell cache, feed fallback
     manifest.webmanifest, icon.svg
     components/
-      NextUp.tsx        the hero countdown          (PRD F1)
+      NextUp.tsx        the next three deadlines    (PRD F2)
       EventRow.tsx      row + meter + caption       (F2, F3)
       Meter.tsx         the depletion meter
       Legend.tsx        what the bars and colours mean
