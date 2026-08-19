@@ -1,9 +1,18 @@
 # SOURCES.md — event sources for the games still missing
 
 A source assessment for the games named in `docs/FEEDBACK.md` § P1 that still have no adapter.
-Written 2026-08-18. Nothing here has been built: no fixture was captured, no `SOURCES` entry added,
-no parser written. This is the reconnaissance that decides what is worth one pass of
-**add-game-source** and what is worth writing off.
+Written 2026-08-18. **Acted on 2026-08-19**: four of the games below were built, one turned out to be
+blocked rather than merely awkward, and the rest were declined. Each section keeps its original
+reconnaissance and carries its outcome at the top, because the reasoning is what stops the next pass
+re-deriving it.
+
+What changed on 2026-08-19, in one paragraph. **Built:** Girls' Frontline 2 (`iopwiki`, new parser),
+Stella Sora (`stellasorawiki`, new parser), Chaos Zero Nightmare (`game8`, no parser work) and
+Umamusume (`game8`, after widening its section and column vocabulary). **Blocked:** Nikke — its
+`robots.txt` cannot be read from here at all any more, so the permission this file required before
+building could not be obtained. **Declined:** Punishing: Gray Raven, Guardian Tales, Azur Lane and
+Aether Gazer, all as proposed. One thing not on the original list also came out of the pass: the
+**Infinity Nikki source is stale** and has no reachable replacement — see § 11.
 
 Verdicts here are proposals. Once one is acted on — built or declined — the *decision* belongs in
 `AGENTS.md` § Scraping conduct, whose table exists so a source is not re-litigated every pass and
@@ -25,7 +34,11 @@ Two things this method cannot tell you, and both matter:
   conduct). The only hard evidence we hold is what CI has actually committed: `git log` on
   `snapshots/` shows `github-actions[bot]` landing **arknights.wiki.gg**, **endfield.wiki.gg** and
   **bluearchive.wiki** (Miraheze). Fandom sources have never refreshed in CI, because `robots.txt`
-  itself is challenged from a datacentre address and the gate fails closed.
+  itself is challenged from a datacentre address and the gate fails closed — and as of 2026-08-19
+  that challenge covers every Fandom wiki from *any* address tried here, not just CI's.
+  Of the 2026-08-19 additions, **Stella Sora** is Miraheze and so is the one likely to refresh in CI;
+  **IOP Wiki** is permissive but unproven; **Chaos Zero Nightmare** and **Umamusume** are game8 and
+  therefore blind in CI by construction.
 - **Whether a page will still look like this in six weeks.** Each recommendation below names the
   assertion `canParse` should make, so a redesign fails the source loudly instead of emptying a lane.
 
@@ -33,20 +46,22 @@ Two things this method cannot tell you, and both matter:
 
 | Game | Status |
 |---|---|
-| Arknights, Reverse: 1999, Blue Archive, Persona 5X | **Built** |
-| Azur Lane, Umamusume | Declined on conduct (`azurlane.koumakan.jp` `ai-input=no`; `uma.moe` Turnstile) |
-| **Girls' Frontline 2, Nikke, Chaos Zero Nightmare, Stella Sora, Punishing: Gray Raven, Guardian Tales, Aether Gazer** | **No source — assessed below** |
+| Arknights, Reverse: 1999, Blue Archive, Persona 5X | **Built** (2026-08-17/18) |
+| **Girls' Frontline 2, Stella Sora, Chaos Zero Nightmare, Umamusume** | **Built** (2026-08-19) |
+| Nikke | **Blocked.** Best unbuilt data here; `robots.txt` unreadable, so the permission cannot be established — see § 3 |
+| Azur Lane | Declined on conduct (`azurlane.koumakan.jp` `ai-input=no`), and both Fandom alternatives are dead archives |
+| Punishing: Gray Raven, Guardian Tales, Aether Gazer | Declined — see §§ 6, 7, 9 |
 | Silver Palace | Unreleased |
 
 ## Summary of findings
 
 | Game | Best source found | Parser | Refreshes in CI? | Verdict |
 |---|---|---|---|---|
-| Girls' Frontline 2 | `iopwiki.com/wiki/GFL2_Events` | new (`iopwiki`) | likely (permissive robots, unproven) | **Build first** — best data quality of anything here |
-| Stella Sora | `stellasora.miraheze.org/wiki/Main_Page` | new (or extend `bawiki`) | yes (Miraheze proven) | **Build** — banners only, and read the main page, not the banner list |
-| Nikke | `nikke-…-international.fandom.com/api.php?…page=Event` | new shape | **no** — Fandom robots fails closed | **Build**, eyes open: fixture-backed in CI like r1999 |
-| Chaos Zero Nightmare | `game8.co/games/Chaos-Zero-Nightmare/archives/559899` | **existing** `game8` | **no** — game8 202s the runner | **Build** if you want a cheap win; it is a fixture-only lane |
-| Umamusume | `game8.co/games/Umamusume-Pretty-Derby/archives/536311` | `game8` + two header words | **no** | Possible, but it edits a parser eight sources share |
+| Girls' Frontline 2 | `iopwiki.com/wiki/GFL2_Events` | new (`iopwiki`) | likely (permissive robots, unproven) | **BUILT** 2026-08-19 — best data quality of anything here |
+| Stella Sora | `stellasora.miraheze.org/wiki/Main_Page` | new (`stellasorawiki`) | yes (Miraheze proven) | **BUILT** 2026-08-19 — banners only, from the main page |
+| Nikke | `nikke-…-international.fandom.com/api.php?…page=Event` | new shape | **no** — Fandom robots fails closed | **BLOCKED** — the robots.txt precondition could not be met from any client here |
+| Chaos Zero Nightmare | `game8.co/games/Chaos-Zero-Nightmare/archives/559899` | **existing** `game8` | **no** — game8 202s the runner | **BUILT** 2026-08-19 — no parser work, fixture-only lane |
+| Umamusume | `game8.co/games/Umamusume-Pretty-Derby/archives/536311` | `game8` + section and column vocabulary | **no** | **BUILT** 2026-08-19 — cost more than "two header words"; see § 5 |
 | Punishing: Gray Raven | `grayravens.com/wiki/Events` | — | — | **Decline for now** — one dated string on the whole page |
 | Guardian Tales | `guardian-tales.fandom.com/wiki/Events` | — | — | **Decline** — wiki stopped dating events in 2025 |
 | Azur Lane | none | — | — | **Still declined** — the Fandom alternatives are 2021 archives |
@@ -55,7 +70,7 @@ Two things this method cannot tell you, and both matter:
 
 ---
 
-## 1. Girls' Frontline 2: Exilium — build this one first
+## 1. Girls' Frontline 2: Exilium — BUILT 2026-08-19
 
 **Source:** `https://iopwiki.com/wiki/GFL2_Events` (IOP Wiki, the Girls' Frontline universe wiki)
 
@@ -114,7 +129,7 @@ zero unparsed, which is the count check `AGENTS.md` § Silent drops asks for. La
 
 ---
 
-## 2. Stella Sora — build the main page, not the banner list
+## 2. Stella Sora — BUILT 2026-08-19, from the main page and not the banner list
 
 **Source:** `https://stellasora.miraheze.org/` — a Miraheze wiki, so the same call as Blue Archive and
 hololive Dreams: `/wiki/` is the surface `*` is allowed, `/w/` and `/*?action=` are disallowed. CC
@@ -150,7 +165,21 @@ source immediately — full coverage, no template dependency.
 
 ---
 
-## 3. Nikke — the best data, on the surface CI cannot reach
+## 3. Nikke — blocked on a permission that can no longer be read
+
+> **Outcome (2026-08-19): not built, and not declined either.** The precondition this section set —
+> "read this wiki's `robots.txt` in a browser and confirm it is the same file" — could not be met.
+> From this machine that file answers **403** to our fetcher, and a real headless browser gets a
+> Cloudflare managed challenge that never resolves. Worse, the same is now true of *every* Fandom
+> wiki tried, including `blhx.fandom.com`, which served it `200` on 2026-08-18 and is what this
+> section's permission argument was leaning on. Nothing about the data changed — it is still the
+> richest schedule of anything unbuilt — but the permission has to be in writing before the adapter
+> exists, and it cannot currently be obtained. **Unblocking it is one action by someone on an
+> address Fandom serves:** open that URL, confirm the standard file (allows `/api.php?action=`,
+> disallows only `Special:`/`User:`/`Template:`/`Help:`), and paste it into this file. Everything
+> below then applies unchanged, including the free `resetOffsets` win.
+
+
 
 **Source:** `https://nikke-goddess-of-victory-international.fandom.com/api.php?action=parse&page=Event&prop=text&formatversion=2&format=json`
 
@@ -205,7 +234,7 @@ a moment's care in `games.ts`, `schema.ts` and the fixture directory name.
 
 ---
 
-## 4. Chaos Zero Nightmare — the cheapest adapter available, and a ninth blind source
+## 4. Chaos Zero Nightmare — BUILT 2026-08-19; the cheapest adapter available, and a ninth blind source
 
 **Source:** `https://game8.co/games/Chaos-Zero-Nightmare/archives/559899` ("List of All Events")
 
@@ -246,7 +275,28 @@ is stale (its "latest events" are April–May 2026); `czn.gg` is a WordPress sit
 
 ---
 
-## 5. Umamusume — reachable, but it edits a parser eight sources share
+## 5. Umamusume — built, and the estimate below was wrong
+
+> **Outcome (2026-08-19): BUILT**, off the stable `List of All Banners` page as recommended. Two
+> corrections to what follows, both worth having before the next Game8 page is assessed:
+>
+> - **"A few characters" was wrong.** Teaching `COL_TITLE` the word `Banner` and `COL_RANGE` the word
+>   `Availability` gets you **zero events**. The page's schedule sits under `List of All Banners` →
+>   `All Current Banners`, which the *section* vocabulary did not match either, and its back
+>   catalogue sits under `Previous Banners`, which `previous events` does not match — so without
+>   that exclusion the finished rows would have gone straight onto the calendar. Beyond that, the
+>   current-banners table lays the Standard and Paid schedules side by side inside one `<table>`
+>   under a spanning label row, and that row is *plausible* enough to resolve both columns at
+>   indices no data row has. `readColumnTable` now decides the header by what it produces, trying
+>   row 1 only when row 0 produced nothing.
+> - **The blast radius was measurable, and it was zero.** The worry below — that widening a parser
+>   eight sources share starts matching tables it currently ignores — is right in principle and was
+>   settled by measurement rather than by regenerating `.expected.json` until the tests agreed: every
+>   pinned fixture *and* every live snapshot was parsed before and after, and no existing source's
+>   output changed by a single event. Do that diff on any future change to `game8.ts`; it costs one
+>   script and it is the only thing that distinguishes a safe widening from a silent one.
+
+
 
 `uma.moe` stays declined; nothing about the Turnstile gate has changed. Two other surfaces exist.
 
@@ -365,6 +415,32 @@ projections point at late 2026 / early 2027. Nothing to scrape, as `docs/FEEDBAC
 
 ---
 
+## 11. Infinity Nikki — not on the original list, and the most urgent thing found
+
+This game already has an adapter, which is why it was not assessed on 2026-08-18. It should have
+been. `game8.co/games/Infinity-Nikki/archives/487445` fetches, parses, and passes every test — and
+the page itself says `Last updated on: August 31, 2025`, with **zero** occurrences of the string
+`2026`. Seven events parse out of it, five of them with `endsAt: null`, which the app renders as
+live-with-unknown-end indefinitely. A year-old event presented as current is precisely the failure
+this product exists to prevent, and it arrives through a source that looks perfectly healthy to the
+runner: a stale page is not a broken one, so no failure streak, no annotation, no `broken` tier.
+
+Every replacement was checked on 2026-08-19 and none works:
+
+| Candidate | Result |
+|---|---|
+| `infinitynikki.wiki.gg` | 401 — no such wiki (as with Nikke, Umamusume, Blue Archive, R1999) |
+| `infinitynikki.miraheze.org` | Exists, serves robots.txt, **abandoned** — front page last edited 11 Feb 2025, `/wiki/Events` returns a permission error |
+| `prydwen.gg/infinity-nikki` | 404 — not a game prydwen covers |
+| `game8.co/…/archives/487444` (Banners) | Staler still: last updated 20 May 2025 |
+| `infinitynikki.fandom.com` | Behind the blanket Fandom 403 (§ 3) |
+
+So there is nothing to move the lane to. **This is a call for the repository owner**, and both
+options cost something: leaving it means a knowingly stale lane carried only by the footer's
+freshness disclosure, and retiring it means dropping a `GameId` that is the first segment of every
+completion key that game's readers hold, with no server-side recovery. Recorded in `AGENTS.md`
+§ Scraping conduct so the next pass does not rediscover it.
+
 ## What every one of these costs, beyond the source
 
 Adding a game is never only a `SOURCES` entry:
@@ -381,19 +457,19 @@ Adding a game is never only a `SOURCES` entry:
 
 ## Recommended order
 
-1. **Girls' Frontline 2** — best dates in the list (explicit UTC, both boundaries exact), permissive
-   host, live event today. Costs a parser module; buys the strongest lane since wiki.gg.
-2. **Stella Sora** — Miraheze, which is the one family we know refreshes in CI. Banners only, and
-   read the main page's `<time>` elements rather than the unzoned banner list.
-3. **Nikke** — richest schedule of the three (story events *and* dated pickup banners, plus an
-   evidenced reset clock), but confirm the `robots.txt` allowance in a browser first, and accept that
-   CI will never refresh it.
-4. **Chaos Zero Nightmare** — zero parser work, but a ninth blind game8 source. Do it when someone is
-   willing to run the refresh by hand, or not at all.
-5. **Umamusume** — after a separate, carefully re-verified commit widening `game8.ts`'s column
-   vocabulary.
-6. Decline **Azur Lane**, **Punishing: Gray Raven**, **Guardian Tales** and **Aether Gazer**, with the
-   reasons above written into `AGENTS.md` § Scraping conduct so they are not researched a third time.
+Steps 1, 2, 4 and 5 were done on 2026-08-19, and step 6's declines are now written into `AGENTS.md`
+§ Scraping conduct. What is left is not a queue of sources any more — it is two decisions:
+
+1. **Nikke** (§ 3) — the richest schedule of anything unbuilt, needing one action from someone on an
+   address Fandom serves: read that wiki's `robots.txt` and record it here. Everything else about
+   the adapter is specified above, including the evidenced `resetOffsets`/`resetHourLocal` pair that
+   must ship in the same commit as the game.
+2. **Infinity Nikki** (§ 11) — decide whether a lane with no reachable source stays or is retired.
+   Not a research task; there is nothing left to find.
+
+Below that, in descending order of value: re-check `grayravens.com` if it ever puts its schedule in
+a table, and re-check Azur Lane if `koumakan` ever drops `ai-input=no`. Neither is worth a pass
+until something changes upstream.
 
 ## Appendix — reproducing the checks
 

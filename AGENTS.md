@@ -301,6 +301,30 @@ re-litigated each pass:
 | `stellasora.miraheze.org` | **Built** (2026-08-19), from the front page's `Current Banners` module and **not** `/wiki/Banner_List` — see § Stella Sora below |
 | `game8.co/games/Chaos-Zero-Nightmare` | **Built** (2026-08-19). Zero parser work — the existing `game8` parser reads it. The ninth game8 source, so fixture-backed in CI from day one |
 | `game8.co/games/Umamusume-Pretty-Derby` | **Built** (2026-08-19), off the stable `List of All Banners` page, not the monthly release-schedule pages whose URL changes every month. Cost a widening of `game8.ts`'s section and column vocabulary — see § Working on parsers |
+| `nikke-…-international.fandom.com` | **Blocked, not declined** (2026-08-19). The API answers our User-Agent with a 200 and the data is the best of any unbuilt source — story events *and* dated pickup banners, with an evidenced 05:00 UTC+9 reset. But this wiki's `robots.txt` cannot be read from here **at all**: 403 to our fetcher and an unresolving Cloudflare challenge to a real browser. The permission has to be in writing before the adapter exists, so this waits on someone reading that file from an address Fandom serves |
+| `infinitynikki.miraheze.org` | **Declined.** Exists and serves `robots.txt`, but the wiki is abandoned — front page last edited 11 February 2025 and `/wiki/Events` returns a permission error. Checked as a replacement for the stale Infinity Nikki Game8 page |
+| `prydwen.gg/infinity-nikki` | **Declined.** 404 — prydwen does not cover Infinity Nikki |
+| `grayravens.com` (Punishing: Gray Raven) | **Declined.** Conduct is fine; the data is not. The whole 626 KB `/wiki/Events` page contains exactly one date range, written as prose, one event per six-week patch |
+| `guardian-tales.fandom.com` | **Declined.** Parses fine and contains no 2026 date at all — newest dated entry is 2025. The `bluearchive.fandom.com` failure again: parses cleanly to nothing live |
+| `blhx.fandom.com`, `azurlane-archive.fandom.com` | **Declined.** The two Fandom alternatives to the declined koumakan wiki are dead archives — `Event_Calendar` stops in **2021**, and the archive wiki's headings have nothing under them. Azur Lane still has no source |
+| Aether Gazer | **Do not build.** The developer confirmed no further content updates after 23 July 2026, with store listings removed 17 October 2026. The wiki dates nothing anyway — `Event_Guide_List` is an image gallery. A lane that will be empty by winter |
+
+**The Infinity Nikki lane is knowingly stale, and there is nowhere to move it** (checked
+2026-08-19). `game8.co/games/Infinity-Nikki/archives/487445` fetches, parses and passes every test —
+and its page says `Last updated on: August 31, 2025`. It mentions the year 2026 zero times. Seven
+events parse out of it, of which **five carry `endsAt: null`** and so read as live-with-unknown-end
+forever, on a calendar whose whole purpose is telling a reader what is still on. That is worse than
+an empty lane, and it is the failure this product exists to prevent — arriving through a source that
+looks perfectly healthy to the runner, because a stale page is not a broken one.
+
+Every replacement was checked and none works: `infinitynikki.wiki.gg` 401s (no such wiki),
+`prydwen.gg` does not cover the game, `infinitynikki.miraheze.org` is abandoned (front page last
+edited February 2025, `/wiki/Events` a permission error), Game8's own `Banners` page for the game is
+staler still (May 2025) and its whole Infinity Nikki wiki is unmaintained, and the Fandom wiki is
+behind the blanket 403 above. **This is a decision for the repository owner, not a bug to fix in
+code**: either the lane stays and the footer's freshness disclosure carries it, or the game is
+retired. Retiring it is not free — `nikki` is the first segment of every completion key that game's
+readers have, so dropping the `GameId` orphans them with no server-side recovery (§ Event IDs).
 
 `.github/ISSUE_TEMPLATE/feature_request.yml` points readers at that table by heading, so a source
 request can be checked against it before anyone writes it up — the loudest feedback on the first
@@ -326,6 +350,19 @@ body. So the adapter fetches `api.php?action=parse&page=Events`, with no imperso
 own headers, on a path the site put in writing. The only namespaces `*` is refused are `Special:`,
 `User:`, `Template:` and `Help:`, none of which we want; `parsers/fandom.ts` skips `Special:` links
 for that reason.
+
+**Fandom's posture tightened on 2026-08-19, and it now covers every wiki.** On 2026-08-18 the
+standard `robots.txt` was still readable from a plain address — `blhx.fandom.com` served it `200`,
+which is how the permission above was confirmed. As of 2026-08-19 **every** Fandom wiki tried
+(`reverse1999`, `fategrandorder`, `nikke-…-international`, `infinitynikki`, `blhx`) answers `403`
+to our fetcher, and a real headless browser gets a Cloudflare managed challenge that never resolves.
+Two consequences, and neither is a licence to work around it:
+
+- The two built Fandom sources now report `skipped_robots` on **every** run, from any address we
+  have, so `r1999` and `fgo` are permanently fixture-backed until someone refreshes them from an
+  address Fandom serves. `fgo` has never had a snapshot at all.
+- A **new** Fandom source cannot be added at all, because the permission cannot be read. That is
+  what blocks Nikke, whose data is otherwise the best of any unbuilt source.
 
 One consequence to keep in mind: because `/robots.txt` is unreadable from a challenged address, the
 robots gate **fails closed there and the source is skipped**. That is a warning line rather than a
