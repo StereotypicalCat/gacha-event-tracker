@@ -48,10 +48,10 @@ Consequences worth internalising:
 
 | Parser | Site | Sources using it |
 |---|---|---|
-| `game8` | game8.co article calendars | Genshin, Star Rail, Wuthering Waves, ZZZ, Endfield, NTE, Infinity Nikki, Persona 5: The Phantom X, Chaos Zero Nightmare, Umamusume |
+| `game8` | game8.co article calendars | Genshin, Star Rail, Wuthering Waves, ZZZ, Endfield, NTE, Persona 5: The Phantom X, Chaos Zero Nightmare, Umamusume |
 | `wikigg` | wiki.gg MediaWiki `mp-event` templates | Endfield |
 | `akwiki` | arknights.wiki.gg's `mrfz-wtable` "Ongoing/upcoming" table | Arknights |
-| `fandom` | Fandom wikis via the MediaWiki `action=parse` API — three page templates: `Event \| Time Period \| Version` wikitables, FGO's picture-fenced `ONGOING EVENTS` blocks, and Nikke's `Event \| Start(UTC+9) \| End(UTC+9)` tables | Reverse: 1999, Fate/Grand Order, Nikke |
+| `fandom` | Fandom wikis via the MediaWiki `action=parse` API — four page templates: `Event \| Time Period \| Version` wikitables, FGO's picture-fenced `ONGOING EVENTS` blocks, Nikke's `Event \| Start(UTC+9) \| End(UTC+9)` tables, and Infinity Nikki's `Event \| Duration \| Description \| Type` article-tables | Reverse: 1999, Fate/Grand Order, Nikke, Infinity Nikki |
 | `bawiki` | bluearchive.wiki's rendered `/wiki/Events` — a JP/Global tabber over `Name (EN) \| Start date \| End date \| Notes` wikitables | Blue Archive |
 | `holodoriwiki` | holodori.wiki's rendered `/wiki/Events` — `Current Events` and `Past Events` wikitables over `Event \| Type \| Start Date \| End Date` | hololive Dreams |
 | `iopwiki` | iopwiki.com's `gf-table event-period` tables — `Title \| Period (start/end) \| Server \| Type \| Comment`, one table per event and one row per server | Girls' Frontline 2 |
@@ -145,6 +145,7 @@ All live in `src/ingest/dates.ts`, each returning null rather than inferring any
 | `parseIsoClockRangeUtc` | `2026-08-06 13:00 - 2026-08-26 22:59 (UTC)` (whole range in one cell, **zone required**, nothing converted) | Girls' Frontline 2 |
 | `parseIsoOffsetInstant` | `2026-08-03T21:00-07:00` (a machine-readable `<time datetime>` attribute; **offset required**) | Stella Sora |
 | `parseDayMonthYearClock` | `12 August 2026`, `10 September 202604:59:59` (day-first; the offset comes from the **column header**, and a clockless boundary keeps its printed day) | Nikke |
+| `parseZonelessClockRange` | `July 20, 2026 04:00 – August 10, 2026 03:49` (reads the clock and **discards** it — the page states no zone, so only the printed day is publishable) | Infinity Nikki |
 | `parseOpenRange` | `Jul. 24, 2026 - End of 4.6`, `July 10, 2026 - Permanent` | Star Rail, Wuthering Waves |
 
 **A day-precision result is 00:00Z, and that is a placeholder rather than a time.** Every reader

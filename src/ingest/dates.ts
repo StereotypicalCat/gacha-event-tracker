@@ -610,3 +610,45 @@ export function parseDayMonthYearClock(
   );
   return value === null ? null : { iso: value, precision: "exact" };
 }
+
+/**
+ * "July 20, 2026 04:00 – August 10, 2026 03:49" → both days, day precision.
+ *
+ * **The clock is read and deliberately thrown away.** The Infinity Nikki wiki
+ * states a wall clock on both boundaries and names no zone for it anywhere on
+ * the page — only prose elsewhere dating version launches `(UTC-7)` and a note
+ * that rewards reset at `04:00 (Server Time)`. Its durations do run 04:00 →
+ * 03:59, which only lands on a reset boundary if the column is server-local, so
+ * the case for UTC-7 is strong and it is still circumstantial.
+ *
+ * Publishing the clock would mean picking an offset, and the offset moves the
+ * *day*: `July 16, 2026 20:00` read as UTC-7 is `2026-07-17T03:00Z`, and the
+ * start's day is half of every event ID this game will ever have. So the
+ * printed date stands on its own, at day precision, exactly as every Game8 date
+ * does — Game8 states no zone either, and `clockFor` exists to resolve such a
+ * boundary against the reader's own server reset.
+ *
+ * Matching the clock rather than ignoring it is the point: a cell whose shape
+ * this reader does not fully recognise yields null instead of a half-read date.
+ */
+export function parseZonelessClockRange(
+  input: string,
+): { start: ParsedInstant; end: ParsedInstant } | null {
+  const re =
+    /^\s*([A-Za-z]+)\.?\s+(\d{1,2}),\s*(\d{4})(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?\s*[-–—]\s*([A-Za-z]+)\.?\s+(\d{1,2}),\s*(\d{4})(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?\s*$/;
+  const m = re.exec(input);
+  if (!m) return null;
+
+  const startMonth = monthNumber(m[1] ?? "");
+  const endMonth = monthNumber(m[4] ?? "");
+  if (startMonth === null || endMonth === null) return null;
+
+  const startIso = iso(Number(m[3]), startMonth, Number(m[2]));
+  const endIso = iso(Number(m[6]), endMonth, Number(m[5]));
+  if (startIso === null || endIso === null) return null;
+
+  return {
+    start: { iso: startIso, precision: "day" },
+    end: { iso: endIso, precision: "day" },
+  };
+}

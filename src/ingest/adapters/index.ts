@@ -73,12 +73,6 @@ const SOURCES: SourceSpec[] = [
     parserId: "game8",
   },
   {
-    id: "nikki-game8-events",
-    game: "nikki",
-    url: "https://game8.co/games/Infinity-Nikki/archives/487445",
-    parserId: "game8",
-  },
-  {
     id: "p5x-game8-events",
     game: "p5x",
     url: "https://game8.co/games/Persona-5-Phantom-X/archives/532244",
@@ -142,6 +136,21 @@ const SOURCES: SourceSpec[] = [
     // See `parsers/stellasora.ts` for why coverage loses that argument.
     url: "https://stellasora.miraheze.org/wiki/Main_Page",
     parserId: "stellasorawiki",
+  },
+  {
+    id: "nikki-fandom-events",
+    game: "nikki",
+    // Infinity Nikki, replacing a Game8 page that stopped being updated in
+    // August 2025 and had been publishing year-old events as live ever since.
+    //
+    // `infinitynikki.fandom.com` 301s here; this is the canonical host. Its
+    // robots.txt was read in a browser on 2026-08-19 and is the standard Fandom
+    // file, the same one that cleared Nikke below.
+    //
+    // Day precision on both boundaries by choice: the page states a wall clock
+    // and names no zone for it. See `parsers/fandom.ts` and docs/SOURCES.md § 11.
+    url: "https://infinity-nikki.fandom.com/api.php?action=parse&page=Event&prop=text&formatversion=2&format=json",
+    parserId: "fandom",
   },
   {
     id: "nikke-fandom-events",

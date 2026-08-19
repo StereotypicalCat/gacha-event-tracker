@@ -319,6 +319,11 @@ Note also that `nikke` and `nikki` are one letter apart and are different games 
 Nikke and Infinity Nikki. Both are the first segment of every completion key their game will ever
 have, so a typo in either direction is silent data loss for real readers.
 
+Infinity Nikki's source changed on 2026-08-19 and its silence changed shape with it: the Fandom wiki
+states a wall clock on every boundary and no zone for it, so there is still nothing to read a server
+map off — the clock is discarded at ingest and only the printed day is published. An offset invented
+here would move real readers' day keys.
+
 Infinity Nikki, P5X, Blue Archive, Chaos Zero Nightmare and Umamusume carry **no `resetOffsets`
 entry**, so they take the regional default. That is an assumption, not a verified server map — none
 of those sources states one. Two of the 2026-08-19 additions are worth separating out, because they

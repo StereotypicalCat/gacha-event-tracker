@@ -3,8 +3,9 @@ import {
   parseDayMonthYearClock,
   parseFullRange,
   parseOrdinalDateTimeRange,
+  parseZonelessClockRange,
 } from "../dates.ts";
-import { text } from "../html.ts";
+import { decodeEntities, text } from "../html.ts";
 import type { ParseContext } from "../adapters/types.ts";
 import { inferType } from "./game8.ts";
 import type { SourceParser } from "./types.ts";
@@ -101,17 +102,29 @@ const FGO_ARTICLE_SUFFIX = /\s*\(US\)\s*$/;
 const NIKKE_ZONE_HEADER = /^(start|end)\s*\(utc([+-]\d{1,2})\)$/;
 
 /**
- * A title cell's fallback, for when the wiki has no logo for the event yet.
+ * A title cell's fallback, for when the wiki has no image for the event yet.
  *
- * Every title on this page is an image and the name is normally recoverable
- * from the wrapping `<a title="Project Matis">`. The newest row — today's live
- * event — is the one most likely to have no logo uploaded, and then the cell is
- * a red link reading `File:Persona on Frontline logo.png`. A reader that only
- * understood `<a title>` would silently drop the single most important row on
- * the page and publish a calendar missing what is on right now.
+ * Both the Nikke and Infinity Nikki pages render every event title as an image,
+ * with the name recoverable from the wrapping `<a title="Project Matis">`. The
+ * newest row is the one most likely to have no image uploaded, and then the
+ * cell is a red link reading `File:Persona on Frontline logo.png`. A reader that
+ * only understood `<a title>` would silently drop the single most important row
+ * on either page and publish a calendar missing what is on right now.
  */
-const NIKKE_FILE_TITLE =
-  /^File:\s*(.+?)\s*(?:logo)?\.(?:png|jpe?g|gif|webp)$/i;
+const FILE_TITLE = /^File:\s*(.+?)\s*(?:logo)?\.(?:png|jpe?g|gif|webp)$/i;
+
+/**
+ * A dated suffix on an Infinity Nikki title — `Deep Breakthrough/2026-07-20`
+ * from a subpage link, or `Alison's Travel Shop 2026-08-06` from the file name
+ * behind a red link. Slash or space, because the wiki uses both.
+ *
+ * The wiki gives each run of a recurring event its own dated page, so that date
+ * names the *run* rather than the event. Stripping it is safe because the start
+ * date is already half the event ID, which is what keeps two runs of
+ * `Alison's Travel Shop` apart — and keeping it would put the date on screen
+ * twice, in the row and in its own title.
+ */
+const DATED_SUBPAGE = /[\s/]\d{4}-\d{2}-\d{2}$/;
 
 /** The rendered HTML inside an `action=parse` response, or null. */
 export function renderedHtml(body: string): string | null {
@@ -402,14 +415,198 @@ function parseNikkeEvents(rendered: string, ctx: ParseContext): GachaEvent[] {
 
 /** A title cell's event name: the link's title, or the file name behind it. */
 function nikkeTitle(cell: string): string | null {
-  const linked = /<a\b[^>]*title="([^"]*)"/i.exec(cell)?.[1];
+  // `decodeEntities`, not `text`: this comes out of an attribute value, which
+  // never passes through the tag stripper, so `&#39;` would otherwise survive
+  // into the title and from there into the event ID.
+  const linked = attributeTitle(cell);
   const raw = (linked ?? text(cell)).trim();
   if (raw.length === 0) return null;
 
   // "File:Persona on Frontline logo.png" -> "Persona on Frontline". Applied to
   // the link title too: a red link carries the file name in both places.
-  const named = NIKKE_FILE_TITLE.exec(raw)?.[1];
+  const named = FILE_TITLE.exec(raw)?.[1];
   const title = (named ?? raw).trim();
+  return title.length === 0 ? null : title;
+}
+
+/** Headings whose tables are a schedule our readers can act on. */
+const IN_INCLUDED_SECTION = /^(current|upcoming) events$/i;
+
+/**
+ * True for the Infinity Nikki wiki's `Event` page, and the gate on the branch
+ * below. Asserts the heading *and* the table shape, because the page's
+ * `Permanent Events` table shares neither.
+ */
+function isInfinityNikkiEventPage(rendered: string): boolean {
+  return infinityNikkiTables(rendered).length > 0;
+}
+
+interface InTable {
+  body: string;
+  title: number;
+  duration: number;
+  description: number | undefined;
+  type: number | undefined;
+}
+
+/** Every `Current`/`Upcoming Events` table, with its columns resolved. */
+function infinityNikkiTables(rendered: string): InTable[] {
+  const flat = rendered.replace(EDIT_SECTION, "").replace(/\s+/g, " ");
+  const out: InTable[] = [];
+  let included = false;
+
+  for (const node of flat.matchAll(SECTION)) {
+    const heading = node[1];
+    if (heading !== undefined) {
+      included = IN_INCLUDED_SECTION.test(text(heading).trim());
+      continue;
+    }
+    if (!included) continue;
+
+    const body = node[2] ?? "";
+    const headers = [...body.matchAll(/<th\b[^>]*>([\s\S]*?)<\/th>/gi)].map((h) =>
+      text(h[1] ?? "").toLowerCase().trim(),
+    );
+    const at = (name: string) => {
+      const i = headers.indexOf(name);
+      return i < 0 ? undefined : i;
+    };
+
+    const title = at("event");
+    const duration = at("duration");
+    // Resolved from the header row rather than counted, for the reason
+    // `bawiki.ts` does it: the page's other tables are shaped differently, and
+    // fixed indices would hand a description to the date reader and empty the
+    // lane with no error.
+    if (title === undefined || duration === undefined) continue;
+
+    out.push({
+      body,
+      title,
+      duration,
+      description: at("description"),
+      type: at("type"),
+    });
+  }
+
+  return out;
+}
+
+/**
+ * The Infinity Nikki wiki's current and upcoming events.
+ *
+ * This source replaces a Game8 page that stopped being updated in August 2025
+ * and had been publishing year-old events as live ever since.
+ *
+ * **Every boundary here is day precision, and the clock the page prints is
+ * deliberately discarded** — see `parseZonelessClockRange`. The wiki states a
+ * wall clock on both sides and names no zone for it, so publishing an instant
+ * would mean picking an offset, and the offset moves the day: the start's day is
+ * half of every event ID this game will ever have. The printed date stands on
+ * its own, exactly as every Game8 date already does.
+ *
+ * Two sections only. `Permanent Events` has no end and is not time-boxed, and
+ * `Past Events` is history the page keeps and a calendar of deadlines does not
+ * want — and both are fenced off by their heading rather than by position.
+ */
+function parseInfinityNikkiEvents(
+  rendered: string,
+  ctx: ParseContext,
+): GachaEvent[] {
+  const nowMs = Date.parse(ctx.now);
+  const out: GachaEvent[] = [];
+  const seen = new Set<string>();
+
+  for (const table of infinityNikkiTables(rendered)) {
+    for (const row of table.body.matchAll(ROW)) {
+      const cells = [...(row[1] ?? "").matchAll(CELL)].map((c) => ({
+        tag: c[1] ?? "",
+        html: c[2] ?? "",
+      }));
+      if (cells.length === 0 || cells.some((c) => c.tag === "h")) continue;
+
+      const titleCell = cells[table.title]?.html ?? "";
+      const title = infinityNikkiTitle(titleCell);
+      if (title === null) continue;
+
+      const range = parseZonelessClockRange(text(cells[table.duration]?.html ?? ""));
+      // A row this reader cannot date yields nothing rather than a guess — the
+      // page carries undated entries such as "Permanent".
+      if (range === null) continue;
+      if (range.end.iso <= range.start.iso) continue;
+
+      // "Current" is maintained by hand and goes stale before anyone moves a
+      // row, so currency is checked rather than taken on trust.
+      if (Date.parse(range.end.iso) < nowMs) continue;
+
+      const id = eventId(ctx.game, title, range.start.iso);
+      if (seen.has(id)) continue;
+      seen.add(id);
+
+      const described =
+        table.description === undefined
+          ? ""
+          : text(cells[table.description]?.html ?? "");
+      const stated =
+        table.type === undefined ? "" : text(cells[table.type]?.html ?? "");
+      const href = ARTICLE_LINK.exec(titleCell)?.[1];
+
+      out.push({
+        id,
+        game: ctx.game,
+        title,
+        // The page's own Type column — "Check-in", "Store", "Quest" — is a
+        // better signal than the title, which for this game is usually a mood.
+        type: inferType(`${title} ${stated}`),
+        summary: described.length > 0 ? described.slice(0, 500) : null,
+        startsAt: range.start.iso,
+        startPrecision: range.start.precision,
+        endsAt: range.end.iso,
+        endPrecision: range.end.precision,
+        // One worldwide service, and the page draws no regional distinction.
+        regionScoped: false,
+        regionEnds: null,
+        sourceUrl:
+          href === undefined
+            ? ctx.sourceUrl
+            : new URL(href, ctx.sourceUrl).toString(),
+        sourceId: ctx.sourceId,
+        status: "published",
+        // Day precision on both sides, by choice rather than by omission: the
+        // source stated more than this and could not say what zone it meant.
+        confidence: 0.85,
+        extractionMethod: "parser",
+        version: 1,
+        firstSeenAt: ctx.now,
+        updatedAt: ctx.now,
+      });
+    }
+  }
+
+  return out;
+}
+
+/**
+ * A link's `title` attribute, decoded.
+ *
+ * Attribute values never pass through `text()`, so an apostrophe arrives as
+ * `&#39;` — and an undecoded title becomes an undecoded slug, which is a
+ * localStorage key. The sanitiser at the ingest boundary repairs exactly this,
+ * and a parser that needs repairing on its own fixture is a parser with a bug.
+ */
+function attributeTitle(cell: string): string | undefined {
+  const raw = /<a\b[^>]*title="([^"]*)"/i.exec(cell)?.[1];
+  return raw === undefined ? undefined : decodeEntities(raw);
+}
+
+/** An event's name, from its link title, its file name, or its text. */
+function infinityNikkiTitle(cell: string): string | null {
+  const linked = attributeTitle(cell);
+  const raw = (linked ?? text(cell)).trim();
+  if (raw.length === 0) return null;
+
+  const named = FILE_TITLE.exec(raw)?.[1] ?? raw;
+  const title = named.replace(DATED_SUBPAGE, "").trim();
   return title.length === 0 ? null : title;
 }
 
@@ -425,6 +622,14 @@ export function parseFandomEventsPage(
   // apart, and `canParse` asserts it, so a template change fails the source
   // loudly instead of routing an FGO page through the `Time Period` reader and
   // emptying the lane.
+  if (isInfinityNikkiEventPage(rendered)) {
+    return parseInfinityNikkiEvents(rendered, ctx).sort((a, b) =>
+      a.startsAt === b.startsAt
+        ? a.id.localeCompare(b.id)
+        : a.startsAt.localeCompare(b.startsAt),
+    );
+  }
+
   if (isNikkeEventPage(rendered)) {
     return parseNikkeEvents(rendered, ctx).sort((a, b) =>
       a.startsAt === b.startsAt
@@ -542,7 +747,10 @@ export const fandomParser: SourceParser = {
     const isTimePeriodTable =
       /class="[^"]*wikitable/.test(rendered) && /Time Period/i.test(rendered);
     return (
-      isTimePeriodTable || isFgoEventList(rendered) || isNikkeEventPage(rendered)
+      isTimePeriodTable ||
+      isFgoEventList(rendered) ||
+      isNikkeEventPage(rendered) ||
+      isInfinityNikkiEventPage(rendered)
     );
   },
   parse: parseFandomEventsPage,

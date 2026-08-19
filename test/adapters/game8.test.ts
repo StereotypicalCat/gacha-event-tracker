@@ -32,7 +32,6 @@ const CASES: Array<{ adapter: Adapter; fixture: string }> = [
   { adapter: adapter("zzz-game8-events"), fixture: "fixtures/zzz/game8-events-2026-08-14" },
   { adapter: adapter("endfield-game8-events"), fixture: "fixtures/endfield/game8-events-2026-08-14" },
   { adapter: adapter("endfield-wikigg-events"), fixture: "fixtures/endfield/wikigg-events-2026-08-14" },
-  { adapter: adapter("nikki-game8-events"), fixture: "fixtures/nikki/game8-events-2026-08-17" },
   { adapter: adapter("p5x-game8-events"), fixture: "fixtures/p5x/game8-events-2026-08-17" },
   { adapter: adapter("arknights-akwiki-events"), fixture: "fixtures/arknights/akwiki-events-2026-08-17" },
   // A `.html` fixture holding JSON, deliberately: this source is the MediaWiki
@@ -47,6 +46,7 @@ const CASES: Array<{ adapter: Adapter; fixture: string }> = [
   { adapter: adapter("czn-game8-events"), fixture: "fixtures/czn/game8-events-2026-08-19" },
   { adapter: adapter("uma-game8-events"), fixture: "fixtures/uma/game8-events-2026-08-19" },
   { adapter: adapter("nikke-fandom-events"), fixture: "fixtures/nikke/fandom-events-2026-08-19" },
+  { adapter: adapter("nikki-fandom-events"), fixture: "fixtures/nikki/fandom-events-2026-08-19" },
 ];
 
 async function runAdapter(adapter: Adapter, fixture: string) {
@@ -247,14 +247,27 @@ describe("endfield", () => {
   });
 });
 
-describe("nikki", () => {
+describe("game8 labelled Start/End cells (retired Infinity Nikki fixture)", () => {
+  // The source is gone — that Game8 page stopped being updated in August 2025
+  // and Infinity Nikki now comes from Fandom — but the fixture stays, because
+  // it is the only page here carrying shape 6: a duration cell holding
+  // "Start: January 24, 2025 End: Permanent" as two labelled halves split by a
+  // <br>, which a tag-stripping reader sees as one run of text. Driven through
+  // the parser directly, since there is no adapter to route it any more.
   const fixture = "fixtures/nikki/game8-events-2026-08-17";
 
+  async function parse() {
+    const html = await Bun.file(`${fixture}.html`).text();
+    return game8Parser.parse(html, {
+      now: NOW,
+      sourceUrl: "https://game8.co/games/Infinity-Nikki/archives/487445",
+      sourceId: "nikki-game8-events",
+      game: "nikki",
+    });
+  }
+
   test("reads a labelled Start/End cell, and takes no end from 'Permanent'", async () => {
-    // The duration cell is "Start: January 24, 2025 End: Permanent" — two
-    // labelled halves separated by a <br>, which a tag-stripping reader sees as
-    // one run of text.
-    const events = await runAdapter(adapter("nikki-game8-events"), fixture);
+    const events = await parse();
     expect(events).toHaveLength(7); // every row of the current-events table
 
     const fiesta = events.find((e) => e.title === "Fireworks Fiesta");
@@ -271,10 +284,7 @@ describe("nikki", () => {
   test("never presents the labelled cell's own text as a summary", async () => {
     // "End: Permanent" is structure, not a blurb. Leaving it in the summary
     // slot would show a reader a date the parser deliberately refused to use.
-    const events = await runAdapter(adapter("nikki-game8-events"), fixture);
-    for (const e of events) {
-      expect(e.summary).toBeNull();
-    }
+    for (const e of await parse()) expect(e.summary).toBeNull();
   });
 });
 
@@ -1552,5 +1562,109 @@ describe("Nikke wiki (the third Fandom template)", () => {
       "fixtures/r1999/fandom-events-2026-08-17")).length).toBeGreaterThan(0);
     expect((await runAdapter(adapter("fgo-fandom-events"),
       "fixtures/fgo/fandom-events-2026-08-18")).length).toBeGreaterThan(0);
+  });
+});
+
+describe("Infinity Nikki wiki (the fourth Fandom template)", () => {
+  const fixture = "fixtures/nikki/fandom-events-2026-08-19";
+  const nikki = adapter("nikki-fandom-events");
+
+  function parse(html: string) {
+    return nikki.parse(html, {
+      now: NOW,
+      sourceUrl: nikki.url,
+      sourceId: nikki.id,
+      game: nikki.game,
+    });
+  }
+
+  const HEAD =
+    "<tr><th>Event</th><th>Duration</th><th>Description</th><th>Type</th></tr>";
+  const row = (title: string, duration: string, type = "Task") =>
+    `<tr><td>${title}</td><td>${duration}</td><td>Blurb</td><td>${type}</td></tr>`;
+  const wrapped = (sections: string) =>
+    JSON.stringify({ parse: { text: sections } });
+  const section = (heading: string, rows: string) =>
+    `<h2><span class="mw-headline" id="x">${heading}</span></h2>
+     <table class="article-table">${HEAD}${rows}</table>`;
+
+  test("takes the printed date at day precision and drops the clock", async () => {
+    // The page states a wall clock on both sides and names no zone for it
+    // anywhere. Publishing an instant would mean picking an offset, and the
+    // offset moves the day — the start's day is half of every event ID.
+    const events = await runAdapter(nikki, fixture);
+    const gambit = events.find((e) => e.title === "Dawnlit Gambit");
+    // "July 16, 2026 20:00 – August 27, 2026 12:49"
+    expect(gambit?.startsAt).toBe("2026-07-16T00:00:00.000Z");
+    expect(gambit?.endsAt).toBe("2026-08-27T00:00:00.000Z");
+    for (const e of events) {
+      expect(e.startPrecision).toBe("day");
+      expect(e.endPrecision).toBe("day");
+      expect(e.startsAt.endsWith("T00:00:00.000Z")).toBe(true);
+    }
+  });
+
+  test("publishes 2026 events, which is the whole point of the source", async () => {
+    // The Game8 page this replaces was last updated in August 2025 and had been
+    // publishing year-old events as live ever since.
+    const events = await runAdapter(nikki, fixture);
+    expect(events.length).toBeGreaterThan(0);
+    for (const e of events) expect(e.startsAt >= "2026-01-01").toBe(true);
+  });
+
+  test("reads Current and Upcoming, never Permanent or Past", () => {
+    const events = parse(
+      wrapped(
+        section("Current Events", row("Live", "July 16, 2026 20:00 – August 27, 2026 12:49")) +
+        section("Upcoming Events", row("Soon", "August 15, 2026 04:00 – August 22, 2026 03:59")) +
+        section("Permanent Events", row("Forever", "August 1, 2026 04:00 – December 1, 2026 03:59")) +
+        section("Past Events", row("Over", "August 1, 2026 04:00 – December 1, 2026 03:59")),
+      ),
+    );
+    expect(events.map((e) => e.title).sort()).toEqual(["Live", "Soon"]);
+  });
+
+  test("recovers a name from a red link's file, dated suffix and all", () => {
+    // Both shapes appear on the page: a real subpage link carrying
+    // "Name/2026-08-06", and a red link whose file is "Name 2026-08-06.png".
+    // That date names the run, not the event, and the start date already keys it.
+    const events = parse(
+      wrapped(
+        section(
+          "Current Events",
+          row(
+            `<a href="/wiki/Special:Upload?wpDestFile=x.png" title="File:Alison&#39;s Travel Shop 2026-08-06.png">File:x.png</a>`,
+            "August 6, 2026 20:00 – August 27, 2026 12:49",
+          ) +
+          row(
+            `<a href="/wiki/Deep_Breakthrough/2026-07-20" title="Deep Breakthrough/2026-07-20">img</a>`,
+            "July 20, 2026 04:00 – August 27, 2026 03:49",
+          ),
+        ),
+      ),
+    );
+    expect(events.map((e) => e.title).sort()).toEqual([
+      "Alison's Travel Shop",
+      "Deep Breakthrough",
+    ]);
+    // Decoded, because an undecoded title becomes an undecoded localStorage key.
+    expect(events.map((e) => e.id)).toContain(
+      "nikki:alisons-travel-shop:2026-08-06",
+    );
+  });
+
+  test("a row it cannot date yields nothing rather than a guess", () => {
+    const events = parse(
+      wrapped(section("Current Events", row("Undated", "Permanent"))),
+    );
+    expect(events).toEqual([]);
+  });
+
+  test("carries the page's own type and description through", async () => {
+    const events = await runAdapter(nikki, fixture);
+    const shop = events.find((e) => e.title === "Memory Hall");
+    // Type column says "Store".
+    expect(shop?.type).toBe("shop");
+    expect(shop?.summary).toBeTruthy();
   });
 });
