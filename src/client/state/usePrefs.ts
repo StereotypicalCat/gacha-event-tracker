@@ -87,6 +87,19 @@ export interface Prefs {
    */
   timelineGroup: TimelineGroup;
   /**
+   * Whether the board plots events that have not started yet.
+   *
+   * Off by default, and that is a claim about what the board is *for*: it
+   * answers "how does the time I am in lay out?", and a reader with fourteen
+   * lanes has a next patch queued behind every one of them. Plotting those by
+   * default pushes the right edge of the board weeks past today, shrinks every
+   * running bar to make room, and fills the space with things nobody can do
+   * yet. Nothing is lost by leaving them off — the checklist's "Not started
+   * yet" section has listed them all along, and the toggle in the board's
+   * header says how many are being held back.
+   */
+  timelineUpcoming: boolean;
+  /**
    * Whether to guess which events repeat daily from what the source printed.
    * Off leaves only the ones the reader marked themselves; it never discards a
    * mark or a logged day, so it is reversible.
@@ -124,6 +137,7 @@ function defaults(): Prefs {
     view: "soon",
     timelineDayWidth: DEFAULT_DAY_WIDTH,
     timelineGroup: "game",
+    timelineUpcoming: false,
     detectDaily: false,
     showCompleted: true,
     showIgnored: false,
