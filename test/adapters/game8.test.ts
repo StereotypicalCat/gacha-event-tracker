@@ -5,7 +5,7 @@ import { parseOrdinalDateTimeRange } from "../../src/ingest/dates.ts";
 import { arknightsWikiParser } from "../../src/ingest/parsers/akwiki.ts";
 import { blueArchiveWikiParser } from "../../src/ingest/parsers/bawiki.ts";
 import { fandomParser, renderedHtml } from "../../src/ingest/parsers/fandom.ts";
-import { inferType } from "../../src/ingest/parsers/game8.ts";
+import { game8Parser, inferType } from "../../src/ingest/parsers/game8.ts";
 import { holodoriWikiParser } from "../../src/ingest/parsers/holodori.ts";
 import { GachaEvent, type EventType } from "../../src/shared/schema.ts";
 
@@ -1349,5 +1349,75 @@ describe("Chaos Zero Nightmare (game8)", () => {
       expect(e.startPrecision).toBe("day");
       expect(e.startsAt.endsWith("T00:00:00.000Z")).toBe(true);
     }
+  });
+});
+
+describe("game8 column vocabulary", () => {
+  // The parser directly rather than through an adapter: `canParse` guards the
+  // seam against a redesigned *page*, and these are hand-built table snippets.
+  const parse = (html: string) =>
+    game8Parser.parse(html, {
+      now: NOW,
+      // Hand-built table snippets, so the context is a label rather than a
+      // claim about a game — these assert table shape, not any one page.
+      sourceUrl: "https://game8.co/games/Genshin-Impact/archives/301601",
+      sourceId: "genshin-game8-events",
+      game: "genshin",
+    });
+
+  test("falls back to the second row when the first is a spanning label", () => {
+    // Game8 lays two schedules side by side in one <table> and gives the pair a
+    // label row. Reading that row as the header finds the range column at an
+    // index no data row has, so every row fails to date and the table silently
+    // yields nothing.
+    const events = parse(
+      `<h2>List of All Banners</h2><table>
+         <tr><th>Standard Banners</th><th>Banner</th><th>Rating</th><th>Availability</th>
+             <th>Paid Banners</th><th>Banner</th><th>Rating</th><th>Availability</th></tr>
+         <tr><th>Banner</th><th>Rating</th><th>Availability</th></tr>
+         <tr><td>Seeking the Pearl</td><td>★★★★☆</td><td>8/12/2026 - 8/21/2026</td></tr>
+       </table>`,
+    );
+    expect(events.map((e) => e.title)).toEqual(["Seeking the Pearl"]);
+  });
+
+  test("row 0 still wins wherever it resolves both columns", () => {
+    // The fallback must never let a page that parses today start reading a
+    // different row. Here row 0 is a real header and row 1 is data.
+    const events = parse(
+      `<h2>Current Events</h2><table>
+         <tr><th>Event</th><th>Duration</th></tr>
+         <tr><td>First</td><td>8/12/2026 - 8/21/2026</td></tr>
+         <tr><td>Second</td><td>8/13/2026 - 8/22/2026</td></tr>
+       </table>`,
+    );
+    expect(events.map((e) => e.title)).toEqual(["First", "Second"]);
+  });
+
+  test("reads a banner-scheduling page's headings and columns", () => {
+    const events = parse(
+      `<h2>All Current Banners</h2><table>
+         <tr><th>Banner</th><th>Availability (UTC)</th></tr>
+         <tr><td>Live One</td><td>8/12/2026 - 8/21/2026</td></tr>
+       </table>
+       <h3>Previous Banners</h3><table>
+         <tr><th>Banner</th><th>Availability</th></tr>
+         <tr><td>Finished One</td><td>8/1/2026 - 8/9/2026</td></tr>
+       </table>`,
+    );
+    expect(events.map((e) => e.title)).toEqual(["Live One"]);
+  });
+
+  test("`Banner Guides` is navigation, not a schedule", () => {
+    // The widened title column must not turn Game8's nav tables into events.
+    // This one has no range column at all, so it yields nothing either way —
+    // the assertion is that widening `Event` to `Banner` did not change that.
+    const events = parse(
+      `<h2>Current Events</h2><table>
+         <tr><th>Banner Guides</th></tr>
+         <tr><td>List of All Banners</td><td>Upcoming Banners</td></tr>
+       </table>`,
+    );
+    expect(events).toEqual([]);
   });
 });

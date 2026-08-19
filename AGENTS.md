@@ -119,7 +119,7 @@ src/client/       React app, service worker, manifest
                   theme.ts — dark or light, and what a game hue reads as on each
 scripts/          build-feed.ts, build-static.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             670 tests
+test/             674 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
@@ -172,13 +172,27 @@ These come from how gacha games actually schedule things, and they cause most bu
 - **A source may publish more than one region's schedule.** Arknights' wiki lists CN and Global on
   every row, five months apart. Publish the one our readers are on and skip the row that lacks it —
   a CN date on a Global calendar is a confidently wrong date, not a near miss.
-- **Game8 has no single template.** Seven shapes are known and a page may mix them: label/value
+- **Game8 has no single template.** Eight shapes are known and a page may mix them: label/value
   detail tables, column tables, image-grid schedules (unsupportable), combined label+range+blurb
-  cells, rowspan Start/End pairs, labelled `Start: … End: …` cells, and `<hr>`-separated date pairs.
+  cells, rowspan Start/End pairs, labelled `Start: … End: …` cells, `<hr>`-separated date pairs, and
+  two schedules laid side by side in one `<table>` under a spanning label row.
   Full table in `docs/INGESTION.md`. Before assuming a new
   Game8 page will work, dump its structure and check **every** table — Endfield was written off as
   undatable on a pass that only inspected its `Duration` rows, and its real events were further
   down the page.
+- **The header row is the row that dates rows, not the first one.** Game8's banner pages put the
+  Standard and Paid schedules side by side inside one `<table>` and label the pair
+  `Standard Banners | Banner | Rating | Availability | Paid Banners | …`. That row is not merely
+  unhelpful, it is *plausible* — it contains both column words, so it resolves and puts the range at
+  an index no data row has, and the whole table yields nothing with no error anywhere. So
+  `readColumnTable` falls back to row 1 **only when row 0 produced nothing**, which is what keeps
+  every page that parses today parsing identically. Verified rather than assumed: the change was
+  diffed across all pinned fixtures and every live snapshot, and moved no existing event.
+- **Some Game8 wikis schedule banners, not events**, and head their sections accordingly —
+  `List of All Banners`, `All Current Banners`, and a `Previous Banners` back catalogue that
+  `previous events` does not match. All three are in the section vocabulary now. The finished rows
+  sit directly below the live ones and are dated identically, so that exclusion is the only thing
+  between the calendar and a year of expired banners.
 - **Check what fences a section off.** Inclusion is decided by headings, and the level varies: Persona
   5 hides fifty finished events behind nothing but an `<h4>Finished Events</h4>` in a collapsed
   accordion, while Genshin uses `h4` for sub-headings *inside* one event. So `h4` gates sections but

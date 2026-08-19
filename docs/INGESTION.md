@@ -231,8 +231,14 @@ several:
    repeats each live event under its own `h3` with `Start Date` / `End Date` rows and a paragraph of
    prose; those corroborate the dates and supply the blurb the flat table lacks.
    *(Persona 5: The Phantom X)*
+8. **Two schedules side by side in one `<table>`**, under a spanning label row —
+   `Standard Banners | Banner | Rating | Availability | Paid Banners | Banner | …`, with the real
+   header on the row below and three-cell data rows under that. The label row is *plausible*: it
+   contains both column words, resolves, and puts the range at an index no data row has, so the
+   table yields nothing at all with no error. `readColumnTable` therefore decides the header by what
+   it produces — row 1 is tried **only when row 0 produced nothing**. *(Umamusume)*
 
-Shapes 1, 2, 4, 5, 6 and 7 are handled. Before assuming a new Game8 page will work, dump its heading/table
+Shapes 1, 2, 4, 5, 6, 7 and 8 are handled. Before assuming a new Game8 page will work, dump its heading/table
 structure and check which shape it uses — and check **every** table, not just the obvious one.
 Endfield was written off as undatable on a first pass that only inspected its `Duration` rows; its
 two real events were in a table further down.
