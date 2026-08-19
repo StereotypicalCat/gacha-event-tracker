@@ -16,6 +16,7 @@ export const GameId = z.enum([
   "holodori", // hololive Dreams
   "gfl2", // Girls' Frontline 2: Exilium
   "stellasora", // Stella Sora
+  "czn", // Chaos Zero Nightmare
 ]);
 export type GameId = z.infer<typeof GameId>;
 

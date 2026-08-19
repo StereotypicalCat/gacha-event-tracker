@@ -37,8 +37,8 @@ A web app that aggregates live and upcoming events across popular gacha games, p
 calendar, sorts them by end date or by what the reader is partway through, tracks day-by-day
 progress on events that repeat daily, and lets a user mark events completed.
 
-**Status: working app, refreshing itself on a schedule.** Schema, eight parsers, sixteen sources across
-fifteen games, the full interface, offline support, a static server, a Docker image and CI all exist and
+**Status: working app, refreshing itself on a schedule.** Schema, eight parsers, seventeen sources across
+sixteen games, the full interface, offline support, a static server, a Docker image and CI all exist and
 are tested. The refresh runner (`bun run refresh`) fetches, caches raw snapshots and rebuilds the
 feed; `.github/workflows/refresh.yml` runs it twice a day and commits only when a page actually
 changed. The SQLite layer and the review queue are still specified in `docs/` but not built, so the
@@ -119,7 +119,7 @@ src/client/       React app, service worker, manifest
                   theme.ts — dark or light, and what a game hue reads as on each
 scripts/          build-feed.ts, build-static.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             660 tests
+test/             670 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
@@ -164,7 +164,7 @@ These come from how gacha games actually schedule things, and they cause most bu
 - **Skip, never guess.** Every function in `dates.ts` returns `null` rather than inferring a missing
   year, month, or end. `readColumnTable` drops a row it cannot date. An omitted event is a
   recoverable disappointment; a confidently wrong date is the failure this product exists to prevent.
-- **Parsers are keyed by site, not game.** One `game8` parser serves eight sources and `fandom` two;
+- **Parsers are keyed by site, not game.** One `game8` parser serves nine sources and `fandom` two;
   `wikigg`, `akwiki`, `bawiki`, `holodoriwiki`, `iopwiki` and `stellasorawiki` serve one each — the first two share a host family
   and have entirely different templates, and the last two are both Miraheze wikis whose page
   templates have nothing in common. Adding a source for a known site is one `SOURCES` entry; a new
@@ -242,9 +242,9 @@ Sources are community wikis. Treat them as a guest would:
 
 - Honor `robots.txt`; set a descriptive `User-Agent` with a contact URL.
 - One request per source per refresh cycle, minimum 6 hours apart.
-- **Space requests to one host**, honouring its `Crawl-delay` and defaulting to 2s. Eight of the
-  sixteen sources are game8.co pages, so the per-source floor alone still permits one cycle to arrive
-  as eight back-to-back requests to a single site — which is the shape an edge network throttles, and
+- **Space requests to one host**, honouring its `Crawl-delay` and defaulting to 2s. Nine of the
+  seventeen sources are game8.co pages, so the per-source floor alone still permits one cycle to arrive
+  as nine back-to-back requests to a single site — which is the shape an edge network throttles, and
   what a burst looks like from the far end regardless of our intent.
 - Send `If-None-Match` / `If-Modified-Since`; treat `304` as "skip, unchanged".
 - Cache raw snapshots so re-parsing never re-fetches. **Iterate against fixtures, not the network.**
@@ -256,9 +256,9 @@ training, and no `User-agent: *` rule applies to our paths. Keep it that way: do
 rate, and do not add an LLM that consumes page content.
 
 **game8.co does not answer a GitHub Actions runner** (confirmed 2026-08-17). Its edge returns
-`202 Accepted` with a bot-management body to every one of the eight game8 sources, from the first
+`202 Accepted` with a bot-management body to every one of the nine game8 sources, from the first
 scheduled cycle onward — `last confirmed: never` — while the same URLs return `200` and parse
-cleanly from a normal address. So `robots.txt` permits us and the network does not, and those eight
+cleanly from a normal address. So `robots.txt` permits us and the network does not, and those nine
 games have only ever been built from checked-in fixtures in CI.
 
 The per-host spacing above does not fix this and was not meant to: a 202 on the very first request
@@ -285,6 +285,7 @@ re-litigated each pass:
 | `prydwen.gg`, `gametora.com` | **Cleared, unbuilt.** `User-agent: *` allows the paths we would want. prydwen sets `Crawl-delay: 10`, far below our one-per-6h |
 | `iopwiki.com` | **Built** (2026-08-19), Girls' Frontline 2 — see § IOP Wiki below. `robots.txt` is two lines, `User-agent: *` and `Crawl-Delay: 20`, no `Disallow` anywhere |
 | `stellasora.miraheze.org` | **Built** (2026-08-19), from the front page's `Current Banners` module and **not** `/wiki/Banner_List` — see § Stella Sora below |
+| `game8.co/games/Chaos-Zero-Nightmare` | **Built** (2026-08-19). Zero parser work — the existing `game8` parser reads it. The ninth game8 source, so fixture-backed in CI from day one |
 
 `.github/ISSUE_TEMPLATE/feature_request.yml` points readers at that table by heading, so a source
 request can be checked against it before anyone writes it up — the loudest feedback on the first
@@ -610,6 +611,6 @@ to an open page). Four things hold it up:
   (PRD F7). `freshness()` in `src/shared/feed.ts` is the one definition: it takes the newest
   `lastSuccessAt` and **never `generatedAt`**, which is a build stamp that would call a
   fixture-backed calendar minutes old, and it treats a game as only as fresh as its *oldest* source,
-  so one live wiki cannot vouch for a stalled sibling. Given that eight sources cannot be fetched
+  so one live wiki cannot vouch for a stalled sibling. Given that nine sources cannot be fetched
   from CI at all (§ Scraping conduct), this disclosure is the only thing standing between a reader and
   a confidently stale calendar — do not let a future change source it from the build clock.

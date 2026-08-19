@@ -132,6 +132,9 @@ export const GAMES: Record<GameId, GameMeta> = {
   // starts, 12:59 and 19:59 ends), so there is no reset hour to read off it
   // either. See the fgo entry below for the same reasoning at more length.
   stellasora: { id: "stellasora", name: "Stella Sora", short: "Stella Sora", hue: "#2E9E9E", studio: "Yostar", dailyTasks: "Daily missions" },
+  // No `resetOffsets`: the source is Game8, which states day-precision prose
+  // and no clock at all — the same silence p5x has, and the same answer.
+  czn: { id: "czn", name: "Chaos Zero Nightmare", short: "CZN", hue: "#B84A9C", studio: "Smilegate", dailyTasks: "Daily missions" },
 };
 
 export const GAME_LIST: GameMeta[] = Object.values(GAMES);

@@ -10,7 +10,7 @@ import { z } from "zod";
 
 export const GameId = z.enum([
   "genshin", "hsr", "zzz", "wuwa", "arknights", "endfield", "nte", "nikki", "p5x", "r1999",
-  "ba", "fgo", "holodori", "gfl2", "stellasora",
+  "ba", "fgo", "holodori", "gfl2", "stellasora", "czn",
 ]);
 
 export const EventType = z.enum([
@@ -308,7 +308,7 @@ nothing to add, which is the point worth carrying to the next game: an override 
 the game moves nobody, while the same override added a year later re-labels every tick already
 logged under the old clock. Get it right at introduction or accept a migration.
 
-Infinity Nikki, P5X and Blue Archive carry **no `resetOffsets`
+Infinity Nikki, P5X, Blue Archive and Chaos Zero Nightmare carry **no `resetOffsets`
 entry**, so they take the regional default. That is an assumption, not a verified server map — none
 of those sources states one. Two of the 2026-08-19 additions are worth separating out, because they
 are silent for different reasons and neither is the usual one:

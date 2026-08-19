@@ -44,6 +44,7 @@ const CASES: Array<{ adapter: Adapter; fixture: string }> = [
   { adapter: adapter("holodori-holodoriwiki-events"), fixture: "fixtures/holodori/holodoriwiki-events-2026-08-18" },
   { adapter: adapter("gfl2-iopwiki-events"), fixture: "fixtures/gfl2/iopwiki-events-2026-08-19" },
   { adapter: adapter("stellasora-stellasorawiki-events"), fixture: "fixtures/stellasora/stellasorawiki-events-2026-08-19" },
+  { adapter: adapter("czn-game8-events"), fixture: "fixtures/czn/game8-events-2026-08-19" },
 ];
 
 async function runAdapter(adapter: Adapter, fixture: string) {
@@ -1312,5 +1313,41 @@ describe("Stella Sora wiki", () => {
            <div class="stellasora-home-banner">Aug 3, 2026 — Aug 24, 2026</div></div>`,
       ),
     ).toThrow(/redesigned/);
+  });
+});
+
+describe("Chaos Zero Nightmare (game8)", () => {
+  const fixture = "fixtures/czn/game8-events-2026-08-19";
+  const czn = adapter("czn-game8-events");
+
+  test("reuses the game8 parser with no new parsing code", () => {
+    // The whole point of this source: a ninth game8 page is a registry entry,
+    // a fixture and a test. If this ever stops being true the page has moved
+    // to a template the parser does not know.
+    expect(czn.parserId).toBe("game8");
+  });
+
+  test("publishes the four datable events and skips the two without a start", async () => {
+    // The page carries six current events. Two print `Start Date: -`, and no
+    // start means no event ID — so skipping them is the rule working rather
+    // than a silent drop. Counted independently off the fixture: six
+    // `Start Date` rows, two of them `-`.
+    const events = await runAdapter(czn, fixture);
+    expect(events).toHaveLength(4);
+
+    const titles = events.map((e) => e.title);
+    expect(titles).toContain("Beach Cafe Festival");
+    expect(titles).toContain("Chasing the Remanants of Light");
+    // Both appear on the page and neither states a start.
+    expect(titles).not.toContain("Full-Scale Offensive Season 3");
+    expect(titles).not.toContain("Virtual Tactical Simulation - Yuki");
+  });
+
+  test("keeps Game8's day precision rather than inventing a clock", async () => {
+    // Game8 prints "July 29, 2026" and no time of day anywhere on this page.
+    for (const e of await runAdapter(czn, fixture)) {
+      expect(e.startPrecision).toBe("day");
+      expect(e.startsAt.endsWith("T00:00:00.000Z")).toBe(true);
+    }
   });
 });

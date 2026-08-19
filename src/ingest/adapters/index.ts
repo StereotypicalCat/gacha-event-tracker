@@ -143,6 +143,17 @@ const SOURCES: SourceSpec[] = [
     url: "https://stellasora.miraheze.org/wiki/Main_Page",
     parserId: "stellasorawiki",
   },
+  {
+    id: "czn-game8-events",
+    game: "czn",
+    // The ninth game8 source, and the cost is worth stating plainly: game8's
+    // edge answers the Actions runner with a 202 and a bot-management body
+    // (AGENTS.md § Scraping conduct), so this lane is built from a checked-in
+    // fixture in CI from day one and only a manual `bun run refresh` moves it.
+    // `freshness()` discloses that in the footer, which is what it is for.
+    url: "https://game8.co/games/Chaos-Zero-Nightmare/archives/559899",
+    parserId: "game8",
+  },
 ];
 
 function toAdapter(spec: SourceSpec): Adapter {
