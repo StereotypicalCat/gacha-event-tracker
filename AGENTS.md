@@ -683,6 +683,21 @@ to an open page). Four things hold it up:
   then says you wrote something you never read, and the commit stops being the one coherent change
   the bullet below asks for. If unrelated changes are in the way, say what you see and leave them
   alone.
+
+  **Another agent may be working in this tree right now, not merely before you.** The index is
+  shared and it moves under you: a `git status` that was clean when you started can hold four staged
+  files by the time you commit, and none of them yours. So read `git status --porcelain` immediately
+  before every commit and treat anything you did not touch as a stop sign, and when the index already
+  holds someone else's staged work, commit with an explicit pathspec — `git commit -- <your paths>`,
+  which takes the working-tree content of exactly those paths and leaves the rest of the index where
+  its owner left it. This is not hypothetical: on 2026-08-19 a session ran a sweeping commit that
+  swallowed a 64-line source assessment another session had just finished, and published it under a
+  one-line message about snapshot freshness. Both changes were fine; the log stopped being true.
+
+  **If you find your work inside someone else's commit, say so and ask before rewriting it.** The
+  fix is a `reset --soft` and two pathspec commits, and it is quick — but the commit you would be
+  rewriting is theirs, the session that wrote it may still be running, and racing it for `HEAD` costs
+  more than the mixed message does. Ask, then split.
 - **Commits are self-contained and succinct.** One coherent change per commit, typechecking and
   passing tests on its own — a feature spanning layers splits as model → store → UI → docs, each
   step green by itself, even when that means widening a type in the model commit that only the UI
