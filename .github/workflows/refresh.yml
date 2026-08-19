@@ -21,6 +21,18 @@ on:
         description: "Refresh a single source id (blank = all)"
         type: string
         default: ""
+      # Both of these are refused on the scheduled run and only work here, on a
+      # dispatch, because a dispatch is a person and GitHub records which one.
+      # See AGENTS.md § Scraping conduct: an override on every cycle is just a
+      # new default. Prefer pairing either with `only`.
+      force:
+        description: "Ask sources before their 6h floor is up (one run only)"
+        type: boolean
+        default: false
+      assume_robots_on_403:
+        description: "Treat a challenged robots.txt 403 as the recorded permission"
+        type: boolean
+        default: false
 
 # Never two refreshes at once: they would both fetch, and the second would race
 # the first's commit. Queue instead of cancelling — a half-finished refresh that
@@ -79,6 +91,9 @@ jobs:
           # run script, so a dispatch input cannot become shell.
           ONLY: ${{ inputs.only }}
           DRY_RUN: ${{ inputs.dry_run }}
+          # Empty on a scheduled run, so neither flag is ever passed by the cron.
+          FORCE: ${{ inputs.force }}
+          ASSUME_ROBOTS_ON_403: ${{ inputs.assume_robots_on_403 }}
         run: |
           args=()
           if [ "$DRY_RUN" = "true" ]; then
@@ -86,6 +101,12 @@ jobs:
           fi
           if [ -n "$ONLY" ]; then
             args+=(--only "$ONLY")
+          fi
+          if [ "$FORCE" = "true" ]; then
+            args+=(--force)
+          fi
+          if [ "$ASSUME_ROBOTS_ON_403" = "true" ]; then
+            args+=(--assume-robots-on-403)
           fi
           bun run refresh "${args[@]}"
 

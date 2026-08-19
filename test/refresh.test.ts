@@ -968,8 +968,40 @@ describe("the workflows that drive the refresh", () => {
     const refresh = await read("refresh.yml");
     expect(refresh).toContain("git rebase");
     expect(refresh).toMatch(/for attempt in/);
-    expect(refresh).not.toContain("--force");
+    // Scoped to `git push`, because the bare substring `--force` also matches
+    // the refresh runner's own `--force` flag, which the dispatch inputs now
+    // offer and which has nothing to do with rewriting a branch. What must stay
+    // impossible is a force push — including `--force-with-lease`, which is
+    // still one.
+    expect(refresh).not.toMatch(/git push[^\n]*(--force|--force-with-lease|\s-f\b)/);
     expect(refresh).not.toContain("-f origin");
+    expect(refresh).not.toContain("push --force");
+  });
+
+  test("refresh.yml offers both overrides to a dispatch and to no cron", async () => {
+    // The scheduled run must never be able to pass either one: an override on
+    // every cycle is the new default with extra steps, and for the robots one a
+    // cron cannot re-read the permission it would be standing on. Both flags are
+    // therefore reachable only through `workflow_dispatch` inputs, which are
+    // empty on a schedule, and each is guarded on the literal string "true".
+    const refresh = await read("refresh.yml");
+
+    const dispatch = refresh.slice(
+      refresh.indexOf("workflow_dispatch:"),
+      refresh.indexOf("concurrency:"),
+    );
+    expect(dispatch).toContain("force:");
+    expect(dispatch).toContain("assume_robots_on_403:");
+
+    // Every occurrence of either flag is inside a test on its input variable.
+    expect(refresh).toMatch(/if \[ "\$FORCE" = "true" \]; then\n\s*args\+=\(--force\)/);
+    expect(refresh).toMatch(
+      /if \[ "\$ASSUME_ROBOTS_ON_403" = "true" \]; then\n\s*args\+=\(--assume-robots-on-403\)/,
+    );
+    // The cron block itself carries no flags.
+    const cron = refresh.slice(refresh.indexOf("schedule:"), refresh.indexOf("workflow_dispatch:"));
+    expect(cron).not.toContain("force");
+    expect(cron).not.toContain("assume");
   });
 
   test("refresh.yml turns red on a broken source only after committing", async () => {

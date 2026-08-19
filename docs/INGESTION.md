@@ -297,7 +297,8 @@ section but must never claim the event title.
     names the actor), while a `schedule` or any other runner event is not. The `schedule` refusal is
     load-bearing rather than ceremonial: from a challenged address `robots.txt` never arrives, so a
     cron standing on the recorded permission could never see the host withdraw it, and the recorded
-    permission has no expiry.
+    permission has no expiry. `refresh.yml` therefore exposes both overrides as
+    `workflow_dispatch` inputs, which are empty on the cron and so can never be passed by it.
 
   Every host it applied to is named in the run's warnings and in `summary.assumedRobots` — an
   override that reports nothing is one nobody withdraws. It changes no other obligation: still one
