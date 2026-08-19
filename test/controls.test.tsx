@@ -23,6 +23,7 @@ const PREFS: Prefs = {
   timelineDayWidth: 32,
   timelineGroup: "game",
   timelineUpcoming: false,
+  timelineSplitUpcoming: true,
   detectDaily: false,
   showCompleted: true,
   showIgnored: false,

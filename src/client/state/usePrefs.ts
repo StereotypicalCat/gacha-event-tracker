@@ -100,6 +100,24 @@ export interface Prefs {
    */
   timelineUpcoming: boolean;
   /**
+   * Whether those unstarted events keep to their own block on the board, under
+   * a "Not started yet" heading, or sit in one deadline order with everything
+   * else.
+   *
+   * Two readings of the same board, and both are right for somebody. Split
+   * answers "what is on now, and what is queued behind it" — the shape of a
+   * patch. Mixed answers "what runs out first", full stop, which is the
+   * question a Gantt chart is for: an event opening on Friday and closing on
+   * Sunday is a nearer deadline than one running now until October, and the
+   * split order can never show that.
+   *
+   * Defaults to `true`, the board as it was before this existed. Only read when
+   * `timelineUpcoming` is on — with nothing unstarted plotted there is no block
+   * to keep apart — but stored either way, so switching the parent back on
+   * restores the answer they gave rather than a default.
+   */
+  timelineSplitUpcoming: boolean;
+  /**
    * Whether to guess which events repeat daily from what the source printed.
    * Off leaves only the ones the reader marked themselves; it never discards a
    * mark or a logged day, so it is reversible.
@@ -138,6 +156,7 @@ function defaults(): Prefs {
     timelineDayWidth: DEFAULT_DAY_WIDTH,
     timelineGroup: "game",
     timelineUpcoming: false,
+    timelineSplitUpcoming: true,
     detectDaily: false,
     showCompleted: true,
     showIgnored: false,
