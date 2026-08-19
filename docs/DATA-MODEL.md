@@ -218,7 +218,7 @@ Namespaced, versioned, and small. Nothing here ever goes to the server.
 "gacha-tracker:v1:daily"        // { [id]: { days: ["2026-08-15", ...], at } }
 "gacha-tracker:v1:ignored"      // { [eventId]: { at } }  — "stop showing me this"
 "gacha-tracker:v1:prefs"        // { region, hiddenGames[], knownGames[]?, focusGame, sort, view,
-                                //   timelineDayWidth, timelineGroup, timelineUpcoming,
+                                //   timelineDayWidth, timelineGroup, showUpcoming,
                                 //   timelineSplitUpcoming, detectDaily, showCompleted,
                                 //   showIgnored, theme, regionConfirmed, onboarded }
                                 // timelineDayWidth is px per day on the board, stored as the
@@ -228,17 +228,25 @@ Namespaced, versioned, and small. Nothing here ever goes to the server.
                                 // timelineGroup is "game" (a lane each) or "ending" (every game
                                 // in one deadline queue). Defaults to "game", so shipping it
                                 // moved nobody's board; see PRD F1.
-                                // timelineUpcoming plots events that have not started yet.
-                                // Defaults to false — the board's window is drawn from what it
-                                // plots, so on by default would push every running bar right to
-                                // make room for things nobody can do yet. Set from settings
-                                // alongside showCompleted / showIgnored, and the only one of
-                                // the three scoped to one view. See PRD F1.
+                                // showUpcoming shows events that have not started yet, in
+                                // BOTH views — the board plots them, the checklist keeps its
+                                // "Not started yet" section. Defaults to false; set from
+                                // settings alongside showCompleted / showIgnored, which is the
+                                // same question. See PRD F1.
+                                // It was named timelineUpcoming while it governed the board
+                                // alone. `adoptRenamed` in usePrefs.ts carries a stored old
+                                // value across on load — nothing is lost by dropping it, since
+                                // this is one blob under one key rather than a key space, but
+                                // resetting a reader's answer for them is not nothing either.
+                                // A stored new name always wins, so it cannot overwrite a
+                                // fresher answer with a stale one.
                                 // timelineSplitUpcoming keeps those events in their own block
                                 // under a "Not started yet" heading (true, the default) or puts
                                 // them in one deadline order with the running ones (false).
-                                // Only read when timelineUpcoming is on, but stored either way
-                                // so switching that back on restores the answer given. PRD F1.
+                                // The board only: the checklist splits them into a section of
+                                // its own either way. Read only when showUpcoming is on, but
+                                // stored regardless, so switching that back on restores the
+                                // answer given. PRD F1.
                                 // knownGames is every lane the reader has been offered. Absent
                                 // means unrecorded, not "offered nothing" — see PRD F8; a lane
                                 // missing from it is new to them and arrives switched off.

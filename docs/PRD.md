@@ -111,21 +111,25 @@ few pixels apart the board is being asked the one question it exists to answer a
 reader to squint. It also gives a one-day event a bar to read and to tap rather than the 34px
 minimum every short bar collapses to.
 
-**What has not started yet is off by default, and the reader can switch it on.** The board answers
-"how does the time I am in lay out?", and every lane has a next patch queued behind it — so plotting
-all of it unasked stretched the window weeks past today and squeezed the running bars the reader
-came for down to nothing. `prefs.timelineUpcoming` defaults to `false`, which is what every existing
-board already looked like on the day it shipped, since the window is drawn from what is plotted.
-Nothing is hidden by that: the checklist's own "Not started yet" section (F2) has listed them all
-along, and a board with nothing left running says exactly that and names the setting, instead of
-reading as an empty calendar.
+**What has not started yet is off by default, and the reader can switch it on** — `prefs.showUpcoming`,
+which governs **both views**: the board plots them, and the checklist keeps its "Not started yet"
+section (F2). One question, asked once, because they are the same events. It defaults to `false`
+because this app answers *what expires next*, and a reader with fourteen lanes has a next patch
+queued behind every one of them.
+
+On the board that is structural as well as editorial: the window is drawn from what is plotted, so
+showing the future stretches the right edge weeks past today and squeezes the running bars the
+reader came for down to nothing.
+
+**Held back is never merely absent.** A section that simply is not there is indistinguishable from a
+quiet fortnight, and this app does not leave a reader to infer what it is not showing them. So the
+page header states `N live · N upcoming` whatever the setting says, and either view left with
+nothing to show says so in words and names the setting rather than rendering an empty column.
 
 The switch is in settings (F4), with the two other answers to *what am I allowed to look at* —
 `showCompleted` and `showIgnored` — and **not** in the board's own header beside the stacking and
 scale controls. That is the line those two draw: they reshape what is already on the board, which is
-why they are reached for while reading it, and this one decides what is on it at all. It is the only
-one of the three scoped to a single view, so its row says so rather than reading as a promise about
-the whole app.
+why they are reached for while reading it, and this one decides what is on it at all.
 
 **Switched on, the board says in words where they begin.** A bar drawn to the right of the "now"
 rule is only *implicitly* in the future, and implicitly is not a standard this product holds itself
@@ -144,7 +148,8 @@ bar to answer the question the reader opened it with. So the line between the tw
 muted ink rather than a hue, since a hue on this board means *whose event is this*. One per lane,
 because "where does this stop running?" is a different answer for each of them.
 
-**Two readings of that board, and the reader picks** (`prefs.timelineSplitUpcoming`, default
+**Two readings of that board, and the reader picks** — the board's alone, since the checklist splits
+these into a section with a heading of its own either way (`prefs.timelineSplitUpcoming`, default
 `true` — the board as it was before the choice existed). Split keeps the unstarted events in their
 own block under that heading, and answers "what is on now, and what is queued behind it" — the shape
 of a patch. **Mixed in** drops the block for one deadline order, started or not, and answers "what
@@ -166,6 +171,13 @@ the frayed right edge carries for an unannounced end.
 A flat list of all *currently running* events sorted ascending by end date, with a relative
 countdown ("ends in 2 days", "ends in 4 hours"). Under 24 hours, the row is emphasized. This is the
 view that justifies the app, and it is one tap from the timeline.
+
+**"Not started yet" is a second section, and it is off by default** (`prefs.showUpcoming`, F1 — the
+same switch the board reads). Running events are the list's whole claim; what has not opened is
+context, and on fourteen lanes it is more rows than the thing the reader came for. Split into its
+own section rather than mixed into the order, because that is what the list *is*: a queue of jobs
+you can do now, and one you cannot do yet does not belong among them. The board offers the mixed
+reading instead, where a nearer deadline genuinely is a nearer deadline (F1).
 
 The tab reads **Checklist**, which is what a reader with four games is doing with it: working down a
 list of jobs with deadlines. Its stored id stays `"soon"` — that value is in `prefs.view` on real
