@@ -34,7 +34,7 @@ const SPLITS: Array<{ split: boolean; label: string; hint: string }> = [
   {
     split: true,
     label: "In their own group",
-    hint: "Each lane runs out, then a \u201cNot started yet\u201d heading and what is queued behind it.",
+    hint: "Each lane runs out, then a \u201cNot started yet\u201d heading and what is queued behind it \u2014 the shape the checklist has either way.",
   },
   {
     split: false,
@@ -156,28 +156,24 @@ export function Controls({
                 Show events I've finished
               </label>
 
-              {/* Sits with the other two "what am I allowed to look at" rows
-                  because that is the question it answers — but unlike them it
-                  is answered for the board only, and a row that did not say so
-                  would read as a promise about the whole app. The checklist
-                  keeps its own "Not started yet" section either way, which is
-                  why switching this off costs a reader nothing they cannot
-                  still go and read. */}
+              {/* One of the three "what am I allowed to look at" rows, and it
+                  reaches both views: the checklist's "Not started yet" section
+                  and the board's future bars are the same events answering the
+                  same question. Off is the default because this app answers
+                  *what expires next* — see PRD F1. */}
               <label className="flex cursor-pointer select-none items-start gap-2 text-xs text-muted">
                 <input
                   type="checkbox"
-                  checked={prefs.timelineUpcoming}
-                  onChange={(e) =>
-                    onUpdate({ timelineUpcoming: e.target.checked })
-                  }
+                  checked={prefs.showUpcoming}
+                  onChange={(e) => onUpdate({ showUpcoming: e.target.checked })}
                   className="mt-px size-4 accent-[var(--color-near)]"
                 />
                 <span>
                   Show events that haven't started
                   <span className="mt-0.5 block max-w-xs leading-relaxed text-faint">
-                    On the timeline, which draws its span from what it plots —
-                    so this stretches the board weeks past today. The checklist
-                    lists them under "Not started yet" regardless.
+                    Adds the checklist's "Not started yet" section, and plots
+                    them on the timeline — which draws its span from what it
+                    plots, so the board stretches weeks past today.
                   </span>
                 </span>
               </label>
@@ -187,7 +183,7 @@ export function Controls({
                   are on it, and offering it anyway is a control that does
                   nothing — the stored answer is kept either way, so switching
                   the row above back on restores it rather than a default. */}
-              {prefs.timelineUpcoming && (
+              {prefs.showUpcoming && (
                 <div className="ml-6 flex flex-col gap-1.5">
                   <div className="flex gap-1.5">
                     {SPLITS.map((s) => (
@@ -209,6 +205,7 @@ export function Controls({
                     ))}
                   </div>
                   <p className="max-w-xs text-xs leading-relaxed text-faint">
+                    On the timeline.{" "}
                     {SPLITS.find((s) => s.split === prefs.timelineSplitUpcoming)
                       ?.hint}
                   </p>

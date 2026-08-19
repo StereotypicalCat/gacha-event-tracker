@@ -87,18 +87,21 @@ export interface Prefs {
    */
   timelineGroup: TimelineGroup;
   /**
-   * Whether the board plots events that have not started yet.
+   * Whether events that have not started yet are shown at all — the board
+   * plots them, and the checklist keeps its "Not started yet" section.
    *
-   * Off by default, and that is a claim about what the board is *for*: it
-   * answers "how does the time I am in lay out?", and a reader with fourteen
-   * lanes has a next patch queued behind every one of them. Plotting those by
-   * default pushes the right edge of the board weeks past today, shrinks every
-   * running bar to make room, and fills the space with things nobody can do
-   * yet. Nothing is lost by leaving them off — the checklist's "Not started
-   * yet" section has listed them all along, and the toggle in the board's
-   * header says how many are being held back.
+   * Off by default, and that is a claim about what this app is for: it answers
+   * *what expires next*, and a reader with fourteen lanes has a next patch
+   * queued behind every one of them. On the board it is also structural, since
+   * the window is drawn from what is plotted — showing the future pushes the
+   * right edge weeks past today and shrinks every running bar to make room.
+   *
+   * It sits with `showCompleted` and `showIgnored` because it is the same
+   * question: what is the reader allowed to look at. It was called
+   * `timelineUpcoming` while it governed only the board — see `adoptRenamed`,
+   * which carries a reader's stored answer across rather than resetting it.
    */
-  timelineUpcoming: boolean;
+  showUpcoming: boolean;
   /**
    * Whether those unstarted events keep to their own block on the board, under
    * a "Not started yet" heading, or sit in one deadline order with everything
@@ -111,9 +114,12 @@ export interface Prefs {
    * Sunday is a nearer deadline than one running now until October, and the
    * split order can never show that.
    *
+   * The board only: the checklist splits them structurally, into a section with
+   * a heading of its own, and always has.
+   *
    * Defaults to `true`, the board as it was before this existed. Only read when
-   * `timelineUpcoming` is on — with nothing unstarted plotted there is no block
-   * to keep apart — but stored either way, so switching the parent back on
+   * `showUpcoming` is on — with nothing unstarted plotted there is no block to
+   * keep apart — but stored either way, so switching the parent back on
    * restores the answer they gave rather than a default.
    */
   timelineSplitUpcoming: boolean;
@@ -155,7 +161,7 @@ function defaults(): Prefs {
     view: "soon",
     timelineDayWidth: DEFAULT_DAY_WIDTH,
     timelineGroup: "game",
-    timelineUpcoming: false,
+    showUpcoming: false,
     timelineSplitUpcoming: true,
     detectDaily: false,
     showCompleted: true,
@@ -204,10 +210,34 @@ export function adoptNewLanes(
   };
 }
 
+/**
+ * A stored `prefs` object with the one renamed field carried across.
+ *
+ * `timelineUpcoming` became `showUpcoming` when it stopped being about the
+ * board alone. Dropping the old name would not lose data — this is one blob
+ * under one key, not a key space — but it would silently reset the answer of
+ * every reader who had switched the future on, and they would have to find the
+ * setting again to say a thing they already said.
+ *
+ * A stored new name always wins, so this can never overwrite a fresher answer
+ * with a stale one; and once written back under the new name the old one is
+ * simply an unread leftover. Pure and exported so that is a test rather than a
+ * claim.
+ */
+export function adoptRenamed(
+  stored: Partial<Prefs> & { timelineUpcoming?: boolean },
+): Partial<Prefs> {
+  const { timelineUpcoming, ...rest } = stored;
+  if (timelineUpcoming === undefined || rest.showUpcoming !== undefined) {
+    return rest;
+  }
+  return { ...rest, showUpcoming: timelineUpcoming };
+}
+
 export function usePrefs() {
   const [prefs, setPrefs] = useState<Prefs>(() => ({
     ...defaults(),
-    ...readJson<Partial<Prefs>>(KEYS.prefs, {}),
+    ...adoptRenamed(readJson<Partial<Prefs>>(KEYS.prefs, {})),
   }));
 
   useEffect(() => {

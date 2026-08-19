@@ -22,7 +22,7 @@ const PREFS: Prefs = {
   view: "soon",
   timelineDayWidth: 32,
   timelineGroup: "game",
-  timelineUpcoming: false,
+  showUpcoming: false,
   timelineSplitUpcoming: true,
   detectDaily: false,
   showCompleted: true,
@@ -75,20 +75,26 @@ describe("Controls: what am I allowed to look at", () => {
     expect(html).toContain("Show events I&#x27;ve finished");
   });
 
-  test("it says the board is what it applies to", () => {
-    // Sitting between two app-wide filters, a row that named no scope would
-    // read as a promise about the whole app — and the checklist lists these
-    // whatever this says.
+  test("it names both views, because it reaches both", () => {
+    // It began as the board's alone. Sitting between two app-wide filters, a
+    // row that still said "on the timeline" would understate what a tick does.
     const html = render(PREFS);
-    expect(html).toContain("On the timeline");
     expect(html).toContain("Not started yet");
+    expect(html).toContain("timeline");
+  });
+
+  test("the split pills say they are the board's alone", () => {
+    // Unlike the row above them, these really are one view — the checklist
+    // splits unstarted events into a section of their own either way.
+    const html = render({ ...PREFS, showUpcoming: true });
+    expect(html).toContain("On the timeline.");
   });
 
   test("it reads its own preference and not a neighbour's", () => {
     // Both neighbours are on and this one is off, so a checkbox bound to the
     // wrong key shows up as the wrong count of ticks.
     const off = checkboxes(render(PREFS));
-    const on = checkboxes(render({ ...PREFS, timelineUpcoming: true }));
+    const on = checkboxes(render({ ...PREFS, showUpcoming: true }));
     expect(off.filter(Boolean)).toHaveLength(1);
     expect(on.filter(Boolean)).toHaveLength(2);
   });
@@ -97,7 +103,7 @@ describe("Controls: what am I allowed to look at", () => {
     // A choice about arranging them is unanswerable with none on the board,
     // and a control that changes nothing visible is worse than none.
     expect(render(PREFS)).not.toContain("Mixed in");
-    const on = render({ ...PREFS, timelineUpcoming: true });
+    const on = render({ ...PREFS, showUpcoming: true });
     expect(on).toContain("In their own group");
     expect(on).toContain("Mixed in");
   });
@@ -105,10 +111,10 @@ describe("Controls: what am I allowed to look at", () => {
   test("it is a pair of answers, not one answer and its absence", () => {
     // "Mixed in" is a different order, not a heading switched off, so both
     // states name themselves and the panel says which is on.
-    const split = render({ ...PREFS, timelineUpcoming: true });
+    const split = render({ ...PREFS, showUpcoming: true });
     const mixed = render({
       ...PREFS,
-      timelineUpcoming: true,
+      showUpcoming: true,
       timelineSplitUpcoming: false,
     });
     const pressed = (html: string) =>

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { adoptNewLanes } from "../src/client/state/usePrefs.ts";
+import { adoptNewLanes, adoptRenamed } from "../src/client/state/usePrefs.ts";
 import type { LaneId } from "../src/shared/custom.ts";
 
 /**
@@ -64,5 +64,45 @@ describe("adoptNewLanes", () => {
   test("their existing choices are left exactly as they were", () => {
     const patch = adoptNewLanes([...TRACKED, "fgo"], TRACKED, ["hsr"]);
     expect(patch?.hiddenGames).toEqual(["hsr", "fgo"]);
+  });
+});
+
+/**
+ * A preference that changed its name.
+ *
+ * `timelineUpcoming` governed the board alone; `showUpcoming` governs the
+ * checklist too. Nothing is lost by dropping the old name — `prefs` is one blob
+ * under one key — but a reader who had switched the future on would find it off
+ * again with no explanation, which is the same failure as forgetting their view.
+ */
+describe("adoptRenamed", () => {
+  test("a reader's old answer is carried across", () => {
+    expect(adoptRenamed({ timelineUpcoming: true })).toEqual({
+      showUpcoming: true,
+    });
+    // Both directions: having said no is also an answer.
+    expect(adoptRenamed({ timelineUpcoming: false })).toEqual({
+      showUpcoming: false,
+    });
+  });
+
+  test("the old name never overwrites a fresher one", () => {
+    // Once written back under the new name, the leftover must not undo it —
+    // otherwise the setting would spring back on every load.
+    expect(
+      adoptRenamed({ timelineUpcoming: true, showUpcoming: false }),
+    ).toEqual({ showUpcoming: false });
+  });
+
+  test("it is dropped rather than carried into the stored object", () => {
+    // Kept, it would be written straight back and outlive the migration.
+    expect(
+      Object.keys(adoptRenamed({ timelineUpcoming: true, sort: "doing" })),
+    ).toEqual(["sort", "showUpcoming"]);
+  });
+
+  test("a reader with neither is left alone", () => {
+    expect(adoptRenamed({ sort: "doing" })).toEqual({ sort: "doing" });
+    expect(adoptRenamed({})).toEqual({});
   });
 });

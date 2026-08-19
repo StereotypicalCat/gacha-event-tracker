@@ -286,6 +286,15 @@ export function App() {
 
   const live = visible.filter((r) => r.clock.live);
   const upcoming = visible.filter((r) => r.clock.upcoming);
+  /**
+   * The unstarted events the checklist actually lists.
+   *
+   * `upcoming` stays the full count either way, because the page header states
+   * it — a section that is simply absent is indistinguishable from a quiet
+   * fortnight, and this app does not leave a reader to infer what it is not
+   * showing them.
+   */
+  const listedUpcoming = prefs.showUpcoming ? upcoming : [];
 
   /**
    * What the page is telling the reader to *do*, as opposed to what it is
@@ -507,13 +516,13 @@ export function App() {
             </Section>
           )}
 
-          {upcoming.length > 0 && (
+          {listedUpcoming.length > 0 && (
             <Section
               title="Not started yet"
               // The ordering control lives with the first list on the page, so
               // it is never missing when there is something to order.
               action={
-                live.length === 0 && upcoming.length > 1 ? (
+                live.length === 0 && listedUpcoming.length > 1 ? (
                   <SortControl
                     value={prefs.sort}
                     onChange={(sort) => update({ sort })}
@@ -521,15 +530,24 @@ export function App() {
                 ) : undefined
               }
             >
-              <EventList rows={upcoming} render={renderRow} />
+              <EventList rows={listedUpcoming} render={renderRow} />
             </Section>
           )}
 
-          {visible.length === 0 && (
+          {/* Nothing listed is three different situations, and the reader can
+              only act on the one they are actually in. Held-back events come
+              first because that one has a switch behind it. */}
+          {live.length === 0 && listedUpcoming.length === 0 && (
             <p className="px-4 py-12 text-sm leading-relaxed text-muted">
-              {focus !== null
-                ? `Nothing running in ${gameMeta(focus).name}. Try another game, or show all of them.`
-                : "Nothing to show. Every game is switched off, or you've finished everything and hidden completed events."}
+              {upcoming.length > 0
+                ? `Nothing running right now. ${
+                    upcoming.length === 1
+                      ? "One event has"
+                      : `${upcoming.length} events have`
+                  } not started yet — switch on “Show events that haven't started” below to list them.`
+                : focus !== null
+                  ? `Nothing running in ${gameMeta(focus).name}. Try another game, or show all of them.`
+                  : "Nothing to show. Every game is switched off, or you've finished everything and hidden completed events."}
             </p>
           )}
           </div>
@@ -551,7 +569,7 @@ export function App() {
             // The board holds these back itself rather than being handed a
             // shorter list, so it can say how many are waiting when there is
             // nothing else left to draw. The switch is in settings.
-            showUpcoming={prefs.timelineUpcoming}
+            showUpcoming={prefs.showUpcoming}
             splitUpcoming={prefs.timelineSplitUpcoming}
             onOpen={setOpenId}
             isDone={isDone}

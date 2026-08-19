@@ -113,10 +113,11 @@ export function Timeline({
   /**
    * Whether events that have not started yet are plotted.
    *
-   * Off by default (`prefs.timelineUpcoming`). The board is asked "how does the
-   * time I am in lay out?", and every lane has a next patch queued behind it —
-   * plotting those unasked stretches the window weeks past today and squeezes
-   * the running bars the reader came for.
+   * Off by default (`prefs.showUpcoming`, which governs the checklist's own
+   * "Not started yet" section too). The board is asked "how does the time I am
+   * in lay out?", and every lane has a next patch queued behind it — plotting
+   * those unasked stretches the window weeks past today and squeezes the
+   * running bars the reader came for.
    *
    * Read-only here: the switch lives in settings with the other two answers to
    * "what am I allowed to look at" (`Controls`), not in the board's own header
