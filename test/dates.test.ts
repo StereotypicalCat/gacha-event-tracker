@@ -11,6 +11,7 @@ import {
   parseSlashClockZone,
   parseSlashDateTimeRange,
   parseYearFirstSlashRange,
+  parseIsoClockRangeUtc,
 } from "../src/ingest/dates.ts";
 
 describe("parseMonthDayYear", () => {
@@ -414,5 +415,60 @@ describe("parseSlashClockZone", () => {
     expect(
       parseSlashClockZone("Starts 08/20/2026 12:00PM (JST) after maintenance"),
     ).toBeNull();
+  });
+});
+
+describe("parseIsoClockRangeUtc", () => {
+  test("reads both boundaries exact, converting nothing", () => {
+    // IOP Wiki states the zone itself, so this is the one range reader here
+    // that assumes no offset anywhere.
+    const range = parseIsoClockRangeUtc(
+      "2026-08-06 13:00 - 2026-08-26 22:59 (UTC)",
+    );
+    expect(range?.start.iso).toBe("2026-08-06T13:00:00.000Z");
+    expect(range?.end.iso).toBe("2026-08-26T22:59:00.000Z");
+    expect(range?.start.precision).toBe("exact");
+    expect(range?.end.precision).toBe("exact");
+  });
+
+  test("accepts the en dash and the non-breaking spaces the page emits", () => {
+    // The wiki writes `&#160;-&#160;`, which `text()` decodes to spaces.
+    expect(
+      parseIsoClockRangeUtc("2025-01-16 17:00 – 2025-02-06 02:59 (UTC)")?.end
+        .iso,
+    ).toBe("2025-02-06T02:59:00.000Z");
+  });
+
+  test("requires the stated zone rather than defaulting to UTC", () => {
+    // The failure this prevents is silent and hours wide: a wall clock with no
+    // zone is a missing fact, exactly as it is in `parseSlashClockZone`.
+    expect(parseIsoClockRangeUtc("2026-08-06 13:00 - 2026-08-26 22:59")).toBeNull();
+    expect(
+      parseIsoClockRangeUtc("2026-08-06 13:00 - 2026-08-26 22:59 (UTC+8)"),
+    ).toBeNull();
+  });
+
+  test("rejects an impossible calendar day", () => {
+    expect(
+      parseIsoClockRangeUtc("2026-02-30 13:00 - 2026-03-26 22:59 (UTC)"),
+    ).toBeNull();
+    expect(
+      parseIsoClockRangeUtc("2026-08-06 25:00 - 2026-08-26 22:59 (UTC)"),
+    ).toBeNull();
+  });
+
+  test("is anchored at the start, so it cannot find a range inside prose", () => {
+    expect(
+      parseIsoClockRangeUtc("Runs 2026-08-06 13:00 - 2026-08-26 22:59 (UTC)"),
+    ).toBeNull();
+  });
+
+  test("tolerates the ICS widget's leftovers after the zone", () => {
+    // The period cell also carries an export widget; the parser strips its
+    // markup but the container survives as trailing whitespace.
+    expect(
+      parseIsoClockRangeUtc("2026-08-06 13:00 - 2026-08-26 22:59 (UTC)   ")
+        ?.start.iso,
+    ).toBe("2026-08-06T13:00:00.000Z");
   });
 });

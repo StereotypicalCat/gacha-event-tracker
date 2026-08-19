@@ -123,6 +123,16 @@ const SOURCES: SourceSpec[] = [
     url: "https://holodori.wiki/wiki/Events",
     parserId: "holodoriwiki",
   },
+  {
+    id: "gfl2-iopwiki-events",
+    game: "gfl2",
+    // IOP Wiki, the Girls' Frontline universe wiki. Its robots.txt is two lines
+    // — `User-agent: *` and `Crawl-Delay: 20` — with no Disallow anywhere, and
+    // the page answers our own User-Agent with a 200 and a real `Last-Modified`,
+    // so the conditional request below costs it a 304 on an unchanged day.
+    url: "https://iopwiki.com/wiki/GFL2_Events",
+    parserId: "iopwiki",
+  },
 ];
 
 function toAdapter(spec: SourceSpec): Adapter {

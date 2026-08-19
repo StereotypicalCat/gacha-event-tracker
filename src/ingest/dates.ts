@@ -479,3 +479,40 @@ export function parseSlashClockZone(input: string): ParsedInstant | null {
   );
   return value === null ? null : { iso: value, precision: "exact" };
 }
+
+/**
+ * "2025-01-16 17:00 - 2025-02-06 02:59 (UTC)" → both instants, exact precision.
+ *
+ * IOP Wiki's GFL2 event tables put the whole period in one cell and — unusually
+ * for a community wiki — state the zone on every one of them. That makes this
+ * the only range reader here that converts nothing: the source has already done
+ * it, so both boundaries are exact and no offset is assumed anywhere.
+ *
+ * **The zone is required**, for the reason `parseSlashClockZone` requires its
+ * own: a cell that states a wall clock and no zone is a missing fact, not an
+ * invitation to read it as UTC. All 145 rows on the page carry `(UTC)` today,
+ * so the day one loses it that row should drop out rather than land hours off
+ * on a boundary the reader is standing in the game watching.
+ *
+ * Anchored at the start so a range cannot be found inside prose or a slug; left
+ * open at the end because the cell also carries an ICS export widget, whose
+ * markup the caller strips but whose container survives as trailing whitespace.
+ */
+export function parseIsoClockRangeUtc(
+  input: string,
+): { start: ParsedInstant; end: ParsedInstant } | null {
+  const re =
+    /^\s*(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2})\s*[-–—]\s*(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2})\s*\(UTC\)/i;
+  const m = re.exec(input);
+  if (!m) return null;
+
+  const n = (i: number) => Number(m[i]);
+  const startIso = iso(n(1), n(2), n(3), n(4), n(5));
+  const endIso = iso(n(6), n(7), n(8), n(9), n(10));
+  if (startIso === null || endIso === null) return null;
+
+  return {
+    start: { iso: startIso, precision: "exact" },
+    end: { iso: endIso, precision: "exact" },
+  };
+}

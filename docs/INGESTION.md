@@ -54,6 +54,7 @@ Consequences worth internalising:
 | `fandom` | Fandom wikis via the MediaWiki `action=parse` API — two page templates: `Event \| Time Period \| Version` wikitables, and FGO's picture-fenced `ONGOING EVENTS` blocks | Reverse: 1999, Fate/Grand Order |
 | `bawiki` | bluearchive.wiki's rendered `/wiki/Events` — a JP/Global tabber over `Name (EN) \| Start date \| End date \| Notes` wikitables | Blue Archive |
 | `holodoriwiki` | holodori.wiki's rendered `/wiki/Events` — `Current Events` and `Past Events` wikitables over `Event \| Type \| Start Date \| End Date` | hololive Dreams |
+| `iopwiki` | iopwiki.com's `gf-table event-period` tables — `Title \| Period (start/end) \| Server \| Type \| Comment`, one table per event and one row per server | Girls' Frontline 2 |
 
 `wikigg` is the better shape by a distance: it emits ISO timestamps with one timer per server
 region, so its events carry exact precision and real `regionEnds`. Prefer a source like that over a
@@ -140,6 +141,7 @@ All live in `src/ingest/dates.ts`, each returning null rather than inferring any
 | `parseOrdinalDateTimeRange` | `November 9th, 05:00 - December 4th, 2023, 04:59 (UTC-5)` (ordinal days, stated offset) | Reverse: 1999 |
 | `parseIsoDay` | `2026-08-04` (one boundary per column, so nothing to split) | Blue Archive |
 | `parseSlashClockZone` | `08/17/2026 8:00PM (JST)` (one boundary per column, 12-hour clock, **named** zone) | hololive Dreams |
+| `parseIsoClockRangeUtc` | `2026-08-06 13:00 - 2026-08-26 22:59 (UTC)` (whole range in one cell, **zone required**, nothing converted) | Girls' Frontline 2 |
 | `parseOpenRange` | `Jul. 24, 2026 - End of 4.6`, `July 10, 2026 - Permanent` | Star Rail, Wuthering Waves |
 
 **A day-precision result is 00:00Z, and that is a placeholder rather than a time.** Every reader
@@ -337,14 +339,6 @@ Title similarity alone would merge a rerun with its original, since reruns reuse
 start-date proximity check is the actual guard; the title threshold is deliberately loose (0.80) so
 that "Stygian Onslaught" and "Stygian Onslaught Event" collapse into one row rather than showing
 the user a duplicate.
-
-**Agreement raises confidence (+0.10) only across different `sourceId`s.** The same row seen twice
-in one document is not corroboration.
-
-**Disagreement is surfaced, never averaged.** Two sources whose `endsAt` differ by more than 24
-hours produce a `conflicts` entry; the pipeline routes those to quarantine. Splitting the difference
-between two dates would produce a value neither source asserts — the worst possible answer for a
-product whose promise is date accuracy.
 
 ## Stage 4 — validate
 

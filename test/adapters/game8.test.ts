@@ -42,6 +42,7 @@ const CASES: Array<{ adapter: Adapter; fixture: string }> = [
   { adapter: adapter("ba-bawiki-events"), fixture: "fixtures/ba/bawiki-events-2026-08-17" },
   { adapter: adapter("fgo-fandom-events"), fixture: "fixtures/fgo/fandom-events-2026-08-18" },
   { adapter: adapter("holodori-holodoriwiki-events"), fixture: "fixtures/holodori/holodoriwiki-events-2026-08-18" },
+  { adapter: adapter("gfl2-iopwiki-events"), fixture: "fixtures/gfl2/iopwiki-events-2026-08-19" },
 ];
 
 async function runAdapter(adapter: Adapter, fixture: string) {
@@ -1057,5 +1058,129 @@ describe("Fate/Grand Order wiki", () => {
       expect(e.regionScoped).toBe(false);
       expect(e.regionEnds).toBeNull();
     }
+  });
+});
+
+describe("IOP Wiki (Girls' Frontline 2)", () => {
+  const fixture = "fixtures/gfl2/iopwiki-events-2026-08-19";
+  const gfl2 = adapter("gfl2-iopwiki-events");
+
+  function parse(html: string) {
+    return gfl2.parse(html, {
+      now: NOW,
+      sourceUrl: gfl2.url,
+      sourceId: gfl2.id,
+      game: gfl2.game,
+    });
+  }
+
+  const HEADER =
+    "<tr><th>Title</th><th>Period (start/end)</th><th>Server</th><th>Type</th><th>Comment</th></tr>";
+
+  const row = (title: string, period: string, server: string, type = "Character Event") =>
+    `<tr><td>${title}</td><td>${period}</td><td>${server}</td><td>${type}</td><td></td></tr>`;
+
+  /** A stand-in page with the heading-fenced shape this parser navigates. */
+  const paged = (main: string, betas = "") =>
+    `<h2>Main Events</h2><h3>Event</h3><table class="gf-table event-period">${main}</table>
+     <h2>Betas</h2><table class="gf-table event-period">${betas}</table>`;
+
+  test("publishes only the EN server's rows", async () => {
+    // The hazard this source has, and the only one that could put a
+    // confidently wrong date on the calendar: CN, EN and JP rows share one
+    // table and the Chinese schedule runs about a year ahead. Counted off the
+    // fixture: 145 rows, 51 of them EN.
+    const events = parse(
+      paged(
+        HEADER +
+          row("异乡乐徽", "2027-08-06 10:00 - 2027-08-26 09:59 (UTC)", "CN") +
+          row("Moonshroud Requiem", "2026-08-06 13:00 - 2026-08-26 22:59 (UTC)", "EN") +
+          row("失意の翼の中で", "2026-11-06 13:00 - 2026-11-26 22:59 (UTC)", "JP"),
+      ),
+    );
+    expect(events.map((e) => e.title)).toEqual(["Moonshroud Requiem"]);
+  });
+
+  test("fences out the Betas section", async () => {
+    // Closed beta rows are dated exactly like everything else and parse
+    // cleanly — onto a calendar of things nobody can play.
+    const events = parse(
+      paged(
+        HEADER + row("Moonshroud Requiem", "2026-08-06 13:00 - 2026-08-26 22:59 (UTC)", "EN"),
+        HEADER +
+          row("Closed Beta Test (Sunborn)", "2026-08-10 12:00 - 2026-08-19 08:00 (UTC)", "EN", "Open Beta"),
+      ),
+    );
+    expect(events.map((e) => e.title)).toEqual(["Moonshroud Requiem"]);
+  });
+
+  test("takes both boundaries exact, in the UTC the page states", async () => {
+    const events = await runAdapter(gfl2, fixture);
+    expect(events).toHaveLength(1);
+    const [live] = events;
+    expect(live?.title).toBe("Moonshroud Requiem");
+    expect(live?.startsAt).toBe("2026-08-06T13:00:00.000Z");
+    expect(live?.endsAt).toBe("2026-08-26T22:59:00.000Z");
+    expect(live?.startPrecision).toBe("exact");
+    expect(live?.endPrecision).toBe("exact");
+    // Nothing was converted or assumed, which is what earns the top score.
+    expect(live?.confidence).toBe(0.95);
+  });
+
+  test("drops a row that loses its zone rather than reading it as UTC", async () => {
+    // The page states `(UTC)` on all 145 rows. If one ever stops, that row is
+    // a wall clock with no zone — a missing fact, and the same call
+    // `parseSlashClockZone` makes on the hololive wiki.
+    const events = parse(
+      paged(HEADER + row("Zoneless", "2026-08-06 13:00 - 2026-08-26 22:59", "EN")),
+    );
+    expect(events).toEqual([]);
+  });
+
+  test("prefers the stated Type over a guess from the title", async () => {
+    // "Moonshroud Requiem" says nothing about being a character banner; the
+    // page's own Type column does.
+    const events = parse(
+      paged(
+        HEADER +
+          row("Moonshroud Requiem", "2026-08-06 13:00 - 2026-08-26 22:59 (UTC)", "EN") +
+          row("Corposant Part 1", "2026-08-07 13:00 - 2026-08-27 22:59 (UTC)", "EN", "Main Story Event") +
+          row("Endless Projections", "2026-08-08 13:00 - 2026-08-28 22:59 (UTC)", "EN", "Combat Event"),
+      ),
+    );
+    expect(events.map((e) => e.type)).toEqual(["banner", "story", "challenge"]);
+  });
+
+  test("word-infers a Type the wiki has not used before", async () => {
+    // An unmapped value must not silently flatten to "other" — that is how a
+    // taxonomy change goes unnoticed.
+    const events = parse(
+      paged(
+        HEADER +
+          row("Anniversary Login", "2026-08-06 13:00 - 2026-08-26 22:59 (UTC)", "EN", "Sign-in Event"),
+      ),
+    );
+    expect(events[0]?.type).toBe("login");
+  });
+
+  test("publishes nothing from the back catalogue", async () => {
+    // 145 rows go back to 2023 and nothing downstream drops a finished event,
+    // so the currency gate is this parser's job.
+    for (const e of await runAdapter(gfl2, fixture)) {
+      expect(e.endsAt === null || e.endsAt > NOW).toBe(true);
+    }
+  });
+
+  test("a redesign fails the source instead of emptying the lane", () => {
+    // 47 tables on this page, most of them layout. "A table exists" proves
+    // nothing; that the Title/Period/Server header row is still findable does.
+    expect(() =>
+      gfl2.parse("<h2>Main Events</h2><table><tr><th>Name</th><th>When</th></tr></table>", {
+        now: NOW,
+        sourceUrl: gfl2.url,
+        sourceId: gfl2.id,
+        game: gfl2.game,
+      }),
+    ).toThrow(/redesigned/);
   });
 });

@@ -114,6 +114,15 @@ export const GAMES: Record<GameId, GameMeta> = {
   // reader has a day key for a game the app has never shipped, whereas adding
   // the same override later would re-label ticks they had already logged.
   holodori: { id: "holodori", name: "hololive Dreams", short: "holodori", hue: "#5FD3F3", studio: "QualiArts / COVER", dailyTasks: "Daily missions, stamina", resetOffsets: { asia: 9, america: 9, europe: 9 } },
+  // No `resetOffsets`, and unusually the source is not silent here — it is
+  // ambiguous, which comes to the same answer. Every IOP Wiki row states an
+  // exact UTC instant, but the EN boundaries land on three different clocks:
+  // 33 events end at 22:59, 11 at 08:59 and 5 at 02:59. Arknights and
+  // Reverse: 1999 each earned an override from a single boundary the whole page
+  // agreed on, one minute or second before a 04:00 local reset; three of them
+  // is a patch window, not a reset hour. So this game takes the regional
+  // default until something states its server clock outright.
+  gfl2: { id: "gfl2", name: "Girls' Frontline 2: Exilium", short: "GFL2", hue: "#A9C23F", studio: "Sunborn", dailyTasks: "Daily missions" },
 };
 
 export const GAME_LIST: GameMeta[] = Object.values(GAMES);

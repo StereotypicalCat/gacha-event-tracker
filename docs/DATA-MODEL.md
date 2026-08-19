@@ -10,7 +10,7 @@ import { z } from "zod";
 
 export const GameId = z.enum([
   "genshin", "hsr", "zzz", "wuwa", "arknights", "endfield", "nte", "nikki", "p5x", "r1999",
-  "ba", "fgo", "holodori",
+  "ba", "fgo", "holodori", "gfl2",
 ]);
 
 export const EventType = z.enum([
@@ -308,8 +308,16 @@ nothing to add, which is the point worth carrying to the next game: an override 
 the game moves nobody, while the same override added a year later re-labels every tick already
 logged under the old clock. Get it right at introduction or accept a migration.
 
-Infinity Nikki, P5X and Blue Archive carry **no `resetOffsets` entry**, so they take the regional
-default. That is an assumption, not a verified server map — none of the three sources states one.
+Infinity Nikki, P5X and Blue Archive carry **no `resetOffsets`
+entry**, so they take the regional default. That is an assumption, not a verified server map — none
+of those sources states one. The 2026-08-19 addition below is worth separating out, because it is
+silent for a different reason than the usual one:
+
+- **Girls' Frontline 2** states an exact UTC instant on every boundary, so the data is there and
+  still settles nothing: its EN events end at 22:59 (33 of them), 08:59 (11) and 02:59 (5). Arknights
+  and Reverse: 1999 each earned an override from a single boundary the whole page agreed on; three
+  of them is a patch window, not a reset hour.
+
 Blue Archive is the case where the assumption is most likely wrong and still the right entry: the
 game does run one worldwide server, but `bluearchive.wiki` states no time of day and no timezone
 anywhere on the page, so there is no offset to read off it. Confirm these against the games before
