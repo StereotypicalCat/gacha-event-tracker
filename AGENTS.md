@@ -466,8 +466,12 @@ serves, on a permission recorded by hand — and never browser-shaped headers.
 - **It does not even work.** A real headless browser pointed at these hosts gets a managed challenge
   that never resolves, so the option being refused on conduct is also the option that fails.
 
-The legitimate lever is the address, which is why `refresh.yml` runs on a `[self-hosted, safe-ip]`
-runner rather than `ubuntu-latest`.
+The legitimate lever is the address — but the one alternative tried here was not a better address.
+`refresh.yml` ran on `[self-hosted, safe-ip]` from 2026-08-19 and was switched back to `ubuntu-latest`
+on 2026-08-20, because that runner was challenged by Cloudflare and refused by CloudFront alike (§ the
+per-address measurement above). So this remains the route for game8 and it is still unwalked: an
+address CloudFront serves, or another source. Do not read the revert as the idea being wrong — read it
+as that particular address not being the one.
 
 `--assume-robots-on-403` is the one concession to that, and it is deliberately the narrowest thing
 that helps: `bun run refresh --assume-robots-on-403` treats **an interstitial challenge** on
