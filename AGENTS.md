@@ -483,14 +483,30 @@ in `GITHUB_ACTOR`, and a `schedule` — or any other runner event — is not. Th
 were unreachable from the workflow at all. The run prints which override was used and who authorised
 it.
 
-**The cron stays refused, and for the robots override that is not ceremony.** From an address that
-gets a challenge we never receive `robots.txt` at all — so a schedule standing on the recorded
-permission has no way to notice the host withdrawing it. The recorded permission has no expiry, and a
-person re-reading the file in a browser is the only thing that ever re-validates it. A twice-daily job
-asserting it forever would be fetching on a snapshot of consent taken on 2026-08-19. Note what the
-challenge-vs-refusal narrowing does and does not cover here: a plain `403` still stops us, but a
-`robots.txt` *edited* to disallow us would be invisible, because we get a challenge instead of a file.
-That gap is the whole reason a person has to be the one asking.
+**The two overrides are not symmetrical, and `--force` is the stricter one.** A schedule may never
+force: asking every cycle before the interval is up is a shorter interval with extra steps, and the
+interval is the obligation. That one stays reachable only from a person or a dispatch.
+
+**The cron does pass `--assume-robots-on-403`, and that is a decision with a named cost** (taken by
+the repository owner, 2026-08-20). Four Fandom sources skip on a challenged `robots.txt` every cycle,
+and the alternative was four calendars sitting as stale as the last manual run — which for a product
+whose whole promise is a trustworthy end date is the worse failure. So the schedule stands on the
+permission recorded in this section, and **the owner re-reads those files by hand over time** rather
+than the code pretending to.
+
+Be exact about the risk that buys, because it is not "we might be crawling against robots.txt":
+
+- A plain `403` still fails closed. The challenge-or-refusal split is what guarantees that much, so a
+  host that actually turns us away still stops the run.
+- What is invisible is a `robots.txt` **edited** to disallow us. From a challenged address the file
+  never arrives, so a withdrawal would look exactly like the challenge we already expect. Nothing in
+  the pipeline can catch that; only the manual re-read can.
+- **The per-cycle warning is therefore the compensating control, not a nicety.** Every run names each
+  host it stood on a hand-recorded permission for, says the file was not read, and tells the reader to
+  re-read it — as a `::warning` annotation on the run page, so it survives a completely green cycle
+  where nothing else draws the eye. `test/refresh.test.ts` pins both the one-warning-per-host rule and
+  that it reaches the run page. **Do not demote it to a log line**, and do not let a future change
+  make it conditional: it is the only thing that ever prompts the re-read this arrangement depends on.
 
 **A `403` is two answers wearing one status code, and only one of them is covered.** A managed
 challenge means "we cannot tell what you are" — the question a human answers by reading the file in a
@@ -677,7 +693,7 @@ Fate/Grand Order problem arriving through a source that looks like it answered t
 `scripts/refresh-sources.ts` enforces all of the above in code — the 6h floor (except under the
 opt-in `--force` above), one request, no retries, conditional headers, per-host spacing, robots
 (failing closed when `robots.txt` cannot be read, except under the opt-in `--assume-robots-on-403`
-described in § Fandom, which covers a challenged `403` and never a plain refusal). Both overrides are refused on an unattended run — a `schedule` gets neither, a person or a `workflow_dispatch` may pass both (`runAttendance`) — and reported by name
+described in § Fandom, which covers a challenged `403` and never a plain refusal). The two overrides differ on who may pass them: `--force` is refused on an unattended run (`runAttendance` — a person or a `workflow_dispatch`, never a `schedule`), while `--assume-robots-on-403` is passed by the cron by standing decision and is reported by name
 in the run's warnings — an override that reports nothing is one nobody withdraws. Anything that would make it fetch more often is a change to this section first.
 
 **A source down is a warning; a source down for days is a broken build.** One wiki failing must

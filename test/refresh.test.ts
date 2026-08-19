@@ -901,6 +901,31 @@ describe("what the runner reports to the runner", () => {
     for (const line of lines) expect(line).not.toInclude("\n");
   });
 
+  test("an assumed robots permission annotates an otherwise green run", () => {
+    // This is now the scheduled run's standing state, not an exception: the cron
+    // passes --assume-robots-on-403, so every cycle fetches four Fandom sources
+    // on a permission it could not re-read. That warning is the whole
+    // compensating control for the risk being accepted (AGENTS.md § Scraping
+    // conduct), and a summary line can be scrolled past where a run-page
+    // annotation cannot — so it has to survive as one even when nothing is
+    // broken and there is no error to draw the eye.
+    const green = {
+      ...broken,
+      broken: [],
+      warnings: [
+        "reverse1999.fandom.com: fetched on --assume-robots-on-403 — its " +
+          "robots.txt was NOT read this run. Re-read it in a browser.",
+      ],
+      assumedRobots: ["reverse1999.fandom.com"],
+    };
+    const lines = annotations(green);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toStartWith("::warning title=refresh::");
+    expect(lines[0]).toContain("--assume-robots-on-403");
+    expect(lines[0]).toContain("reverse1999.fandom.com");
+    expect(lines[0]).not.toInclude("\n");
+  });
+
   test("nothing to say means no annotations", () => {
     expect(annotations({ ...broken, warnings: [], broken: [] })).toEqual([]);
   });
@@ -978,12 +1003,14 @@ describe("the workflows that drive the refresh", () => {
     expect(refresh).not.toContain("push --force");
   });
 
-  test("refresh.yml offers both overrides to a dispatch and to no cron", async () => {
-    // The scheduled run must never be able to pass either one: an override on
-    // every cycle is the new default with extra steps, and for the robots one a
-    // cron cannot re-read the permission it would be standing on. Both flags are
-    // therefore reachable only through `workflow_dispatch` inputs, which are
-    // empty on a schedule, and each is guarded on the literal string "true".
+  test("refresh.yml lets the cron assume robots, and never lets it force", async () => {
+    // The two overrides are deliberately not symmetrical any more. --force stays
+    // reachable only through a dispatch input: a schedule that forces every cycle
+    // is a shorter interval with extra steps, and the interval is the obligation.
+    // --assume-robots-on-403 is passed by the cron on purpose (owner's decision,
+    // 2026-08-20) so four Fandom calendars do not sit stale between manual runs;
+    // the compensating control is the per-cycle warning naming every host, which
+    // is what prompts the manual re-read.
     const refresh = await read("refresh.yml");
 
     const dispatch = refresh.slice(
@@ -993,15 +1020,16 @@ describe("the workflows that drive the refresh", () => {
     expect(dispatch).toContain("force:");
     expect(dispatch).toContain("assume_robots_on_403:");
 
-    // Every occurrence of either flag is inside a test on its input variable.
+    // --force: guarded on its input alone, so a schedule (where it is empty)
+    // can never reach it.
     expect(refresh).toMatch(/if \[ "\$FORCE" = "true" \]; then\n\s*args\+=\(--force\)/);
+    expect(refresh).not.toMatch(/FORCE" = "true" \] \|\| \[ "\$EVENT_NAME"/);
+
+    // --assume-robots-on-403: its input OR the run being a schedule.
     expect(refresh).toMatch(
-      /if \[ "\$ASSUME_ROBOTS_ON_403" = "true" \]; then\n\s*args\+=\(--assume-robots-on-403\)/,
+      /if \[ "\$ASSUME_ROBOTS_ON_403" = "true" \] \|\| \[ "\$EVENT_NAME" = "schedule" \]; then\n\s*args\+=\(--assume-robots-on-403\)/,
     );
-    // The cron block itself carries no flags.
-    const cron = refresh.slice(refresh.indexOf("schedule:"), refresh.indexOf("workflow_dispatch:"));
-    expect(cron).not.toContain("force");
-    expect(cron).not.toContain("assume");
+    expect(refresh).toContain("EVENT_NAME: ${{ github.event_name }}");
   });
 
   test("refresh.yml turns red on a broken source only after committing", async () => {

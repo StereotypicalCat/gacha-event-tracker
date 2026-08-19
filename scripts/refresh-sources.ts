@@ -864,15 +864,21 @@ async function main(): Promise<number> {
     return 2;
   }
 
-  if (args.assumeRobotsOn403 && !attendance.attended) {
-    console.error(
-      `--assume-robots-on-403 needs a person to ask for it; this run came from ` +
-        `${attendance.why}.\n` +
-        "It asserts a permission a person read by hand, and a schedule cannot " +
-        "re-read it. Dispatch the workflow by hand to pass it.",
-    );
-    return 2;
-  }
+  // `--assume-robots-on-403` is deliberately NOT gated on attendance, unlike
+  // `--force` above. The four Fandom sources skip on a challenged robots.txt
+  // every cycle, and the repository owner has taken on re-reading those files by
+  // hand over time rather than have four calendars go stale between manual runs
+  // (decided 2026-08-20). That is a standing decision about this project's own
+  // conduct, so the code records it instead of re-litigating it per run.
+  //
+  // What keeps it honest is the disclosure, which is why that is not optional:
+  // every cycle names each host it stood on a hand-recorded permission for and
+  // says the file was not read this run. The risk being accepted is specific —
+  // from a challenged address robots.txt never arrives, so a file *edited* to
+  // disallow us would be invisible (a plain 403 still fails closed, and the
+  // challenge-or-refusal split is what guarantees that much). The per-cycle
+  // warning is the only thing that ever prompts the re-read, so do not demote it
+  // to a log line.
 
   // Who authorised the override is part of the record, not a detail. A local
   // shell leaves no trace anybody else can read; a dispatch names the actor.

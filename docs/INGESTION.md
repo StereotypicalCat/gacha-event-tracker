@@ -292,13 +292,14 @@ section but must never claim the event title.
     challenge page's markers; a `403` whose body cannot be read is unclassifiable and therefore not
     excused.
   - It never overrides a `robots.txt` we *could* read, so a file that disallows us still says no.
-  - **It is refused on an unattended run, not on every runner.** `runAttendance` asks who asked: a
-    local shell and a `workflow_dispatch` are both a person (the latter better evidenced — GitHub
-    names the actor), while a `schedule` or any other runner event is not. The `schedule` refusal is
-    load-bearing rather than ceremonial: from a challenged address `robots.txt` never arrives, so a
-    cron standing on the recorded permission could never see the host withdraw it, and the recorded
-    permission has no expiry. `refresh.yml` therefore exposes both overrides as
-    `workflow_dispatch` inputs, which are empty on the cron and so can never be passed by it.
+  - **The cron passes it, unlike `--force`.** A standing decision (2026-08-20): four Fandom sources
+    skip on a challenged `robots.txt` every cycle, and four stale calendars are the worse failure for
+    a product that sells trustworthy end dates. `--force` remains gated on `runAttendance` — a person
+    or a `workflow_dispatch`, never a `schedule` — because forcing every cycle is just a shorter
+    interval. The accepted risk is narrow and named: a plain `403` still fails closed, but a
+    `robots.txt` *edited* to disallow us is invisible from a challenged address, so the owner re-reads
+    those files by hand. The per-cycle `::warning` naming every assumed host is the compensating
+    control and is pinned by tests; the dispatch input can be set to `false` to see the real state.
 
   Every host it applied to is named in the run's warnings and in `summary.assumedRobots` — an
   override that reports nothing is one nobody withdraws. It changes no other obligation: still one
