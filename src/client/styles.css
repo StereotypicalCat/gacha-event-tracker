@@ -121,6 +121,30 @@ body {
   background-attachment: fixed;
 }
 
+/*
+ * Anything you can act on says so under the pointer.
+ *
+ * A `<button>` defaults to `cursor: default`, so the app's own controls — a
+ * daily chip, the headline deadline, a settings pill — read as text until you
+ * click one and discover otherwise. Sixty-odd of them, which is why this is a
+ * rule rather than a class added at each call site: the ones that got it were
+ * the ones somebody noticed, and the point of an affordance is that it holds
+ * everywhere without being noticed.
+ *
+ * In `@layer base` on purpose. Utilities beat it, so a control that means
+ * something else by the pointer keeps saying it: `cursor-not-allowed` on a
+ * disabled zoom step, `cursor-default` on a day the checklist cannot tick yet.
+ * `:not(:disabled)` covers the same ground for anything that never bothered.
+ */
+@layer base {
+  button:not(:disabled),
+  [role="tab"],
+  input[type="checkbox"]:not(:disabled),
+  label:has(> input[type="checkbox"]:not(:disabled)) {
+    cursor: pointer;
+  }
+}
+
 /* Countdowns tick. Tabular figures keep them from reflowing every second. */
 .tnum {
   font-variant-numeric: tabular-nums;
