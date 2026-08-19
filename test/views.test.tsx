@@ -262,10 +262,22 @@ describe("Timeline stacking", () => {
         group={group}
         onGroup={() => {}}
         showUpcoming={false}
+        splitUpcoming
         onOpen={() => {}}
         isDone={() => false}
       />,
     );
+
+  test("mixed in, lane mode re-sorts rather than keeping the block", () => {
+    // The one place `timelineLanes` is allowed to reorder a lane. Leaving the
+    // given order alone would draw exactly the block it was told not to, minus
+    // the heading that explained it.
+    // Given live-first, as every sort this board can be handed produces. B has
+    // the nearer end (48h against 100h) but has not opened yet.
+    const given = [row("A", "hsr", 100), upcoming("B", "hsr", 24, 24)];
+    expect(timelineLanes(given, "game", true)[0]?.rows[0]?.event.title).toBe("A");
+    expect(timelineLanes(given, "game", false)[0]?.rows[0]?.event.title).toBe("B");
+  });
 
   test("both stackings plot every event", () => {
     for (const group of ["game", "ending"] as const) {
@@ -306,7 +318,12 @@ describe("Timeline: events that have not started", () => {
     upcoming("Long Way Round", "wuwa", 30 * 24),
   ];
 
-  const board = (showUpcoming: boolean, all = rows, group: "game" | "ending" = "ending") =>
+  const board = (
+    showUpcoming: boolean,
+    all = rows,
+    group: "game" | "ending" = "ending",
+    splitUpcoming = true,
+  ) =>
     render(
       <Timeline
         rows={all}
@@ -316,6 +333,7 @@ describe("Timeline: events that have not started", () => {
         group={group}
         onGroup={() => {}}
         showUpcoming={showUpcoming}
+        splitUpcoming={splitUpcoming}
         onOpen={() => {}}
         isDone={() => false}
       />,
@@ -380,6 +398,32 @@ describe("Timeline: events that have not started", () => {
     // for all but one of them.
     const html = board(true, rows, "game");
     expect(html.split("Not started yet")).toHaveLength(4);
+  });
+
+  test("mixed in, there is no block to head and no heading", () => {
+    // Not the heading switched off: the rows are one deadline queue, so a
+    // label would be pointing at the middle of it.
+    const html = board(true, rows, "ending", false);
+    expect(html).toContain("Frost Parade");
+    expect(html).not.toContain("Not started yet");
+  });
+
+  test("mixed in, a nearer deadline wins whether or not it has opened", () => {
+    // The whole point of the option, and the one thing the split order can
+    // never show. Frost Parade opens in 3 days and closes 10 days after that;
+    // Closing Ceremony is running now until 100 hours from now — so it is
+    // still the nearer deadline, and Frost Parade sits under it rather than
+    // behind every running row.
+    const near = upcoming("Quick Turnaround", "hsr", 24, 24);
+    const html = board(true, [row("Closing Ceremony", "genshin", 100), near], "ending", false);
+    expect(html.indexOf("Quick Turnaround")).toBeLessThan(
+      html.indexOf("Closing Ceremony"),
+    );
+    // Split, the same two rows go the other way round.
+    const kept = board(true, [row("Closing Ceremony", "genshin", 100), near], "ending", true);
+    expect(kept.indexOf("Closing Ceremony")).toBeLessThan(
+      kept.indexOf("Quick Turnaround"),
+    );
   });
 
   test("no heading where nothing is waiting", () => {

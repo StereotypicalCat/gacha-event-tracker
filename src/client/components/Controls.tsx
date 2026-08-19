@@ -21,6 +21,28 @@ const THEMES: Array<{ id: ThemeChoice; label: string }> = [
   { id: "system", label: "System" },
 ];
 
+/**
+ * The two readings of a board with the future on it, and both are right for
+ * somebody — see PRD F1.
+ *
+ * Kept as a pair of pills rather than a second checkbox because neither answer
+ * is the absence of the other: "mixed in" is a different order, not a heading
+ * switched off. A checkbox would name one of them and leave the other as
+ * whatever is left over.
+ */
+const SPLITS: Array<{ split: boolean; label: string; hint: string }> = [
+  {
+    split: true,
+    label: "In their own group",
+    hint: "Each lane runs out, then a \u201cNot started yet\u201d heading and what is queued behind it.",
+  },
+  {
+    split: false,
+    label: "Mixed in",
+    hint: "One deadline order, started or not — so something opening Friday and closing Sunday sits above an event running until October.",
+  },
+];
+
 export function Controls({
   games,
   prefs,
@@ -159,6 +181,39 @@ export function Controls({
                   </span>
                 </span>
               </label>
+
+              {/* Only while there is something to arrange. A choice about how
+                  unstarted events sit on the board is unanswerable when none
+                  are on it, and offering it anyway is a control that does
+                  nothing — the stored answer is kept either way, so switching
+                  the row above back on restores it rather than a default. */}
+              {prefs.timelineUpcoming && (
+                <div className="ml-6 flex flex-col gap-1.5">
+                  <div className="flex gap-1.5">
+                    {SPLITS.map((s) => (
+                      <button
+                        key={String(s.split)}
+                        type="button"
+                        onClick={() =>
+                          onUpdate({ timelineSplitUpcoming: s.split })
+                        }
+                        aria-pressed={prefs.timelineSplitUpcoming === s.split}
+                        className={`rounded-full border px-3 py-1 text-[0.6875rem] font-medium transition-colors ${
+                          prefs.timelineSplitUpcoming === s.split
+                            ? "border-ink/70 text-ink"
+                            : "border-hairline text-faint hover:text-muted"
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="max-w-xs text-xs leading-relaxed text-faint">
+                    {SPLITS.find((s) => s.split === prefs.timelineSplitUpcoming)
+                      ?.hint}
+                  </p>
+                </div>
+              )}
 
               {/* Detection reads the source's wording and is wrong in both
                   directions, so it ships off and says so. Off leaves only the

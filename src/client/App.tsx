@@ -552,6 +552,7 @@ export function App() {
             // shorter list, so it can say how many are waiting when there is
             // nothing else left to draw. The switch is in settings.
             showUpcoming={prefs.timelineUpcoming}
+            splitUpcoming={prefs.timelineSplitUpcoming}
             onOpen={setOpenId}
             isDone={isDone}
           />

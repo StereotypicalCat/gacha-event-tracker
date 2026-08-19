@@ -93,6 +93,33 @@ describe("Controls: what am I allowed to look at", () => {
     expect(on.filter(Boolean)).toHaveLength(2);
   });
 
+  test("how unstarted events sit on the board is offered only when they are", () => {
+    // A choice about arranging them is unanswerable with none on the board,
+    // and a control that changes nothing visible is worse than none.
+    expect(render(PREFS)).not.toContain("Mixed in");
+    const on = render({ ...PREFS, timelineUpcoming: true });
+    expect(on).toContain("In their own group");
+    expect(on).toContain("Mixed in");
+  });
+
+  test("it is a pair of answers, not one answer and its absence", () => {
+    // "Mixed in" is a different order, not a heading switched off, so both
+    // states name themselves and the panel says which is on.
+    const split = render({ ...PREFS, timelineUpcoming: true });
+    const mixed = render({
+      ...PREFS,
+      timelineUpcoming: true,
+      timelineSplitUpcoming: false,
+    });
+    const pressed = (html: string) =>
+      [...html.matchAll(/aria-pressed="true"[^>]*>([^<]+)</g)].map((m) => m[1]);
+    expect(pressed(split)).toContain("In their own group");
+    expect(pressed(mixed)).toContain("Mixed in");
+    // And the line under them describes the answer that is actually on.
+    expect(mixed).toContain("One deadline order");
+    expect(split).not.toContain("One deadline order");
+  });
+
   test("the ignored row appears only once something is ignored", () => {
     // Nothing to restore means nothing to offer — the row would be a filter
     // over an empty set.

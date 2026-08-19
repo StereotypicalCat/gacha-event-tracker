@@ -98,6 +98,7 @@ export function Timeline({
   group,
   onGroup,
   showUpcoming,
+  splitUpcoming,
   onOpen,
   isDone,
 }: {
@@ -124,6 +125,18 @@ export function Timeline({
    * decides what is on it at all.
    */
   showUpcoming: boolean;
+  /**
+   * Whether those unstarted events keep to their own block under a heading, or
+   * sit in one deadline order with the running ones
+   * (`prefs.timelineSplitUpcoming`, and the switch is in settings beside the
+   * one above).
+   *
+   * Mixed is not merely the heading switched off: the orders this board is
+   * given all hold unstarted rows behind running ones, so dropping the label
+   * alone would leave the same block with nothing explaining it. `lanes.ts`
+   * re-sorts instead, and this only decides whether the heading is drawn.
+   */
+  splitUpcoming: boolean;
   onOpen: (id: string) => void;
   /**
    * Asked rather than derived from the progress store: an entry exists there
@@ -201,7 +214,7 @@ export function Timeline({
     );
   }
 
-  const lanes = timelineLanes(plotted, group);
+  const lanes = timelineLanes(plotted, group, splitUpcoming);
   const marks = startMarkers(plotted, x);
 
   const months = monthBoundaries(min, max);
@@ -351,7 +364,9 @@ export function Timeline({
             {lanes.map((lane) => {
               const heading = lane.game === null ? null : gameMeta(lane.game);
               // Where this lane stops running and starts being scheduled.
-              const breakAt = splitAt(lane.rows);
+              // Mixed in, there is no such place — the rows are one deadline
+              // queue and a heading would be pointing at the middle of it.
+              const breakAt = splitUpcoming ? splitAt(lane.rows) : -1;
               return (
                 <div key={lane.id}>
                   {/* On its own line and pinned to the left edge, so the lane
