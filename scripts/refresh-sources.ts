@@ -281,7 +281,9 @@ export async function runRefresh(
   summary.assumedRobots = [...cycle.assumedRobots].sort();
   for (const host of summary.assumedRobots) {
     summary.warnings.push(
-      `${host}: fetched on --assume-robots-on-403; its robots.txt was not read this run`,
+      `${host}: fetched on --assume-robots-on-403 — its robots.txt was NOT read ` +
+        `this run. Re-read it in a browser and confirm AGENTS.md § Scraping ` +
+        `conduct still describes it.`,
     );
   }
 
@@ -886,13 +888,10 @@ async function main(): Promise<number> {
     `\n${summary.changed} changed, ${summary.confirmed}/${summary.attempted} confirmed, ` +
       `${summary.warnings.length} warnings, ${summary.broken.length} broken`,
   );
+  // One line per warning, and every warning is in `summary.warnings` — printing
+  // a category separately here once double-reported the assumed-robots hosts
+  // and left the "N warnings" count above disagreeing with the lines under it.
   for (const warning of summary.warnings) console.warn(`  ! ${warning}`);
-  for (const host of summary.assumedRobots) {
-    console.warn(
-      `  ! ${host}: robots.txt was NOT read this run. Re-read it in a browser ` +
-        `and confirm AGENTS.md § Scraping conduct still describes it.`,
-    );
-  }
   for (const b of summary.broken) {
     console.error(
       `  !! ${b.sourceId} has failed ${b.consecutiveFailures} cycles running ` +

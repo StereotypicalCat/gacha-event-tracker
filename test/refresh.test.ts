@@ -363,9 +363,15 @@ describe("robots", () => {
 
     expect(summary.outcomes[0]?.result).toBe("fetched");
     expect(summary.assumedRobots).toEqual(["game8.co"]);
-    expect(summary.warnings.some((w) => w.includes("--assume-robots-on-403"))).toBe(
-      true,
+    // Exactly one warning per host, and it carries the instruction. The host
+    // was reported twice for a while — once from here and once from a second
+    // loop in main() — which also left the run's "N warnings" count disagreeing
+    // with the number of lines printed under it.
+    const assumed = summary.warnings.filter((w) =>
+      w.includes("--assume-robots-on-403"),
     );
+    expect(assumed).toHaveLength(1);
+    expect(assumed[0]).toContain("Re-read it in a browser");
   });
 
   test("an ordinary run reports no assumed hosts at all", async () => {
