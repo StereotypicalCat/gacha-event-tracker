@@ -338,15 +338,33 @@ Only meaningful when a game has more than one source; a single-source game passe
 
 `mergeEvents(groups)` compares events across sources:
 
-1. **Same ID** → same event; keep the higher-confidence copy.
-2. **Near match** — same game, title similarity ≥ 0.80, starts within 24h — → same event under
-   different titles; keep the higher-confidence copy.
+1. **Same ID** → same event; keep the higher-confidence copy. Applies within a source as well as
+   across sources — an identical id is the same row seen twice, whatever it is called.
+2. **Near match** — **different sources**, same game, title similarity ≥ 0.80, starts within 24h —
+   → same event under different titles; keep the higher-confidence copy.
 3. **Otherwise** → distinct events; keep both.
 
 Title similarity alone would merge a rerun with its original, since reruns reuse the name. The
 start-date proximity check is the actual guard; the title threshold is deliberately loose (0.80) so
 that "Stygian Onslaught" and "Stygian Onslaught Event" collapse into one row rather than showing
 the user a duplicate.
+
+**Near matching is cross-source only, and that restriction is load-bearing** (2026-08-19). Fusing
+two rows from *one* page overrules a distinction the publisher made on purpose, and the loose
+threshold that makes rule 2 useful across sources makes it actively wrong within one: Game8's
+Umamusume banner list runs `3 Star Guaranteed 1.5 Anniversary Scout (Character)` and `(Support)`
+concurrently, titles differing by a single parenthetical and starting the same day. That scores far
+above 0.80, and fusing them dropped a live banner off the calendar with nothing anywhere reporting
+it — a silent drop, which § Silent drops ranks as the dangerous failure. Rule 1 still fuses repeats
+within a source, so nothing is duplicated; the parsers dedupe by id before merge is reached anyway.
+
+**Agreement raises confidence (+0.10) only across different `sourceId`s.** The same row seen twice
+in one document is not corroboration.
+
+**Disagreement is surfaced, never averaged.** Two sources whose `endsAt` differ by more than 24
+hours produce a `conflicts` entry; the pipeline routes those to quarantine. Splitting the difference
+between two dates would produce a value neither source asserts — the worst possible answer for a
+product whose promise is date accuracy.
 
 ## Stage 4 — validate
 
