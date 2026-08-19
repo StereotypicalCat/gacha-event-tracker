@@ -1,7 +1,8 @@
 # SOURCES.md — event sources for the games still missing
 
 A source assessment for the games named in `docs/FEEDBACK.md` § P1 that still have no adapter,
-plus § 12, a sweep of thirteen Game8 hubs asked for separately on 2026-08-19.
+plus § 12, a sweep of thirteen Game8 hubs, and § 13, one URL offered for Honkai Impact 3rd —
+both asked for separately on 2026-08-19.
 Written 2026-08-18. **Acted on 2026-08-19**: four of the games below were built, one turned out to be
 blocked rather than merely awkward, and the rest were declined. Each section keeps its original
 reconnaissance and carries its outcome at the top, because the reasoning is what stops the next pass
@@ -619,6 +620,58 @@ worth keeping:
   and only two rows are dated at all; everything else is recurring or permanent. The back catalogue
   under `List of Past Events` is the rowspan Start/End shape and is correctly fenced by its heading.
 
+## 13. Honkai Impact 3rd — assessed 2026-08-19 on request; decline
+
+**Source:** `https://marisaimpact.com/calendar89` — Marisa Impact, a fan site for HI3, whose
+`Supply and Boss Timeline` is the only calendar this game has been offered here. Not a P1 game: this
+section answers a direct request to add that URL, and HI3 has no `GameId` today.
+
+**Conduct is clear, and it is the only part of this that is.** `robots.txt` answers our own
+`User-Agent` with a `200`, and its 1248 bytes are **entirely comments** — Cloudflare's
+content-signals preamble with no `User-agent` line, no `Disallow` and no `Content-Signal` at all. By
+clause (c) of the text it ships with, a use with no signal is "neither granted nor restricted", so
+nothing here refuses us the way `koumakan`'s `ai-input=no` does. There is no `Crawl-delay`. The site
+is Cloudflare-fronted but serves us the page itself with a plain `200`, so this is not the Fandom
+challenge or the `uma.moe` gate either. The page is server-rendered SvelteKit and the whole schedule
+is in the HTML; the route's `__data.json` carries an `ogImage` and nothing else, so the rendered page
+is the only surface and there is no API to prefer.
+
+**Four things kill it, and the first two on their own are enough.**
+
+- **The dates are estimates, and the page says so twice.** Under the title: *"Based on CN server.
+  Schedule might be different for Regional servers."* And the first column of both grids is headed
+  *"Estimated date for Regional Servers"*. This is the `akwiki` CN-column hazard with nothing to fall
+  back to — there is no Global row to publish and a CN row to skip, there is one CN schedule with an
+  estimate drawn over it. Putting that behind a countdown is the confidently wrong date this product
+  exists to prevent, and it would be wrong on the honest side of the page's own disclaimer.
+- **No year appears anywhere.** Weeks read `Jun 25 - July 3`, `Aug 14 - 20`; stripping the tags from
+  either version's page and grepping for `20\d\d` returns nothing at all. `dates.ts` infers a missing
+  year for no source and must not start here, and the start's day is half of every event ID this game
+  would ever have.
+- **The unit is a week column, not an event boundary.** A bar spans whole weeks, so its end is the
+  end of a bucket rather than a date anyone published. That is *not* the day-precision reading Game8
+  and Infinity Nikki get: there we publish the date the page printed, and here the page printed a
+  week.
+- **The URL is per-version and there is no stable route to the current one.** `/calendar89` is
+  version 8.9, `Jun 25 - Aug 20` — it expires the day after this was written. Version 9.0 is at
+  `/calendar90` and runs `Aug 20 - Oct 22`. The version picker is client-side, the nav links only
+  *earlier* versions (`/calendar88`, `/calendar89`), and the page's own `og:url` and canonical
+  (`/valk/calendar89`) is a scheme that already 404s at `/valk/calendar90`. A `SOURCES` entry pinned
+  to `calendar89` would be publishing history inside a day — § 11's failure mode on a six-week clock —
+  and nothing on the site names the live version at a fixed address.
+
+**The markup is fine, which is worth recording so nobody re-derives it.** Each row is a
+`<div class="relative grid grid-cols-N">`; cell 1 is the row label (`BATTLESUIT SUPPLY A`, `EVENT 3`)
+and every bar carries `col-span-N`, with bare `<div class="col-span-N"></div>` spacers standing in for
+an offset start. So a bar's start week is `1 + Σ` the spans before it and its length is its own span,
+and the week columns are in the header row. A parser would be positional rather than textual and is
+perfectly writable. The blocker is what the numbers mean, not how to read them.
+
+**What would change this:** the site stating a year, and stating a real regional schedule rather than
+an estimate over the CN one — plus a stable URL for the current version, or an index page naming it.
+Any two of the three still leaves the other. No alternative HI3 source was looked for in this pass, so
+the game is unsourced rather than declined outright.
+
 ## What every one of these costs, beyond the source
 
 Adding a game is never only a `SOURCES` entry:
@@ -649,8 +702,8 @@ both been made. What is queued is the two live finds of the § 12 sweep:
    across every fixture and snapshot as Umamusume's was.
 
 Below that, in descending order of value: re-check `grayravens.com` if it ever puts its schedule in
-a table, and re-check Azur Lane if `koumakan` ever drops `ai-input=no`. Neither is worth a pass
-until something changes upstream.
+a table, re-check Azur Lane if `koumakan` ever drops `ai-input=no`, and re-check `marisaimpact.com`
+if it ever prints a year (§ 13). None is worth a pass until something changes upstream.
 
 ## Appendix — reproducing the checks
 
@@ -666,6 +719,8 @@ curl -sS -A "$UA" https://iopwiki.com/wiki/GFL2_Events                > gfl2.htm
 curl -sS -A "$UA" https://stellasora.miraheze.org/wiki/Main_Page      > stellasora.html
 curl -sS -A "$UA" 'https://nikke-goddess-of-victory-international.fandom.com/api.php?action=parse&page=Event&prop=text&formatversion=2&format=json' > nikke.json
 curl -sS -A "$UA" https://game8.co/games/Chaos-Zero-Nightmare/archives/559899 > czn.html
+curl -sS -A "$UA" https://marisaimpact.com/robots.txt                 # comments only, no directive
+curl -sS -A "$UA" https://marisaimpact.com/calendar90                 > hi3-v90.html
 
 # the § 12 sweep: hubs first, then the schedule page each one turned out to have.
 # `--rate 30/m` keeps one request every 2s to a single host, per AGENTS.md § Scraping conduct.
@@ -697,3 +752,6 @@ Facts stated above that a future reader may want to re-check, with how they were
 | The FEH page is unreadable by shape, not by two header words | `columnLayout` finds no range column at all — `Availability` is a start and `End` is its own column, and `readStartEndTable` wants the rowspan `Start`/`End` pair |
 | Game8's structural check rejects the Pokémon UNITE page | `game8Parser.canParse` → `false`; the page has 25 `a-table` matches and zero `a-header--3` |
 | A hub's nav is not an index of its pages | the UNITE, Champions, Gundam and Black Beacon schedule pages exist and are linked from none of the hub navigation scanned; found by web search |
+| `marisaimpact.com` states no year on any calendar | stripped tags from `/calendar89` and `/calendar90` and grepped the text for `20\d\d` — zero matches on either |
+| Its calendar URL is per-version, with no stable alias | `/calendar90` is `200` and covers `Aug 20 - Oct 22`; `/valk/calendar90` — the scheme its own `og:url` uses — is `404`; the nav links only `/calendar88` and `/calendar89` |
+| Its schedule is not behind an API | `GET /calendar90/__data.json` returns 144 bytes: an `ogImage` URL and nothing else |
