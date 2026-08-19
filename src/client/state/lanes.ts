@@ -1,5 +1,5 @@
 import type { LaneId } from "../../shared/custom.ts";
-import { endingSoonestFirst, type EventClock } from "../../shared/time.ts";
+import { byDeadline, endingSoonestFirst, type EventClock } from "../../shared/time.ts";
 
 /**
  * How the timeline is stacked: a lane per game, or every game together in
@@ -65,19 +65,35 @@ export interface Lane<T> {
  * Lane mode leaves the order it was given alone. The rows arrive sorted by
  * whatever the reader chose in the list, and grouping them by game is not a
  * licence to re-sort inside a game.
+ *
+ * `split` is the exception to that last sentence, and deliberately so. Both
+ * orders above hold every unstarted event behind every running one, which is
+ * the segregation the board's "Not started yet" heading names — so a reader who
+ * asks for them mixed in is asking for exactly that clause to be dropped, and
+ * `byDeadline` is the same comparator with it gone. It applies in **both**
+ * modes, lane mode included: leaving a lane's given order alone there would
+ * produce the block it was told not to draw, minus the heading that explained
+ * it, which is the worst of both answers.
  */
 export function timelineLanes<T extends Row>(
   rows: readonly T[],
   mode: TimelineGroup,
+  split = true,
 ): Array<Lane<T>> {
+  const order = split ? endingSoonestFirst : byDeadline;
+
   if (mode === "ending") {
     if (rows.length === 0) return [];
-    return [{ id: "all", game: null, rows: [...rows].sort(endingSoonestFirst) }];
+    return [{ id: "all", game: null, rows: [...rows].sort(order) }];
   }
 
   const byGame = new Map<LaneId, T[]>();
   for (const row of rows) {
     byGame.set(row.event.game, [...(byGame.get(row.event.game) ?? []), row]);
   }
-  return [...byGame].map(([game, laneRows]) => ({ id: game, game, rows: laneRows }));
+  return [...byGame].map(([game, laneRows]) => ({
+    id: game,
+    game,
+    rows: split ? laneRows : [...laneRows].sort(byDeadline),
+  }));
 }

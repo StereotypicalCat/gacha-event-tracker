@@ -345,6 +345,30 @@ export function endingSoonestFirst(
 }
 
 /**
+ * Sort key: soonest deadline first, and nothing else.
+ *
+ * The other half of the timeline's "put them all together" (PRD F1). Where
+ * `endingSoonestFirst` holds every unstarted event behind every running one —
+ * which is what a *checklist* wants, since you cannot do a thing that has not
+ * opened — this asks the one question a Gantt board is for: what runs out
+ * first. An event opening on Friday and closing on Sunday is a nearer deadline
+ * than one running now until October, and a reader looking at a calendar rather
+ * than a to-do list is entitled to see it in that order.
+ *
+ * The `endsAt: null` rule is the same in both: an unannounced end is real but is
+ * not a deadline, so it sorts behind every dated row rather than claiming a
+ * place in the queue.
+ */
+export function byDeadline(
+  a: { clock: EventClock },
+  b: { clock: EventClock },
+): number {
+  if (a.clock.msRemaining === null) return b.clock.msRemaining === null ? 0 : 1;
+  if (b.clock.msRemaining === null) return -1;
+  return a.clock.msRemaining - b.clock.msRemaining;
+}
+
+/**
  * A plain-language caption for an event's window.
  *
  * The meter shows a proportion; this says what the proportion is *of*. Without
