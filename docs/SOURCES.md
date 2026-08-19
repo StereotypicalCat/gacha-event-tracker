@@ -1,6 +1,7 @@
 # SOURCES.md — event sources for the games still missing
 
-A source assessment for the games named in `docs/FEEDBACK.md` § P1 that still have no adapter.
+A source assessment for the games named in `docs/FEEDBACK.md` § P1 that still have no adapter,
+plus § 12, a sweep of thirteen Game8 hubs asked for separately on 2026-08-19.
 Written 2026-08-18. **Acted on 2026-08-19**: four of the games below were built, one turned out to be
 blocked rather than merely awkward, and the rest were declined. Each section keeps its original
 reconnaissance and carries its outcome at the top, because the reasoning is what stops the next pass
@@ -12,7 +13,10 @@ Umamusume (`game8`, after widening its section and column vocabulary). **Built o
 permission was read in a browser:** Nikke, whose `robots.txt` turned out to be the standard Fandom
 file. **Declined:** Punishing: Gray Raven, Guardian Tales, Azur Lane and
 Aether Gazer, all as proposed. One thing not on the original list also came out of the pass: the
-**Infinity Nikki source is stale** and has no reachable replacement — see § 11.
+**Infinity Nikki source is stale** and has no reachable replacement — see § 11. Later the same day a
+second, unrelated request added § 12: thirteen Game8 hubs checked for a schedule page, of which
+**MementoMori** needs no parser work at all and **Fire Emblem Heroes** has the best data in that
+sweep behind a shape the parser does not read. The other eleven are declines.
 
 Verdicts here are proposals. Once one is acted on — built or declined — the *decision* belongs in
 `AGENTS.md` § Scraping conduct, whose table exists so a source is not re-litigated every pass and
@@ -51,6 +55,7 @@ Two things this method cannot tell you, and both matter:
 | Nikke | **Built** (2026-08-19), once the `robots.txt` was read in a browser — see § 3 |
 | Azur Lane | Declined on conduct (`azurlane.koumakan.jp` `ai-input=no`), and both Fandom alternatives are dead archives |
 | Punishing: Gray Raven, Guardian Tales, Aether Gazer | Declined — see §§ 6, 7, 9 |
+| Infinity Nikki | **Rebuilt** (2026-08-19) on `infinity-nikki.fandom.com` at day precision, replacing a Game8 page stale since August 2025 — see § 11 |
 | Silver Palace | Unreleased |
 
 ## Summary of findings
@@ -368,21 +373,33 @@ projections point at late 2026 / early 2027. Nothing to scrape, as `docs/FEEDBAC
 
 ---
 
-## 11. Infinity Nikki — a live source exists, and one fact is missing from it
+## 11. Infinity Nikki — BUILT 2026-08-19, at day precision, replacing a stale source
 
-This game already has an adapter, which is why it was not assessed on 2026-08-18. It should have
-been. `game8.co/games/Infinity-Nikki/archives/487445` fetches, parses, and passes every test — and
-the page itself says `Last updated on: August 31, 2025`, with **zero** occurrences of the string
-`2026`. Seven events parse out of it, five with `endsAt: null`, which the app renders as
-live-with-unknown-end indefinitely. A year-old event presented as current is precisely the failure
-this product exists to prevent, and it arrives through a source that looks perfectly healthy to the
-runner: a stale page is not a broken one.
+> **Outcome: option (b), chosen by the repository owner.** The lane now reads
+> `infinity-nikki.fandom.com` and the Game8 entry has been removed from `SOURCES` — a source whose
+> every row is wrong is not a second opinion. Seven current 2026 events replace five year-old ones
+> that had `endsAt: null` and rendered as live indefinitely. The Game8 fixture stays in
+> `fixtures/nikki/` as the only regression test for that parser's labelled `Start: … End: Permanent`
+> shape, driven through the parser directly now that no adapter routes it.
+>
+> The clock is read and discarded; the printed date is published at day precision. That invents
+> nothing and treats these cells exactly as every Game8 date already is. **The Blue Archive rule in
+> `AGENTS.md` has been narrowed to match**, because as written it forbade this: it now governs a
+> clock whose *server* is unknown — which is what those Blue Archive tables actually were, three of
+> five not saying which server they described — rather than any clock without a stated zone. What
+> remains forbidden is converting an unzoned clock by picking an offset, since the offset moves the
+> day and the start's day is half an event ID.
 
-**A live replacement was found on 2026-08-19, and it is nearly right.**
-`infinitynikki.fandom.com` 301s to `infinity-nikki.fandom.com`, whose `robots.txt` was read in a
-browser and is the standard Fandom file — same permission as Nikke (§ 3). The wiki is maintained:
-pages edited as recently as 2026-08-17, and its `Event` page mentions 2026 seven hundred and
-thirty-one times. The page is shaped exactly as we would want:
+This game already had an adapter, which is why it was not assessed on 2026-08-18. It should have
+been. `game8.co/games/Infinity-Nikki/archives/487445` fetched, parsed, and passed every test — and
+the page itself said `Last updated on: August 31, 2025`, with **zero** occurrences of the string
+`2026`. That is the lesson worth keeping from this section: **a stale page is not a broken one**, so
+nothing in the pipeline flags it. Check when a page was last updated, not only whether it parses.
+
+**The replacement.** `infinitynikki.fandom.com` 301s to `infinity-nikki.fandom.com`, whose
+`robots.txt` was read in a browser and is the standard Fandom file — same permission as Nikke (§ 3).
+The wiki is maintained: pages edited as recently as 2026-08-17, and its `Event` page mentions 2026
+seven hundred and thirty-one times.
 
 ```
 Current Events / Upcoming Events / Permanent Events / Past Events   (h2 headings)
@@ -390,41 +407,24 @@ Current Events / Upcoming Events / Permanent Events / Past Events   (h2 headings
    Deep Breakthrough    July 20, 2026 04:00 – August 10, 2026 03:49   ...   Double Rewards
 ```
 
-Full dates with the year on both sides, a wall clock on both sides, a description, and the source's
-own event type. Better material than the Game8 page has ever carried.
+**The missing fact was the timezone.** The Duration column names no zone. What the page *does* say,
+elsewhere and in prose: version launches dated `(UTC-7)`; `Rewards reset daily at 04:00 (Server
+Time)`; and durations running `04:00 → 03:59`, which only lands on a reset boundary if the column is
+server-local. Strong circumstantial evidence for UTC-7, and still circumstantial — which is why the
+clock is dropped rather than converted.
 
-**The missing fact is the timezone, and it is missing in an interesting way.** The Duration column
-names no zone. What the page *does* say, elsewhere and in prose:
+Two shapes the parser handles, both of which would otherwise lose or corrupt a row:
 
-- version launches are dated `(UTC-7)` — "Version 2.1 goes live on January 29 (UTC-7)";
-- `Rewards reset daily at 04:00 (Server Time)`;
-- and the durations themselves run `04:00` → `03:59`, which only lands on a reset boundary if the
-  column is server-local.
+- **Titles come from a link's `title` attribute**, so they need entity-decoding by hand — an
+  attribute never passes through `text()`, and `Alison&#39;s Travel Shop` would otherwise become the
+  slug `alison-39-s-travel-shop`, which is a localStorage key. The ingest sanitiser catches exactly
+  this, and a parser that needs repairing on its own fixture has a bug.
+- **Recurring events live on dated subpages**, so a title arrives as `Deep Breakthrough/2026-07-20`
+  or, behind a red link, as the file name `Alison's Travel Shop 2026-08-06.png`. That date names the
+  run rather than the event and is stripped; the start date already keys the runs apart.
 
-That is a strong circumstantial case for UTC-7 and it is still circumstantial. It matters more than
-usual because the offset moves the *day*: `July 16, 2026 20:00` read as UTC-7 is
-`2026-07-17T03:00Z`, and the start's day is half of every event ID this game will ever have.
-
-**Four options, and this is the repository owner's call:**
-
-| Option | What it costs |
-|---|---|
-| **(a) Leave the Game8 lane** | A knowingly stale lane, carried only by the footer's freshness disclosure. The status quo, and the worst of these |
-| **(b) Build the Fandom source at day precision**, taking the printed date and dropping the clock | Loses a stated clock; invents nothing. Treats the cells exactly as every Game8 date is already treated. **Recommended** |
-| **(c) Build it at exact precision, assuming UTC-7** | Almost certainly correct, and an assumption we would be unable to falsify from the page. If wrong, every date is hours out and some days are wrong |
-| **(d) Retire the game** | Drops a `GameId` that prefixes every completion key its readers hold, with no server-side recovery |
-
-**(b) has a precedent tension worth stating rather than glossing.** `AGENTS.md` § Blue Archive
-rules that unzoned wall clocks are "deliberately unparsed", and that "rounding to a day does not save
-it". That ruling was made about tables which additionally *did not say which server they described*.
-Here the wiki is the Global one for a game with a single global service, and the printed date is
-being taken at face value in exactly the way `game8` dates already are — Game8 states no zone either,
-and the whole day-precision mechanism in `clockFor` exists to resolve such a boundary on the reader's
-own server. If (b) is chosen, that rule needs amending to say which case it governs, because as
-written the two conflict.
-
-Asking the wiki's editors to state the zone on the Duration column would settle it outright, and is
-cheaper than any of the above.
+Asking the wiki's editors to state the zone on the Duration column would upgrade this source to
+exact instants, and remains the cheapest improvement available to it.
 
 ## What every one of these costs, beyond the source
 
@@ -443,11 +443,18 @@ Adding a game is never only a `SOURCES` entry:
 ## Recommended order
 
 Steps 1 through 5 were done on 2026-08-19, and step 6's declines are now written into `AGENTS.md`
-§ Scraping conduct. What is left is not a queue of sources any more — it is two decisions:
+§ Scraping conduct. What is left is one decision and two builds:
 
-1. **Infinity Nikki** (§ 11) — choose between four options for a lane whose current source is a year
-   stale and whose live replacement states no timezone on its schedule column. Not a research task;
-   the research is done and the recommendation is option (b).
+Nothing is queued. Every game assessed in this file is now built or declined with its reasoning
+recorded, and the two decisions this pass raised — Nikke's permission and Infinity Nikki's timezone —
+have both been made.
+2. **MementoMori** (§ 12a) — the cheapest adapter available today: a `GameId`, a `GAMES` entry, one
+   `SOURCES` entry, a fixture and a test, with no parser change. Seven events parse out of a
+   seven-row table and six of them are live.
+3. **Fire Emblem Heroes** (§ 12b) — better data and a real cost: a ninth Game8 column shape, a
+   single-date `MM/DD/YYYY` reader, and a decision about the 180-day rule, which one legitimate
+   seven-month banner breaks. Two commits, parser then source, with the vocabulary widening diffed
+   across every fixture and snapshot as Umamusume's was.
 
 Below that, in descending order of value: re-check `grayravens.com` if it ever puts its schedule in
 a table, and re-check Azur Lane if `koumakan` ever drops `ai-input=no`. Neither is worth a pass
@@ -468,6 +475,18 @@ curl -sS -A "$UA" https://stellasora.miraheze.org/wiki/Main_Page      > stellaso
 curl -sS -A "$UA" 'https://nikke-goddess-of-victory-international.fandom.com/api.php?action=parse&page=Event&prop=text&formatversion=2&format=json' > nikke.json
 curl -sS -A "$UA" https://game8.co/games/Chaos-Zero-Nightmare/archives/559899 > czn.html
 
+# the § 12 sweep: hubs first, then the schedule page each one turned out to have.
+# `--rate 30/m` keeps one request every 2s to a single host, per AGENTS.md § Scraping conduct.
+for g in Black-Beacon Brawl-Stars Destiny-Rising Diablo-Immortal Epic-Seven \
+         fire-emblem-heroes Fire-Emblem-Shadows gundam-uce MementoMori \
+         Mongil-Star-Dive Pokemon-Champions Pokemon-UNITE Tower-of-Fantasy; do
+  args+=(-o "hub-$g.html" "https://game8.co/games/$g")
+done
+curl -sS --rate 30/m -A "$UA" --compressed -w '%{http_code} %{url_effective}\n' "${args[@]}"
+
+# how stale is it? — the first question, and the cheapest
+grep -o 'Last updated on:[^<]*' mmori.html
+
 # does an existing parser read it? (offline, once a source id exists)
 bun run parse czn-game8-events czn.html --json
 ```
@@ -481,3 +500,8 @@ Facts stated above that a future reader may want to re-check, with how they were
 | `fandom.ts`, `akwiki`, `wikigg`, `bawiki`, `holodori` cannot read the new pages | `canParse` returned `false` for every combination tried |
 | CI can fetch wiki.gg and Miraheze | `git log --name-only -- snapshots/` — `github-actions[bot]` commits carry `arknights-akwiki`, `endfield-wikigg`, `ba-bawiki` |
 | A Fandom `robots.txt` 403 means the source is skipped, not failed | `src/ingest/robots.ts` `RobotsCache.load` — `status >= 400` other than 404/410 → `usable: false` |
+| All thirteen § 12 hubs exist | `GET https://game8.co/games/<Name>` → `200` for every one |
+| The `game8` parser already reads the MementoMori events page | ran `game8Parser.parse` against the fetched bytes: 7 events from the 7 data rows of `Current Events \| Duration` |
+| The FEH page is unreadable by shape, not by two header words | `columnLayout` finds no range column at all — `Availability` is a start and `End` is its own column, and `readStartEndTable` wants the rowspan `Start`/`End` pair |
+| Game8's structural check rejects the Pokémon UNITE page | `game8Parser.canParse` → `false`; the page has 25 `a-table` matches and zero `a-header--3` |
+| A hub's nav is not an index of its pages | the UNITE, Champions, Gundam and Black Beacon schedule pages exist and are linked from none of the hub navigation scanned; found by web search |
