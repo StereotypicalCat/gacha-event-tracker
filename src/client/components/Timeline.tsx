@@ -98,7 +98,6 @@ export function Timeline({
   group,
   onGroup,
   showUpcoming,
-  onShowUpcoming,
   onOpen,
   isDone,
 }: {
@@ -116,11 +115,15 @@ export function Timeline({
    * Off by default (`prefs.timelineUpcoming`). The board is asked "how does the
    * time I am in lay out?", and every lane has a next patch queued behind it —
    * plotting those unasked stretches the window weeks past today and squeezes
-   * the running bars the reader came for. The count is on the control, so what
-   * is held back is stated rather than merely absent.
+   * the running bars the reader came for.
+   *
+   * Read-only here: the switch lives in settings with the other two answers to
+   * "what am I allowed to look at" (`Controls`), not in the board's own header
+   * beside the stacking and scale controls. Those two reshape what is already
+   * on the board, which is why they are reached for while reading it; this one
+   * decides what is on it at all.
    */
   showUpcoming: boolean;
-  onShowUpcoming: (showUpcoming: boolean) => void;
   onOpen: (id: string) => void;
   /**
    * Asked rather than derived from the progress store: an entry exists there
@@ -213,14 +216,7 @@ export function Timeline({
           floating over the chart: pinned inside, it would sit on top of the
           calendar and cover the very dates it sends you back to. */}
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-hairline px-4 py-2.5">
-        <div className="flex items-center gap-2">
-          <StackControl value={group} onChange={onGroup} />
-          <UpcomingControl
-            on={showUpcoming}
-            waiting={waiting.length}
-            onChange={onShowUpcoming}
-          />
-        </div>
+        <StackControl value={group} onChange={onGroup} />
 
         <div className="flex items-center gap-3">
           <div role="group" aria-label="Scale" className="flex items-center gap-1">
@@ -259,7 +255,8 @@ export function Timeline({
           {waiting.length === 1
             ? "One event has not started yet"
             : `${waiting.length} events have not started yet`}{" "}
-          — switch “Not started” on to see when they begin.
+          — switch on “Show events that haven't started” below to see when they
+          begin.
         </p>
       ) : (
       <div
@@ -538,50 +535,6 @@ function StackControl({
         );
       })}
     </div>
-  );
-}
-
-/**
- * Whether the board also plots what has not started yet.
- *
- * A switch rather than a third stacking pill, and drawn as one — it does not
- * reshape the board, it changes what is on it. The count is the point: a board
- * that quietly withheld nine events would be indistinguishable from a quiet
- * fortnight, and "nothing scheduled" is exactly the wrong thing for this app to
- * imply by accident.
- *
- * Absent when there is nothing waiting and it is switched off: a toggle that
- * cannot change anything invites a tap that does nothing.
- */
-function UpcomingControl({
-  on,
-  waiting,
-  onChange,
-}: {
-  on: boolean;
-  waiting: number;
-  onChange: (on: boolean) => void;
-}) {
-  if (waiting === 0 && !on) return null;
-  return (
-    <button
-      type="button"
-      onClick={() => onChange(!on)}
-      aria-pressed={on}
-      title={
-        on
-          ? "Stop plotting events that have not started yet"
-          : "Also plot events that have not started yet"
-      }
-      className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.6875rem] font-medium transition-colors ${
-        on
-          ? "border-ink/60 text-ink"
-          : "border-hairline text-faint hover:text-muted"
-      }`}
-    >
-      Not started
-      <span className="tnum text-[0.625rem] text-faint">{waiting}</span>
-    </button>
   );
 }
 

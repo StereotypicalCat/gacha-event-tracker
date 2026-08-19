@@ -134,6 +134,32 @@ export function Controls({
                 Show events I've finished
               </label>
 
+              {/* Sits with the other two "what am I allowed to look at" rows
+                  because that is the question it answers — but unlike them it
+                  is answered for the board only, and a row that did not say so
+                  would read as a promise about the whole app. The checklist
+                  keeps its own "Not started yet" section either way, which is
+                  why switching this off costs a reader nothing they cannot
+                  still go and read. */}
+              <label className="flex cursor-pointer select-none items-start gap-2 text-xs text-muted">
+                <input
+                  type="checkbox"
+                  checked={prefs.timelineUpcoming}
+                  onChange={(e) =>
+                    onUpdate({ timelineUpcoming: e.target.checked })
+                  }
+                  className="mt-px size-4 accent-[var(--color-near)]"
+                />
+                <span>
+                  Show events that haven't started
+                  <span className="mt-0.5 block max-w-xs leading-relaxed text-faint">
+                    On the timeline, which draws its span from what it plots —
+                    so this stretches the board weeks past today. The checklist
+                    lists them under "Not started yet" regardless.
+                  </span>
+                </span>
+              </label>
+
               {/* Detection reads the source's wording and is wrong in both
                   directions, so it ships off and says so. Off leaves only the
                   events the reader marked, and discards nothing — every mark and

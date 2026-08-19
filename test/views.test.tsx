@@ -261,7 +261,6 @@ describe("Timeline stacking", () => {
         group={group}
         onGroup={() => {}}
         showUpcoming={false}
-        onShowUpcoming={() => {}}
         onOpen={() => {}}
         isDone={() => false}
       />,
@@ -316,22 +315,19 @@ describe("Timeline: events that have not started", () => {
         group="ending"
         onGroup={() => {}}
         showUpcoming={showUpcoming}
-        onShowUpcoming={() => {}}
         onOpen={() => {}}
         isDone={() => false}
       />,
     );
 
-  test("the board holds them back by default and says how many", () => {
+  test("the board holds them back by default", () => {
     // Off is the default because the board answers "how does the time I am in
-    // lay out?" — but an absence nobody mentioned is indistinguishable from a
-    // quiet fortnight, which is the wrong thing for this app to imply.
+    // lay out?", and it draws its span from what it plots — so a next patch on
+    // every lane pushes the running bars the reader came for off to the left.
     const html = board(false);
     expect(html).toContain("Closing Ceremony");
     expect(html).not.toContain("Frost Parade");
     expect(html).not.toContain("Long Way Round");
-    expect(html).toContain("Not started");
-    expect(html).toContain(">3<");
   });
 
   test("switching it on plots them", () => {
@@ -340,26 +336,20 @@ describe("Timeline: events that have not started", () => {
     expect(html).toContain("Long Way Round");
   });
 
-  test("the control says which way it is set", () => {
-    expect(board(false)).toContain('aria-pressed="false"');
-    expect(board(true)).toContain('aria-pressed="true"');
-  });
-
-  test("nothing waiting and switched off means no control at all", () => {
-    // A toggle that cannot change anything invites a tap that does nothing.
-    expect(board(false, [row("Closing Ceremony", "genshin", 100)])).not.toContain(
-      "Not started",
-    );
-  });
-
   test("a board with only future events says so rather than reading empty", () => {
     // Otherwise the reader is looking at "nothing to plot" while three events
-    // are scheduled, and the reason is a control they did not notice.
+    // are scheduled, and an absence nobody mentioned is indistinguishable from
+    // a quiet fortnight. It names the setting, since the switch is not on the
+    // board any more.
     const html = board(false, rows.slice(1));
     expect(html).toContain("Nothing is running right now");
     expect(html).toContain("3 events have not started yet");
-    // The control is still there to act on what the sentence just told them.
-    expect(html).toContain("Not started");
+    expect(html).toContain("Show events that haven&#x27;t started");
+  });
+
+  test("one waiting event is counted in words, not as \"1 events\"", () => {
+    const html = board(false, [rows[1]!]);
+    expect(html).toContain("One event has not started yet");
   });
 
   test("each clump of starts is marked in words", () => {

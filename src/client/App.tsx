@@ -549,9 +549,9 @@ export function App() {
             group={prefs.timelineGroup}
             onGroup={(timelineGroup) => update({ timelineGroup })}
             // The board holds these back itself rather than being handed a
-            // shorter list, so its own control can say how many are waiting.
+            // shorter list, so it can say how many are waiting when there is
+            // nothing else left to draw. The switch is in settings.
             showUpcoming={prefs.timelineUpcoming}
-            onShowUpcoming={(timelineUpcoming) => update({ timelineUpcoming })}
             onOpen={setOpenId}
             isDone={isDone}
           />
