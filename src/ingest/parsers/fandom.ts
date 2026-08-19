@@ -1,4 +1,5 @@
 import { eventId, type GachaEvent } from "../../shared/schema.ts";
+import { latestBoundaryMs } from "../../shared/time.ts";
 import {
   parseDayMonthYearClock,
   parseFullRange,
@@ -229,7 +230,14 @@ function parseFgoOngoingEvents(
 
     // "Ongoing" is maintained by hand and goes stale before anyone moves a row,
     // so the heading vouching for an event is not enough on its own.
-    if (Date.parse(range.end.iso) < nowMs) continue;
+    //
+    // `latestBoundaryMs`, not `Date.parse`: these ends are day precision, and
+    // the raw value is UTC midnight — a placeholder the countdown resolves to
+    // each reader's own reset. Retiring the row on the placeholder drops it
+    // while the app still shows it as live.
+    if (latestBoundaryMs(range.end.iso, range.end.precision, ctx.game) < nowMs) {
+      continue;
+    }
 
     out.push({
       id: eventId(ctx.game, title, range.start.iso),
@@ -536,8 +544,12 @@ function parseInfinityNikkiEvents(
       if (range.end.iso <= range.start.iso) continue;
 
       // "Current" is maintained by hand and goes stale before anyone moves a
-      // row, so currency is checked rather than taken on trust.
-      if (Date.parse(range.end.iso) < nowMs) continue;
+      // row, so currency is checked rather than taken on trust — on the same
+      // clock the countdown reads a day-precision end on, not on the UTC
+      // midnight placeholder stored for it.
+      if (latestBoundaryMs(range.end.iso, range.end.precision, ctx.game) < nowMs) {
+        continue;
+      }
 
       const id = eventId(ctx.game, title, range.start.iso);
       if (seen.has(id)) continue;

@@ -1588,6 +1588,29 @@ describe("Infinity Nikki wiki (the fourth Fandom template)", () => {
     `<h2><span class="mw-headline" id="x">${heading}</span></h2>
      <table class="article-table">${HEAD}${rows}</table>`;
 
+  test("keeps a day-precision end until it has passed in every region", async () => {
+    // The row is dated "August 15, 2026 04:00 - August 22, 2026 03:59" and the
+    // clock is discarded, so `endsAt` is the 00:00Z placeholder. Retiring the
+    // row on that placeholder drops it nine hours before `clockFor` calls it
+    // over for an American reader — the reader watches the deadline they were
+    // counting down to vanish on its last day, which is a silent drop.
+    const html = await Bun.file(`${fixture}.html`).text();
+    const at = (now: string) =>
+      nikki
+        .parse(html, {
+          now,
+          sourceUrl: nikki.url,
+          sourceId: nikki.id,
+          game: nikki.game,
+        })
+        .some((e) => e.title === "Inspiration Burst");
+
+    expect(at("2026-08-22T01:00:00.000Z")).toBe(true);
+    // 04:00 on the last server to roll, UTC-5. Past that it is over everywhere.
+    expect(at("2026-08-22T08:59:00.000Z")).toBe(true);
+    expect(at("2026-08-22T09:01:00.000Z")).toBe(false);
+  });
+
   test("takes the printed date at day precision and drops the clock", async () => {
     // The page states a wall clock on both sides and names no zone for it
     // anywhere. Publishing an instant would mean picking an offset, and the

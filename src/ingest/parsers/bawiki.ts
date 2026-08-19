@@ -1,4 +1,5 @@
 import { eventId, type GachaEvent } from "../../shared/schema.ts";
+import { latestBoundaryMs } from "../../shared/time.ts";
 import { parseIsoDay, type ParsedInstant } from "../dates.ts";
 import { text } from "../html.ts";
 import type { ParseContext } from "../adapters/types.ts";
@@ -189,12 +190,19 @@ export function parseBlueArchiveWikiEventsPage(
       // the start has passed, the end is the only thing separating a live event
       // from any of the ninety-odd finished rows above it, and without one there
       // is no way to tell — so that row yields nothing rather than a guess.
-      if (Date.parse(start.iso) < nowMs) continue;
+      if (latestBoundaryMs(start.iso, start.precision, ctx.game) < nowMs) {
+        continue;
+      }
     } else {
       if (end.iso <= start.iso) continue;
       // Live and upcoming only. Everything else is history the page keeps and
       // the calendar does not want.
-      if (Date.parse(end.iso) < nowMs) continue;
+      //
+      // Every boundary on this page is day precision, so both checks resolve
+      // through `latestBoundaryMs` rather than reading the stored UTC midnight
+      // as an instant: that placeholder retires a row hours before the reader's
+      // own reset does, which loses a live event on the day it ends.
+      if (latestBoundaryMs(end.iso, end.precision, ctx.game) < nowMs) continue;
     }
 
     // The source's own annotation: "Rerun", "Collaboration Event",

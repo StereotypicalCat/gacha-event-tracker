@@ -8,6 +8,7 @@ import {
   endingSoonestFirst,
   formatRemaining,
   HOUR,
+  latestBoundaryMs,
   urgency,
 } from "../src/shared/time.ts";
 
@@ -230,5 +231,48 @@ describe("dayStartMs", () => {
         expect(dayKey(start - 1, region, game)).toBe("2026-08-18");
       }
     }
+  });
+});
+
+describe("latestBoundaryMs", () => {
+  /**
+   * The ingest half of the rule above. `clockFor` resolves a day-precision
+   * boundary per reader; a parser deciding whether a row is still worth
+   * publishing has no reader, so it has to answer for the last of them — and
+   * before this existed it answered for none of them, comparing the stored UTC
+   * midnight placeholder against `now` and retiring rows the app still showed.
+   */
+  const DAY_END = "2026-08-19T00:00:00.000Z";
+
+  test("is the last region's reset, not UTC midnight", () => {
+    // The Americas server is the last to roll: 04:00 on UTC-5.
+    expect(latestBoundaryMs(DAY_END, "day", "genshin")).toBe(
+      Date.parse("2026-08-19T09:00:00.000Z"),
+    );
+  });
+
+  test("is never earlier than any region's own reading of the same date", () => {
+    for (const game of [undefined, "genshin", "endfield", "r1999"] as const) {
+      const latest = latestBoundaryMs(DAY_END, "day", game);
+      for (const region of ["asia", "america", "europe"] as const) {
+        expect(latest).toBeGreaterThanOrEqual(dayStartMs("2026-08-19", region, game));
+      }
+    }
+  });
+
+  test("follows a game that states its own server map or reset hour", () => {
+    // Endfield's Europe sits on the Americas machine, so no region rolls later
+    // than 09:00Z; Reverse: 1999 is one UTC-5 server rolling at 05:00.
+    expect(latestBoundaryMs(DAY_END, "day", "endfield")).toBe(
+      Date.parse("2026-08-19T09:00:00.000Z"),
+    );
+    expect(latestBoundaryMs(DAY_END, "day", "r1999")).toBe(
+      Date.parse("2026-08-19T10:00:00.000Z"),
+    );
+  });
+
+  test("leaves an exact boundary exactly where the source put it", () => {
+    const exact = "2026-08-19T10:59:59.000Z";
+    expect(latestBoundaryMs(exact, "exact", "genshin")).toBe(Date.parse(exact));
   });
 });

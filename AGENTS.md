@@ -119,7 +119,7 @@ src/client/       React app, service worker, manifest
                   theme.ts — dark or light, and what a game hue reads as on each
 scripts/          build-feed.ts, build-static.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             706 tests
+test/             711 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
@@ -154,6 +154,12 @@ These come from how gacha games actually schedule things, and they cause most bu
   *reading* of the printed date, not an invented time, and it changes nothing stored: the feed,
   every event ID and the parsers are untouched, so it is one resolution at the point where the
   region is finally known.
+  The same clock governs the *other* end of the pipeline. A parser whose page has no trustworthy
+  "ongoing" heading decides currency against `ctx.now` itself, and comparing the 00:00Z placeholder
+  to `now` retires a row hours before `clockFor` calls it over for anybody — the reader watches a
+  deadline they were counting down to vanish on its last day. So `latestBoundaryMs` answers the same
+  question for the *last* region, and `bawiki.ts` and two branches of `fandom.ts` ask it. Nothing
+  stored changes: it is one comparison, not a resolved boundary written to the feed.
 - **Patch cycles are ~6 weeks.** Any event over 180 days is a parse error, not a long event. The
   validator and the tests both reject it.
 

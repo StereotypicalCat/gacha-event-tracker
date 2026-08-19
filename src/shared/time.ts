@@ -1,6 +1,7 @@
 import type { DisplayEvent, LaneId } from "./custom.ts";
 import { GAMES } from "./games.ts";
-import type { GameId, Precision, Region } from "./schema.ts";
+import { Region } from "./schema.ts";
+import type { GameId, Precision } from "./schema.ts";
 
 /**
  * Time is this product's entire subject, so the vocabulary lives in one place:
@@ -194,6 +195,39 @@ function boundaryMs(
     return Date.parse(iso);
   }
   return dayStartMs(iso.slice(0, 10), region, event.game);
+}
+
+/**
+ * The instant a printed boundary has passed for **every** reader, whatever
+ * region they are on.
+ *
+ * `boundaryMs` above answers the question for one reader; this answers it for
+ * the last of them. The two must agree, because they are read at opposite ends
+ * of the same pipeline: an ingest parser deciding whether a row is still worth
+ * publishing, and the countdown deciding whether to call it over.
+ *
+ * They did not. A parser comparing `Date.parse(endsAt)` against `now` retires a
+ * day-precision end at UTC midnight — the placeholder, not an instant (§ Domain
+ * rules) — while the app keeps the event live until the reset that opens that
+ * game-day on the reader's own server. For a default server map that is 09:00Z
+ * in the Americas, so the feed drops an event nine hours before the app, the
+ * countdown and the game all agree it is over. The reader does not see a stale
+ * row; they see the deadline they were counting down to vanish on its last day,
+ * which is the silent drop AGENTS.md § Working on parsers calls the dangerous
+ * failure.
+ *
+ * So a row is history only once it is history everywhere. Being generous by a
+ * few hours costs an expired row at the bottom of a list; being strict costs a
+ * live one.
+ */
+export function latestBoundaryMs(
+  iso: string,
+  precision: Precision,
+  game?: LaneId,
+): number {
+  if (precision !== "day") return Date.parse(iso);
+  const day = iso.slice(0, 10);
+  return Math.max(...Region.options.map((r) => dayStartMs(day, r, game)));
 }
 
 export type Urgency = "expired" | "critical" | "soon" | "near" | "calm";

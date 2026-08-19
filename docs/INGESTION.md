@@ -152,9 +152,20 @@ All live in `src/ingest/dates.ts`, each returning null rather than inferring any
 above returns `precision: "day"` when the source printed no clock, and stores the date at UTC
 midnight because it has to store *something*. It is not a statement that the event begins or ends
 then, and nothing may count down to it literally: `clockFor` resolves a day-precision boundary to
-that game-day's server reset for the reader's region (`docs/DATA-MODEL.md` § Field notes). The
-parsers are unaffected by this and must stay so — resolving here would need a region the parser does
-not have, and would bake one reader's server into the stored feed.
+that game-day's server reset for the reader's region (`docs/DATA-MODEL.md` § Field notes).
+
+**No parser may store a resolved boundary, and three of them must read one to decide inclusion.**
+The stored value stays the printed day at 00:00Z: resolving it here would need a region the parser
+does not have, and would bake one reader's server into the feed everybody downloads. But a parser
+whose page carries no "ongoing" heading it can trust decides currency against `ctx.now` itself —
+`bawiki.ts`, and the Fate/Grand Order and Infinity Nikki branches of `fandom.ts` — and comparing the
+placeholder to `now` retires a row at UTC midnight, hours before `clockFor` calls it over for
+anybody. The reader does not see a stale row; they watch the deadline they were counting down to
+disappear on its last day, which is the silent drop AGENTS.md § Working on parsers calls the
+dangerous failure. So those three ask `latestBoundaryMs` (`src/shared/time.ts`) when the boundary is
+day-precision: the last region's reset, and therefore the instant the row is history for every
+reader rather than for the earliest of them. Being generous by nine hours costs one expired row at
+the bottom of a list; being strict costs a live one.
 
 `parseOpenRange` is tried last because it is the most permissive — it accepts any leading full date
 and reports no end.
