@@ -390,9 +390,16 @@ into that one claim, and they have to be held apart:
   `ubuntu-latest`) reported `skipped_robots` for all four Fandom sources using that same Bun client,
   in the same cycle that nine game8 sources took the usual `202 CloudFront`. So a served address is a
   precondition, not a detail: **a claim that these four now refresh on a schedule is a claim about the
-  address the runner has**, and it must be re-measured there rather than inherited from here. As of
-  writing, `refresh.yml` has just moved to `[self-hosted, safe-ip]` and has not yet run a cycle, so
-  their scheduled reachability is **untested**, not established. The next run's summary settles it.
+  address the runner has**, and it must be re-measured there rather than inherited from here.
+
+  **`[self-hosted, safe-ip]` was then measured, and Fandom challenges it too.** The first cycle after
+  that switch reported `403 (an interstitial challenge)` for all four Fandom sources — so the runner
+  move fixed this for game8's `202`, if it fixed anything, and not for Fandom. These four still only
+  move when a person refreshes them from an address Fandom serves, which is what
+  `--assume-robots-on-403` is for and why it is interactive-only. Two things that cycle did **not**
+  settle: game8, whose nine sources were all `skipped_interval` (not due until 23:46 UTC) and so were
+  never asked, and whether any address we control is served — this repository's own sandbox is, which
+  is where the `200`s above come from.
 
 Three things worth keeping from the episode, because each one is a trap:
 
