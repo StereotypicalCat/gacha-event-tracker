@@ -139,6 +139,17 @@ export const GAMES: Record<GameId, GameMeta> = {
   // which states the zone the *dates* are in and says nothing about where the
   // server's day rolls — and every row on it is a bare date anyway, with no
   // time of day to read a reset out of. Same silence as p5x and czn.
+  // Nikke runs one worldwide server on a Japanese clock that rolls its day at
+  // **05:00**, not 04:00 — and both halves come from the source rather than
+  // from habit. Every schedule column on the wiki is headed `Start(UTC+9)` /
+  // `End(UTC+9)`, and the rows themselves show the boundary: story events end
+  // at 04:59:59 and the pickup banner replacing them starts at 05:00:00, one
+  // second apart. That is the Reverse: 1999 evidence pattern exactly.
+  //
+  // Set in the same commit that ships the game, which costs nothing now and
+  // could not be added later without re-labelling day keys readers had already
+  // logged ticks under.
+  nikke: { id: "nikke", name: "Goddess of Victory: Nikke", short: "Nikke", hue: "#E4572E", studio: "Shift Up", dailyTasks: "Daily missions, outpost", resetOffsets: { asia: 9, america: 9, europe: 9 }, resetHourLocal: 5 },
   uma: { id: "uma", name: "Umamusume: Pretty Derby", short: "Umamusume", hue: "#6FBF44", studio: "Cygames", dailyTasks: "Daily races, missions" },
 };
 

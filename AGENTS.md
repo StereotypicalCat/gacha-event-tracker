@@ -37,8 +37,8 @@ A web app that aggregates live and upcoming events across popular gacha games, p
 calendar, sorts them by end date or by what the reader is partway through, tracks day-by-day
 progress on events that repeat daily, and lets a user mark events completed.
 
-**Status: working app, refreshing itself on a schedule.** Schema, eight parsers, eighteen sources across
-seventeen games, the full interface, offline support, a static server, a Docker image and CI all exist and
+**Status: working app, refreshing itself on a schedule.** Schema, eight parsers, nineteen sources across
+eighteen games, the full interface, offline support, a static server, a Docker image and CI all exist and
 are tested. The refresh runner (`bun run refresh`) fetches, caches raw snapshots and rebuilds the
 feed; `.github/workflows/refresh.yml` runs it twice a day and commits only when a page actually
 changed. The SQLite layer and the review queue are still specified in `docs/` but not built, so the
@@ -106,7 +106,7 @@ re-verify a sample against the live page afterward.
 ```
 src/shared/       schema.ts (the contract), time.ts, daily.ts, effort.ts, games.ts, feed.ts
                   custom.ts — reader-authored games and events, and their key spaces
-src/ingest/       html.ts, dates.ts (fourteen formats), merge.ts, sanitize.ts, robots.ts, snapshots.ts
+src/ingest/       html.ts, dates.ts (fifteen formats), merge.ts, sanitize.ts, robots.ts, snapshots.ts
   parsers/        game8.ts, wikigg.ts, akwiki.ts, fandom.ts, bawiki.ts, holodori.ts, iopwiki.ts,
                   stellasora.ts — keyed by SITE, not game
   adapters/       index.ts — SOURCES registry binding url+game+parser, and the sanitize seam
@@ -119,7 +119,7 @@ src/client/       React app, service worker, manifest
                   theme.ts — dark or light, and what a game hue reads as on each
 scripts/          build-feed.ts, build-static.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             686 tests
+test/             700 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
@@ -301,7 +301,7 @@ re-litigated each pass:
 | `stellasora.miraheze.org` | **Built** (2026-08-19), from the front page's `Current Banners` module and **not** `/wiki/Banner_List` — see § Stella Sora below |
 | `game8.co/games/Chaos-Zero-Nightmare` | **Built** (2026-08-19). Zero parser work — the existing `game8` parser reads it. The ninth game8 source, so fixture-backed in CI from day one |
 | `game8.co/games/Umamusume-Pretty-Derby` | **Built** (2026-08-19), off the stable `List of All Banners` page, not the monthly release-schedule pages whose URL changes every month. Cost a widening of `game8.ts`'s section and column vocabulary — see § Working on parsers |
-| `nikke-…-international.fandom.com` | **Blocked, not declined** (2026-08-19). The API answers our User-Agent with a 200 and the data is the best of any unbuilt source — story events *and* dated pickup banners, with an evidenced 05:00 UTC+9 reset. But this wiki's `robots.txt` cannot be read from here **at all**: 403 to our fetcher and an unresolving Cloudflare challenge to a real browser. The permission has to be in writing before the adapter exists, so this waits on someone reading that file from an address Fandom serves |
+| `nikke-…-international.fandom.com` | **Built** (2026-08-19), via `api.php` like Reverse: 1999 and FGO. Its `robots.txt` was read in a browser and is the standard Fandom file — see § Fandom below. Richest schedule of anything added in this pass: story events *and* dated pickup banners, with the reset clock evidenced on the page |
 | `infinitynikki.miraheze.org` | **Declined.** Exists and serves `robots.txt`, but the wiki is abandoned — front page last edited 11 February 2025 and `/wiki/Events` returns a permission error. Checked as a replacement for the stale Infinity Nikki Game8 page |
 | `prydwen.gg/infinity-nikki` | **Declined.** 404 — prydwen does not cover Infinity Nikki |
 | `grayravens.com` (Punishing: Gray Raven) | **Declined.** Conduct is fine; the data is not. The whole 626 KB `/wiki/Events` page contains exactly one date range, written as prose, one event per six-week patch |
@@ -309,22 +309,27 @@ re-litigated each pass:
 | `blhx.fandom.com`, `azurlane-archive.fandom.com` | **Declined.** The two Fandom alternatives to the declined koumakan wiki are dead archives — `Event_Calendar` stops in **2021**, and the archive wiki's headings have nothing under them. Azur Lane still has no source |
 | Aether Gazer | **Do not build.** The developer confirmed no further content updates after 23 July 2026, with store listings removed 17 October 2026. The wiki dates nothing anyway — `Event_Guide_List` is an image gallery. A lane that will be empty by winter |
 
-**The Infinity Nikki lane is knowingly stale, and there is nowhere to move it** (checked
-2026-08-19). `game8.co/games/Infinity-Nikki/archives/487445` fetches, parses and passes every test —
-and its page says `Last updated on: August 31, 2025`. It mentions the year 2026 zero times. Seven
-events parse out of it, of which **five carry `endsAt: null`** and so read as live-with-unknown-end
-forever, on a calendar whose whole purpose is telling a reader what is still on. That is worse than
-an empty lane, and it is the failure this product exists to prevent — arriving through a source that
-looks perfectly healthy to the runner, because a stale page is not a broken one.
+**The Infinity Nikki lane is knowingly stale, and the fix is a decision rather than a search**
+(checked 2026-08-19). `game8.co/games/Infinity-Nikki/archives/487445` fetches, parses and passes
+every test — and its page says `Last updated on: August 31, 2025`. It mentions the year 2026 zero
+times. Seven events parse out of it, of which **five carry `endsAt: null`** and so read as
+live-with-unknown-end forever, on a calendar whose whole purpose is telling a reader what is still
+on. That is worse than an empty lane, and it arrives through a source that looks perfectly healthy
+to the runner, because a stale page is not a broken one.
 
-Every replacement was checked and none works: `infinitynikki.wiki.gg` 401s (no such wiki),
-`prydwen.gg` does not cover the game, `infinitynikki.miraheze.org` is abandoned (front page last
-edited February 2025, `/wiki/Events` a permission error), Game8's own `Banners` page for the game is
-staler still (May 2025) and its whole Infinity Nikki wiki is unmaintained, and the Fandom wiki is
-behind the blanket 403 above. **This is a decision for the repository owner, not a bug to fix in
-code**: either the lane stays and the footer's freshness disclosure carries it, or the game is
-retired. Retiring it is not free — `nikki` is the first segment of every completion key that game's
-readers have, so dropping the `GameId` orphans them with no server-side recovery (§ Event IDs).
+A live replacement exists: `infinity-nikki.fandom.com` (the canonical host; the unhyphenated name
+301s to it) is maintained, permitted by the same standard Fandom `robots.txt` as Nikke, and its
+`Event` page carries `Current Events` / `Upcoming Events` tables of
+`Event | Duration | Description | Type` with full dates and clocks on both sides. **What it does not
+carry is a timezone on that column** — only prose elsewhere dating version launches `(UTC-7)` and a
+note that rewards reset at `04:00 (Server Time)`. The durations run `04:00 → 03:59`, which only
+lands on a reset boundary if the column is server-local, so the case for UTC-7 is strong and
+circumstantial. It matters because the offset moves the *day*, and the start's day is half an event
+ID. `docs/SOURCES.md` § 11 lays out the four options and recommends taking the printed date at day
+precision, which invents nothing and treats these cells exactly as every Game8 date is already
+treated — and which conflicts with § Blue Archive as written, so that rule needs narrowing if it is
+chosen. **Not to be decided by an agent**: retiring the game instead would drop a `GameId` that
+prefixes every completion key its readers hold, with no server-side recovery.
 
 `.github/ISSUE_TEMPLATE/feature_request.yml` points readers at that table by heading, so a source
 request can be checked against it before anyone writes it up — the loudest feedback on the first
@@ -361,8 +366,19 @@ Two consequences, and neither is a licence to work around it:
 - The two built Fandom sources now report `skipped_robots` on **every** run, from any address we
   have, so `r1999` and `fgo` are permanently fixture-backed until someone refreshes them from an
   address Fandom serves. `fgo` has never had a snapshot at all.
-- A **new** Fandom source cannot be added at all, because the permission cannot be read. That is
-  what blocks Nikke, whose data is otherwise the best of any unbuilt source.
+- A **new** Fandom source can still be added, but only once someone reads that wiki's `robots.txt`
+  from an address Fandom serves and records it here. That is exactly how Nikke was cleared on
+  2026-08-19: the file was read in a browser, is the standard Fandom file — no `Disallow: /` for
+  `*`, `/api.php?action=` explicitly allowed, only `Special:`, `User:`, `User_talk:`, `Template:`,
+  `Template_talk:`, `Help:` and `UserProfile:` refused — and the named AI crawlers it blocks
+  (`GPTBot`, `CCBot`, `OAI-SearchBot`, `ImagesiftBot`) are not us.
+
+**The 403 is on `robots.txt`, not on the API.** Worth separating, because it decides what is
+possible: `api.php?action=parse` answers our own User-Agent with a `200` from here, on all three
+Fandom wikis we read. Only the robots file is challenged. So an adapter can be *written and
+fixture-backed* from any address; what it cannot do is pass the robots gate at refresh time, which
+fails closed and skips. The permission is therefore a thing a human records once, and the freshness
+is a thing that needs an address Fandom serves.
 
 One consequence to keep in mind: because `/robots.txt` is unreadable from a challenged address, the
 robots gate **fails closed there and the source is skipped**. That is a warning line rather than a
@@ -370,6 +386,23 @@ broken build — `skipped_robots` does not touch the failure streak, and the run
 *every* source is blocked — so the scheduled refresh simply never updates this game, and the feed
 falls back to the checked-in fixture. Refreshing it means running `bun run refresh` from an address
 Fandom serves, which is how its first snapshot was taken.
+
+**Three Fandom templates now, and the third states its zone in a column header.** The Nikke wiki's
+`Event` page is `Event | Start(UTC+9) | End(UTC+9) | Archived(?)` for story events and
+`Nikke | Start(UTC+9) | End(UTC+9)` for pickup banners. That header is the safety property, not a
+convenience: no date in any cell carries an offset, so a table whose Start/End columns stop naming a
+zone must be **refused** rather than read as UTC — the Blue Archive hazard, arriving one column to
+the left, and `canParse` asserts the lookup. Two more things about it:
+
+- **Every title is an image, and the newest row is the one without one.** Names come from the
+  wrapping `<a title="Project Matis">`, but an event whose logo has not been uploaded yet renders as
+  a red link reading `File:Persona on Frontline logo.png` — so a reader that only understood
+  `<a title>` would silently drop *today's live event* and publish a calendar missing what is on
+  now. The file name is the fallback, and a test pins that exact row.
+- **A start with no clock keeps the day the page printed.** Story events state a bare date on the
+  start and a clock on the end; converting the bare one from UTC+9 would move it to the previous
+  calendar day, and the start's day is half an event ID. That is the Fate/Grand Order rule below,
+  applied to the opposite gap — there, a zone with no clock; here, a clock on only one side.
 
 **Two Fandom sources now, and the second one's page is chosen, not obvious.**
 `fategrandorder.fandom.com` publishes two schedules: `Event_List` opens "This page lists all Events

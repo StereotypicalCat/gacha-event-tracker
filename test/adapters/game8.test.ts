@@ -46,6 +46,7 @@ const CASES: Array<{ adapter: Adapter; fixture: string }> = [
   { adapter: adapter("stellasora-stellasorawiki-events"), fixture: "fixtures/stellasora/stellasorawiki-events-2026-08-19" },
   { adapter: adapter("czn-game8-events"), fixture: "fixtures/czn/game8-events-2026-08-19" },
   { adapter: adapter("uma-game8-events"), fixture: "fixtures/uma/game8-events-2026-08-19" },
+  { adapter: adapter("nikke-fandom-events"), fixture: "fixtures/nikke/fandom-events-2026-08-19" },
 ];
 
 async function runAdapter(adapter: Adapter, fixture: string) {
@@ -1453,5 +1454,103 @@ describe("game8 column vocabulary", () => {
        </table>`,
     );
     expect(events).toEqual([]);
+  });
+});
+
+describe("Nikke wiki (the third Fandom template)", () => {
+  const fixture = "fixtures/nikke/fandom-events-2026-08-19";
+  const nikke = adapter("nikke-fandom-events");
+
+  function parse(html: string) {
+    return nikke.parse(html, {
+      now: NOW,
+      sourceUrl: nikke.url,
+      sourceId: nikke.id,
+      game: nikke.game,
+    });
+  }
+
+  /** An `action=parse` envelope around one schedule table. */
+  const wrapped = (rows: string, startHead = "Start(UTC+9)", endHead = "End(UTC+9)") =>
+    JSON.stringify({
+      parse: {
+        text: `<table class="wikitable"><tr><th>Event</th><th>${startHead}</th>
+          <th>${endHead}</th><th>Archived(?)</th></tr>${rows}</table>`,
+      },
+    });
+
+  test("keeps the live event whose logo has not been uploaded", async () => {
+    // The row that matters most and the one a naive reader drops: every title
+    // here is an image read from <a title>, and the newest row is a red link
+    // reading "File:Persona on Frontline logo.png". Losing it publishes a
+    // calendar missing what is on right now.
+    const titles = (await runAdapter(nikke, fixture)).map((e) => e.title);
+    expect(titles).toContain("Persona on Frontline");
+    for (const t of titles) expect(t).not.toMatch(/^File:/);
+    for (const t of titles) expect(t).not.toMatch(/\.png$/i);
+  });
+
+  test("converts the stated UTC+9, carrying seconds", async () => {
+    const events = await runAdapter(nikke, fixture);
+    const persona = events.find((e) => e.title === "Persona on Frontline");
+    // Start is a bare date, so it keeps the day the page printed.
+    expect(persona?.startsAt).toBe("2026-08-12T00:00:00.000Z");
+    expect(persona?.startPrecision).toBe("day");
+    // End states 10 September 2026 04:59:59 (UTC+9) → 19:59:59Z the day before.
+    expect(persona?.endsAt).toBe("2026-09-09T19:59:59.000Z");
+    expect(persona?.endPrecision).toBe("exact");
+  });
+
+  test("a start with no clock keeps its printed day rather than shifting", () => {
+    // Nine hours would move a bare date to the previous calendar day, and the
+    // start's day is half an event ID. Same rule as the FGO page.
+    const events = parse(
+      wrapped(`<tr><td><a title="Bare Start">x</a></td><td>12 August 2026</td>
+        <td>10 September 202604:59:59</td><td></td></tr>`),
+    );
+    expect(events[0]?.startsAt).toBe("2026-08-12T00:00:00.000Z");
+    expect(events[0]?.id).toBe("nikke:bare-start:2026-08-12");
+  });
+
+  test("refuses a table whose columns stop naming the zone", () => {
+    // No date on this page carries an offset next to it, so the header is the
+    // only evidence of the zone. Losing it must empty the table, not default
+    // the whole schedule to UTC — the Blue Archive hazard one column left.
+    expect(() =>
+      parse(
+        wrapped(
+          `<tr><td><a title="Zoneless">x</a></td><td>12 August 2026</td>
+           <td>10 September 202604:59:59</td><td></td></tr>`,
+          "Start",
+          "End",
+        ),
+      ),
+    ).toThrow(/redesigned/);
+  });
+
+  test("reads the offset the header states, not a hardcoded one", () => {
+    const events = parse(
+      wrapped(
+        `<tr><td><a title="Shifted">x</a></td><td>12 August 2026</td>
+         <td>10 September 202604:00:00</td><td></td></tr>`,
+        "Start(UTC+2)",
+        "End(UTC+2)",
+      ),
+    );
+    expect(events[0]?.endsAt).toBe("2026-09-10T02:00:00.000Z");
+  });
+
+  test("publishes nothing that has already ended", async () => {
+    for (const e of await runAdapter(nikke, fixture)) {
+      expect(e.endsAt === null || e.endsAt > NOW).toBe(true);
+    }
+  });
+
+  test("still reads the other two Fandom templates", async () => {
+    // The branch is additive: r1999 and FGO must be untouched by it.
+    expect((await runAdapter(adapter("r1999-fandom-events"),
+      "fixtures/r1999/fandom-events-2026-08-17")).length).toBeGreaterThan(0);
+    expect((await runAdapter(adapter("fgo-fandom-events"),
+      "fixtures/fgo/fandom-events-2026-08-18")).length).toBeGreaterThan(0);
   });
 });

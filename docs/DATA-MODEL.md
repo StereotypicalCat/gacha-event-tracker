@@ -10,7 +10,7 @@ import { z } from "zod";
 
 export const GameId = z.enum([
   "genshin", "hsr", "zzz", "wuwa", "arknights", "endfield", "nte", "nikki", "p5x", "r1999",
-  "ba", "fgo", "holodori", "gfl2", "stellasora", "czn", "uma",
+  "ba", "fgo", "holodori", "gfl2", "stellasora", "czn", "uma", "nikke",
 ]);
 
 export const EventType = z.enum([
@@ -307,6 +307,17 @@ before a 04:00 local reset. Only the offset is overridden; the hour is the defau
 nothing to add, which is the point worth carrying to the next game: an override that arrives with
 the game moves nobody, while the same override added a year later re-labels every tick already
 logged under the old clock. Get it right at introduction or accept a migration.
+
+Nikke is the third game to earn one from the source rather than from habit, after Arknights and
+Reverse: 1999, and it earns `resetHourLocal` too: every schedule column on its wiki is headed
+`Start(UTC+9)` / `End(UTC+9)`, and the rows show where the day turns — a story event ends at
+04:59:59 and the pickup banner replacing it starts at 05:00:00, one second later. So UTC+9 for every
+region, rolling at 05:00 rather than 04:00. It shipped in the same commit as the game, which costs
+nothing while no reader has a day key for it.
+
+Note also that `nikke` and `nikki` are one letter apart and are different games — Goddess of Victory:
+Nikke and Infinity Nikki. Both are the first segment of every completion key their game will ever
+have, so a typo in either direction is silent data loss for real readers.
 
 Infinity Nikki, P5X, Blue Archive, Chaos Zero Nightmare and Umamusume carry **no `resetOffsets`
 entry**, so they take the regional default. That is an assumption, not a verified server map — none

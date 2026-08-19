@@ -144,6 +144,22 @@ const SOURCES: SourceSpec[] = [
     parserId: "stellasorawiki",
   },
   {
+    id: "nikke-fandom-events",
+    game: "nikke",
+    // The MediaWiki API, like the two Fandom sources above. This wiki's
+    // robots.txt was read in a browser on 2026-08-19 and is the standard Fandom
+    // file: no `Disallow: /` for `*`, `/api.php?action=` explicitly allowed,
+    // and only `Special:`, `User:`, `User_talk:`, `Template:`, `Template_talk:`,
+    // `Help:` and `UserProfile:` refused. The named AI crawlers it blocks
+    // (GPTBot, CCBot, OAI-SearchBot, ImagesiftBot) are not us.
+    //
+    // As with r1999 and fgo, the robots gate still fails closed from a
+    // datacentre address, so the scheduled refresh reports skipped_robots and
+    // this lane is fixture-backed until refreshed from an address Fandom serves.
+    url: "https://nikke-goddess-of-victory-international.fandom.com/api.php?action=parse&page=Event&prop=text&formatversion=2&format=json",
+    parserId: "fandom",
+  },
+  {
     id: "czn-game8-events",
     game: "czn",
     // The ninth game8 source, and the cost is worth stating plainly: game8's

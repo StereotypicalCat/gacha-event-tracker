@@ -34,9 +34,12 @@ function iso(
   d: number,
   hh = 0,
   mm = 0,
+  ss = 0,
 ): string | null {
-  if (m < 1 || m > 12 || d < 1 || d > 31 || hh > 23 || mm > 59) return null;
-  const date = new Date(Date.UTC(y, m - 1, d, hh, mm, 0, 0));
+  if (m < 1 || m > 12 || d < 1 || d > 31 || hh > 23 || mm > 59 || ss > 59) {
+    return null;
+  }
+  const date = new Date(Date.UTC(y, m - 1, d, hh, mm, ss, 0));
   // Rejects impossible calendar dates such as February 30.
   if (date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) return null;
   return date.toISOString();
@@ -379,8 +382,9 @@ function offsetIso(
   hh: number,
   mm: number,
   offsetMs: number,
+  ss = 0,
 ): string | null {
-  const local = iso(y, m, d, hh, mm);
+  const local = iso(y, m, d, hh, mm, ss);
   if (local === null) return null;
   return new Date(Date.parse(local) - offsetMs).toISOString();
 }
@@ -554,4 +558,55 @@ export function parseIsoOffsetInstant(input: string): ParsedInstant | null {
   const value = Date.parse(input.trim());
   if (Number.isNaN(value)) return null;
   return { iso: new Date(value).toISOString(), precision: "exact" };
+}
+
+/**
+ * "12 August 2026" → 2026-08-12T00:00:00.000Z, day precision.
+ * "10 September 202604:59:59" → converted from `offsetMs`, exact precision.
+ *
+ * The Nikke wiki's schedule states its zone in the *column header*
+ * (`Start(UTC+9)`), not in the cell, so the offset arrives as an argument here
+ * rather than being read out of the text. A caller that cannot prove the zone
+ * must not call this.
+ *
+ * **A boundary with no clock keeps the day the page printed, unconverted.**
+ * That is the Fate/Grand Order rule (`AGENTS.md` § Fandom): there is no time of
+ * day to anchor a conversion to, and shifting a bare date by nine hours would
+ * move it to the previous calendar day — and the start's day is half an event
+ * ID. A boundary that does state a clock is converted, because then there is
+ * something real to convert.
+ *
+ * Day-first, unlike `parseMonthDayYear`: this wiki writes `12 August 2026`
+ * where Game8 writes `August 12, 2026`. The date and the clock arrive with no
+ * separator between them because they are separate elements in the markup, and
+ * reference markers (`[1]`) trail some cells, so the tail is tolerated rather
+ * than anchored.
+ */
+export function parseDayMonthYearClock(
+  input: string,
+  offsetMs: number,
+): ParsedInstant | null {
+  const re = /^\s*(\d{1,2})\s+([A-Za-z]+)\.?\s+(\d{4})\s*(?:(\d{1,2}):(\d{2})(?::(\d{2}))?)?/;
+  const m = re.exec(input.replace(/\[\d+\]/g, " "));
+  if (!m) return null;
+
+  const month = monthNumber(m[2] ?? "");
+  if (month === null) return null;
+
+  const day = Number(m[1]);
+  const year = Number(m[3]);
+
+  if (m[4] === undefined) {
+    // No clock: the printed day stands, exactly as it does on FGO's page.
+    const value = iso(year, month, day);
+    return value === null ? null : { iso: value, precision: "day" };
+  }
+
+  // Seconds matter here and are carried: this page ends its events at
+  // 04:59:59 and starts the next banner at 05:00:00, one second apart, and
+  // rounding that to the minute would make the two overlap.
+  const value = offsetIso(
+    year, month, day, Number(m[4]), Number(m[5]), offsetMs, Number(m[6] ?? 0),
+  );
+  return value === null ? null : { iso: value, precision: "exact" };
 }

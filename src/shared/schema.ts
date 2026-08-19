@@ -18,6 +18,9 @@ export const GameId = z.enum([
   "stellasora", // Stella Sora
   "czn", // Chaos Zero Nightmare
   "uma", // Umamusume: Pretty Derby
+  // NOTE: one letter from "nikki" (Infinity Nikki) above, and both are the
+  // first segment of every completion key their game will ever have.
+  "nikke", // Goddess of Victory: Nikke
 ]);
 export type GameId = z.infer<typeof GameId>;
 
