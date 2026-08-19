@@ -4,6 +4,7 @@ import {
   crawlDelayMs,
   groupFor,
   isAllowed,
+  isInterstitialChallenge,
   parseRobots,
   patternMatches,
   requestTarget,
@@ -353,9 +354,27 @@ describe("--assume-robots-on-403", () => {
    * This option is that recorded permission, and nothing wider. The tests below
    * are mostly about what it must NOT do.
    */
+  /**
+   * A Cloudflare managed challenge, trimmed from a real one served by
+   * `nikke-goddess-of-victory-international.fandom.com/robots.txt` on
+   * 2026-08-19. The markers are the part under test.
+   */
+  const CHALLENGE_BODY =
+    `<!DOCTYPE html><html lang="en-US"><head><title>Just a moment...</title>` +
+    `<meta name="robots" content="noindex,nofollow"></head><body>` +
+    `<noscript>Enable JavaScript and cookies to continue</noscript>` +
+    `<script>window._cf_chl_opt = {cRay: 'a2dc2c7a38c95a94'};` +
+    `a.src = '/cdn-cgi/challenge-platform/h/g/orchestrate/chl_page/v1';` +
+    `</script></body></html>`;
+
+  const challenged = () =>
+    new Response(CHALLENGE_BODY, {
+      status: 403,
+      headers: { "cf-mitigated": "challenge" },
+    });
   const forbidden = () => new Response("denied", { status: 403 });
 
-  function cache(assume: boolean, responder = forbidden) {
+  function cache(assume: boolean, responder = challenged) {
     return new RobotsCache({
       userAgent: UA,
       fetchImpl: async () => responder(),
@@ -367,6 +386,25 @@ describe("--assume-robots-on-403", () => {
     const d = await cache(false).allows("https://x.fandom.com/api.php?action=parse");
     expect(d.allowed).toBe(false);
     expect(d.reason).toContain("403");
+  });
+
+  /**
+   * The run has to be able to tell the two 403s apart from the summary alone.
+   * A challenge is somebody's cue to refresh by hand on the recorded
+   * permission; a refusal is a source to stop fetching. `robots.txt returned
+   * 403` said neither, and the ambiguity cost a day of wrong conclusions about
+   * Fandom.
+   */
+  test("says which kind of 403 it was, with no override in play", async () => {
+    const chal = await cache(false).allows("https://x.fandom.com/api.php");
+    expect(chal.allowed).toBe(false);
+    expect(chal.reason).toContain("interstitial challenge");
+    expect(chal.reason).toContain("--assume-robots-on-403 covers this");
+
+    const deny = await cache(false, forbidden).allows("https://x.test/wiki/E");
+    expect(deny.allowed).toBe(false);
+    expect(deny.reason).toContain("refusal");
+    expect(deny.reason).toContain("does not cover");
   });
 
   test("with it, the host is fetched and the run is told why", async () => {
@@ -403,7 +441,65 @@ describe("--assume-robots-on-403", () => {
   });
 
   test("is off unless asked for", async () => {
-    const plain = new RobotsCache({ userAgent: UA, fetchImpl: async () => forbidden() });
+    const plain = new RobotsCache({ userAgent: UA, fetchImpl: async () => challenged() });
     expect((await plain.allows("https://x.test/a")).allowed).toBe(false);
+  });
+
+  /**
+   * The narrowing this option always claimed and did not have. A 403 is two
+   * different answers wearing one status code: an edge challenge is "we cannot
+   * tell what you are", which a human reading the rules in a browser genuinely
+   * answers, while a bare 403 is the site refusing us. Before this, both looked
+   * like Fandom's and the flag talked over the second one too.
+   */
+  test("covers a challenge, never a plain refusal", async () => {
+    const d = await cache(true, forbidden).allows("https://x.test/wiki/Event");
+    expect(d.allowed).toBe(false);
+    expect(d.assumedOnForbidden).toBeUndefined();
+    expect(d.reason).toContain("refusal");
+  });
+
+  test("a 403 whose body cannot be read is not excused", async () => {
+    // Unclassifiable is not the same as challenged, and only one of them is
+    // covered by a permission somebody recorded.
+    const torn = () =>
+      new Response(
+        new ReadableStream({
+          start(c) {
+            c.error(new Error("connection reset"));
+          },
+        }),
+        { status: 403 },
+      );
+    const d = await cache(true, torn).allows("https://x.test/wiki/Event");
+    expect(d.allowed).toBe(false);
+    expect(d.assumedOnForbidden).toBeUndefined();
+    expect(d.reason).toContain("unclassifiable");
+  });
+
+  describe("isInterstitialChallenge", () => {
+    test("trusts cf-mitigated, without reading the body", async () => {
+      const r = new Response("", {
+        status: 403,
+        headers: { "cf-mitigated": "challenge" },
+      });
+      expect(await isInterstitialChallenge(r)).toBe(true);
+      // The header settled it, so the body is still there to be read.
+      expect(r.bodyUsed).toBe(false);
+    });
+
+    test("falls back to the challenge page's own markers", async () => {
+      const r = new Response(CHALLENGE_BODY, { status: 403 });
+      expect(await isInterstitialChallenge(r)).toBe(true);
+    });
+
+    test("a refusal is not a challenge", async () => {
+      for (const body of ["denied", "Forbidden", ""]) {
+        const r = new Response(body, { status: 403 });
+        expect(`${body}: ${await isInterstitialChallenge(r)}`).toBe(
+          `${body}: false`,
+        );
+      }
+    });
   });
 });

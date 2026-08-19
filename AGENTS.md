@@ -119,7 +119,7 @@ src/client/       React app, service worker, manifest
                   theme.ts — dark or light, and what a game hue reads as on each
 scripts/          build-feed.ts, build-static.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             732 tests
+test/             772 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
@@ -395,14 +395,25 @@ fails closed and skips. The permission is therefore a thing a human records once
 is a thing that needs an address Fandom serves.
 
 `--assume-robots-on-403` is the one concession to that, and it is deliberately the narrowest thing
-that helps: `bun run refresh --assume-robots-on-403` treats a `403` **on `/robots.txt` itself** as
-the permission recorded above rather than failing closed. It is not a workaround for a host that
-turned us away — it never overrides a `robots.txt` we could read, so a file that disallows us still
-says no, and it does nothing at all for game8.co, whose robots.txt reads fine and welcomes us while
-its edge refuses the pages. It is refused under CI, because what it stands in for is a person having
-read a file in a browser, and there is no person on a runner. Every host it applied to is named in
-the run's warnings, so it stays a thing somebody decided this morning rather than a default. Nothing
-else relaxes: one request per source, six hours apart, spaced per host, no retries.
+that helps: `bun run refresh --assume-robots-on-403` treats **an interstitial challenge** on
+`/robots.txt` itself as the permission recorded above rather than failing closed. It is not a
+workaround for a host that turned us away — it never overrides a `robots.txt` we could read, so a
+file that disallows us still says no, and it does nothing at all for game8.co, whose robots.txt reads
+fine and welcomes us while its edge refuses the pages. It is refused under CI, because what it stands
+in for is a person having read a file in a browser, and there is no person on a runner. Every host it
+applied to is named in the run's warnings, so it stays a thing somebody decided this morning rather
+than a default. Nothing else relaxes: one request per source, six hours apart, spaced per host, no
+retries.
+
+**A `403` is two answers wearing one status code, and only one of them is covered.** A managed
+challenge means "we cannot tell what you are" — the question a human answers by reading the file in a
+browser, which is the whole basis of the concession. A bare `403` means "you are forbidden", and that
+is a host declining us, which no permission recorded on our side may talk over. The flag claimed this
+distinction from the day it was written and could not actually draw it, so it excused both;
+`isInterstitialChallenge` (`src/ingest/robots.ts`) now decides, on Cloudflare's own
+`cf-mitigated: challenge` header with the challenge page's markers as a fallback. A `403` whose body
+cannot be read is unclassifiable, and unclassifiable is not challenged. This only ever *narrows* what
+the flag opens — nothing that passed the gate before stops passing it.
 
 One consequence to keep in mind: because `/robots.txt` is unreadable from a challenged address, the
 robots gate **fails closed there and the source is skipped**. That is a warning line rather than a
@@ -579,7 +590,7 @@ Fate/Grand Order problem arriving through a source that looks like it answered t
 `scripts/refresh-sources.ts` enforces all of the above in code — the 6h floor (except under the
 opt-in `--force` above), one request, no retries, conditional headers, per-host spacing, robots
 (failing closed when `robots.txt` cannot be read, except under the opt-in `--assume-robots-on-403`
-described in § Fandom). Both overrides are interactive-only, refused under CI, and reported by name
+described in § Fandom, which covers a challenged `403` and never a plain refusal). Both overrides are interactive-only, refused under CI, and reported by name
 in the run's warnings — an override that reports nothing is one nobody withdraws. Anything that would make it fetch more often is a change to this section first.
 
 **A source down is a warning; a source down for days is a broken build.** One wiki failing must

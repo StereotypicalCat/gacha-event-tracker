@@ -401,20 +401,64 @@ export class RobotsCache {
       };
     }
 
-    // A host that will not serve us the file at all, only when an operator has
-    // asked for this. `usable: true` with no rules is not a guess about what
-    // the site permits — it is standing in for rules a human read in a browser
-    // and wrote into AGENTS.md. Everything else about being a guest still
-    // applies: one request per source, six hours apart, spaced per host.
-    if (response.status === 403 && this.assumeAllowedWhenForbidden) {
+    // A `403` is two different answers wearing one status code, and the run has
+    // to be able to tell them apart — so classify every one, whether or not an
+    // override is in play. A managed challenge means "we cannot tell what you
+    // are": a question a non-browser cannot answer, and the only situation a
+    // permission recorded by hand stands in for. A plain `403` means "you are
+    // forbidden", which is the host itself declining us.
+    //
+    // Reporting it is not a nicety. INGESTION.md already requires a non-ok
+    // status to record what turned us away, because a bare `HTTP 403` reads
+    // identically whether a CDN decided we are a bot farm or the site said no —
+    // and those two want opposite responses from whoever reads the summary. One
+    // of them is what `--assume-robots-on-403` is for; the other is a source to
+    // stop fetching.
+    if (response.status === 403) {
+      let challenged: boolean | null;
+      try {
+        challenged = await isInterstitialChallenge(response);
+      } catch {
+        // Unreadable body: we cannot say which of the two this was, and
+        // unclassifiable is not challenged.
+        challenged = null;
+      }
+
+      // `usable: true` with no rules is not a guess about what the site
+      // permits — it is standing in for rules a human read in a browser and
+      // wrote into AGENTS.md. Everything else about being a guest still
+      // applies: one request per source, six hours apart, spaced per host.
+      if (challenged === true && this.assumeAllowedWhenForbidden) {
+        return {
+          robots: ALLOW_ALL,
+          usable: true,
+          reason:
+            `robots.txt returned 403 behind an interstitial challenge; ` +
+            `proceeding on a permission recorded by hand ` +
+            `(--assume-robots-on-403)`,
+          at,
+          assumedOnForbidden: true,
+        };
+      }
+
+      const kind =
+        challenged === null
+          ? "unclassifiable"
+          : challenged
+            ? "an interstitial challenge"
+            : "a refusal";
+      const advice =
+        challenged === true && !this.assumeAllowedWhenForbidden
+          ? "; --assume-robots-on-403 covers this on an interactive run"
+          : challenged === false
+            ? "; --assume-robots-on-403 does not cover a host that turned us away"
+            : "";
+
       return {
         robots: ALLOW_ALL,
-        usable: true,
-        reason:
-          `robots.txt returned 403; proceeding on a permission recorded by ` +
-          `hand (--assume-robots-on-403)`,
+        usable: false,
+        reason: `robots.txt returned 403 (${kind})${advice}`,
         at,
-        assumedOnForbidden: true,
       };
     }
 
@@ -459,6 +503,48 @@ export class RobotsCache {
 
     return { robots: parseRobots(text), usable: true, reason: "robots.txt ok", at };
   }
+}
+
+/**
+ * Markers of an edge challenge page, as opposed to a page that says no.
+ *
+ * All Cloudflare's, because Cloudflare is what actually sits in front of the
+ * wikis here. The header is the reliable one — Cloudflare labels its own
+ * mitigations — and the body markers are the fallback for a challenge served
+ * without it.
+ */
+const CHALLENGE_BODY_MARKERS = [
+  "_cf_chl_opt",
+  "/cdn-cgi/challenge-platform/",
+  "cf-browser-verification",
+  "Just a moment...",
+  "Enable JavaScript and cookies to continue",
+] as const;
+
+/**
+ * Is this response an interstitial challenge rather than a refusal?
+ *
+ * The distinction `--assume-robots-on-403` rests on, and it is not cosmetic. A
+ * challenge is an edge saying "prove you are a browser" — a question our
+ * fetcher cannot answer and was never asked by the site's operators, which is
+ * why a human reading the rules in a browser is a fair substitute for reading
+ * them here. A bare `403` is the site itself refusing, and no recorded
+ * permission may talk over that.
+ *
+ * Consumes the body, so call it once and only on a response being classified.
+ */
+export async function isInterstitialChallenge(
+  response: Response,
+): Promise<boolean> {
+  // `cf-mitigated: challenge` is Cloudflare naming what it just did, so it
+  // settles the question without reading the body at all.
+  const mitigated = response.headers.get("cf-mitigated");
+  if (mitigated !== null && mitigated.toLowerCase().includes("challenge")) {
+    return true;
+  }
+
+  const head = (await response.text()).slice(0, 4096);
+  return CHALLENGE_BODY_MARKERS.some((marker) => head.includes(marker));
 }
 
 /**

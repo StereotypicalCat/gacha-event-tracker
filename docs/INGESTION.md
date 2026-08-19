@@ -277,19 +277,33 @@ section but must never claim the event title.
   cycle is a shorter interval with extra steps. Every source asked early is listed in
   `summary.forced` and warned about; a run that was due anyway is never reported as forced, because a
   summary that cried "forced" on an ordinary run would train the reader to ignore the word.
-- **One narrow exception, opt-in per run: `--assume-robots-on-403`.** Fandom answers a datacentre
-  address `403` on `/robots.txt` itself while `api.php?action=parse` answers our own User-Agent with
-  a `200`, so the gate fails closed and four sources can never refresh — even though their rules are
-  known, because a person read them in a browser and wrote them into AGENTS.md § Scraping conduct.
-  The flag makes the run proceed on that recorded permission. Three things bound it: it applies to
-  `403` **only** (a 401, a 5xx or a soft 404 are still "we do not know"); it never overrides a
-  `robots.txt` we *could* read, so a file that disallows us still says no; and it is refused under
-  CI, because it stands in for a human and there is none on a runner. Every host it applied to is
-  named in the run's warnings and in `summary.assumedRobots` — an override that reports nothing is
-  one nobody withdraws. It changes no other obligation: still one request per source, still six
-  hours apart, still spaced per host.
+- **One narrow exception, opt-in per run: `--assume-robots-on-403`.** For a host that will not serve
+  us `/robots.txt` at all, while the surface we actually read answers our own User-Agent with a
+  `200`, the gate fails closed and the source can never refresh — even though its rules are known,
+  because a person read them in a browser and wrote them into AGENTS.md § Scraping conduct. The flag
+  makes the run proceed on that recorded permission. Four things bound it:
+  - It applies to `403` **only** — a 401, a 5xx or a soft 404 are still "we do not know".
+  - **The `403` must be an interstitial challenge, not a refusal** (`isInterstitialChallenge`). A
+    managed challenge is an edge saying "prove you are a browser", a question our fetcher cannot
+    answer and the site's operators never asked, which is what makes a human reading the rules a fair
+    substitute. A bare `403` is the site itself refusing us, and this flag has never been permitted
+    to talk over that — it claimed as much from the start and could not tell the two apart, so it
+    did. Detection is Cloudflare's own `cf-mitigated: challenge` header, falling back to the
+    challenge page's markers; a `403` whose body cannot be read is unclassifiable and therefore not
+    excused.
+  - It never overrides a `robots.txt` we *could* read, so a file that disallows us still says no.
+  - It is refused under CI, because it stands in for a human and there is none on a runner.
+
+  Every host it applied to is named in the run's warnings and in `summary.assumedRobots` — an
+  override that reports nothing is one nobody withdraws. It changes no other obligation: still one
+  request per source, still six hours apart, still spaced per host.
 - 20s timeout. **No retries**: a retry is a second request, and AGENTS.md § Scraping conduct says
   one per source per cycle. A failed source waits for the next cycle instead.
+- **A `403` on `robots.txt` records which kind it was** — `an interstitial challenge`, `a refusal`,
+  or `unclassifiable` — and names the flag that does or does not cover it. Both fail closed and skip;
+  the difference is what the reader should do about it, and `robots.txt returned 403` said neither. A
+  challenge is a cue to refresh by hand on the recorded permission or move the run to a served
+  address; a refusal is a source to stop fetching.
 - **Only `200` is a page** (plus `304` for "unchanged"). Not `response.ok` — that admits the whole
   2xx range, and `202 Accepted` is what an edge bot-manager answers with while it serves a challenge
   instead of the wiki. Admitting it fed that challenge page to the parser, which reported "yielded 0
