@@ -35,7 +35,7 @@ permissions:
 jobs:
   refresh:
     name: Fetch sources and rebuild the feed
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, safe-ip]
     # A fork must not point this at the wikis on a schedule. Same shape as the
     # DEPLOY_PAGES gate in ci.yml: off by default for anyone but this repo,
     # while a fork owner can still dispatch it by hand and take responsibility.
