@@ -4,6 +4,7 @@ import { NextUp } from "../src/client/components/NextUp.tsx";
 import {
   boardWindow,
   markerLabel,
+  splitAt,
   startMarkers,
   Timeline,
 } from "../src/client/components/Timeline.tsx";
@@ -305,14 +306,14 @@ describe("Timeline: events that have not started", () => {
     upcoming("Long Way Round", "wuwa", 30 * 24),
   ];
 
-  const board = (showUpcoming: boolean, all = rows) =>
+  const board = (showUpcoming: boolean, all = rows, group: "game" | "ending" = "ending") =>
     render(
       <Timeline
         rows={all}
         now={NOW}
         dayWidth={32}
         onZoom={() => {}}
-        group="ending"
+        group={group}
         onGroup={() => {}}
         showUpcoming={showUpcoming}
         onOpen={() => {}}
@@ -362,6 +363,51 @@ describe("Timeline: events that have not started", () => {
 
   test("start markers are absent while the events are held back", () => {
     expect(board(false)).not.toContain("2 start");
+  });
+
+  test("a heading marks where the running bars stop", () => {
+    // The dashed edge says "this bar has not started"; it does not say where
+    // the running ones ended, which is what a board read at a glance needs.
+    const html = board(true);
+    const at = html.indexOf("Not started yet");
+    expect(at).toBeGreaterThan(html.indexOf("Closing Ceremony"));
+    expect(at).toBeLessThan(html.indexOf("Frost Parade"));
+  });
+
+  test("every lane gets its own, since every lane has its own boundary", () => {
+    // Stacked by game, "where does this game stop running?" is a different
+    // answer per lane — one heading for the board would be in the wrong place
+    // for all but one of them.
+    const html = board(true, rows, "game");
+    expect(html.split("Not started yet")).toHaveLength(4);
+  });
+
+  test("no heading where nothing is waiting", () => {
+    // A label with nothing under it is a section that does not exist.
+    expect(board(true, [row("Closing Ceremony", "genshin", 100)])).not.toContain(
+      "Not started yet",
+    );
+    expect(board(false)).not.toContain("Not started yet");
+  });
+});
+
+describe("splitAt", () => {
+  const live = { clock: { upcoming: false } };
+  const soon = { clock: { upcoming: true } };
+
+  test("finds the boundary", () => {
+    expect(splitAt([live, live, soon, soon])).toBe(2);
+  });
+
+  test("a lane that is all future breaks at the top", () => {
+    // Not a divider then but a heading, which is the honest reading: nothing
+    // in this lane has started.
+    expect(splitAt([soon, soon])).toBe(0);
+  });
+
+  test("nothing waiting is no boundary at all", () => {
+    expect(splitAt([live, live])).toBe(-1);
+    expect(splitAt([])).toBe(-1);
   });
 });
 

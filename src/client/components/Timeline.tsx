@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "react";
+import { Fragment, useLayoutEffect, useRef } from "react";
 import { useGameMeta } from "../state/gameMeta.tsx";
 import { DAY } from "../../shared/time.ts";
 import type { RowEvent } from "./EventRow.tsx";
@@ -350,6 +350,8 @@ export function Timeline({
           <div className="space-y-7 pb-10 pt-9">
             {lanes.map((lane) => {
               const heading = lane.game === null ? null : gameMeta(lane.game);
+              // Where this lane stops running and starts being scheduled.
+              const breakAt = splitAt(lane.rows);
               return (
                 <div key={lane.id}>
                   {/* On its own line and pinned to the left edge, so the lane
@@ -368,7 +370,7 @@ export function Timeline({
                   )}
 
                   <div className="relative space-y-2">
-                    {lane.rows.map(({ event, clock }) => {
+                    {lane.rows.map(({ event, clock }, i) => {
                       const game = gameMeta(event.game);
                       const unknownEnd = clock.endsMs === null;
                       const notStarted = clock.upcoming;
@@ -382,8 +384,9 @@ export function Timeline({
                       const width = Math.max(right - left, MIN_BAR);
                       const done = isDone(event.id);
                       return (
+                        <Fragment key={event.id}>
+                        {i === breakAt && <NotStarted />}
                         <button
-                          key={event.id}
                           type="button"
                           onClick={() => onOpen(event.id)}
                           // The game is in the tooltip on the merged board
@@ -458,6 +461,7 @@ export function Timeline({
                             style={{ background: URGENCY_COLOR[clock.urgency] }}
                           />
                         </button>
+                        </Fragment>
                       );
                     })}
                   </div>
@@ -536,6 +540,48 @@ function StackControl({
       })}
     </div>
   );
+}
+
+/**
+ * The line between what is running and what is only scheduled.
+ *
+ * The same object as a lane's name — a small label pinned to the left edge so
+ * it survives any scroll position — because it is doing the same job: saying
+ * what the bars under it are. A dashed edge and a thinner wash tell a reader
+ * that *this* bar has not started; they do not tell them where the running
+ * ones stopped, and a board read at a glance should not need the difference
+ * decoded per bar.
+ *
+ * In muted ink rather than a game's hue, since a hue on this board means "whose
+ * event is this" and this label is not about a game.
+ */
+function NotStarted() {
+  return (
+    <p
+      className="eyebrow sticky left-0 z-20 w-fit bg-ground pb-0.5 pr-2 pt-2 text-[0.625rem] text-faint"
+      style={{ paddingLeft: PIN }}
+    >
+      Not started yet
+    </p>
+  );
+}
+
+/**
+ * The index of the first row that has not started, or -1 when none has.
+ *
+ * A single index rather than a per-row test, because the label marks a
+ * *boundary* and there is only one: every sort this board can be given puts
+ * live rows before upcoming ones — `endingSoonestFirst` on the merged board,
+ * and both list modes in the lanes, which say so explicitly. If that ever
+ * stopped holding, the honest repair is to fix the order rather than to scatter
+ * the label wherever the sequence flips.
+ *
+ * Exported so the guarantee is a test rather than a comment.
+ */
+export function splitAt(
+  rows: readonly { clock: { upcoming: boolean } }[],
+): number {
+  return rows.findIndex((r) => r.clock.upcoming);
 }
 
 /**
