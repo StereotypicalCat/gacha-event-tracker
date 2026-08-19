@@ -365,9 +365,12 @@ which is how the permission above was confirmed. As of 2026-08-19 **every** Fand
 to our fetcher, and a real headless browser gets a Cloudflare managed challenge that never resolves.
 Two consequences, and neither is a licence to work around it:
 
-- The two built Fandom sources now report `skipped_robots` on **every** run, from any address we
-  have, so `r1999` and `fgo` are permanently fixture-backed until someone refreshes them from an
-  address Fandom serves. `fgo` has never had a snapshot at all.
+- **All four** built Fandom sources report `skipped_robots` on **every** run, from any address we
+  have, so `r1999`, `fgo`, `nikke` and `nikki` are permanently fixture-backed until someone
+  refreshes them from an address Fandom serves. Only `r1999` has ever had a snapshot at all — last
+  refreshed on 2026-08-19, hours before the tightening was found — and `fgo`, `nikke` and `nikki`
+  have never had one. That is not a source being down: nothing is broken, and nothing will ever
+  update these four on a schedule.
 - A **new** Fandom source can still be added, but only once someone reads that wiki's `robots.txt`
   from an address Fandom serves and records it here. That is exactly how Nikke was cleared on
   2026-08-19: the file was read in a browser, is the standard Fandom file — no `Disallow: /` for
@@ -376,7 +379,7 @@ Two consequences, and neither is a licence to work around it:
   (`GPTBot`, `CCBot`, `OAI-SearchBot`, `ImagesiftBot`) are not us.
 
 **The 403 is on `robots.txt`, not on the API.** Worth separating, because it decides what is
-possible: `api.php?action=parse` answers our own User-Agent with a `200` from here, on all three
+possible: `api.php?action=parse` answers our own User-Agent with a `200` from here, on all four
 Fandom wikis we read. Only the robots file is challenged. So an adapter can be *written and
 fixture-backed* from any address; what it cannot do is pass the robots gate at refresh time, which
 fails closed and skips. The permission is therefore a thing a human records once, and the freshness
@@ -428,7 +431,7 @@ by hand**, because an attribute never passes through `text()` and `Alison&#39;s 
 otherwise become a slug, and a slug is a localStorage key. The sanitiser catches exactly that, and a
 parser needing repair on its own fixture is a parser with a bug.
 
-**Two Fandom sources now, and the second one's page is chosen, not obvious.**
+**The second Fandom source's page is chosen, not obvious.**
 `fategrandorder.fandom.com` publishes two schedules: `Event_List` opens "This page lists all Events
 in Fate/Grand Order Japan", and `Event_List_(US)` is the English server. They run months apart, each
 links the other, and reading the Japanese one on an English calendar is the `akwiki` CN column again
