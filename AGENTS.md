@@ -119,7 +119,7 @@ src/client/       React app, service worker, manifest
                   theme.ts — dark or light, and what a game hue reads as on each
 scripts/          build-feed.ts, build-static.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             724 tests
+test/             730 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
@@ -261,7 +261,15 @@ fixtures, that is a data-loss bug, not a diff to regenerate.
 Sources are community wikis. Treat them as a guest would:
 
 - Honor `robots.txt`; set a descriptive `User-Agent` with a contact URL.
-- One request per source per refresh cycle, minimum 6 hours apart.
+- One request per source per refresh cycle, minimum 6 hours apart. **`--force` sets that floor
+  aside for one run, and only a person at a keyboard may pass it** — it is refused under CI, because
+  a schedule that forces every cycle is just a shorter interval with extra steps, and the interval is
+  the obligation. What makes it defensible is what it does *not* change: conditional headers still go
+  out, so a page that has not moved costs the host a `304` rather than a re-serve, and per-host
+  spacing, robots, the one-request-per-source rule and the no-retry rule all still apply. Prefer it
+  with `--only`: forcing nineteen sources to re-ask a question they answered an hour ago is the
+  behaviour this bullet exists to prevent, whatever flag authorised it. The run names every source it
+  asked early, and a run that was due anyway is never reported as forced.
 - **Space requests to one host**, honouring its `Crawl-delay` and defaulting to 2s. Nine of the
   nineteen sources are game8.co pages, so the per-source floor alone still permits one cycle to arrive
   as nine back-to-back requests to a single site — which is the shape an edge network throttles, and
@@ -568,9 +576,11 @@ Stella Sora takes no `resetOffsets` either, and for the opposite reason to most:
 outright, and the offset is `-07:00` — US Pacific, which shifts by an hour twice a year. That is the
 Fate/Grand Order problem arriving through a source that looks like it answered the question.
 
-`scripts/refresh-sources.ts` enforces all of the above in code — the 6h floor, one request, no
-retries, conditional headers, per-host spacing, robots (failing closed when `robots.txt` cannot be
-read, except under the opt-in `--assume-robots-on-403` described in § Fandom). Anything that would make it fetch more often is a change to this section first.
+`scripts/refresh-sources.ts` enforces all of the above in code — the 6h floor (except under the
+opt-in `--force` above), one request, no retries, conditional headers, per-host spacing, robots
+(failing closed when `robots.txt` cannot be read, except under the opt-in `--assume-robots-on-403`
+described in § Fandom). Both overrides are interactive-only, refused under CI, and reported by name
+in the run's warnings — an override that reports nothing is one nobody withdraws. Anything that would make it fetch more often is a change to this section first.
 
 **A source down is a warning; a source down for days is a broken build.** One wiki failing must
 never blank a calendar or stop the sources that did answer from being committed — so a failure is

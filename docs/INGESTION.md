@@ -270,6 +270,13 @@ section but must never claim the event title.
 - Honor `robots.txt`; cache parsed robots per host for 24h. **Fail closed** — a `robots.txt` that
   5xxs or times out means "do not fetch", because a permission we could not read is not a
   permission we have. A 404 means no restrictions.
+- **`--force` sets the 6h floor aside for one run**, and nothing else: conditional headers still go
+  out (so an unchanged page is a `304`, not a re-serve), per-host spacing still applies, robots still
+  decides, and there are still no retries. A source that was not due and is *also* disallowed stays
+  skipped, for the reason that actually matters. Refused under CI — a schedule that forces every
+  cycle is a shorter interval with extra steps. Every source asked early is listed in
+  `summary.forced` and warned about; a run that was due anyway is never reported as forced, because a
+  summary that cried "forced" on an ordinary run would train the reader to ignore the word.
 - **One narrow exception, opt-in per run: `--assume-robots-on-403`.** Fandom answers a datacentre
   address `403` on `/robots.txt` itself while `api.php?action=parse` answers our own User-Agent with
   a `200`, so the gate fails closed and four sources can never refresh — even though their rules are
