@@ -48,7 +48,7 @@ Consequences worth internalising:
 
 | Parser | Site | Sources using it |
 |---|---|---|
-| `game8` | game8.co article calendars | Genshin, Star Rail, Wuthering Waves, ZZZ, Endfield, NTE, Infinity Nikki, Persona 5: The Phantom X, Chaos Zero Nightmare |
+| `game8` | game8.co article calendars | Genshin, Star Rail, Wuthering Waves, ZZZ, Endfield, NTE, Infinity Nikki, Persona 5: The Phantom X, Chaos Zero Nightmare, Umamusume |
 | `wikigg` | wiki.gg MediaWiki `mp-event` templates | Endfield |
 | `akwiki` | arknights.wiki.gg's `mrfz-wtable` "Ongoing/upcoming" table | Arknights |
 | `fandom` | Fandom wikis via the MediaWiki `action=parse` API — two page templates: `Event \| Time Period \| Version` wikitables, and FGO's picture-fenced `ONGOING EVENTS` blocks | Reverse: 1999, Fate/Grand Order |

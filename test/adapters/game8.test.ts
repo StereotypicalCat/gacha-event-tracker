@@ -45,6 +45,7 @@ const CASES: Array<{ adapter: Adapter; fixture: string }> = [
   { adapter: adapter("gfl2-iopwiki-events"), fixture: "fixtures/gfl2/iopwiki-events-2026-08-19" },
   { adapter: adapter("stellasora-stellasorawiki-events"), fixture: "fixtures/stellasora/stellasorawiki-events-2026-08-19" },
   { adapter: adapter("czn-game8-events"), fixture: "fixtures/czn/game8-events-2026-08-19" },
+  { adapter: adapter("uma-game8-events"), fixture: "fixtures/uma/game8-events-2026-08-19" },
 ];
 
 async function runAdapter(adapter: Adapter, fixture: string) {
@@ -1349,6 +1350,39 @@ describe("Chaos Zero Nightmare (game8)", () => {
       expect(e.startPrecision).toBe("day");
       expect(e.startsAt.endsWith("T00:00:00.000Z")).toBe(true);
     }
+  });
+});
+
+describe("Umamusume (game8 banner pages)", () => {
+  const fixture = "fixtures/uma/game8-events-2026-08-19";
+  const uma = adapter("uma-game8-events");
+
+  test("reads the four current banners, both columns of them", async () => {
+    // Counted off the page: `All Current Banners` lays Standard and Paid
+    // banners side by side inside one <table>, two rows each.
+    const events = await runAdapter(uma, fixture);
+    expect(events.map((e) => e.title)).toEqual([
+      "3 Star Guaranteed 1.5 Anniversary Scout (Character)",
+      "3 Star Guaranteed 1.5 Anniversary Scout (Support)",
+      "Daiichi Ruby Power SSR and K.S. Miracle Guts SR",
+      "Seeking the Pearl (Rocket☆Star)",
+    ]);
+    const pearl = events.find((e) => e.title === "Seeking the Pearl (Rocket☆Star)");
+    // The page prints "8/12/2026 - 8/21/2026" and no time of day.
+    expect(pearl?.startsAt).toBe("2026-08-12T00:00:00.000Z");
+    expect(pearl?.endsAt).toBe("2026-08-21T00:00:00.000Z");
+    expect(pearl?.startPrecision).toBe("day");
+  });
+
+  test("never publishes the Previous Banners table", async () => {
+    // Dated exactly like the live rows and sitting directly below them, so the
+    // only thing separating them is the heading. `previous events` does not
+    // match `Previous Banners` — which is why that pattern was added.
+    const titles = (await runAdapter(uma, fixture)).map((e) => e.title);
+    expect(titles).not.toContain("Yukino Bijin (Darl'n Snowflake)");
+    expect(titles).not.toContain(
+      "Smart Falcon Power SSR and Silence Suzuka Speed SSR",
+    );
   });
 });
 

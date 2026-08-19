@@ -154,6 +154,21 @@ const SOURCES: SourceSpec[] = [
     url: "https://game8.co/games/Chaos-Zero-Nightmare/archives/559899",
     parserId: "game8",
   },
+  {
+    id: "uma-game8-events",
+    game: "uma",
+    // `uma.moe` stays declined — its API sits behind a Cloudflare Turnstile
+    // proof header, and an adapter would mean defeating a deliberate access
+    // control. This is the surface that is simply open.
+    //
+    // The stable URL matters here: Game8 also publishes monthly
+    // `August 2026 Release Schedule` pages whose id changes every month, which
+    // a static registry cannot follow. "List of All Banners" does not move.
+    //
+    // The tenth game8 source, with the same CI blindness as the other nine.
+    url: "https://game8.co/games/Umamusume-Pretty-Derby/archives/536311",
+    parserId: "game8",
+  },
 ];
 
 function toAdapter(spec: SourceSpec): Adapter {

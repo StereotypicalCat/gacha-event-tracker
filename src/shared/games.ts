@@ -135,6 +135,11 @@ export const GAMES: Record<GameId, GameMeta> = {
   // No `resetOffsets`: the source is Game8, which states day-precision prose
   // and no clock at all — the same silence p5x has, and the same answer.
   czn: { id: "czn", name: "Chaos Zero Nightmare", short: "CZN", hue: "#B84A9C", studio: "Smilegate", dailyTasks: "Daily missions" },
+  // No `resetOffsets`. The source's own column is headed `Availability (UTC)`,
+  // which states the zone the *dates* are in and says nothing about where the
+  // server's day rolls — and every row on it is a bare date anyway, with no
+  // time of day to read a reset out of. Same silence as p5x and czn.
+  uma: { id: "uma", name: "Umamusume: Pretty Derby", short: "Umamusume", hue: "#6FBF44", studio: "Cygames", dailyTasks: "Daily races, missions" },
 };
 
 export const GAME_LIST: GameMeta[] = Object.values(GAMES);
