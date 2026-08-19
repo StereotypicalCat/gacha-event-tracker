@@ -295,6 +295,52 @@ body {
     filter 130ms ease-out;
 }
 
+/* ---- Today's dailies ---------------------------------------------------- */
+/*
+ * A daily chip is the fastest thing on the page to act on, and it was saying
+ * none of that: the pointer stayed an arrow and nothing happened under it, so a
+ * strip of tappable jobs read as a row of status badges.
+ *
+ * The hover is drawn from what the component does *not* own. A chip's border,
+ * ink and wash are mixed from the game's hue, which is data rather than a token
+ * and therefore arrives as an inline style — and no rule here can override one
+ * of those. So the cursor, a ring in the same hue, a one-pixel lift and the
+ * label coming up to full ink carry it instead. `--hue` and `data-done` are the
+ * two things the chip hands over for that.
+ *
+ * The label only brightens while the job is outstanding: on a finished chip the
+ * ink *is* the game's hue, and overriding it with `ink` would trade the one
+ * thing that says which game for a hover state.
+ */
+.tick-chip {
+  transition:
+    border-color 130ms ease-out,
+    background-color 130ms ease-out,
+    color 130ms ease-out,
+    box-shadow 130ms ease-out,
+    transform 120ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+.tick-label {
+  transition: color 130ms ease-out;
+}
+
+@media (hover: hover) {
+  .tick-chip:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--hue) 45%, transparent);
+  }
+  .tick-chip[data-done="false"]:hover .tick-label {
+    color: var(--color-ink);
+  }
+}
+
+/* Press feedback on both mouse and touch, as the event row has. */
+.tick-chip:active {
+  transform: scale(0.96);
+  transition-duration: 60ms;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .event-row,
   .row-rail,
@@ -302,13 +348,17 @@ body {
   .row-count,
   .row-summary,
   .row-check,
-  .meter-tick {
+  .meter-tick,
+  .tick-chip,
+  .tick-label {
     transition: none;
   }
   .row-check:hover,
   .row-check:active,
   .event-row:hover .row-open,
-  .event-row:hover .row-rail {
+  .event-row:hover .row-rail,
+  .tick-chip:hover,
+  .tick-chip:active {
     transform: none;
   }
 }
