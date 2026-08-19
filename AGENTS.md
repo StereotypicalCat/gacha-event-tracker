@@ -262,7 +262,7 @@ Sources are community wikis. Treat them as a guest would:
 
 - Honor `robots.txt`; set a descriptive `User-Agent` with a contact URL.
 - One request per source per refresh cycle, minimum 6 hours apart. **`--force` sets that floor
-  aside for one run, and only a person at a keyboard may pass it** — it is refused under CI, because
+  aside for one run, and only a person may pass it** — it is refused on an unattended run, because
   a schedule that forces every cycle is just a shorter interval with extra steps, and the interval is
   the obligation. What makes it defensible is what it does *not* change: conditional headers still go
   out, so a page that has not moved costs the host a `304` rather than a re-serve, and per-host
@@ -470,11 +470,27 @@ that helps: `bun run refresh --assume-robots-on-403` treats **an interstitial ch
 `/robots.txt` itself as the permission recorded above rather than failing closed. It is not a
 workaround for a host that turned us away — it never overrides a `robots.txt` we could read, so a
 file that disallows us still says no, and it does nothing at all for game8.co, whose robots.txt reads
-fine and welcomes us while its edge refuses the pages. It is refused under CI, because what it stands
-in for is a person having read a file in a browser, and there is no person on a runner. Every host it
-applied to is named in the run's warnings, so it stays a thing somebody decided this morning rather
-than a default. Nothing else relaxes: one request per source, six hours apart, spaced per host, no
-retries.
+fine and welcomes us while its edge refuses the pages. Every host it applied to is named in the run's
+warnings, so it stays a thing somebody decided this morning rather than a default. Nothing else
+relaxes: one request per source, six hours apart, spaced per host, no retries.
+
+**Who may pass it is a question about the person, not the machine.** Both overrides are refused on an
+*unattended* run and available to a person, and `runAttendance` (`scripts/refresh-sources.ts`) draws
+that line: a local shell is a person, a `workflow_dispatch` is a person and GitHub records which one
+in `GITHUB_ACTOR`, and a `schedule` — or any other runner event — is not. This replaced a blanket
+`isCi()` check, which asked the coarser question and got the case that matters wrong: a dispatch sets
+`CI=true`, so somebody clicking "Run workflow" was refused exactly as the cron was, and the overrides
+were unreachable from the workflow at all. The run prints which override was used and who authorised
+it.
+
+**The cron stays refused, and for the robots override that is not ceremony.** From an address that
+gets a challenge we never receive `robots.txt` at all — so a schedule standing on the recorded
+permission has no way to notice the host withdrawing it. The recorded permission has no expiry, and a
+person re-reading the file in a browser is the only thing that ever re-validates it. A twice-daily job
+asserting it forever would be fetching on a snapshot of consent taken on 2026-08-19. Note what the
+challenge-vs-refusal narrowing does and does not cover here: a plain `403` still stops us, but a
+`robots.txt` *edited* to disallow us would be invisible, because we get a challenge instead of a file.
+That gap is the whole reason a person has to be the one asking.
 
 **A `403` is two answers wearing one status code, and only one of them is covered.** A managed
 challenge means "we cannot tell what you are" — the question a human answers by reading the file in a
@@ -661,7 +677,7 @@ Fate/Grand Order problem arriving through a source that looks like it answered t
 `scripts/refresh-sources.ts` enforces all of the above in code — the 6h floor (except under the
 opt-in `--force` above), one request, no retries, conditional headers, per-host spacing, robots
 (failing closed when `robots.txt` cannot be read, except under the opt-in `--assume-robots-on-403`
-described in § Fandom, which covers a challenged `403` and never a plain refusal). Both overrides are interactive-only, refused under CI, and reported by name
+described in § Fandom, which covers a challenged `403` and never a plain refusal). Both overrides are refused on an unattended run — a `schedule` gets neither, a person or a `workflow_dispatch` may pass both (`runAttendance`) — and reported by name
 in the run's warnings — an override that reports nothing is one nobody withdraws. Anything that would make it fetch more often is a change to this section first.
 
 **A source down is a warning; a source down for days is a broken build.** One wiki failing must

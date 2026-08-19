@@ -676,19 +676,51 @@ export async function rebuildFeedViaScript(): Promise<void> {
   if (code !== 0) throw new Error(`build-feed exited ${code}`);
 }
 
+/** Whether a person authorised this run, and who, for the override gates. */
+export type Attendance =
+  | { readonly attended: true; readonly by: string }
+  | { readonly attended: false; readonly why: string };
+
 /**
- * Are we on a runner rather than at somebody's keyboard?
+ * Did a person ask for this run, or did a schedule?
  *
- * Both variables, because `CI` is the convention every runner sets and
- * `GITHUB_ACTIONS` is the one this repo's workflow guarantees. Erring towards
- * "yes" is the safe direction: the only thing it costs is refusing an
- * interactive-only flag to a human whose shell exports `CI`.
+ * The two overrides below stand in for somebody deciding something — that a
+ * page has moved and they want it now, or that they have read a robots.txt in a
+ * browser. What must never happen is a *schedule* asserting either one every
+ * cycle, because an override on every run is not an override, it is the new
+ * default with extra steps (AGENTS.md § Scraping conduct).
+ *
+ * This used to be `isCi()`, which asked the coarser question and got the wrong
+ * answer for the case that matters: a `workflow_dispatch` sets `CI=true`, so a
+ * human clicking "Run workflow" was refused exactly like the cron was. A
+ * dispatch is a person, and a better-evidenced one than a local shell — GitHub
+ * records who in `GITHUB_ACTOR`, and the run log keeps it.
+ *
+ * Erring towards "unattended" stays the safe direction: any runner event that is
+ * not a dispatch is treated as a schedule, so a `push`- or `repository_dispatch`-
+ * triggered run gets no overrides either.
  */
-function isCi(): boolean {
-  return (
-    process.env["CI"] !== undefined && process.env["CI"] !== "" ||
-    process.env["GITHUB_ACTIONS"] === "true"
-  );
+export function runAttendance(
+  env: Record<string, string | undefined> = process.env,
+): Attendance {
+  const onRunner =
+    (env["CI"] !== undefined && env["CI"] !== "") ||
+    env["GITHUB_ACTIONS"] === "true";
+  if (!onRunner) return { attended: true, by: "a local shell" };
+
+  const event = env["GITHUB_EVENT_NAME"];
+  if (event === "workflow_dispatch") {
+    const actor = env["GITHUB_ACTOR"];
+    return {
+      attended: true,
+      by:
+        actor === undefined || actor === ""
+          ? "a manual dispatch"
+          : `a manual dispatch by ${actor}`,
+    };
+  }
+
+  return { attended: false, why: event === undefined || event === "" ? "CI" : event };
 }
 
 interface Args {
@@ -811,31 +843,45 @@ async function main(): Promise<number> {
     return 2;
   }
 
-  // The flag stands in for a human having read a robots.txt in a browser and
-  // written it down. There is no human on a runner, and a scheduled job quietly
-  // asserting a permission nobody re-checked is how "temporary" becomes
-  // permanent — so CI is refused the option outright rather than trusted not to
-  // pass it. AGENTS.md § Scraping conduct is the argument.
-  // Same reasoning as the robots override: this is a person deciding, once,
-  // that a page has moved and they want it now. A schedule deciding that every
-  // run is just a shorter interval with extra steps, and the interval is the
-  // obligation.
-  if (args.force && isCi()) {
+  // Both overrides are a person deciding something — that a page has moved and
+  // they want it now, or that they have read a robots.txt in a browser and
+  // written it down. Neither may be asserted by a *schedule*: an override on
+  // every cycle is not an override, it is the new default with extra steps, and
+  // for the robots one it would be worse than that. From an address that gets a
+  // challenge we never receive the file at all, so a cron standing on a recorded
+  // permission has no way to notice the host withdrawing it — the recorded
+  // permission has no expiry, and a person re-reading it is the only thing that
+  // ever re-validates it. AGENTS.md § Scraping conduct is the argument.
+  const attendance = runAttendance();
+
+  if (args.force && !attendance.attended) {
     console.error(
-      "--force is interactive-only and refused under CI.\n" +
+      `--force needs a person to ask for it; this run came from ` +
+        `${attendance.why}.\n` +
         "The 6h floor is what the scheduled runner is for; change the schedule, " +
-        "not the floor.",
+        "not the floor. Dispatch the workflow by hand to pass it.",
     );
     return 2;
   }
 
-  if (args.assumeRobotsOn403 && isCi()) {
+  if (args.assumeRobotsOn403 && !attendance.attended) {
     console.error(
-      "--assume-robots-on-403 is interactive-only and refused under CI.\n" +
-        "It asserts a permission a person read by hand; run the refresh from a " +
-        "machine the host serves instead.",
+      `--assume-robots-on-403 needs a person to ask for it; this run came from ` +
+        `${attendance.why}.\n` +
+        "It asserts a permission a person read by hand, and a schedule cannot " +
+        "re-read it. Dispatch the workflow by hand to pass it.",
     );
     return 2;
+  }
+
+  // Who authorised the override is part of the record, not a detail. A local
+  // shell leaves no trace anybody else can read; a dispatch names the actor.
+  if (attendance.attended && (args.force || args.assumeRobotsOn403)) {
+    const used = [
+      args.force ? "--force" : null,
+      args.assumeRobotsOn403 ? "--assume-robots-on-403" : null,
+    ].filter((f): f is string => f !== null);
+    console.log(`  override:   ${used.join(", ")} — authorised by ${attendance.by}`);
   }
 
   const store = new SnapshotStore(args.root);

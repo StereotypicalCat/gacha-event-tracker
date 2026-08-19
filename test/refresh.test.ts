@@ -8,6 +8,7 @@ import {
   DEFAULT_HOST_GAP_MS,
   outputs,
   parseArgs,
+  runAttendance,
   runRefresh,
   stepSummary,
   type RefreshOptions,
@@ -1074,5 +1075,67 @@ describe("flags", () => {
     expect(() => parseArgs(["--user-agent"])).toThrow(
       "--user-agent requires a value",
     );
+  });
+});
+
+/**
+ * The override gates ask who authorised the run, not whether a runner is
+ * present. That distinction is the whole reason the workflow can offer these
+ * toggles at all: a `workflow_dispatch` sets `CI=true`, so the old `isCi()`
+ * check refused a human clicking "Run workflow" exactly as it refused the cron.
+ *
+ * What must not regress is the other half — a *schedule* must never be able to
+ * assert either override, because an override on every cycle is the new default
+ * with extra steps, and for the robots one a cron cannot re-read the permission
+ * it would be standing on.
+ */
+describe("runAttendance", () => {
+  test("a local shell is a person", () => {
+    const a = runAttendance({});
+    expect(a.attended).toBe(true);
+    expect(a.attended && a.by).toBe("a local shell");
+  });
+
+  test("a scheduled run is not, and says so", () => {
+    const a = runAttendance({ CI: "true", GITHUB_EVENT_NAME: "schedule" });
+    expect(a.attended).toBe(false);
+    expect(!a.attended && a.why).toBe("schedule");
+  });
+
+  test("a manual dispatch is a person, and names the actor", () => {
+    const a = runAttendance({
+      CI: "true",
+      GITHUB_ACTIONS: "true",
+      GITHUB_EVENT_NAME: "workflow_dispatch",
+      GITHUB_ACTOR: "StereotypicalCat",
+    });
+    expect(a.attended).toBe(true);
+    expect(a.attended && a.by).toBe("a manual dispatch by StereotypicalCat");
+  });
+
+  test("a dispatch with no actor recorded is still a person", () => {
+    const a = runAttendance({ CI: "true", GITHUB_EVENT_NAME: "workflow_dispatch" });
+    expect(a.attended).toBe(true);
+    expect(a.attended && a.by).toBe("a manual dispatch");
+  });
+
+  test("any other runner event counts as unattended", () => {
+    // Erring towards "no person" — a push- or repository_dispatch-triggered run
+    // gets no overrides either, so a schedule cannot be dressed up as one.
+    for (const event of ["push", "repository_dispatch", "pull_request", ""]) {
+      const a = runAttendance({ CI: "true", GITHUB_EVENT_NAME: event });
+      expect(`${event}: ${a.attended}`).toBe(`${event}: false`);
+    }
+  });
+
+  test("GITHUB_ACTIONS alone is enough to count as a runner", () => {
+    const a = runAttendance({ GITHUB_ACTIONS: "true", GITHUB_EVENT_NAME: "schedule" });
+    expect(a.attended).toBe(false);
+  });
+
+  test("an empty CI variable is not a runner", () => {
+    // `CI=` is how a shell unsets it in practice; treating it as a runner would
+    // refuse a person their own flags.
+    expect(runAttendance({ CI: "" }).attended).toBe(true);
   });
 });

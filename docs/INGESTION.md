@@ -292,7 +292,12 @@ section but must never claim the event title.
     challenge page's markers; a `403` whose body cannot be read is unclassifiable and therefore not
     excused.
   - It never overrides a `robots.txt` we *could* read, so a file that disallows us still says no.
-  - It is refused under CI, because it stands in for a human and there is none on a runner.
+  - **It is refused on an unattended run, not on every runner.** `runAttendance` asks who asked: a
+    local shell and a `workflow_dispatch` are both a person (the latter better evidenced — GitHub
+    names the actor), while a `schedule` or any other runner event is not. The `schedule` refusal is
+    load-bearing rather than ceremonial: from a challenged address `robots.txt` never arrives, so a
+    cron standing on the recorded permission could never see the host withdraw it, and the recorded
+    permission has no expiry.
 
   Every host it applied to is named in the run's warnings and in `summary.assumedRobots` — an
   override that reports nothing is one nobody withdraws. It changes no other obligation: still one
