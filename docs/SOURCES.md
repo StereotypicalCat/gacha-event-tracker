@@ -426,6 +426,199 @@ Two shapes the parser handles, both of which would otherwise lose or corrupt a r
 Asking the wiki's editors to state the zone on the Duration column would upgrade this source to
 exact instants, and remains the cheapest improvement available to it.
 
+## 12. Thirteen Game8 hubs, swept on 2026-08-19 — two are worth building, eleven are not
+
+Not a P1 game between them: this section answers a direct request to check a list of Game8 game
+hubs for a schedule page we could add. All thirteen hubs exist and returned `200` (unlike the
+2026-08-18 probe, where eight of the games looked at had no Game8 hub at all), so the question was
+never whether the wiki exists — it was whether the wiki is *alive* and whether its schedule is in a
+table.
+
+**Two things about the method, both of which cost time here.**
+
+- **A hub's navigation is not an index of its pages.** Reading only the links on
+  `game8.co/games/<Name>` found no schedule page for Pokémon UNITE, Pokémon Champions, Gundam UC
+  Engage or Black Beacon. All four have one. They were found by web search instead, and one of them
+  — UNITE's — is among the freshest pages in this sweep. Do not conclude "no such page" from the hub
+  alone.
+- **`Last updated on:` is the cheapest check there is**, and it separated the two live candidates
+  from the ones still publishing last year's schedule in a single grep. It is the check that was missing when Infinity Nikki went
+  a year stale behind a source that parsed perfectly (§ 11). Run it before parsing anything.
+
+| Game | Best page found | Last updated | `game8` parser today | Verdict |
+|---|---|---|---|---|
+| **MementoMori** | `/MementoMori/archives/436644` | **2026-08-13** | **7 events from 7 rows** | **Build.** Zero parser work — the cheapest adapter since Chaos Zero Nightmare |
+| **Fire Emblem Heroes** | `/fire-emblem-heroes/archives/272468` | **2026-08-18** | 0 (shape unsupported) | **Build second.** Best data in the sweep, but a new column shape and one rule collision — see below |
+| Pokémon UNITE | `/Pokemon-UNITE/archives/337574` | 2026-08-16 | `canParse` **false** | Decline — fresh page, two dated rows, and a template the parser refuses by design |
+| Gundam UC Engage | `/gundam-uce/archives/521684` | 2026-07-13 | 0 | Decline — ends without starts |
+| Pokémon Champions | `/Pokemon-Champions/archives/596103` | 2026-04-22 | 0 | Decline — a tournament calendar, four months stale |
+| Mongil: Star Dive | `/Mongil-Star-Dive/archives/595311` | 2026-05-27 | 0 | Decline — image grid, and the wiki stopped in June |
+| Destiny: Rising | `/Destiny-Rising/archives/546191` | 2025-10-09 | 5 events, newest ended 2025-11-06 | Decline — parses cleanly to nothing live |
+| Black Beacon | `/Black-Beacon/archives/515801` | 2025-05-14 | 1 event, from May 2025 | Decline — the Infinity Nikki failure mode |
+| Tower of Fantasy | `/Tower-of-Fantasy/archives/384442` | 2022-11-01 | 0 | Decline — both pages are four years old |
+| Epic Seven | — | 2022-01 | — | Decline — hub's newest content is January 2022 |
+| Diablo Immortal | — | 2022-09 | — | Decline — abandoned, and zone events are a daily rotation, not a calendar |
+| Brawl Stars | — | 2021-11 | — | Decline — abandoned five years ago |
+| Fire Emblem Shadows | — | — | — | Decline — the whole wiki is fourteen pages and none is a schedule |
+| Chaos Zero Nightmare | — | — | — | Already built, 2026-08-19 — see § 4 |
+
+**One cost applies to both builds and should be in the commit message, not discovered later.** Both
+candidates are game8.co, which does not answer the Actions runner (`AGENTS.md` § Scraping conduct).
+Nine of the nineteen sources are game8 pages today, now that Infinity Nikki has moved to Fandom
+(§ 11); these would make ten and eleven. Each is a lane fixture-backed in CI from day one and only
+ever as fresh as someone's last manual `bun run refresh`, and one more request to a single host every
+cycle — the per-host arithmetic § Scraping conduct already calls uncomfortable.
+
+### 12a. MementoMori — the whole adapter is a `SOURCES` entry
+
+**Source:** `https://game8.co/games/MementoMori/archives/436644` ("List of All Current Events"),
+last updated 13 August 2026.
+
+The existing parser reads it as-is. Run offline against the fetched bytes:
+
+```
+parser game8 canParse: true
+events: 7
+ - NijiSanji x MementoMori Special Collaboration        2026-07-28 → 2026-08-24
+ - NijiSanji x MementoMori Special Title Screen         2026-07-28 → 2026-08-24
+ - NijiSanji x MementoMori: Invocation of the Lucky Draw 2026-07-28 → 2026-08-24
+ - NijiSanji x MementoMori In-Game MV                   2026-07-28 → 2026-08-24
+ - NijiSanji x MementoMori X Repost Campaign            2026-07-28 → 2026-08-10
+ - Invite a Friend Campaign                             2026-07-28 → 2026-08-24
+ - Twilight Florence Celebration Missons Event          2026-08-13 → (unknown)
+```
+
+Seven events out of a seven-row table under `List of Current Limited-Time Events`, headed
+`Current Events | Duration` — the count check `AGENTS.md` § Silent drops asks for, with nothing
+dropped. Six are live today. The seventh states `Part 1 Start Date: August 13, 2026 Part 2 Start
+Date: August 31, 2026` and no end, so it lands `endsAt: null`, which is the correct reading of a cell
+that names two starts and no finish. `List of Upcoming Events` currently holds one sentence saying
+there are none, and `List of Past Events` is fenced off by its heading.
+
+**Two latent hazards, and they are about this page more than most.**
+
+- **`Recurring Events Schedule` is an *included* section here.** It is an `<h3>` and it matches
+  `/recurring events/i` in `INCLUDED_SECTIONS`. Its table is `Event List | Latest Dates` and its rows
+  are months stale — `Guild Missions … April 27, 2026 4:00 - May 17, 2026 3:59 (UTC+1)`. Nothing
+  fences it off; the only thing keeping those rows off the calendar is that `COL_TITLE` does not
+  know the words `Event List` and `COL_RANGE` does not know `Latest Dates`. That is column
+  vocabulary standing in for a section rule, which is exactly the arrangement the Umamusume commit
+  warned about.
+- **The gacha page's back catalogue is not excluded by anything.** `archives/436056` heads its
+  168-row history `List of Previous Invocation (Gacha) Banners`, and `EXCLUDED_SECTIONS` matches
+  `previous banners` — which that string does not contain. So **do not** add the gacha page as a
+  second source, and treat any future widening of `game8.ts`'s vocabulary as dangerous for this game
+  specifically. Its current banners are unusable anyway: the dates sit inside an
+  `Info and Duration` prose cell (`Rarity Banner Duration: August …`), not a column.
+
+**No `resetOffsets`.** The current-events table names no timezone, which is honest day precision and
+what `clockFor` exists to resolve. The rest of the page is worse than silent — it is *inconsistent*:
+recurring rows carry `(UTC+1)`, others carry `(UTC-7)`, on the same page. Nothing there evidences one
+clock for the game, so this is the Blue Archive call — no offset, and say why in `games.ts`.
+
+**Work:** a `mmori` `GameId`, a `GAMES` entry, one `SOURCES` entry, a fixture and a test. No parser
+change. `canParse` already asserts the Game8 structural markers; the test should additionally pin
+the `Current Events | Duration` header, so a redesign fails the source rather than emptying the lane.
+
+### 12b. Fire Emblem Heroes — the best data here, and it costs a ninth Game8 shape
+
+**Source:** `https://game8.co/games/fire-emblem-heroes/archives/272468` ("FEH Calendar & Banner
+Schedule"), **last updated 18 August 2026** — yesterday, and the freshest page found anywhere in this
+sweep. A nine-year-old article ID that has been maintained the whole time, which is the stable-URL
+property Umamusume's monthly pages lack (§ 5).
+
+Three tables under `List of Current and Upcoming Events`, all one shape:
+
+```
+Event Name                        | Availability   | End
+Binding Worlds                    | 08/12/2026     | 08/21/2026
+Hall of Forms (Revival)           | 08/14/2026     | 08/20/2026
+CYL 10: Grand Festival            | 08/17/2026     | 09/18/2026
+A Blissful Soak                   | 08/07/2026     | 09/06/2026
+Weekly Revival                    | Weekly         |
+Free Summon                       | Date of Installation |
+```
+
+Eight datable rows today (two events, six summons), plus four rows reading `Daily`, `Weekly`,
+`Monthly` or `Date of Installation`, which are genuinely undatable and skipped — the rule working,
+not a silent drop. Both boundaries carry a year. No timezone anywhere on the page, so day precision
+on both sides, resolved on the reader's server by `clockFor`; no `resetOffsets` claim to make.
+
+**The parser returns zero, and the reason is a shape, not two header words.**
+
+- `COL_TITLE` is `/^(.*\b)?(events?|banners?)$/i`, so `Event Name` misses.
+- There is no range column at all. `Availability` holds a *start*, and the end is its own column.
+  `readStartEndTable` looks like the answer and is not: it wants headers matching `^start$` and
+  `^end$` and reads the rowspan shape where each event spans two rows, one boundary each. This is
+  one row per event with two date columns — a ninth Game8 shape, and the one shape that is trivial
+  everywhere else.
+- `dates.ts` has no reader for a single `MM/DD/YYYY` boundary. `parseShortSlashRange` wants both
+  halves in one cell; `parseMonthDayYear` wants `August 12, 2026`. One small function, and it should
+  refuse a two-digit year rather than guess a century.
+
+**One row breaks a rule this repository holds on purpose, and it is not a parse error.**
+
+```
+Summer Celebration: Guaranteed 4★SHSR | 08/02/2026 | 03/01/2027
+```
+
+That is 211 days. `AGENTS.md` § Domain rules says any event over 180 days is a parse error, and
+`test/adapters/game8.test.ts` asserts it across every fixture — a rule that exists because a span
+that long is normally a misread year. Here it is real: FEH runs a seven-month new-player banner. So
+building this source means choosing, **before the fixture is written, because the fixture is the
+test**: drop rows over 180 days at the adapter and lose a real banner while the guard keeps its
+meaning, or carve a stated exception and weaken the guard for the eight sources that share it. The
+first is the safer default and the second needs an argument.
+
+**And the widening is the Umamusume question again.** `COL_TITLE` is shared by every live game8
+source. Teaching it `Event Name` may start matching tables on pages it currently ignores, so parse
+every pinned fixture *and* every live snapshot before and after and diff the output. That measurement
+is what distinguished a safe widening from a silent one last time, and it costs one script.
+
+### 12c. The eleven declines, grouped by how they fail
+
+**Abandoned wikis** — the Infinity Nikki failure mode (§ 11), where a source parses perfectly and
+publishes last year. Each of these would put a lane on the calendar that is history or empty:
+
+| Game | Evidence |
+|---|---|
+| Black Beacon | Three pages checked — `500805` News & Events (15 May 2025), `515801` Events Schedule and Calendar (14 May 2025), `500801` banners (5 May 2025). The events page parses **one** event, 5–29 May 2025 |
+| Destiny: Rising | `546191` (9 Oct 2025) parses five events whose newest ended 6 November 2025; `546176` banners (14 Oct 2025) parses none. The hub's newest article is dated November 2025. `bluearchive.fandom.com` verbatim |
+| Mongil: Star Dive | `595311` (27 May 2026) is the image-grid shape — an `<h3>` per event and no date in any table. `592077` banners (6 May 2026) hides `Availability: Apr. 29 - May 26, 2026` inside a `Details` cell, and every banner listed as current ended three months ago |
+| Tower of Fantasy | Both pages last updated 1 November 2022. A search summary also reports Game8 saying it stopped covering the game at Update 2.0 — second-hand, and the two `Last updated on:` stamps are the first-hand evidence |
+| Epic Seven | Hub's newest content is January 2022. A search summary reports a Game8 notice ending coverage; not read on a page fetched here, and not needed — the stamps say it |
+| Brawl Stars | Newest content October–November 2021 |
+| Diablo Immortal | Newest content September 2022. Its "events" are zone rotations on a time of day — `Ancient Arena … Tuesday, Thursday, Saturday and Sunday at 9:30 PM server time` — which is a daily chore, not a dated event |
+
+**Alive, but the schedule is not in a datable table:**
+
+- **Gundam UC Engage** is the frustrating one. The wiki is *very* active — a weekly
+  `<Month> <Day> Update Details and Summary` article, newest dated 18 August 2026. But the calendar
+  page `521684` was last updated 13 July 2026 and prints **ends without starts**:
+  `2.5th Anniv. Login Bonus Until October 28, 2026`, two events per cell, no header row. No start
+  means no event ID, so the whole page yields nothing by the rule rather than by accident. The banner
+  page `443747` (28 May 2026) does the same — `Period: Until June 3, 2026`. The dates that *are*
+  current live in the weekly update articles, whose URL changes every week, which a static `SOURCES`
+  registry cannot follow — the Umamusume monthly-page problem, one cadence faster.
+- **Pokémon Champions** (`596103`, 22 April 2026) lists two in-game events, one of them
+  `April 8, 2026 - TBD`, and otherwise schedules online competitions and regional championships. A
+  tournament calendar for a competitive title, not a gacha schedule.
+- **Fire Emblem Shadows** has fourteen article links in its entire hub — `Disciples` and
+  `Season Passes` are the only two structured pages. There is nothing to parse yet. Worth one look
+  again if the game gets a content cadence.
+
+**And one that is fresh, and still no**: **Pokémon UNITE** (`337574`, 16 August 2026). Two findings
+worth keeping:
+
+- **`game8.canParse` returns `false` on it** — the page carries 25 `a-table` matches and **zero**
+  `a-header--3`. That is the structural check doing precisely its job: a Game8 page in a different
+  template refuses the source rather than silently returning nothing. Pointing a `SOURCES` entry at
+  it would fail the run, which is the correct outcome and the reason not to.
+- The data is thin regardless. `Current Seasons` fuses the name and the range into one cell —
+  `Ranked Season 38 8/1/2026 - 9/1/2026` — under a header reading `Event Name / Duration | Rewards`,
+  and only two rows are dated at all; everything else is recurring or permanent. The back catalogue
+  under `List of Past Events` is the rowspan Start/End shape and is correctly fenced by its heading.
+
 ## What every one of these costs, beyond the source
 
 Adding a game is never only a `SOURCES` entry:
@@ -443,15 +636,14 @@ Adding a game is never only a `SOURCES` entry:
 ## Recommended order
 
 Steps 1 through 5 were done on 2026-08-19, and step 6's declines are now written into `AGENTS.md`
-§ Scraping conduct. What is left is one decision and two builds:
+§ Scraping conduct. Every game assessed in the § P1 pass is now built or declined with its reasoning
+recorded, and the two decisions it raised — Nikke's permission and Infinity Nikki's timezone — have
+both been made. What is queued is the two live finds of the § 12 sweep:
 
-Nothing is queued. Every game assessed in this file is now built or declined with its reasoning
-recorded, and the two decisions this pass raised — Nikke's permission and Infinity Nikki's timezone —
-have both been made.
-2. **MementoMori** (§ 12a) — the cheapest adapter available today: a `GameId`, a `GAMES` entry, one
+1. **MementoMori** (§ 12a) — the cheapest adapter available today: a `GameId`, a `GAMES` entry, one
    `SOURCES` entry, a fixture and a test, with no parser change. Seven events parse out of a
    seven-row table and six of them are live.
-3. **Fire Emblem Heroes** (§ 12b) — better data and a real cost: a ninth Game8 column shape, a
+2. **Fire Emblem Heroes** (§ 12b) — better data and a real cost: a ninth Game8 column shape, a
    single-date `MM/DD/YYYY` reader, and a decision about the 180-day rule, which one legitimate
    seven-month banner breaks. Two commits, parser then source, with the vocabulary widening diffed
    across every fixture and snapshot as Umamusume's was.
