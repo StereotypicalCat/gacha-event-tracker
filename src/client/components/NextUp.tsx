@@ -63,12 +63,16 @@ export function NextUp({
       <div className="relative">
         <p className="eyebrow">Next to expire</p>
 
+        {/* The one thing on the page a reader is most likely to tap, and it was
+            the only clickable text here that did not answer the cursor — the
+            queued rows under it brighten, the row list brightens, and this sat
+            inert and read as a heading rather than a way in. */}
         <button
           type="button"
           onClick={() => onOpen(event.id)}
-          className="mt-2 block max-w-full text-left"
+          className="group mt-2 block max-w-full text-left"
         >
-          <h1 className="font-display text-[1.75rem] font-semibold leading-[1.15] tracking-tight">
+          <h1 className="font-display text-[1.75rem] font-semibold leading-[1.15] tracking-tight transition-colors duration-150 group-hover:text-ink-strong">
             {event.title}
           </h1>
           <p className="mt-1 text-sm" style={{ color: game.hue }}>
