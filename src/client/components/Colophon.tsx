@@ -37,6 +37,7 @@ export const AUTHOR = {
   name: "Lucas Winther",
   site: "https://lucaswinther.info",
   github: "https://github.com/StereotypicalCat",
+  kofi: "https://ko-fi.com/stereotypicalcat",
 } as const;
 
 const LINK =
@@ -94,6 +95,15 @@ function GitHubMark() {
   return (
     <svg viewBox="0 0 16 16" className="size-3.5" fill="currentColor" aria-hidden>
       <path d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38l-.01-1.49c-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.4 7.4 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48l-.01 2.19c0 .21.15.46.55.38A8 8 0 0 0 8 0Z" />
+    </svg>
+  );
+}
+
+function KofiMark() {
+  return (
+    <svg viewBox="0 0 16 16" className="size-3.5" fill="currentColor" aria-hidden>
+      <path d="M2 3h9.2a3.3 3.3 0 0 1 0 6.6h-.6A4 4 0 0 1 6.7 13H5.3a4 4 0 0 1-4-4V3.7c0-.4.3-.7.7-.7Zm8.6 5.3h.6a2 2 0 0 0 0-4h-.6v4Z" />
+      <path d="M4.4 5.6c.5-.5 1.2-.4 1.6 0 .4-.4 1.1-.5 1.6 0 .5.5.4 1.2 0 1.7L6 8.9 4.4 7.3c-.4-.5-.5-1.2 0-1.7Z" />
     </svg>
   );
 }
@@ -288,26 +298,6 @@ export function Colophon({
         {"."}
       </p>
 
-      {IDEA_CREDITS.length > 0 && (
-        <p className="mt-2">
-          Additional ideas and design from{" "}
-          {IDEA_CREDITS.map((c, i) => (
-            <span key={c.handle}>
-              {i > 0 && (i === IDEA_CREDITS.length - 1 ? " and " : ", ")}
-              <a
-                href={c.url}
-                target="_blank"
-                rel="noreferrer noopener"
-                className={LINK}
-              >
-                {c.handle}
-              </a>
-            </span>
-          ))}
-          {"."}
-        </p>
-      )}
-
       <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
         <a
           href={AUTHOR.github}
@@ -327,7 +317,44 @@ export function Colophon({
           <GitHubMark />
           Source code
         </a>
+        {/*
+          Last in the row of small links, in the row's own muted grey, with no
+          accent colour, no button and no sentence asking for anything. This
+          page's job is to be trusted about dates, and a tip jar that competes
+          with the disclaimer above it spends that trust to make an ask — so it
+          reads as one more link for a reader already looking at the footer, and
+          is invisible to everyone else.
+        */}
+        <a
+          href={AUTHOR.kofi}
+          target="_blank"
+          rel="noreferrer noopener me"
+          className="inline-flex items-center gap-1.5 text-muted transition-colors duration-150 hover:text-ink"
+        >
+          <KofiMark />
+          Ko-fi
+        </a>
       </p>
+
+      {IDEA_CREDITS.length > 0 && (
+        <p className="mt-2">
+          Additional ideas and design from{" "}
+          {IDEA_CREDITS.map((c, i) => (
+            <span key={c.handle}>
+              {i > 0 && (i === IDEA_CREDITS.length - 1 ? " and " : ", ")}
+              <a
+                href={c.url}
+                target="_blank"
+                rel="noreferrer noopener"
+                className={LINK}
+              >
+                {c.handle}
+              </a>
+            </span>
+          ))}
+          {"."}
+        </p>
+      )}
 
       {/*
         Placed under the disclaimer that admits dates can be wrong, because that

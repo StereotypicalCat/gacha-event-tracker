@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { EventForm } from "../src/client/components/CustomForms.tsx";
 import { YourOwn } from "../src/client/components/YourOwn.tsx";
 import { EventRow } from "../src/client/components/EventRow.tsx";
-import { Colophon } from "../src/client/components/Colophon.tsx";
+import { AUTHOR, Colophon, REPO_URL } from "../src/client/components/Colophon.tsx";
 import { GameMetaProvider } from "../src/client/state/gameMeta.tsx";
 import {
   asDisplayEvent,
@@ -279,5 +279,29 @@ describe("Colophon freshness notice (PRD F7)", () => {
       />,
     );
     expect(html).toContain("Reverse: 1999 (never)");
+  });
+
+  test("the author's links sit together, above the ideas credit", () => {
+    // The row is who built this and where to find them; the credit below it is
+    // other people. Reading order follows that, so a reader scanning the footer
+    // does not pass a stranger's handle on the way to the author's own links.
+    const html = renderToStaticMarkup(<Colophon sources={[fresh]} now={NOW} />);
+    const links = html.indexOf("@StereotypicalCat");
+    const ideas = html.indexOf("Additional ideas");
+    expect(links).toBeGreaterThan(-1);
+    expect(ideas).toBeGreaterThan(-1);
+    expect(links).toBeLessThan(ideas);
+  });
+
+  test("carries the Ko-fi link, in the row and not as an appeal", () => {
+    const html = renderToStaticMarkup(<Colophon sources={[fresh]} now={NOW} />);
+    expect(html).toContain(AUTHOR.kofi);
+    // Last in the author's row, so it never lands between the disclaimer and
+    // the reader — and never louder than the links beside it.
+    expect(html.indexOf(AUTHOR.kofi)).toBeGreaterThan(html.indexOf(REPO_URL));
+    expect(html.indexOf(AUTHOR.kofi)).toBeLessThan(html.indexOf("Additional ideas"));
+    // Unobtrusive is a property of the markup, not a matter of taste: the same
+    // muted class as its neighbours, and no ask anywhere in the footer.
+    expect(html).not.toMatch(/support me|buy me|donate|tip jar/i);
   });
 });
