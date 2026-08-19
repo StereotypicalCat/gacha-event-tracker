@@ -392,14 +392,18 @@ into that one claim, and they have to be held apart:
   precondition, not a detail: **a claim that these four now refresh on a schedule is a claim about the
   address the runner has**, and it must be re-measured there rather than inherited from here.
 
-  **`[self-hosted, safe-ip]` was then measured, and Fandom challenges it too.** The first cycle after
-  that switch reported `403 (an interstitial challenge)` for all four Fandom sources — so the runner
-  move fixed this for game8's `202`, if it fixed anything, and not for Fandom. These four still only
-  move when a person refreshes them from an address Fandom serves, which is what
-  `--assume-robots-on-403` is for and why it is interactive-only. Two things that cycle did **not**
-  settle: game8, whose nine sources were all `skipped_interval` (not due until 23:46 UTC) and so were
-  never asked, and whether any address we control is served — this repository's own sandbox is, which
-  is where the `200`s above come from.
+  **`[self-hosted, safe-ip]` was then measured, and it fixed neither edge.** The first cycle after that
+  switch reported `403 (an interstitial challenge)` for all four Fandom sources; the next one, once the
+  6h floor was up, reported `202 CloudFront` for all nine game8 sources. So that address is challenged
+  by Cloudflare and refused by CloudFront alike, and the runner move bought nothing on its own — worth
+  recording plainly, because "use a different runner" is the first idea anybody has here and it has now
+  been tried.
+
+  What did fix the Fandom half was the cron passing `--assume-robots-on-403` (below): the following
+  cycle put all four through at `200`, two of them with fresh bytes. **game8 has no equivalent and
+  cannot get one** — its `202` is the page itself being withheld, not a permission we hold and cannot
+  re-read, so there is nothing for a recorded decision to stand on. Those nine remain fixture-backed in
+  CI until they are fetched from an address CloudFront serves or replaced with another source.
 
 Three things worth keeping from the episode, because each one is a trap:
 
