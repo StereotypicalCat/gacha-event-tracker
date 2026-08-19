@@ -231,7 +231,9 @@ Namespaced, versioned, and small. Nothing here ever goes to the server.
                                 // timelineUpcoming plots events that have not started yet.
                                 // Defaults to false — the board's window is drawn from what it
                                 // plots, so on by default would push every running bar right to
-                                // make room for things nobody can do yet. See PRD F1.
+                                // make room for things nobody can do yet. Set from settings
+                                // alongside showCompleted / showIgnored, and the only one of
+                                // the three scoped to one view. See PRD F1.
                                 // knownGames is every lane the reader has been offered. Absent
                                 // means unrecorded, not "offered nothing" — see PRD F8; a lane
                                 // missing from it is new to them and arrives switched off.

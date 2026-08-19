@@ -117,9 +117,15 @@ all of it unasked stretched the window weeks past today and squeezed the running
 came for down to nothing. `prefs.timelineUpcoming` defaults to `false`, which is what every existing
 board already looked like on the day it shipped, since the window is drawn from what is plotted.
 Nothing is hidden by that: the checklist's own "Not started yet" section (F2) has listed them all
-along, and the control on the board says **how many** are being held back rather than leaving them
-as an absence. A board with nothing running says exactly that, and points at the control, instead of
+along, and a board with nothing left running says exactly that and names the setting, instead of
 reading as an empty calendar.
+
+The switch is in settings (F4), with the two other answers to *what am I allowed to look at* —
+`showCompleted` and `showIgnored` — and **not** in the board's own header beside the stacking and
+scale controls. That is the line those two draw: they reshape what is already on the board, which is
+why they are reached for while reading it, and this one decides what is on it at all. It is the only
+one of the three scoped to a single view, so its row says so rather than reading as a promise about
+the whole app.
 
 **Switched on, the board says in words where they begin.** A bar drawn to the right of the "now"
 rule is only *implicitly* in the future, and implicitly is not a standard this product holds itself
