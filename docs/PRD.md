@@ -111,6 +111,26 @@ few pixels apart the board is being asked the one question it exists to answer a
 reader to squint. It also gives a one-day event a bar to read and to tap rather than the 34px
 minimum every short bar collapses to.
 
+**What has not started yet is off by default, and the reader can switch it on.** The board answers
+"how does the time I am in lay out?", and every lane has a next patch queued behind it — so plotting
+all of it unasked stretched the window weeks past today and squeezed the running bars the reader
+came for down to nothing. `prefs.timelineUpcoming` defaults to `false`, which is what every existing
+board already looked like on the day it shipped, since the window is drawn from what is plotted.
+Nothing is hidden by that: the checklist's own "Not started yet" section (F2) has listed them all
+along, and the control on the board says **how many** are being held back rather than leaving them
+as an absence. A board with nothing running says exactly that, and points at the control, instead of
+reading as an empty calendar.
+
+**Switched on, the board says in words where they begin.** A bar drawn to the right of the "now"
+rule is only *implicitly* in the future, and implicitly is not a standard this product holds itself
+to anywhere else a date is involved. Gacha schedules are not a smooth stream of start dates either —
+a game ships a patch and six things open at once — so the honest unit is the clump: a dashed rule at
+each group of starts, labelled `5 start Aug 24–Aug 27`, in its own band under the `now` chip. Two
+clumps that land within a label's width of each other merge and the label states the span it covers,
+rather than claiming one date the board is not ruling at. The bars themselves take a dashed left
+edge and a thinner wash of their game's hue, so what is running and what is merely scheduled
+separate at a glance without reading a single date.
+
 **The board draws at most two months of past.** A standing login campaign can have been running for
 half a year, and drawing from the earliest start bought months of empty calendar that nobody scrolls
 back through and that pushed every other bar off to the right. An event older than the board keeps
