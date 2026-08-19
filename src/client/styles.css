@@ -295,24 +295,25 @@ body {
     filter 130ms ease-out;
 }
 
-/* ---- Today's dailies ---------------------------------------------------- */
+/* ---- Chips coloured by a game hue --------------------------------------- */
 /*
- * A daily chip is the fastest thing on the page to act on, and it was saying
- * none of that: the pointer stayed an arrow and nothing happened under it, so a
- * strip of tappable jobs read as a row of status badges.
+ * Today's dailies and the focus bar are the same object twice: a pill carrying
+ * a game's colour, pressed or not, that you tap. Both were saying none of that
+ * — the pointer stayed an arrow and nothing happened under it, so two strips of
+ * controls read as rows of status badges.
  *
- * The hover is drawn from what the component does *not* own. A chip's border,
- * ink and wash are mixed from the game's hue, which is data rather than a token
- * and therefore arrives as an inline style — and no rule here can override one
- * of those. So the cursor, a ring in the same hue, a one-pixel lift and the
- * label coming up to full ink carry it instead. `--hue` and `data-done` are the
- * two things the chip hands over for that.
+ * The hover has to be drawn from what the components do *not* own. A chip's
+ * border, ink and wash are mixed from the game's hue, which is data rather than
+ * a token and therefore arrives as an inline style — and no rule here can
+ * override one of those. So a ring in the same hue, a one-pixel lift and the
+ * label coming up to full ink carry it instead. `--hue` is the one thing a chip
+ * has to hand over; `aria-pressed` it was already saying out loud.
  *
- * The label only brightens while the job is outstanding: on a finished chip the
- * ink *is* the game's hue, and overriding it with `ink` would trade the one
- * thing that says which game for a hover state.
+ * The label only brightens on a chip that is *not* pressed. On a pressed one
+ * the ink already *is* the game's hue, and overriding it with `ink` would trade
+ * the one thing saying which game for a hover state.
  */
-.tick-chip {
+.hue-chip {
   transition:
     border-color 130ms ease-out,
     background-color 130ms ease-out,
@@ -321,22 +322,22 @@ body {
     transform 120ms cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 
-.tick-label {
+.hue-chip-label {
   transition: color 130ms ease-out;
 }
 
 @media (hover: hover) {
-  .tick-chip:hover {
+  .hue-chip:hover {
     transform: translateY(-1px);
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--hue) 45%, transparent);
   }
-  .tick-chip[data-done="false"]:hover .tick-label {
+  .hue-chip[aria-pressed="false"]:hover .hue-chip-label {
     color: var(--color-ink);
   }
 }
 
 /* Press feedback on both mouse and touch, as the event row has. */
-.tick-chip:active {
+.hue-chip:active {
   transform: scale(0.96);
   transition-duration: 60ms;
 }
@@ -349,16 +350,16 @@ body {
   .row-summary,
   .row-check,
   .meter-tick,
-  .tick-chip,
-  .tick-label {
+  .hue-chip,
+  .hue-chip-label {
     transition: none;
   }
   .row-check:hover,
   .row-check:active,
   .event-row:hover .row-open,
   .event-row:hover .row-rail,
-  .tick-chip:hover,
-  .tick-chip:active {
+  .hue-chip:hover,
+  .hue-chip:active {
     transform: none;
   }
 }

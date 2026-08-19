@@ -61,7 +61,12 @@ export function GameFocus({
       <div
         role="group"
         aria-label="Focus on one game"
-        className="scroll-x -mx-4 mt-2 flex gap-1.5 px-4 pb-1 lg:flex-wrap"
+        // `pt-1` is the lift's headroom, not spacing: `scroll-x` sets
+        // `overflow-x: auto`, which computes the vertical axis to `auto` as
+        // well, so a chip that rises a pixel under the cursor loses that pixel
+        // and its ring to the scroller's edge. `mt` gives the same total gap
+        // back.
+        className="scroll-x -mx-4 mt-1 flex gap-1.5 px-4 pb-1 pt-1 lg:flex-wrap"
       >
         <Chip
           label="All"
@@ -120,8 +125,12 @@ function Chip({
       onClick={onClick}
       aria-pressed={on}
       aria-label={`${ariaLabel ?? label}, ${count} outstanding`}
-      className="flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
+      // The dailies strip's hover, and for the same reason: these colours are a
+      // game's hue, so they arrive inline where no rule can reach them, and
+      // `.hue-chip` works off `--hue` and the `aria-pressed` above instead.
+      className="hue-chip flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium"
       style={{
+        ["--hue" as string]: hue,
         borderColor: on ? hue : `color-mix(in srgb, ${hue} 30%, transparent)`,
         color: on ? hue : "var(--color-muted)",
         background: on
@@ -131,7 +140,7 @@ function Chip({
         opacity: count === 0 && !on ? 0.5 : 1,
       }}
     >
-      {label}
+      <span className="hue-chip-label">{label}</span>
       <span className="tnum text-[0.625rem] opacity-70">{count}</span>
     </button>
   );
