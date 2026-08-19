@@ -133,6 +133,16 @@ const SOURCES: SourceSpec[] = [
     url: "https://iopwiki.com/wiki/GFL2_Events",
     parserId: "iopwiki",
   },
+  {
+    id: "stellasora-stellasorawiki-events",
+    game: "stellasora",
+    // The front page, and deliberately not `/wiki/Banner_List`: the list has
+    // full coverage and states no timezone anywhere, while this module emits
+    // the same instants as `<time datetime>` with the offset in the markup.
+    // See `parsers/stellasora.ts` for why coverage loses that argument.
+    url: "https://stellasora.miraheze.org/wiki/Main_Page",
+    parserId: "stellasorawiki",
+  },
 ];
 
 function toAdapter(spec: SourceSpec): Adapter {

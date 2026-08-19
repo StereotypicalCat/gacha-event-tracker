@@ -15,6 +15,7 @@ export const GameId = z.enum([
   "fgo", // Fate/Grand Order
   "holodori", // hololive Dreams
   "gfl2", // Girls' Frontline 2: Exilium
+  "stellasora", // Stella Sora
 ]);
 export type GameId = z.infer<typeof GameId>;
 

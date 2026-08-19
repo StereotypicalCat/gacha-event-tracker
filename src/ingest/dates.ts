@@ -516,3 +516,42 @@ export function parseIsoClockRangeUtc(
     end: { iso: endIso, precision: "exact" },
   };
 }
+
+/**
+ * `2026-08-03T21:00-07:00` → 2026-08-04T04:00:00.000Z, exact precision.
+ *
+ * A machine-readable instant, which is rare enough here to be worth naming:
+ * the Stella Sora wiki's front page emits its banner window as real
+ * `<time datetime>` elements, so the offset is stated in the markup rather than
+ * printed for a human to interpret.
+ *
+ * **The offset is required.** `Z` or `±HH:MM` both pass; a bare local datetime
+ * does not, and that is the same call every other reader here makes. It matters
+ * more than usual on this source, because the page's sibling `Banner_List`
+ * prints the identical instants with no zone anywhere — reading those as UTC
+ * would be an assumption that happens to be right today and is unfalsifiable
+ * from the page, which is exactly the kind of fact this file refuses to invent.
+ *
+ * Anchored at both ends: an attribute value is a whole cell, not prose.
+ */
+export function parseIsoOffsetInstant(input: string): ParsedInstant | null {
+  const re =
+    /^\s*(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?\s*(Z|[+-]\d{2}:?\d{2})\s*$/i;
+  const m = re.exec(input);
+  if (!m) return null;
+
+  // Validated on the stated local fields before the offset shifts anything:
+  // converting first would quietly turn February 30 into a real March instant.
+  const local = iso(
+    Number(m[1]),
+    Number(m[2]),
+    Number(m[3]),
+    Number(m[4]),
+    Number(m[5]),
+  );
+  if (local === null) return null;
+
+  const value = Date.parse(input.trim());
+  if (Number.isNaN(value)) return null;
+  return { iso: new Date(value).toISOString(), precision: "exact" };
+}

@@ -12,6 +12,7 @@ import {
   parseSlashDateTimeRange,
   parseYearFirstSlashRange,
   parseIsoClockRangeUtc,
+  parseIsoOffsetInstant,
 } from "../src/ingest/dates.ts";
 
 describe("parseMonthDayYear", () => {
@@ -470,5 +471,42 @@ describe("parseIsoClockRangeUtc", () => {
       parseIsoClockRangeUtc("2026-08-06 13:00 - 2026-08-26 22:59 (UTC)   ")
         ?.start.iso,
     ).toBe("2026-08-06T13:00:00.000Z");
+  });
+});
+
+describe("parseIsoOffsetInstant", () => {
+  test("converts a stated offset to UTC", () => {
+    // Stella Sora's front page emits its banner window as real `<time datetime>`
+    // attributes, so the offset is in the markup rather than printed for a
+    // human to interpret.
+    expect(parseIsoOffsetInstant("2026-08-03T21:00-07:00")?.iso).toBe(
+      "2026-08-04T04:00:00.000Z",
+    );
+    expect(parseIsoOffsetInstant("2026-08-03T21:00-07:00")?.precision).toBe(
+      "exact",
+    );
+  });
+
+  test("accepts Z and seconds", () => {
+    expect(parseIsoOffsetInstant("2026-08-03T21:00:00Z")?.iso).toBe(
+      "2026-08-03T21:00:00.000Z",
+    );
+  });
+
+  test("requires the offset rather than defaulting to UTC", () => {
+    // The sibling `Banner_List` prints the same instants with no zone anywhere
+    // on the page. Reading those as UTC is the assumption this reader exists to
+    // refuse.
+    expect(parseIsoOffsetInstant("2026-08-03T21:00")).toBeNull();
+    expect(parseIsoOffsetInstant("2026-08-03 21:00-07:00")).toBeNull();
+  });
+
+  test("rejects an impossible calendar day, before the offset shifts it", () => {
+    // Converting first would quietly turn February 30 into a real March instant.
+    expect(parseIsoOffsetInstant("2026-02-30T21:00-07:00")).toBeNull();
+  });
+
+  test("is anchored, so it cannot read an instant out of prose", () => {
+    expect(parseIsoOffsetInstant("Starts 2026-08-03T21:00-07:00")).toBeNull();
   });
 });

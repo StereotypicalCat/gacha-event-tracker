@@ -10,7 +10,7 @@ import { z } from "zod";
 
 export const GameId = z.enum([
   "genshin", "hsr", "zzz", "wuwa", "arknights", "endfield", "nte", "nikki", "p5x", "r1999",
-  "ba", "fgo", "holodori", "gfl2",
+  "ba", "fgo", "holodori", "gfl2", "stellasora",
 ]);
 
 export const EventType = z.enum([
@@ -310,13 +310,18 @@ logged under the old clock. Get it right at introduction or accept a migration.
 
 Infinity Nikki, P5X and Blue Archive carry **no `resetOffsets`
 entry**, so they take the regional default. That is an assumption, not a verified server map — none
-of those sources states one. The 2026-08-19 addition below is worth separating out, because it is
-silent for a different reason than the usual one:
+of those sources states one. Two of the 2026-08-19 additions are worth separating out, because they
+are silent for different reasons and neither is the usual one:
 
 - **Girls' Frontline 2** states an exact UTC instant on every boundary, so the data is there and
   still settles nothing: its EN events end at 22:59 (33 of them), 08:59 (11) and 02:59 (5). Arknights
   and Reverse: 1999 each earned an override from a single boundary the whole page agreed on; three
   of them is a patch window, not a reset hour.
+- **Stella Sora** states an offset outright — `-07:00` — and that is precisely why it gets no entry.
+  `-07:00` is US Pacific in summer and `-08:00` in winter, so one fixed number is wrong for half the
+  year in either direction. This is the Fate/Grand Order gap, arriving through a source that looks
+  like it answered the question.
+
 
 Blue Archive is the case where the assumption is most likely wrong and still the right entry: the
 game does run one worldwide server, but `bluearchive.wiki` states no time of day and no timezone

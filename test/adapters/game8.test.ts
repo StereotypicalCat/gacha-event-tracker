@@ -43,6 +43,7 @@ const CASES: Array<{ adapter: Adapter; fixture: string }> = [
   { adapter: adapter("fgo-fandom-events"), fixture: "fixtures/fgo/fandom-events-2026-08-18" },
   { adapter: adapter("holodori-holodoriwiki-events"), fixture: "fixtures/holodori/holodoriwiki-events-2026-08-18" },
   { adapter: adapter("gfl2-iopwiki-events"), fixture: "fixtures/gfl2/iopwiki-events-2026-08-19" },
+  { adapter: adapter("stellasora-stellasorawiki-events"), fixture: "fixtures/stellasora/stellasorawiki-events-2026-08-19" },
 ];
 
 async function runAdapter(adapter: Adapter, fixture: string) {
@@ -1181,6 +1182,135 @@ describe("IOP Wiki (Girls' Frontline 2)", () => {
         sourceId: gfl2.id,
         game: gfl2.game,
       }),
+    ).toThrow(/redesigned/);
+  });
+});
+
+describe("Stella Sora wiki", () => {
+  const fixture = "fixtures/stellasora/stellasorawiki-events-2026-08-19";
+  const ss = adapter("stellasora-stellasorawiki-events");
+
+  function parse(html: string) {
+    return ss.parse(html, {
+      now: NOW,
+      sourceUrl: ss.url,
+      sourceId: ss.id,
+      game: ss.game,
+    });
+  }
+
+  /**
+   * The module as the template actually emits it — BEM underscores escaped as
+   * `&#95;&#95;`, which is the detail a selector written from a browser's view
+   * of the page gets wrong.
+   */
+  const banner = (name: string, href: string, start: string, end: string) =>
+    `<div class="stellasora-home-banner">
+       <div class="stellasora-home-banner&#95;&#95;name"><a href="${href}">${name}</a></div>
+       <div class="stellasora-home-banner&#95;&#95;period">
+         <time class="stellasora-time" datetime="${start}">x</time> —
+         <time class="stellasora-time" datetime="${end}">y</time>
+       </div></div>`;
+
+  const carded = (banners: string) =>
+    `<div class="stellasora-home-card stellasora-home-card--current stellasora-home-current">
+       <div class="stellasora-home-current&#95;&#95;banners">${banners}</div></div>
+     <div class="stellasora-home-card stellasora-home-card--navigation">
+       <div class="stellasora-home-banner">
+         <div class="stellasora-home-banner&#95;&#95;name">Not a banner</div>
+         <div><time datetime="2026-08-01T00:00-07:00">z</time>
+              <time datetime="2026-12-01T00:00-07:00">z</time></div></div></div>`;
+
+  test("reads the four live banners, converting the stated offset", async () => {
+    const events = await runAdapter(ss, fixture);
+    expect(events.map((e) => e.title)).toEqual([
+      "A Breezy Romance",
+      "Afternoon Glimmer into the Green",
+      "Bloom to the Bright Sun",
+      "Tinges of Rainbow",
+    ]);
+    // 2026-08-17T20:00-07:00 → 03:00Z the next day. Cross-checked against the
+    // wiki's own `Banner_List`, which prints `2026-08-18 03:00:00` for this
+    // banner — the agreement that shows the unzoned table is UTC, and is still
+    // only evidence, which is why we read this page instead.
+    const bloom = events.find((e) => e.title === "Bloom to the Bright Sun");
+    expect(bloom?.startsAt).toBe("2026-08-18T03:00:00.000Z");
+    expect(bloom?.endsAt).toBe("2026-09-08T02:59:00.000Z");
+    for (const e of events) {
+      expect(e.startPrecision).toBe("exact");
+      expect(e.endPrecision).toBe("exact");
+      expect(e.type).toBe("banner");
+    }
+  });
+
+  test("finds the module through its HTML-escaped class name", () => {
+    // The template writes `&#95;&#95;` where a browser shows `__`. A selector
+    // written against the decoded name matches nothing and empties the lane
+    // with no error anywhere, which is the failure this codebase ranks worst.
+    const events = parse(
+      carded(
+        banner("A Breezy Romance", "/wiki/A_Breezy_Romance", "2026-08-03T21:00-07:00", "2026-08-24T12:59-07:00"),
+      ),
+    );
+    expect(events).toHaveLength(1);
+  });
+
+  test("stops at the next card rather than reading the whole page", () => {
+    // Five more cards follow this one. An unbounded slice would publish
+    // whichever of them grows a `<time>` element next.
+    const events = parse(
+      carded(
+        banner("A Breezy Romance", "/wiki/A_Breezy_Romance", "2026-08-03T21:00-07:00", "2026-08-24T12:59-07:00"),
+      ),
+    );
+    expect(events.map((e) => e.title)).toEqual(["A Breezy Romance"]);
+  });
+
+  test("refuses a red link's `?action=` href and falls back to the page", async () => {
+    // Miraheze's robots.txt disallows `?action=`, and a create-page form is the
+    // wrong place to send a reader. `holodori.ts` makes the same call.
+    const events = await runAdapter(ss, fixture);
+    const red = events.find((e) => e.title === "A Breezy Romance");
+    expect(red?.sourceUrl).toBe("https://stellasora.miraheze.org/wiki/Main_Page");
+    // The ones whose articles exist do get linked.
+    expect(events.find((e) => e.title === "Tinges of Rainbow")?.sourceUrl).toBe(
+      "https://stellasora.miraheze.org/wiki/Tinges_of_Rainbow/2026-08-17",
+    );
+  });
+
+  test("drops a banner whose datetime states no offset", () => {
+    // The sibling `Banner_List` prints exactly this — a wall clock with no zone
+    // anywhere on the page — and reading it as UTC is the assumption this
+    // source was chosen to avoid.
+    const events = parse(
+      carded(banner("Zoneless", "/wiki/Zoneless", "2026-08-03T21:00", "2026-08-24T12:59")),
+    );
+    expect(events).toEqual([]);
+  });
+
+  test("drops a banner missing one of its two timestamps", () => {
+    // A start paired with an end read off the next banner would be a
+    // confidently wrong date rather than a missing one.
+    const events = parse(
+      carded(
+        `<div class="stellasora-home-banner">
+           <div class="stellasora-home-banner&#95;&#95;name">Half</div>
+           <div><time datetime="2026-08-03T21:00-07:00">x</time></div></div>`,
+      ),
+    );
+    expect(events).toEqual([]);
+  });
+
+  test("a redesign fails the source instead of emptying the lane", () => {
+    expect(() =>
+      parse('<div class="stellasora-home-card">no module here</div>'),
+    ).toThrow(/redesigned/);
+    // The module present but its `<time>` children gone is equally a redesign.
+    expect(() =>
+      parse(
+        `<div class="stellasora-home-current&#95;&#95;banners">
+           <div class="stellasora-home-banner">Aug 3, 2026 — Aug 24, 2026</div></div>`,
+      ),
     ).toThrow(/redesigned/);
   });
 });

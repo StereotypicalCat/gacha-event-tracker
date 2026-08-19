@@ -55,6 +55,7 @@ Consequences worth internalising:
 | `bawiki` | bluearchive.wiki's rendered `/wiki/Events` — a JP/Global tabber over `Name (EN) \| Start date \| End date \| Notes` wikitables | Blue Archive |
 | `holodoriwiki` | holodori.wiki's rendered `/wiki/Events` — `Current Events` and `Past Events` wikitables over `Event \| Type \| Start Date \| End Date` | hololive Dreams |
 | `iopwiki` | iopwiki.com's `gf-table event-period` tables — `Title \| Period (start/end) \| Server \| Type \| Comment`, one table per event and one row per server | Girls' Frontline 2 |
+| `stellasorawiki` | stellasora.miraheze.org's front-page `Current Banners` module — `<time datetime>` pairs inside `stellasora-home-banner` blocks | Stella Sora |
 
 `wikigg` is the better shape by a distance: it emits ISO timestamps with one timer per server
 region, so its events carry exact precision and real `regionEnds`. Prefer a source like that over a
@@ -142,6 +143,7 @@ All live in `src/ingest/dates.ts`, each returning null rather than inferring any
 | `parseIsoDay` | `2026-08-04` (one boundary per column, so nothing to split) | Blue Archive |
 | `parseSlashClockZone` | `08/17/2026 8:00PM (JST)` (one boundary per column, 12-hour clock, **named** zone) | hololive Dreams |
 | `parseIsoClockRangeUtc` | `2026-08-06 13:00 - 2026-08-26 22:59 (UTC)` (whole range in one cell, **zone required**, nothing converted) | Girls' Frontline 2 |
+| `parseIsoOffsetInstant` | `2026-08-03T21:00-07:00` (a machine-readable `<time datetime>` attribute; **offset required**) | Stella Sora |
 | `parseOpenRange` | `Jul. 24, 2026 - End of 4.6`, `July 10, 2026 - Permanent` | Star Rail, Wuthering Waves |
 
 **A day-precision result is 00:00Z, and that is a placeholder rather than a time.** Every reader

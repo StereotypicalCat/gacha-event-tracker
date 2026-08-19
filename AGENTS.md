@@ -37,8 +37,8 @@ A web app that aggregates live and upcoming events across popular gacha games, p
 calendar, sorts them by end date or by what the reader is partway through, tracks day-by-day
 progress on events that repeat daily, and lets a user mark events completed.
 
-**Status: working app, refreshing itself on a schedule.** Schema, seven parsers, fifteen sources across
-fourteen games, the full interface, offline support, a static server, a Docker image and CI all exist and
+**Status: working app, refreshing itself on a schedule.** Schema, eight parsers, sixteen sources across
+fifteen games, the full interface, offline support, a static server, a Docker image and CI all exist and
 are tested. The refresh runner (`bun run refresh`) fetches, caches raw snapshots and rebuilds the
 feed; `.github/workflows/refresh.yml` runs it twice a day and commits only when a page actually
 changed. The SQLite layer and the review queue are still specified in `docs/` but not built, so the
@@ -106,9 +106,9 @@ re-verify a sample against the live page afterward.
 ```
 src/shared/       schema.ts (the contract), time.ts, daily.ts, effort.ts, games.ts, feed.ts
                   custom.ts — reader-authored games and events, and their key spaces
-src/ingest/       html.ts, dates.ts (thirteen formats), merge.ts, sanitize.ts, robots.ts, snapshots.ts
-  parsers/        game8.ts, wikigg.ts, akwiki.ts, fandom.ts, bawiki.ts, holodori.ts,
-                  iopwiki.ts — keyed by SITE, not game
+src/ingest/       html.ts, dates.ts (fourteen formats), merge.ts, sanitize.ts, robots.ts, snapshots.ts
+  parsers/        game8.ts, wikigg.ts, akwiki.ts, fandom.ts, bawiki.ts, holodori.ts, iopwiki.ts,
+                  stellasora.ts — keyed by SITE, not game
   adapters/       index.ts — SOURCES registry binding url+game+parser, and the sanitize seam
 src/client/       React app, service worker, manifest
   state/          progress, daily log, ignores, prefs, sort — all localStorage
@@ -119,7 +119,7 @@ src/client/       React app, service worker, manifest
                   theme.ts — dark or light, and what a game hue reads as on each
 scripts/          build-feed.ts, build-static.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             641 tests
+test/             660 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
@@ -165,7 +165,7 @@ These come from how gacha games actually schedule things, and they cause most bu
   year, month, or end. `readColumnTable` drops a row it cannot date. An omitted event is a
   recoverable disappointment; a confidently wrong date is the failure this product exists to prevent.
 - **Parsers are keyed by site, not game.** One `game8` parser serves eight sources and `fandom` two;
-  `wikigg`, `akwiki`, `bawiki`, `holodoriwiki` and `iopwiki` serve one each — the first two share a host family
+  `wikigg`, `akwiki`, `bawiki`, `holodoriwiki`, `iopwiki` and `stellasorawiki` serve one each — the first two share a host family
   and have entirely different templates, and the last two are both Miraheze wikis whose page
   templates have nothing in common. Adding a source for a known site is one `SOURCES` entry; a new
   site is a parser module.
@@ -243,7 +243,7 @@ Sources are community wikis. Treat them as a guest would:
 - Honor `robots.txt`; set a descriptive `User-Agent` with a contact URL.
 - One request per source per refresh cycle, minimum 6 hours apart.
 - **Space requests to one host**, honouring its `Crawl-delay` and defaulting to 2s. Eight of the
-  fifteen sources are game8.co pages, so the per-source floor alone still permits one cycle to arrive
+  sixteen sources are game8.co pages, so the per-source floor alone still permits one cycle to arrive
   as eight back-to-back requests to a single site — which is the shape an edge network throttles, and
   what a burst looks like from the far end regardless of our intent.
 - Send `If-None-Match` / `If-Modified-Since`; treat `304` as "skip, unchanged".
@@ -284,6 +284,7 @@ re-litigated each pass:
 | `holodori.wiki` | **Built** (2026-08-18), from the rendered `/wiki/Events` page. Miraheze again, so the same call as Blue Archive; CC BY-SA 4.0, no `Content-Signal`, no `Crawl-delay` for `*` |
 | `prydwen.gg`, `gametora.com` | **Cleared, unbuilt.** `User-agent: *` allows the paths we would want. prydwen sets `Crawl-delay: 10`, far below our one-per-6h |
 | `iopwiki.com` | **Built** (2026-08-19), Girls' Frontline 2 — see § IOP Wiki below. `robots.txt` is two lines, `User-agent: *` and `Crawl-Delay: 20`, no `Disallow` anywhere |
+| `stellasora.miraheze.org` | **Built** (2026-08-19), from the front page's `Current Banners` module and **not** `/wiki/Banner_List` — see § Stella Sora below |
 
 `.github/ISSUE_TEMPLATE/feature_request.yml` points readers at that table by heading, so a source
 request can be checked against it before anyone writes it up — the loudest feedback on the first
@@ -413,6 +414,26 @@ rather than assuming it, exactly as `parseSlashClockZone` does. GFL2 takes no `r
 boundaries land on three different clocks (22:59, 08:59 and 02:59 UTC), which is a patch window
 rather than a reset hour — Arknights and Reverse: 1999 each earned an override from a single
 boundary their whole page agreed on.
+
+**Stella Sora: the front page, not the article — the opposite call to Blue Archive.** Miraheze
+again, so `/wiki/` is open and `/w/` and `?action=` are closed. But this wiki publishes its schedule
+twice, and the fuller surface is the worse one:
+
+- `/wiki/Banner_List` has 55 clean rows with full wall clocks and states **no timezone anywhere**.
+- The front page's `Current Banners` module emits the same instants as real
+  `<time datetime="2026-08-17T20:00-07:00">` elements.
+
+The two agree exactly, which is strong evidence the table is UTC and is still only evidence — so we
+read the surface that says what it means and pay for it in coverage: four live banners instead of a
+full history. If an editor ever states the zone on `Banner_List`, that page becomes the better
+source immediately. Two traps in the markup: the template writes its BEM underscores as `&#95;&#95;`,
+so a selector written against the name a browser shows finds **nothing at all**; and banner names are
+red links to `?action=edit&redlink=1`, which robots.txt disallows, so a href with a query is refused
+and the page URL stands in — the `holodori.ts` rule.
+
+Stella Sora takes no `resetOffsets` either, and for the opposite reason to most: it states an offset
+outright, and the offset is `-07:00` — US Pacific, which shifts by an hour twice a year. That is the
+Fate/Grand Order problem arriving through a source that looks like it answered the question.
 
 `scripts/refresh-sources.ts` enforces all of the above in code — the 6h floor, one request, no
 retries, conditional headers, per-host spacing, robots (failing closed when `robots.txt` cannot be

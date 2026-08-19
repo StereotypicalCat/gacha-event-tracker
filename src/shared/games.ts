@@ -123,6 +123,15 @@ export const GAMES: Record<GameId, GameMeta> = {
   // is a patch window, not a reset hour. So this game takes the regional
   // default until something states its server clock outright.
   gfl2: { id: "gfl2", name: "Girls' Frontline 2: Exilium", short: "GFL2", hue: "#A9C23F", studio: "Sunborn", dailyTasks: "Daily missions" },
+  // No `resetOffsets`, and this is the Fate/Grand Order gap rather than the
+  // Blue Archive one: the source states an offset on every boundary, and the
+  // offset it states is `-07:00` in August. That is US Pacific in summer, which
+  // means it is `-08:00` in winter — one fixed number is wrong for half the year
+  // in either direction, and `resetOffsets` holds one fixed number. The page
+  // also never lands its boundaries on a single local hour (20:00 and 21:00
+  // starts, 12:59 and 19:59 ends), so there is no reset hour to read off it
+  // either. See the fgo entry below for the same reasoning at more length.
+  stellasora: { id: "stellasora", name: "Stella Sora", short: "Stella Sora", hue: "#2E9E9E", studio: "Yostar", dailyTasks: "Daily missions" },
 };
 
 export const GAME_LIST: GameMeta[] = Object.values(GAMES);
