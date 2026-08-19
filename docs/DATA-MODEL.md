@@ -219,7 +219,7 @@ Namespaced, versioned, and small. Nothing here ever goes to the server.
 "gacha-tracker:v1:ignored"      // { [eventId]: { at } }  — "stop showing me this"
 "gacha-tracker:v1:prefs"        // { region, hiddenGames[], knownGames[]?, focusGame, sort, view,
                                 //   timelineDayWidth, timelineGroup, timelineUpcoming,
-                                //   detectDaily, showCompleted,
+                                //   timelineSplitUpcoming, detectDaily, showCompleted,
                                 //   showIgnored, theme, regionConfirmed, onboarded }
                                 // timelineDayWidth is px per day on the board, stored as the
                                 // measurement rather than a step number and read through
@@ -234,6 +234,11 @@ Namespaced, versioned, and small. Nothing here ever goes to the server.
                                 // make room for things nobody can do yet. Set from settings
                                 // alongside showCompleted / showIgnored, and the only one of
                                 // the three scoped to one view. See PRD F1.
+                                // timelineSplitUpcoming keeps those events in their own block
+                                // under a "Not started yet" heading (true, the default) or puts
+                                // them in one deadline order with the running ones (false).
+                                // Only read when timelineUpcoming is on, but stored either way
+                                // so switching that back on restores the answer given. PRD F1.
                                 // knownGames is every lane the reader has been offered. Absent
                                 // means unrecorded, not "offered nothing" — see PRD F8; a lane
                                 // missing from it is new to them and arrives switched off.

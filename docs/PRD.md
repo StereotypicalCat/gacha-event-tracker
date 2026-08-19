@@ -137,6 +137,25 @@ rather than claiming one date the board is not ruling at. The bars themselves ta
 edge and a thinner wash of their game's hue, so what is running and what is merely scheduled
 separate at a glance without reading a single date.
 
+**And the boundary itself is named.** A dashed edge says *this bar* has not started; it does not say
+where the running ones stopped, and a board read at a glance should not have to be decoded bar by
+bar to answer the question the reader opened it with. So the line between the two gets a label —
+`Not started yet`, the same object as a lane's name: a small eyebrow pinned to the left edge, in
+muted ink rather than a hue, since a hue on this board means *whose event is this*. One per lane,
+because "where does this stop running?" is a different answer for each of them.
+
+**Two readings of that board, and the reader picks** (`prefs.timelineSplitUpcoming`, default
+`true` — the board as it was before the choice existed). Split keeps the unstarted events in their
+own block under that heading, and answers "what is on now, and what is queued behind it" — the shape
+of a patch. **Mixed in** drops the block for one deadline order, started or not, and answers "what
+runs out first", which is the question a Gantt chart is for: an event opening on Friday and closing
+on Sunday is a nearer deadline than one running now until October, and the split order can never
+show it. Mixed is therefore *not* the heading switched off — every order this board can be handed
+holds unstarted rows behind running ones, so dropping the label alone would leave the same block
+with nothing explaining it. `timelineLanes` re-sorts on `byDeadline`, which is `endingSoonestFirst`
+with exactly that clause removed, and it is the one case where lane mode is allowed to reorder
+inside a lane.
+
 **The board draws at most two months of past.** A standing login campaign can have been running for
 half a year, and drawing from the earliest start bought months of empty calendar that nobody scrolls
 back through and that pushed every other bar off to the right. An event older than the board keeps
