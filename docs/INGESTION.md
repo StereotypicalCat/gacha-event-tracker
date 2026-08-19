@@ -270,6 +270,17 @@ section but must never claim the event title.
 - Honor `robots.txt`; cache parsed robots per host for 24h. **Fail closed** — a `robots.txt` that
   5xxs or times out means "do not fetch", because a permission we could not read is not a
   permission we have. A 404 means no restrictions.
+- **One narrow exception, opt-in per run: `--assume-robots-on-403`.** Fandom answers a datacentre
+  address `403` on `/robots.txt` itself while `api.php?action=parse` answers our own User-Agent with
+  a `200`, so the gate fails closed and four sources can never refresh — even though their rules are
+  known, because a person read them in a browser and wrote them into AGENTS.md § Scraping conduct.
+  The flag makes the run proceed on that recorded permission. Three things bound it: it applies to
+  `403` **only** (a 401, a 5xx or a soft 404 are still "we do not know"); it never overrides a
+  `robots.txt` we *could* read, so a file that disallows us still says no; and it is refused under
+  CI, because it stands in for a human and there is none on a runner. Every host it applied to is
+  named in the run's warnings and in `summary.assumedRobots` — an override that reports nothing is
+  one nobody withdraws. It changes no other obligation: still one request per source, still six
+  hours apart, still spaced per host.
 - 20s timeout. **No retries**: a retry is a second request, and AGENTS.md § Scraping conduct says
   one per source per cycle. A failed source waits for the next cycle instead.
 - **Only `200` is a page** (plus `304` for "unchanged"). Not `response.ok` — that admits the whole

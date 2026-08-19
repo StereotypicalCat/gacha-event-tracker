@@ -119,7 +119,7 @@ src/client/       React app, service worker, manifest
                   theme.ts — dark or light, and what a game hue reads as on each
 scripts/          build-feed.ts, build-static.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             716 tests
+test/             724 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
@@ -385,6 +385,16 @@ fixture-backed* from any address; what it cannot do is pass the robots gate at r
 fails closed and skips. The permission is therefore a thing a human records once, and the freshness
 is a thing that needs an address Fandom serves.
 
+`--assume-robots-on-403` is the one concession to that, and it is deliberately the narrowest thing
+that helps: `bun run refresh --assume-robots-on-403` treats a `403` **on `/robots.txt` itself** as
+the permission recorded above rather than failing closed. It is not a workaround for a host that
+turned us away — it never overrides a `robots.txt` we could read, so a file that disallows us still
+says no, and it does nothing at all for game8.co, whose robots.txt reads fine and welcomes us while
+its edge refuses the pages. It is refused under CI, because what it stands in for is a person having
+read a file in a browser, and there is no person on a runner. Every host it applied to is named in
+the run's warnings, so it stays a thing somebody decided this morning rather than a default. Nothing
+else relaxes: one request per source, six hours apart, spaced per host, no retries.
+
 One consequence to keep in mind: because `/robots.txt` is unreadable from a challenged address, the
 robots gate **fails closed there and the source is skipped**. That is a warning line rather than a
 broken build — `skipped_robots` does not touch the failure streak, and the run only hard-fails if
@@ -559,7 +569,7 @@ Fate/Grand Order problem arriving through a source that looks like it answered t
 
 `scripts/refresh-sources.ts` enforces all of the above in code — the 6h floor, one request, no
 retries, conditional headers, per-host spacing, robots (failing closed when `robots.txt` cannot be
-read). Anything that would make it fetch more often is a change to this section first.
+read, except under the opt-in `--assume-robots-on-403` described in § Fandom). Anything that would make it fetch more often is a change to this section first.
 
 **A source down is a warning; a source down for days is a broken build.** One wiki failing must
 never blank a calendar or stop the sources that did answer from being committed — so a failure is

@@ -263,6 +263,34 @@ describe("robots", () => {
     expect(summary.warnings).toHaveLength(1);
   });
 
+  test("fetching on an assumed robots permission is named in the summary", async () => {
+    // The override cannot be silent: a permission nobody can re-read is one
+    // nobody withdraws, so every host it applied to is reported by name and
+    // warned about, on a run that otherwise looks completely ordinary.
+    const { opts } = options({
+      robots: {
+        allows: async () => ({
+          allowed: true,
+          reason: "robots.txt returned 403; proceeding on a recorded permission",
+          assumedOnForbidden: true,
+        }),
+      },
+    });
+    const summary = await runRefresh(opts);
+
+    expect(summary.outcomes[0]?.result).toBe("fetched");
+    expect(summary.assumedRobots).toEqual(["game8.co"]);
+    expect(summary.warnings.some((w) => w.includes("--assume-robots-on-403"))).toBe(
+      true,
+    );
+  });
+
+  test("an ordinary run reports no assumed hosts at all", async () => {
+    const { opts } = options({});
+    const summary = await runRefresh(opts);
+    expect(summary.assumedRobots).toEqual([]);
+  });
+
   test("one source blocked is a warning; all of them is a failure", async () => {
     const blocked = {
       allows: async (url: string) => ({
@@ -769,6 +797,7 @@ describe("what the runner reports to the runner", () => {
       },
     ],
     hardFailure: null,
+    assumedRobots: [],
   };
 
   test("a broken source becomes an annotation on the run page", () => {
@@ -926,6 +955,11 @@ describe("flags", () => {
       root: "/tmp/x",
       rebuild: false,
     });
+  });
+
+  test("parseArgs reads --assume-robots-on-403, and it is off by default", () => {
+    expect(parseArgs([]).assumeRobotsOn403).toBe(false);
+    expect(parseArgs(["--assume-robots-on-403"]).assumeRobotsOn403).toBe(true);
   });
 
   test("parseArgs rejects an unknown flag rather than ignoring it", () => {

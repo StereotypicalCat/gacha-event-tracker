@@ -4,12 +4,18 @@
  *   bun run refresh                          # the real thing
  *   bun run refresh --dry-run                # plan only, no requests, no writes
  *   bun run refresh --only genshin-game8-events
+ *   bun run refresh --assume-robots-on-403   # see § the flag, below
  *
  * This is the scheduled half of the pipeline (docs/INGESTION.md stages 1-2).
  * The rules it enforces are etiquette obligations, not preferences:
  *
  *   - robots.txt is read once per host per run and obeyed; unreadable means
- *     "do not fetch", never "assume yes".
+ *     "do not fetch", never "assume yes". `--assume-robots-on-403` is the one
+ *     opt-in exception, for a host that will not serve us the file at all while
+ *     serving us the page: it stands in for rules a person read in a browser
+ *     and wrote into AGENTS.md. It covers 403 only, never overrides a
+ *     robots.txt we could read, is refused under CI, and names every host it
+ *     touched. Nothing else about being a guest relaxes with it.
  *   - at most ONE request per source per cycle, and never sooner than six hours
  *     after the last attempt. There is deliberately no retry: a retry is a
  *     second request, and the next cycle is minutes-cheap compared to being a
@@ -95,6 +101,11 @@ export interface RefreshSummary {
   broken: BrokenSource[];
   /** Set when the run should exit non-zero. */
   hardFailure: string | null;
+  /**
+   * Hosts fetched under `--assume-robots-on-403`. Empty on every normal run,
+   * and on every CI run — the flag is refused there.
+   */
+  assumedRobots: string[];
 }
 
 export interface RobotsGate {
@@ -103,6 +114,8 @@ export interface RobotsGate {
     reason: string;
     /** From the host's `Crawl-delay`, when it states one. */
     crawlDelayMs?: number | null;
+    /** True when `--assume-robots-on-403` is what opened this host. */
+    assumedOnForbidden?: boolean;
   }>;
 }
 
@@ -148,6 +161,8 @@ export const DEFAULT_HOST_GAP_MS = 2_000;
 /** Per-cycle state shared across sources: which hosts we have already asked. */
 interface Cycle {
   requestedHosts: Set<string>;
+  /** Hosts fetched on `--assume-robots-on-403` rather than on a file we read. */
+  assumedRobots: Set<string>;
 }
 
 export async function runRefresh(
@@ -161,9 +176,10 @@ export async function runRefresh(
     warnings: [],
     broken: [],
     hardFailure: null,
+    assumedRobots: [],
   };
 
-  const cycle: Cycle = { requestedHosts: new Set() };
+  const cycle: Cycle = { requestedHosts: new Set(), assumedRobots: new Set() };
 
   const selected =
     options.only === null
@@ -228,6 +244,15 @@ export async function runRefresh(
         });
       }
     }
+  }
+
+  // Named in the summary rather than only in the per-source log, so it survives
+  // into the job summary and cannot be scrolled past.
+  summary.assumedRobots = [...cycle.assumedRobots].sort();
+  for (const host of summary.assumedRobots) {
+    summary.warnings.push(
+      `${host}: fetched on --assume-robots-on-403; its robots.txt was not read this run`,
+    );
   }
 
   // Every source failing is not "a wiki is down", it is us: no network, a bad
@@ -302,6 +327,12 @@ async function refreshOne(
       status: null,
       eventCount: meta?.eventCount ?? null,
     };
+  }
+  // Fetching on a permission nobody can re-read is a thing the run has to say
+  // out loud, every time and per source. An override that reports nothing is an
+  // override that quietly becomes the default.
+  if (decision.assumedOnForbidden === true) {
+    cycle.assumedRobots.add(new URL(adapter.url).host);
   }
 
   // Space requests to a host we have already asked this cycle. This sits after
@@ -608,6 +639,21 @@ export async function rebuildFeedViaScript(): Promise<void> {
   if (code !== 0) throw new Error(`build-feed exited ${code}`);
 }
 
+/**
+ * Are we on a runner rather than at somebody's keyboard?
+ *
+ * Both variables, because `CI` is the convention every runner sets and
+ * `GITHUB_ACTIONS` is the one this repo's workflow guarantees. Erring towards
+ * "yes" is the safe direction: the only thing it costs is refusing an
+ * interactive-only flag to a human whose shell exports `CI`.
+ */
+function isCi(): boolean {
+  return (
+    process.env["CI"] !== undefined && process.env["CI"] !== "" ||
+    process.env["GITHUB_ACTIONS"] === "true"
+  );
+}
+
 interface Args {
   dryRun: boolean;
   only: string | null;
@@ -615,6 +661,8 @@ interface Args {
   userAgent: string;
   rebuild: boolean;
   help: boolean;
+  /** See `--assume-robots-on-403` in USAGE, and § Scraping conduct. */
+  assumeRobotsOn403: boolean;
 }
 
 export function parseArgs(argv: readonly string[]): Args {
@@ -625,6 +673,7 @@ export function parseArgs(argv: readonly string[]): Args {
     userAgent: process.env["REFRESH_USER_AGENT"] ?? DEFAULT_USER_AGENT,
     rebuild: true,
     help: false,
+    assumeRobotsOn403: false,
   };
 
   // A flag whose value is missing is a mistake, never a default. `--only` with
@@ -659,6 +708,9 @@ export function parseArgs(argv: readonly string[]): Args {
       case "--no-feed":
         args.rebuild = false;
         break;
+      case "--assume-robots-on-403":
+        args.assumeRobotsOn403 = true;
+        break;
       case "--help":
       case "-h":
         args.help = true;
@@ -675,13 +727,19 @@ export function parseArgs(argv: readonly string[]): Args {
 }
 
 const USAGE = `usage: bun run refresh [--dry-run] [--only <sourceId>] [--snapshots <dir>]
-                       [--user-agent <ua>] [--no-feed]
+                       [--user-agent <ua>] [--no-feed] [--assume-robots-on-403]
 
   --dry-run       report what each source would do; no requests, no writes
   --only <id>     refresh a single source (${ADAPTERS.map((a) => a.id).join(", ")})
   --snapshots     snapshot cache directory (default: snapshots, env SNAPSHOT_DIR)
   --user-agent    override the User-Agent (env REFRESH_USER_AGENT)
-  --no-feed       skip regenerating public/data/events.v1.json`;
+  --no-feed       skip regenerating public/data/events.v1.json
+  --assume-robots-on-403
+                  temporary, interactive-only. When a host answers 403 to
+                  /robots.txt itself, proceed on the permission recorded in
+                  AGENTS.md instead of failing closed. Refused under CI.
+                  Does NOT override a robots.txt we could read: a file that
+                  disallows us still says no.`;
 
 async function main(): Promise<number> {
   let args: Args;
@@ -704,11 +762,34 @@ async function main(): Promise<number> {
     return 2;
   }
 
+  // The flag stands in for a human having read a robots.txt in a browser and
+  // written it down. There is no human on a runner, and a scheduled job quietly
+  // asserting a permission nobody re-checked is how "temporary" becomes
+  // permanent — so CI is refused the option outright rather than trusted not to
+  // pass it. AGENTS.md § Scraping conduct is the argument.
+  if (args.assumeRobotsOn403 && isCi()) {
+    console.error(
+      "--assume-robots-on-403 is interactive-only and refused under CI.\n" +
+        "It asserts a permission a person read by hand; run the refresh from a " +
+        "machine the host serves instead.",
+    );
+    return 2;
+  }
+
   const store = new SnapshotStore(args.root);
   const robots = new RobotsCache({
     userAgent: args.userAgent,
     fetchImpl: (input, init) => fetch(input, init),
+    assumeAllowedWhenForbidden: args.assumeRobotsOn403,
   });
+
+  if (args.assumeRobotsOn403) {
+    console.warn(
+      "  ! --assume-robots-on-403: a host answering 403 to /robots.txt will be\n" +
+        "    fetched anyway, on the permission recorded in AGENTS.md. Temporary,\n" +
+        "    and every host it applies to is named at the end of this run.",
+    );
+  }
 
   console.log(
     `refresh: ${args.only ?? `${ADAPTERS.length} sources`}${args.dryRun ? " (dry run)" : ""}`,
@@ -737,6 +818,12 @@ async function main(): Promise<number> {
       `${summary.warnings.length} warnings, ${summary.broken.length} broken`,
   );
   for (const warning of summary.warnings) console.warn(`  ! ${warning}`);
+  for (const host of summary.assumedRobots) {
+    console.warn(
+      `  ! ${host}: robots.txt was NOT read this run. Re-read it in a browser ` +
+        `and confirm AGENTS.md § Scraping conduct still describes it.`,
+    );
+  }
   for (const b of summary.broken) {
     console.error(
       `  !! ${b.sourceId} has failed ${b.consecutiveFailures} cycles running ` +
