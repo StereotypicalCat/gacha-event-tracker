@@ -181,9 +181,11 @@ source immediately — full coverage, no template dependency.
 >
 > Three notes for whoever touches it next, all of them corrections or additions to what follows:
 >
-> - **The 403 is on `robots.txt` only.** `api.php?action=parse` answers our own User-Agent with a
->   `200` from a datacentre address; it is the robots file that is challenged. So the adapter could
->   be written and fixture-backed from here, and what it cannot do is pass the gate at refresh time.
+> - **The 403 is per-address and per-client — corrected 2026-08-19.** `api.php?action=parse` answers
+>   our own User-Agent with a `200`, and on a served address so does `/robots.txt` when the runner's
+>   own client asks: `curl` is challenged on that route and Bun's `fetch` is not. That does **not**
+>   make it schedulable — the 17:46 UTC run on `ubuntu-latest` still reported `skipped_robots` for all
+>   four Fandom sources with that same client. `AGENTS.md` § Fandom carries both measurements.
 > - **The zone is in the column header, not the cell** — `Start(UTC+9)` / `End(UTC+9)`. That makes
 >   the header load-bearing: a table that stops naming its zone is refused rather than read as UTC.
 > - **Story-event starts carry no clock, only their ends do.** The start keeps the day the page
@@ -747,6 +749,8 @@ Facts stated above that a future reader may want to re-check, with how they were
 | `fandom.ts`, `akwiki`, `wikigg`, `bawiki`, `holodori` cannot read the new pages | `canParse` returned `false` for every combination tried |
 | CI can fetch wiki.gg and Miraheze | `git log --name-only -- snapshots/` — `github-actions[bot]` commits carry `arknights-akwiki`, `endfield-wikigg`, `ba-bawiki` |
 | A Fandom `robots.txt` 403 means the source is skipped, not failed | `src/ingest/robots.ts` `RobotsCache.load` — `status >= 400` other than 404/410 → `usable: false` |
+| On a served address Fandom answers the runner's own client, and only `curl` was challenged | `bun -e` with `RobotsCache` + `DEFAULT_USER_AGENT` → `allowed`, `robots.txt ok`, all four sources; `curl` → `403` 8/8 with both a bare and a Chrome `User-Agent` |
+| A served address is still a precondition, so that is not schedulability | run `a60eb66` (17:46 UTC, `ubuntu-latest`) → `skipped_robots` on all four Fandom sources, same Bun client, alongside nine game8 `202`s |
 | All thirteen § 12 hubs exist | `GET https://game8.co/games/<Name>` → `200` for every one |
 | The `game8` parser already reads the MementoMori events page | ran `game8Parser.parse` against the fetched bytes: 7 events from the 7 data rows of `Current Events \| Duration` |
 | The FEH page is unreadable by shape, not by two header words | `columnLayout` finds no range column at all — `Availability` is a start and `End` is its own column, and `readStartEndTable` wants the rowspan `Start`/`End` pair |

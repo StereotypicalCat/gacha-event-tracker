@@ -297,6 +297,13 @@ section but must never claim the event title.
   Every host it applied to is named in the run's warnings and in `summary.assumedRobots` — an
   override that reports nothing is one nobody withdraws. It changes no other obligation: still one
   request per source, still six hours apart, still spaced per host.
+
+  **Two variables decide whether it is needed at all, and they were once folded into one.** The
+  client matters — a `curl` measurement said Fandom refused us while the runner's own Bun client was
+  served the file — and so does the address, which the client does not rescue: `ubuntu-latest` still
+  reported `skipped_robots` on all four Fandom sources using that same client. So verify a gate with
+  `bun -e` and the real `RobotsCache` rather than a shell client, and verify it **from the address
+  that will run it**. AGENTS.md § Fandom has both measurements.
 - 20s timeout. **No retries**: a retry is a second request, and AGENTS.md § Scraping conduct says
   one per source per cycle. A failed source waits for the next cycle instead.
 - **A `403` on `robots.txt` records which kind it was** — `an interstitial challenge`, `a refusal`,

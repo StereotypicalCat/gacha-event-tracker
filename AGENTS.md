@@ -353,11 +353,12 @@ trains nothing, and no LLM reads the page content — constraint 2 is what keeps
 load-bearing here and not only a cost decision. Note also that Reverse: 1999, Blue Archive,
 Umamusume and Nikke have **no wiki.gg wiki** — those subdomains 401.
 
-**Fandom: read the API, never the page.** `reverse1999.fandom.com/wiki/Events` answers a non-browser
-client with a Cloudflare managed challenge — HTTP 403, `Just a moment…`, "Enable JavaScript" — and so
-does `/robots.txt` itself, from a datacenter address. Browser-shaped headers or a JS-executing client
-would get past both and **must not be used**: that is defeating a deliberate access control, the same
-reason `uma.moe` was declined above.
+**Fandom: read the API, never the page.** `reverse1999.fandom.com/wiki/Events` answers some
+non-browser clients with a Cloudflare managed challenge — HTTP 403, `Just a moment…`, "Enable
+JavaScript" — and `/robots.txt` is on the same challenged route, though our own client is served both
+(see the correction below). Browser-shaped headers or a JS-executing client would get past a
+challenge and **must not be used**: that is defeating a deliberate access control, the same reason
+`uma.moe` was declined above.
 
 What makes this source legitimate anyway is that the wiki publishes a second, sanctioned surface. Its
 `robots.txt` — read in a browser, where it serves fine — has no `Disallow: /` for `*` and explicitly
@@ -367,32 +368,95 @@ own headers, on a path the site put in writing. The only namespaces `*` is refus
 `User:`, `Template:` and `Help:`, none of which we want; `parsers/fandom.ts` skips `Special:` links
 for that reason.
 
-**Fandom's posture tightened on 2026-08-19, and it now covers every wiki.** On 2026-08-18 the
-standard `robots.txt` was still readable from a plain address — `blhx.fandom.com` served it `200`,
-which is how the permission above was confirmed. As of 2026-08-19 **every** Fandom wiki tried
-(`reverse1999`, `fategrandorder`, `nikke-…-international`, `infinitynikki`, `blhx`) answers `403`
-to our fetcher, and a real headless browser gets a Cloudflare managed challenge that never resolves.
-Two consequences, and neither is a licence to work around it:
+**The Fandom `403` is per-address *and* per-client, and one of those was measured wrong — 2026-08-19.**
+For one day this section recorded that `403` as Fandom's posture, holding across every wiki and every
+address, which made those four sources permanently unschedulable. Two separate variables were folded
+into that one claim, and they have to be held apart:
 
-- **All four** built Fandom sources report `skipped_robots` on **every** run, from any address we
-  have, so `r1999`, `fgo`, `nikke` and `nikki` only ever move when someone refreshes them from an
-  address Fandom serves. All four have a snapshot as of 2026-08-19 and every one of them was taken
-  by hand. That is not a source being down — nothing is broken — but nothing will ever update these
-  four on a schedule either, so their freshness is exactly as old as the last person who ran
-  `bun run refresh` themselves. `--assume-robots-on-403` below is what makes that run possible.
-- A **new** Fandom source can still be added, but only once someone reads that wiki's `robots.txt`
-  from an address Fandom serves and records it here. That is exactly how Nikke was cleared on
-  2026-08-19: the file was read in a browser, is the standard Fandom file — no `Disallow: /` for
-  `*`, `/api.php?action=` explicitly allowed, only `Special:`, `User:`, `User_talk:`, `Template:`,
-  `Template_talk:`, `Help:` and `UserProfile:` refused — and the named AI crawlers it blocks
-  (`GPTBot`, `CCBot`, `OAI-SearchBot`, `ImagesiftBot`) are not us.
+- **The client.** The original measurement was `curl`, and `curl` is not what fetches. On one address,
+  in the same minute:
 
-**The 403 is on `robots.txt`, not on the API.** Worth separating, because it decides what is
-possible: `api.php?action=parse` answers our own User-Agent with a `200` from here, on all four
-Fandom wikis we read. Only the robots file is challenged. So an adapter can be *written and
-fixture-backed* from any address; what it cannot do is pass the robots gate at refresh time, which
-fails closed and skips. The permission is therefore a thing a human records once, and the freshness
-is a thing that needs an address Fandom serves.
+  | Client | `GET /robots.txt` |
+  |---|---|
+  | `curl`, no `User-Agent` override | `403`, 8 tries out of 8 |
+  | `curl`, a Chrome `User-Agent` | `403`, 8 tries out of 8 |
+  | `curl`, our real `User-Agent` | `403` |
+  | **Bun `fetch`, our real `User-Agent`** | **`200`, and the real file, on all five hosts** |
+
+  There, `RobotsCache` returns `allowed` / `robots.txt ok` for all four sources with no override, and
+  the file it reads is byte-for-byte the standard Fandom one recorded above.
+
+- **The address, which the client does not rescue.** The scheduled run `a60eb66` (17:46 UTC, on
+  `ubuntu-latest`) reported `skipped_robots` for all four Fandom sources using that same Bun client,
+  in the same cycle that nine game8 sources took the usual `202 CloudFront`. So a served address is a
+  precondition, not a detail: **a claim that these four now refresh on a schedule is a claim about the
+  address the runner has**, and it must be re-measured there rather than inherited from here. As of
+  writing, `refresh.yml` has just moved to `[self-hosted, safe-ip]` and has not yet run a cycle, so
+  their scheduled reachability is **untested**, not established. The next run's summary settles it.
+
+Three things worth keeping from the episode, because each one is a trap:
+
+- **`curl` is the wrong instrument for a question about this pipeline.** The 403 is a Cloudflare
+  *managed challenge* (`cf-mitigated: challenge`, `cType: 'managed'`), and a managed challenge is
+  scored largely on the TLS and HTTP/2 fingerprint of the client. Bun's stack passes where curl's
+  does not. **Verify a fetch gate with `bun -e` and the real `RobotsCache`**, never with a shell
+  client, or you will record a conclusion about curl and file it under Fandom.
+- **The `User-Agent` is not the lever, in either direction.** Adding a browser `User-Agent` to curl
+  changes nothing — 403 either way — so a 200 that appears when you drop the header is the
+  challenge's probabilistic half, not a header you tuned. `fategrandorder` answered `403` once and
+  then `200` seven times running to an identical request. This matters because the obvious reading of
+  such a result is "shape the headers until it works", which is precisely the impersonation the top
+  of this section forbids. It also does not work.
+- **The challenge is route-scoped.** `api.php` is exempt at Fandom's edge and answers everything;
+  `/robots.txt`, `/wiki/*` and `/` are the challenged routes. So a challenge on the HTML page tells
+  you nothing about the surface the adapter actually reads.
+
+A **new** Fandom source still needs that wiki's own `robots.txt` read and recorded here before it is
+built — read it with the runner's client, which can. That is what Nikke's clearance on 2026-08-19
+rests on, and the file is the standard Fandom one: no `Disallow: /` for `*`, `/api.php?action=`
+explicitly allowed, only `Special:`, `User:`, `User_talk:`, `Template:`, `Template_talk:`, `Help:`
+and `UserProfile:` refused, and the named AI crawlers it blocks (`GPTBot`, `CCBot`, `OAI-SearchBot`,
+`ImagesiftBot`) are not us.
+
+**Should a challenge ever return, it is still not a licence to work around it.** An adapter can be
+written and fixture-backed from any address, because `api.php?action=parse` answers our own
+User-Agent with a `200`; what a challenged address cannot do is pass the robots gate, which fails
+closed and skips. The answer then is the one below — a person refreshing from an address Fandom
+serves, on a permission recorded by hand — and never browser-shaped headers.
+
+**And no, a managed challenge cannot be waited out or solved on our side.** Asked directly on
+2026-08-19, so it is not re-tested each pass:
+
+- **Delays do nothing, because neither block is a rate limit.** Three independent reasons, and the
+  run of 17:46 UTC on 2026-08-19 supplies the first two:
+  - **Every one of these failures was a *first* request to that host in the cycle.** `robots.txt` is
+    fetched once per host per run, so each of the four Fandom `403`s was first contact with a
+    different host. `genshin-game8-events` is the first game8 source in the order and it took a `202`
+    before any other game8 request existed. A mitigation on request one cannot have been caused by
+    the pace of requests two through nine.
+  - **The spacing is already there.** game8's `robots.txt` states no `Crawl-delay`, so the runner
+    applies `DEFAULT_HOST_GAP_MS` (2s) between all nine game8 requests — and all nine still `202`.
+    Cycles are ≥6h apart and game8's `lastConfirmedAt` is still `never`, so months of 12-hour
+    spacing has not moved it either.
+  - **Neither status is a rate response.** Rate limiting is `429` or `503` with `Retry-After`. What
+    arrives is `202` with a CloudFront bot-management body, and `403` with
+    `cf-mitigated: challenge` and no `Retry-After`. Those are identity verdicts, not pace verdicts.
+
+  Spacing requests is an obligation we owe the host regardless, and it stays. It is simply not a
+  lever on this, and adding more of it would only slow the run down while changing nothing.
+- **Carrying cookies does nothing.** curl with a cookie jar across three requests is `403` every
+  time. The edge issues `__cf_bm` (bot management) and never `cf_clearance`, which is the only cookie
+  that marks a challenge as passed.
+- **Earning `cf_clearance` is the access control.** It is issued only after the
+  `/cdn-cgi/challenge-platform/` script runs and returns a valid proof from a browser environment.
+  Executing that to obtain the cookie is defeating a deliberate access control — the exact ground
+  `uma.moe` was declined on, where the gate was a Turnstile proof header. A gate not written in
+  `robots.txt` is still a gate.
+- **It does not even work.** A real headless browser pointed at these hosts gets a managed challenge
+  that never resolves, so the option being refused on conduct is also the option that fails.
+
+The legitimate lever is the address, which is why `refresh.yml` runs on a `[self-hosted, safe-ip]`
+runner rather than `ubuntu-latest`.
 
 `--assume-robots-on-403` is the one concession to that, and it is deliberately the narrowest thing
 that helps: `bun run refresh --assume-robots-on-403` treats **an interstitial challenge** on
