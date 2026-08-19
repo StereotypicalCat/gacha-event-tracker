@@ -119,7 +119,7 @@ src/client/       React app, service worker, manifest
                   theme.ts — dark or light, and what a game hue reads as on each
 scripts/          build-feed.ts, build-static.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             711 tests
+test/             716 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
@@ -630,6 +630,17 @@ timeline, sort, filters, progress, ignore and daily stores as scraped events. Fo
 A lane may now be a game the reader invented, so `gameMeta` is a context resolver (`metaFor`, pure
 and total) rather than a direct lookup — a lane can outlive its game when an import carries an event
 whose game did not come with it.
+
+**Retiring a game, a source or a page must never cost the reader a row they typed.** We retire
+things routinely — a source moves, a page goes stale, a game shuts down — and their events are the
+only copy in existence. Nothing in the client deletes: no store prunes against the feed, `knownGames`
+only ever appends, and `metaFor` renders a lane whose game is gone rather than dropping it. The one
+place this could break is the load path. `useCustom` reads through `validRecords`, which **drops a
+record that fails its schema**, and the survivors are what the next write persists — so a record that
+stops parsing is not hidden pending a fix, it is deleted from the device by the act of opening the
+app. That is why `CustomEvent.game` is `z.string()` and not `GameId`: narrowing it to the enum reads
+like a tightening and would arm every future game removal to erase reader data on next launch.
+`test/custom.test.ts` § retiring a game, a source or a page pins it.
 
 ## Shipping a new version
 
