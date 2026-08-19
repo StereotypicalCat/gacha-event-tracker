@@ -548,6 +548,10 @@ export function App() {
             onZoom={(timelineDayWidth) => update({ timelineDayWidth })}
             group={prefs.timelineGroup}
             onGroup={(timelineGroup) => update({ timelineGroup })}
+            // The board holds these back itself rather than being handed a
+            // shorter list, so its own control can say how many are waiting.
+            showUpcoming={prefs.timelineUpcoming}
+            onShowUpcoming={(timelineUpcoming) => update({ timelineUpcoming })}
             onOpen={setOpenId}
             isDone={isDone}
           />

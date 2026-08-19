@@ -64,6 +64,20 @@ const MIN_BAR = 34;
 const TAG_FROM = 96;
 
 /**
+ * How far apart two start markers have to be before both are drawn.
+ *
+ * Games ship on their own patch days, so at a wide scale several clumps land
+ * within a few pixels of each other and their labels overlap into an unreadable
+ * smear. Below this the later clump is folded into the earlier marker's count,
+ * which is the honest reading anyway: "eleven things start around here".
+ *
+ * Sized to the widest label the marker draws rather than to a gridline, since
+ * what collides is the text and not the rule. A merged marker says the span it
+ * covers, so nothing is claimed about a date the board is not ruling.
+ */
+const MARKER_GAP = 104;
+
+/**
  * One lane per game, bars spanning start→end, today pinned as a rule.
  *
  * The quiet view. The ending-soon list carries the page's boldness, so this
@@ -83,6 +97,8 @@ export function Timeline({
   onZoom,
   group,
   onGroup,
+  showUpcoming,
+  onShowUpcoming,
   onOpen,
   isDone,
 }: {
@@ -94,6 +110,17 @@ export function Timeline({
   /** How the bars are stacked: a lane per game, or one deadline queue. */
   group: TimelineGroup;
   onGroup: (group: TimelineGroup) => void;
+  /**
+   * Whether events that have not started yet are plotted.
+   *
+   * Off by default (`prefs.timelineUpcoming`). The board is asked "how does the
+   * time I am in lay out?", and every lane has a next patch queued behind it —
+   * plotting those unasked stretches the window weeks past today and squeezes
+   * the running bars the reader came for. The count is on the control, so what
+   * is held back is stated rather than merely absent.
+   */
+  showUpcoming: boolean;
+  onShowUpcoming: (showUpcoming: boolean) => void;
   onOpen: (id: string) => void;
   /**
    * Asked rather than derived from the progress store: an entry exists there
@@ -105,8 +132,14 @@ export function Timeline({
   const gameMeta = useGameMeta();
   const scroller = useRef<HTMLDivElement>(null);
 
-  const ends = rows.map((r) => r.clock.endsMs ?? r.clock.startsMs + 14 * DAY);
-  const starts = rows.map((r) => r.clock.startsMs);
+  // Held back rather than filtered away by the caller, so the control can say
+  // how many there are — a board that silently drops a third of the schedule is
+  // the same failure as a stale date, arriving as an absence.
+  const waiting = rows.filter((r) => r.clock.upcoming);
+  const plotted = showUpcoming ? rows : rows.filter((r) => !r.clock.upcoming);
+
+  const ends = plotted.map((r) => r.clock.endsMs ?? r.clock.startsMs + 14 * DAY);
+  const starts = plotted.map((r) => r.clock.startsMs);
   const { min, max } = boardWindow(starts, ends, now);
   const totalDays = Math.ceil((max - min) / DAY);
   const chartWidth = totalDays * dayWidth;
@@ -165,7 +198,8 @@ export function Timeline({
     );
   }
 
-  const lanes = timelineLanes(rows, group);
+  const lanes = timelineLanes(plotted, group);
+  const marks = startMarkers(plotted, x);
 
   const months = monthBoundaries(min, max);
   const weeks = weekBoundaries(min, max);
@@ -178,8 +212,15 @@ export function Timeline({
       {/* The board's own header. The jump control lives out here rather than
           floating over the chart: pinned inside, it would sit on top of the
           calendar and cover the very dates it sends you back to. */}
-      <div className="flex items-center justify-between gap-3 border-b border-hairline px-4 py-2.5">
-        <StackControl value={group} onChange={onGroup} />
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-hairline px-4 py-2.5">
+        <div className="flex items-center gap-2">
+          <StackControl value={group} onChange={onGroup} />
+          <UpcomingControl
+            on={showUpcoming}
+            waiting={waiting.length}
+            onChange={onShowUpcoming}
+          />
+        </div>
 
         <div className="flex items-center gap-3">
           <div role="group" aria-label="Scale" className="flex items-center gap-1">
@@ -209,6 +250,18 @@ export function Timeline({
         </div>
       </div>
 
+      {plotted.length === 0 ? (
+        /* Not the same emptiness as no rows at all: everything the reader can
+           see is still ahead of them, and the board is hiding it on purpose.
+           Say which, or the control above reads as broken. */
+        <p className="px-4 py-10 text-sm leading-relaxed text-muted">
+          Nothing is running right now.{" "}
+          {waiting.length === 1
+            ? "One event has not started yet"
+            : `${waiting.length} events have not started yet`}{" "}
+          — switch “Not started” on to see when they begin.
+        </p>
+      ) : (
       <div
         ref={scroller}
         /*
@@ -248,6 +301,29 @@ export function Timeline({
             </span>
           </div>
 
+          {/* Where the not-yet-started events begin, said in words.
+              A bar drawn to the right of the now rule is the only thing saying
+              "this has not started", and that reads as a fact about the layout
+              rather than about the event — so each clump of starts gets a
+              dashed rule and a label counting what opens there. Below the now
+              rule in the stack: today is the one mark that has to win. */}
+          {marks.map((mark) => (
+            <div
+              key={mark.ms}
+              aria-hidden
+              className="pointer-events-none absolute bottom-0 top-10 z-[5] w-px border-l border-dashed border-faint/60"
+              style={{ left: x(mark.ms) }}
+            >
+              {/* Its own band under the `now` chip rather than beside it: at a
+                  wide scale the first clump is a few pixels from today, and
+                  sharing a line cost the label its first character to a chip
+                  that is deliberately drawn on top of everything. */}
+              <span className="tnum absolute top-5 whitespace-nowrap rounded-[3px] border border-hairline bg-ground px-1 py-px text-[0.5625rem] leading-none text-muted">
+                {markerLabel(mark)}
+              </span>
+            </div>
+          ))}
+
           {/* The axis: months above, week dates below, pinned to the top. */}
           <div className="sticky top-0 z-30 h-10 border-b border-hairline bg-ground/95 backdrop-blur">
             {months.map((m) => (
@@ -272,7 +348,9 @@ export function Timeline({
             )}
           </div>
 
-          <div className="space-y-7 pb-10 pt-5">
+          {/* The top padding is the marker band's room — see the start markers
+              above, which hang in it. */}
+          <div className="space-y-7 pb-10 pt-9">
             {lanes.map((lane) => {
               const heading = lane.game === null ? null : gameMeta(lane.game);
               return (
@@ -296,6 +374,7 @@ export function Timeline({
                     {lane.rows.map(({ event, clock }) => {
                       const game = gameMeta(event.game);
                       const unknownEnd = clock.endsMs === null;
+                      const notStarted = clock.upcoming;
                       // Only clipped if it began before the rendered window,
                       // which reaches a week past the oldest running event — so
                       // in practice bars show their real start and the fade is
@@ -315,9 +394,12 @@ export function Timeline({
                           // it carries, and colour alone is not an answer once
                           // thirteen games share one stack.
                           title={
-                            heading === null
+                            (heading === null
                               ? `${game.name} — ${event.title}`
-                              : event.title
+                              : event.title) +
+                            (notStarted
+                              ? ` — not started yet, begins ${dayLabel(clock.startsMs)}`
+                              : "")
                           }
                           className={`relative flex h-9 items-center gap-2 rounded-[5px] px-3 text-left text-[0.75rem] font-medium transition-opacity hover:opacity-100 ${
                             done ? "opacity-35" : "opacity-90"
@@ -325,12 +407,20 @@ export function Timeline({
                           style={{
                             marginLeft: left,
                             width,
-                            background: `color-mix(in srgb, ${game.hue} 22%, var(--color-surface))`,
+                            // Thinner wash on an event nobody can play yet, so
+                            // a glance at the board separates what is running
+                            // from what is merely scheduled without reading a
+                            // single date.
+                            background: `color-mix(in srgb, ${game.hue} ${
+                              notStarted ? 11 : 22
+                            }%, var(--color-surface))`,
                             // No start edge to draw when the bar begins before
-                            // the view does.
+                            // the view does. Dashed when the event has not
+                            // started: the edge is a date in the future, not a
+                            // thing that has happened.
                             borderLeft: clippedStart
                               ? undefined
-                              : `3px solid ${game.hue}`,
+                              : `3px ${notStarted ? "dashed" : "solid"} ${game.hue}`,
                             // Frayed right = end unannounced; faded left =
                             // started before the window. Both are honest about
                             // what is not shown.
@@ -353,6 +443,17 @@ export function Timeline({
                               </span>
                             )}
                             <span className="min-w-0 truncate">{event.title}</span>
+                            {notStarted && (
+                              /* The dashed edge and the labelled rule above it
+                                 say this to a reader looking at the board; a
+                                 screen reader gets neither, and a bar that has
+                                 not started is not a bar that is running. */
+                              <span className="sr-only">
+                                {" "}
+                                — not started yet, begins{" "}
+                                {dayLabel(clock.startsMs)}
+                              </span>
+                            )}
                           </span>
                           <span
                             aria-hidden
@@ -369,6 +470,7 @@ export function Timeline({
           </div>
         </div>
       </div>
+      )}
     </>
   );
 }
@@ -436,6 +538,50 @@ function StackControl({
         );
       })}
     </div>
+  );
+}
+
+/**
+ * Whether the board also plots what has not started yet.
+ *
+ * A switch rather than a third stacking pill, and drawn as one — it does not
+ * reshape the board, it changes what is on it. The count is the point: a board
+ * that quietly withheld nine events would be indistinguishable from a quiet
+ * fortnight, and "nothing scheduled" is exactly the wrong thing for this app to
+ * imply by accident.
+ *
+ * Absent when there is nothing waiting and it is switched off: a toggle that
+ * cannot change anything invites a tap that does nothing.
+ */
+function UpcomingControl({
+  on,
+  waiting,
+  onChange,
+}: {
+  on: boolean;
+  waiting: number;
+  onChange: (on: boolean) => void;
+}) {
+  if (waiting === 0 && !on) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!on)}
+      aria-pressed={on}
+      title={
+        on
+          ? "Stop plotting events that have not started yet"
+          : "Also plot events that have not started yet"
+      }
+      className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.6875rem] font-medium transition-colors ${
+        on
+          ? "border-ink/60 text-ink"
+          : "border-hairline text-faint hover:text-muted"
+      }`}
+    >
+      Not started
+      <span className="tnum text-[0.625rem] text-faint">{waiting}</span>
+    </button>
   );
 }
 
@@ -532,4 +678,75 @@ function monthBoundaries(min: number, max: number) {
     d.setUTCMonth(d.getUTCMonth() + 1);
   }
   return out;
+}
+
+/**
+ * Where the not-yet-started events begin, and how many begin there.
+ *
+ * Gacha schedules are not a smooth stream of start dates: a game ships a patch
+ * and six things open at once, so the honest unit is the clump, not the event.
+ * Grouped by day and then merged again by *distance on screen*, because two
+ * clumps a week apart are the same mark at six pixels a day and two separate
+ * marks at a hundred and eight — and a merged one says the range it covers
+ * rather than the first date in it, which would be a date the board is not
+ * drawing a rule at.
+ *
+ * Pure and exported because it decides what a reader is told about the future,
+ * which is worth a test rather than a rendering.
+ */
+export function startMarkers<
+  T extends { clock: { upcoming: boolean; startsMs: number } },
+>(
+  rows: readonly T[],
+  x: (ms: number) => number,
+): Array<{ ms: number; through: number; count: number }> {
+  const byDay = new Map<number, { ms: number; through: number; count: number }>();
+  for (const row of rows) {
+    if (!row.clock.upcoming) continue;
+    const day = Math.floor(row.clock.startsMs / DAY);
+    const at = byDay.get(day);
+    if (at === undefined) {
+      byDay.set(day, {
+        ms: row.clock.startsMs,
+        through: row.clock.startsMs,
+        count: 1,
+      });
+    } else {
+      at.ms = Math.min(at.ms, row.clock.startsMs);
+      at.through = Math.max(at.through, row.clock.startsMs);
+      at.count += 1;
+    }
+  }
+
+  const out: Array<{ ms: number; through: number; count: number }> = [];
+  for (const day of [...byDay.values()].sort((a, b) => a.ms - b.ms)) {
+    const last = out[out.length - 1];
+    if (last !== undefined && x(day.ms) - x(last.ms) < MARKER_GAP) {
+      last.through = Math.max(last.through, day.through);
+      last.count += day.count;
+      continue;
+    }
+    out.push({ ...day });
+  }
+  return out;
+}
+
+/**
+ * What a start marker says out loud.
+ *
+ * The whole reason the markers exist: a bar drawn to the right of the now rule
+ * is only implicitly in the future, and "implicitly" is not a standard this app
+ * holds itself to anywhere else a date is involved.
+ */
+export function markerLabel(mark: {
+  ms: number;
+  through: number;
+  count: number;
+}): string {
+  const from = dayLabel(mark.ms);
+  const to = dayLabel(mark.through);
+  if (mark.count === 1) return `starts ${from}`;
+  return from === to
+    ? `${mark.count} start ${from}`
+    : `${mark.count} start ${from}–${to}`;
 }

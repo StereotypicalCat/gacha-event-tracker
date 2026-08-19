@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import { NextUp } from "../src/client/components/NextUp.tsx";
-import { boardWindow, Timeline } from "../src/client/components/Timeline.tsx";
+import {
+  boardWindow,
+  markerLabel,
+  startMarkers,
+  Timeline,
+} from "../src/client/components/Timeline.tsx";
 import { Welcome } from "../src/client/components/Welcome.tsx";
 import { timelineLanes } from "../src/client/state/lanes.ts";
 import { GameMetaProvider } from "../src/client/state/gameMeta.tsx";
@@ -43,6 +48,44 @@ function row(title: string, game: GameId, endsInHours: number | null) {
         ? null
         : new Date(NOW + endsInHours * HOUR).toISOString(),
     endPrecision: endsInHours === null ? "unknown" : "exact",
+    regionScoped: false,
+    regionEnds: null,
+    sourceUrl: "https://example.invalid/events",
+    sourceId: "example-events",
+    status: "published",
+    confidence: 1,
+    extractionMethod: "parser",
+    version: 1,
+    firstSeenAt: "2026-08-17T00:00:00.000Z",
+    updatedAt: "2026-08-17T00:00:00.000Z",
+  });
+  return { event, clock: clockFor(event, "europe", NOW) };
+}
+
+/**
+ * An event whose start is still ahead of `NOW`.
+ *
+ * Its own helper rather than a flag on `row`, because everything about it is
+ * different: the start is what places it, the id is cut from the start's date,
+ * and it is the case the board deliberately withholds.
+ */
+function upcoming(
+  title: string,
+  game: GameId,
+  startsInHours: number,
+  runsForHours = 240,
+) {
+  const startsAt = new Date(NOW + startsInHours * HOUR).toISOString();
+  const event = GachaEvent.parse({
+    id: `${game}:${title.toLowerCase().replace(/\W+/g, "-")}:${startsAt.slice(0, 10)}`,
+    game,
+    title,
+    type: "banner",
+    summary: null,
+    startsAt,
+    startPrecision: "exact",
+    endsAt: new Date(NOW + (startsInHours + runsForHours) * HOUR).toISOString(),
+    endPrecision: "exact",
     regionScoped: false,
     regionEnds: null,
     sourceUrl: "https://example.invalid/events",
@@ -217,6 +260,8 @@ describe("Timeline stacking", () => {
         onZoom={() => {}}
         group={group}
         onGroup={() => {}}
+        showUpcoming={false}
+        onShowUpcoming={() => {}}
         onOpen={() => {}}
         isDone={() => false}
       />,
@@ -250,5 +295,153 @@ describe("Timeline stacking", () => {
       /aria-pressed="true"[\s\S]*?>([^<]+)</.exec(board(group))?.[1];
     expect(pressed("game")).toBe("By game");
     expect(pressed("ending")).toBe("Ending soonest");
+  });
+});
+
+describe("Timeline: events that have not started", () => {
+  const rows = [
+    row("Closing Ceremony", "genshin", 100),
+    upcoming("Frost Parade", "hsr", 3 * 24),
+    upcoming("Second Coming", "zzz", 3 * 24 + 2),
+    upcoming("Long Way Round", "wuwa", 30 * 24),
+  ];
+
+  const board = (showUpcoming: boolean, all = rows) =>
+    render(
+      <Timeline
+        rows={all}
+        now={NOW}
+        dayWidth={32}
+        onZoom={() => {}}
+        group="ending"
+        onGroup={() => {}}
+        showUpcoming={showUpcoming}
+        onShowUpcoming={() => {}}
+        onOpen={() => {}}
+        isDone={() => false}
+      />,
+    );
+
+  test("the board holds them back by default and says how many", () => {
+    // Off is the default because the board answers "how does the time I am in
+    // lay out?" — but an absence nobody mentioned is indistinguishable from a
+    // quiet fortnight, which is the wrong thing for this app to imply.
+    const html = board(false);
+    expect(html).toContain("Closing Ceremony");
+    expect(html).not.toContain("Frost Parade");
+    expect(html).not.toContain("Long Way Round");
+    expect(html).toContain("Not started");
+    expect(html).toContain(">3<");
+  });
+
+  test("switching it on plots them", () => {
+    const html = board(true);
+    expect(html).toContain("Frost Parade");
+    expect(html).toContain("Long Way Round");
+  });
+
+  test("the control says which way it is set", () => {
+    expect(board(false)).toContain('aria-pressed="false"');
+    expect(board(true)).toContain('aria-pressed="true"');
+  });
+
+  test("nothing waiting and switched off means no control at all", () => {
+    // A toggle that cannot change anything invites a tap that does nothing.
+    expect(board(false, [row("Closing Ceremony", "genshin", 100)])).not.toContain(
+      "Not started",
+    );
+  });
+
+  test("a board with only future events says so rather than reading empty", () => {
+    // Otherwise the reader is looking at "nothing to plot" while three events
+    // are scheduled, and the reason is a control they did not notice.
+    const html = board(false, rows.slice(1));
+    expect(html).toContain("Nothing is running right now");
+    expect(html).toContain("3 events have not started yet");
+    // The control is still there to act on what the sentence just told them.
+    expect(html).toContain("Not started");
+  });
+
+  test("each clump of starts is marked in words", () => {
+    const html = board(true);
+    // Two of them open on the same day, so that is one mark saying two.
+    expect(html).toContain("2 start");
+    // And the far one is its own mark, singular.
+    expect(html).toContain("starts ");
+  });
+
+  test("start markers are absent while the events are held back", () => {
+    expect(board(false)).not.toContain("2 start");
+  });
+});
+
+describe("startMarkers", () => {
+  const DAY = 86_400_000;
+  const at = (ms: number) => ({ clock: { upcoming: true, startsMs: ms } });
+
+  /** A generous scale, so nothing merges unless the test asks it to. */
+  const wide = (ms: number) => (ms / DAY) * 108;
+
+  test("events starting the same day are one mark", () => {
+    // A patch ships six things at once; six rules stacked on one date is not a
+    // reading of that, it is a smear.
+    const marks = startMarkers(
+      [at(5 * DAY), at(5 * DAY + 3600_000), at(5 * DAY + 7200_000)],
+      wide,
+    );
+    expect(marks).toHaveLength(1);
+    expect(marks[0]?.count).toBe(3);
+  });
+
+  test("the mark sits at the earliest start in its day", () => {
+    // So the rule lands on the leftmost bar of the clump rather than at a
+    // midnight no event actually begins at.
+    const marks = startMarkers([at(5 * DAY + 7200_000), at(5 * DAY)], wide);
+    expect(marks[0]?.ms).toBe(5 * DAY);
+  });
+
+  test("separate days stay separate when the scale has room", () => {
+    const marks = startMarkers([at(5 * DAY), at(9 * DAY)], wide);
+    expect(marks).toHaveLength(2);
+  });
+
+  test("days closer than a label are merged, and the label says the range", () => {
+    // At six pixels a day, four days apart is 24px — two labels on top of each
+    // other. Merged, and honest about what it covers.
+    const tight = (ms: number) => (ms / DAY) * 6;
+    const marks = startMarkers([at(5 * DAY), at(9 * DAY)], tight);
+    expect(marks).toHaveLength(1);
+    expect(marks[0]?.count).toBe(2);
+    expect(marks[0]?.ms).toBe(5 * DAY);
+    expect(marks[0]?.through).toBe(9 * DAY);
+  });
+
+  test("events already running are not starts", () => {
+    expect(
+      startMarkers([{ clock: { upcoming: false, startsMs: 5 * DAY } }], wide),
+    ).toEqual([]);
+  });
+});
+
+describe("markerLabel", () => {
+  const DAY = 86_400_000;
+
+  test("one event says it starts", () => {
+    expect(markerLabel({ ms: 5 * DAY, through: 5 * DAY, count: 1 })).toStartWith(
+      "starts ",
+    );
+  });
+
+  test("several on one day are counted", () => {
+    expect(markerLabel({ ms: 5 * DAY, through: 5 * DAY, count: 4 })).toStartWith(
+      "4 start ",
+    );
+  });
+
+  test("a merged mark names the span it covers, not just its first day", () => {
+    // Claiming one date for a mark that stands for eleven days is the kind of
+    // small confident wrongness this codebase exists to avoid.
+    const label = markerLabel({ ms: 5 * DAY, through: 9 * DAY, count: 2 });
+    expect(label).toContain("–");
   });
 });
