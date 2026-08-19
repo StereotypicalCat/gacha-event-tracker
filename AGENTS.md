@@ -367,11 +367,11 @@ to our fetcher, and a real headless browser gets a Cloudflare managed challenge 
 Two consequences, and neither is a licence to work around it:
 
 - **All four** built Fandom sources report `skipped_robots` on **every** run, from any address we
-  have, so `r1999`, `fgo`, `nikke` and `nikki` are permanently fixture-backed until someone
-  refreshes them from an address Fandom serves. `r1999` and `fgo` have snapshots, both taken by hand
-  on 2026-08-19; `nikke` and `nikki` have never had one and are served from their fixtures. That is
-  not a source being down: nothing is broken, and nothing will ever update any of the four on a
-  schedule.
+  have, so `r1999`, `fgo`, `nikke` and `nikki` only ever move when someone refreshes them from an
+  address Fandom serves. All four have a snapshot as of 2026-08-19 and every one of them was taken
+  by hand. That is not a source being down — nothing is broken — but nothing will ever update these
+  four on a schedule either, so their freshness is exactly as old as the last person who ran
+  `bun run refresh` themselves. `--assume-robots-on-403` below is what makes that run possible.
 - A **new** Fandom source can still be added, but only once someone reads that wiki's `robots.txt`
   from an address Fandom serves and records it here. That is exactly how Nikke was cleared on
   2026-08-19: the file was read in a browser, is the standard Fandom file — no `Disallow: /` for
