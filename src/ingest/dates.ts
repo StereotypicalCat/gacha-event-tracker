@@ -40,8 +40,19 @@ function iso(
     return null;
   }
   const date = new Date(Date.UTC(y, m - 1, d, hh, mm, ss, 0));
-  // Rejects impossible calendar dates such as February 30.
-  if (date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) return null;
+  // Rejects impossible calendar dates such as February 30 — and a year that did
+  // not survive the round trip. `Date.UTC` maps 0–99 into the 1900s, so a
+  // four-digit "0050" becomes 1950 with the month and day intact, which the two
+  // checks beside this one cannot see. Reading the year back is the same
+  // skip-rather-than-guess rule the rest of this module runs on, applied to the
+  // one field that was taken on trust.
+  if (
+    date.getUTCFullYear() !== y ||
+    date.getUTCMonth() !== m - 1 ||
+    date.getUTCDate() !== d
+  ) {
+    return null;
+  }
   return date.toISOString();
 }
 

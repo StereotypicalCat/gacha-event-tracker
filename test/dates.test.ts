@@ -43,6 +43,20 @@ describe("parseMonthDayYear", () => {
   test("rejects an unknown month name", () => {
     expect(parseMonthDayYear("Smarch 3, 2026")).toBeNull();
   });
+
+  test("rejects a year that Date.UTC would silently move", () => {
+    // `Date.UTC` maps years 0–99 into the 1900s, so "0050" came back as 1950
+    // with the month and day intact — which the impossible-date guard cannot
+    // see, because nothing about the date is impossible. It is the same class of
+    // failure as February 30 rolling over to March 2: a boundary the source
+    // never stated, published as though it had.
+    expect(parseMonthDayYear("August 12, 0050")).toBeNull();
+    expect(parseMonthDayYear("August 12, 0099")).toBeNull();
+    // And a real four-digit year is untouched.
+    expect(parseMonthDayYear("August 12, 2026")?.iso).toBe(
+      "2026-08-12T00:00:00.000Z",
+    );
+  });
 });
 
 describe("parseMonthDayRange", () => {
