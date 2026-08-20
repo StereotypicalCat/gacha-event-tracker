@@ -159,7 +159,12 @@ describe("EventRow provenance", () => {
   test("marks the reader's own event as theirs", () => {
     const html = render(
       <ul>
-        <EventRow row={row(OWN.id)} completed={false} onOpen={() => {}} />
+        <EventRow
+          row={row(OWN.id)}
+          now={Date.parse(AT)}
+          completed={false}
+          onOpen={() => {}}
+        />
       </ul>,
     );
     expect(html).toContain("yours");
@@ -170,12 +175,44 @@ describe("EventRow provenance", () => {
       <ul>
         <EventRow
           row={row("genshin:windblume-festival:2026-03-14")}
+          now={Date.parse(AT)}
           completed={false}
           onOpen={() => {}}
         />
       </ul>,
     );
     expect(html).not.toContain(">yours<");
+  });
+
+  test("counts from the instant it is handed, not from the wall clock", () => {
+    // The row used to ask `Date.now()` for its caption and its "starts in",
+    // which is why neither could be asserted at all: the numbers moved with
+    // whenever the suite happened to run. Rendering the same row at two instants
+    // has to produce two different countdowns, and both have to be the ones the
+    // injected clock implies.
+    const event = { ...asDisplayEvent(OWN), id: OWN.id };
+    const at = Date.parse(AT);
+    // A window opening in two days, so the row takes its "starts in" branch.
+    const upcoming = {
+      ...event,
+      startsAt: new Date(at + 2 * 24 * 3_600_000).toISOString(),
+    };
+    const at2 = (ms: number) =>
+      render(
+        <ul>
+          <EventRow
+            row={{ event: upcoming, clock: clockFor(upcoming, "europe", ms) }}
+            now={ms}
+            completed={false}
+            onOpen={() => {}}
+          />
+        </ul>,
+      );
+
+    expect(at2(at)).toContain("starts in 2d");
+    // A day later the same row says one day, with nothing about the real clock
+    // involved in either answer.
+    expect(at2(at + 24 * 3_600_000)).toContain("starts in 1d");
   });
 });
 

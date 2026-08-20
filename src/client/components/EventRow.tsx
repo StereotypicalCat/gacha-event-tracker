@@ -23,6 +23,17 @@ export interface DailyBadge {
 
 interface EventRowProps {
   row: RowEvent;
+  /**
+   * The instant the page is being read at.
+   *
+   * Passed in like every other surface's, rather than read off the clock here.
+   * This row was the one component asking the wall clock itself, which meant its
+   * caption and its "starts in" counted from a different instant than the
+   * `clock` beside them had been computed against — and that neither could be
+   * rendered against a fixed time in a test, which is the rule the rest of this
+   * codebase holds to.
+   */
+  now: number;
   completed: boolean;
   status?: Status | undefined;
   effort?: Effort | undefined;
@@ -36,6 +47,7 @@ interface EventRowProps {
 
 export function EventRow({
   row,
+  now,
   completed,
   status,
   effort,
@@ -49,13 +61,13 @@ export function EventRow({
   const game = gameMeta(event.game);
   const heat = URGENCY_COLOR[clock.urgency];
 
-  const caption = windowCaption(clock, Date.now());
+  const caption = windowCaption(clock, now);
   // Only ever a warning when the reader gave an estimate — inferring one to
   // justify the warning would be inventing their input.
   const risk = status === "done" ? "fine" : pressure(effort, clock.msRemaining);
 
   const countdown = clock.upcoming
-    ? `starts in ${formatRemaining(clock.startsMs - Date.now())}`
+    ? `starts in ${formatRemaining(clock.startsMs - now)}`
     : clock.msRemaining === null
       ? "end date unknown"
       : formatRemaining(clock.msRemaining);

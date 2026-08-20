@@ -348,6 +348,7 @@ export function App() {
     <EventRow
       key={row.event.id}
       row={row}
+      now={now}
       completed={isDone(row.event.id)}
       status={prog.progress[row.event.id]?.status}
       effort={prog.progress[row.event.id]?.effort}
