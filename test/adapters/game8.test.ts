@@ -217,16 +217,6 @@ describe("new source shapes", () => {
     expect(open.length).toBeGreaterThan(0);
     for (const e of open) expect(e.endPrecision).toBe("unknown");
   });
-
-  test("wuwa parses ranges carrying a year on both sides", async () => {
-    const events = await runAdapter(
-      adapter("wuwa-game8-events"),
-      "fixtures/wuwa/game8-events-2026-08-14",
-    );
-    const jade = events.find((e) => e.title === "In Search of Lost Jade");
-    expect(jade?.startsAt).toBe("2026-07-30T00:00:00.000Z");
-    expect(jade?.endsAt).toBe("2026-08-13T00:00:00.000Z");
-  });
 });
 
 describe("endfield", () => {
@@ -338,6 +328,55 @@ describe("p5x", () => {
       (e) => e.title === "1st Anniversary Celebration",
     );
     expect(anniversary?.summary).toContain("first anniversary");
+  });
+});
+
+describe("wuwa", () => {
+  const fixture = "fixtures/wuwa/game8-events-2026-08-14";
+
+  test("recovers each event's blurb from its own h4 section", async () => {
+    // The listing table's second column holds unlock conditions, not prose. The
+    // description lives further down, in a per-event section whose title is an
+    // h4 and whose dates are labelled `Event Duration` — so both the section
+    // reader and the range vocabulary have to admit it before the blurb the
+    // page has always carried can reach a reader.
+    const events = await runAdapter(adapter("wuwa-game8-events"), fixture);
+    const shape = events.find((e) => e.title === "Shape of Yesterday");
+    expect(shape?.summary).toContain("photos at specific locations");
+    const jade = events.find((e) => e.title === "In Search of Lost Jade");
+    expect(jade?.summary).toContain("web browser event");
+  });
+
+  test("the enclosing summary heading never becomes an event", async () => {
+    // `3.5 Events Summary` heads the block; the h4s inside it name the events.
+    // A reader that lets the h3 keep the title publishes the section as an
+    // event and swallows every h4 below it.
+    const events = await runAdapter(adapter("wuwa-game8-events"), fixture);
+    expect(events.map((e) => e.title)).not.toContain("3.5 Events Summary");
+  });
+
+  test("publishes the events that only the summary block dates", async () => {
+    // Neither of these appears in the Ongoing or Upcoming tables, so before the
+    // summary block was readable they were silently absent from the calendar.
+    const events = await runAdapter(adapter("wuwa-game8-events"), fixture);
+    const titles = events.map((e) => e.title);
+    expect(titles).toContain("Recaptured: Action Highlights");
+    expect(titles).toContain("Mingshen Notices");
+  });
+
+  test("an unlock condition is still not a description", async () => {
+    // "Unlocked by default" sits where the blurb would go and the page offers
+    // no prose for this event anywhere, so the slot stays empty.
+    const events = await runAdapter(adapter("wuwa-game8-events"), fixture);
+    const aces = events.find((e) => e.title === "Ascendant Aces");
+    expect(aces?.summary).toBeNull();
+  });
+
+  test("parses ranges carrying a year on both sides", async () => {
+    const events = await runAdapter(adapter("wuwa-game8-events"), fixture);
+    const jade = events.find((e) => e.title === "In Search of Lost Jade");
+    expect(jade?.startsAt).toBe("2026-07-30T00:00:00.000Z");
+    expect(jade?.endsAt).toBe("2026-08-13T00:00:00.000Z");
   });
 });
 

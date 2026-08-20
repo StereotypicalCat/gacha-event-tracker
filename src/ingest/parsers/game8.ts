@@ -52,6 +52,14 @@ const INCLUDED_SECTIONS = [
   // nothing.
   /list of (all )?banners/i,
   /current banners/i,
+  // Wuthering Waves follows its listing tables with a block that repeats every
+  // live event as its own sub-section — the shape Persona 5 uses, and the only
+  // place on the page the blurbs live. The heading names a version
+  // ("3.6 Events Summary"), so it is matched on the two words it always ends
+  // with. It has to be *recognised* rather than merely fallen through: an
+  // unrecognised heading is read as an event name, which would put the section
+  // title where the first event's should be.
+  /events summary/i,
 ];
 
 /**
@@ -82,7 +90,8 @@ const EXCLUDED_SECTIONS = [
 const START_LABEL = /^(event|test run|banner)?\s*start(\s+date)?$/i;
 const END_LABEL = /^(event|test run|banner)?\s*end(\s+date)?$/i;
 /** Label/value rows carrying a whole range in one cell. */
-const RANGE_LABEL = /^(availability period|event period|duration|period|dates)$/i;
+const RANGE_LABEL =
+  /^(availability period|event period|(event )?duration|period|dates)$/i;
 
 /** Column-table header matchers. */
 const COL_TITLE = /^(.*\b)?(events?|banners?)$/i;
@@ -133,12 +142,16 @@ export function parseGame8EventsPage(
       } else if (INCLUDED_SECTIONS.some((re) => re.test(heading))) {
         sectionIncluded = true;
         currentTitle = null;
-      } else if (node.kind !== "h4") {
-        // An unrecognised h2/h3 names an event. An unrecognised h4 does not —
-        // Genshin uses them for sub-headings *within* one event ("Availability
-        // Period", "Characters & Rewards for this Test Run"), so letting one
-        // claim the title would rename "Character Test Runs" to the label above
-        // its own date table.
+      } else if (node.kind !== "h4" || currentTitle === null) {
+        // An unrecognised h2/h3 names an event. An unrecognised h4 may only
+        // *fill* an empty title, never take one: Genshin uses h4 for
+        // sub-headings *within* one event ("Availability Period", "Characters &
+        // Rewards for this Test Run"), and there the event's own h3 has already
+        // claimed the slot, so letting the label overwrite it would rename
+        // "Character Test Runs" to whatever sits above its date table. Where
+        // the slot is empty the h4 is all there is — Wuthering Waves names each
+        // sub-section of its events-summary block with one, and a reader that
+        // refuses it publishes the section heading once and drops the rest.
         currentTitle = heading;
       }
       continue;
