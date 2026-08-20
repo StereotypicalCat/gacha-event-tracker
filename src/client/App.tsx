@@ -24,7 +24,6 @@ import { compareRows, SORT_MODES, type Activity, type SortMode } from "./state/s
 import {
   advanceFocus,
   countByGame,
-  followingDeadlineMs,
   nextToExpire,
   outstanding,
   resolveFocus,
@@ -302,15 +301,6 @@ export function App() {
   const live = visible.filter((r) => r.clock.live);
   const upcoming = visible.filter((r) => r.clock.upcoming);
   /**
-   * What falls due after the row at the top of "Running now".
-   *
-   * Read off the deadlines rather than off the list, because the list is in
-   * whichever order the reader chose — see `followingDeadlineMs`. Null when
-   * there is no second dated end, and the header then says nothing rather than
-   * counting down to a placeholder.
-   */
-  const following = followingDeadlineMs(live);
-  /**
    * The unstarted events the checklist actually lists.
    *
    * `upcoming` stays the full count either way, because the page header states
@@ -522,11 +512,6 @@ export function App() {
             <Section
               legend
               title="Running now"
-              hint={
-                following === null
-                  ? undefined
-                  : `next after this ends in ${formatRemaining(following)}`
-              }
               action={
                 visible.length > 1 ? (
                   <SortControl
@@ -724,15 +709,23 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * A titled block of the checklist, with room for one control on the right.
+ *
+ * There was a `hint` slot beside `action` — a line of prose for a section with
+ * no control — rendered as `action ?? hint`. Nothing could ever reach it: its
+ * only caller was "Running now", whose hint needed two live rows, and two live
+ * rows are two visible rows, which is exactly when the sort control appears and
+ * wins. What it would have said is on the page anyway, in the "Then" list of the
+ * headline panel, which names those deadlines and counts them down.
+ */
 function Section({
   title,
-  hint,
   legend,
   action,
   children,
 }: {
   title: string;
-  hint?: string | undefined;
   legend?: boolean | undefined;
   /** A control that belongs to this section, e.g. how it is ordered. */
   action?: React.ReactNode | undefined;
@@ -742,7 +735,7 @@ function Section({
     <section className="pt-5">
       <div className="flex items-baseline justify-between gap-3 px-4 pb-2">
         <h2 className="eyebrow">{title}</h2>
-        {action ?? (hint !== undefined && <p className="text-xs text-faint">{hint}</p>)}
+        {action}
       </div>
       {legend === true && <Legend />}
       {children}

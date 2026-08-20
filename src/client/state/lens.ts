@@ -72,31 +72,6 @@ export function firstToExpire<T extends Row>(rows: readonly T[]): T | null {
 }
 
 /**
- * How long the deadline *behind* the closest one has left, or null when there
- * is not a second dated deadline to report.
- *
- * The "Running now" header uses this to say what falls due after the row at the
- * top. It asked the list for `rows[1]` before, which was wrong twice over and
- * in the two ways this module exists to prevent.
- *
- * The list arrives sorted by whatever mode the reader chose, so under "doing
- * first" `rows[1]` is the second thing they are partway through — the same
- * mistake `firstToExpire` was written to stop the headline making, one row
- * further down. And an unannounced end has no time remaining at all, so the
- * old `?? 0` handed `formatRemaining` a zero and the header read "next after
- * this ends in ended": the `endsAt: null` rule turned into a claim that
- * something expired, which is exactly backwards.
- *
- * So it reads the second *dated* deadline and returns null rather than a
- * stand-in, and the caller omits the line when there is nothing to say.
- */
-export function followingDeadlineMs<T extends Row>(
-  rows: readonly T[],
-): number | null {
-  return nextToExpire(rows, 2)[1]?.clock.msRemaining ?? null;
-}
-
-/**
  * The focused game, if it is still a game the reader can see.
  *
  * A focus on a game they have since switched off, or that has dropped out of
