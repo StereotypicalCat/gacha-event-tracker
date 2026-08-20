@@ -65,7 +65,6 @@ export function Controls({
   /** Everything the reader entered themselves, and the ways to change it. */
   own: React.ComponentProps<typeof YourOwn>;
 }) {
-  const gameMeta = useGameMeta();
   return (
     <section className="border-t border-hairline px-4 py-5">
       {/* Which games and how they are read on one side, what the reader has

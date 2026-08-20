@@ -66,7 +66,14 @@ feed is a static JSON file built from snapshots, falling back to checked-in fixt
 
 The only runtime dependency is `zod`. Do not add a bundler, test runner, HTTP client, or HTML
 parsing library — Bun covers all four. `tsconfig.json` runs `strict` plus
-`noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`.
+`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noUnusedLocals` and
+`noUnusedParameters`.
+
+The last two are there because this project has no linter and does not want one: a binding nothing
+reads is the only kind of dead code a reader cannot tell from a deliberate seam, and `tsc` already
+walks every file. Three had accumulated behind `strict` — an unread `type View` import, and a
+`useGameMeta()` resolver in two components that each draw their colours from somewhere else. A
+genuinely unused parameter is spelled with a leading underscore, which both flags already exempt.
 
 ## Commands
 

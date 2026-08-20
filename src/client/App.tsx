@@ -17,7 +17,7 @@ import { useAppUpdate } from "./state/useAppUpdate.ts";
 import { useMarkSet } from "./state/useMarkSet.ts";
 import { useProgress } from "./state/useProgress.ts";
 import { useDailyLog, type DailyLogMap } from "./state/useDailyLog.ts";
-import { adoptNewLanes, usePrefs, type View } from "./state/usePrefs.ts";
+import { adoptNewLanes, usePrefs } from "./state/usePrefs.ts";
 import { snapDayWidth } from "./state/zoom.ts";
 import { useCustom } from "./state/useCustom.ts";
 import { compareRows, SORT_MODES, type Activity, type SortMode } from "./state/sort.ts";

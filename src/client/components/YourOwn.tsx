@@ -1,6 +1,5 @@
 import { useState } from "react";
 import type { CustomEvents, CustomGames, LaneId } from "../../shared/custom.ts";
-import { useGameMeta } from "../state/gameMeta.tsx";
 import type { EventDraft } from "../state/useCustom.ts";
 import { EventForm, GameForm } from "./CustomForms.tsx";
 
@@ -30,7 +29,6 @@ export function YourOwn({
   onRemoveGame: (id: string) => { removed: boolean; blockedBy: number };
   onAddEvent: (draft: EventDraft) => void;
 }) {
-  const gameMeta = useGameMeta();
   const [adding, setAdding] = useState<"game" | "event" | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
