@@ -3,6 +3,7 @@ import {
   advanceFocus,
   countByGame,
   firstToExpire,
+  followingDeadlineMs,
   nextToExpire,
   outstanding,
   resolveFocus,
@@ -43,6 +44,40 @@ describe("outstanding", () => {
 
   test("nothing outstanding is an empty list, not a null", () => {
     expect(outstanding(rows, () => true, none)).toEqual([]);
+  });
+});
+
+describe("followingDeadlineMs", () => {
+  const HOUR = 3_600_000;
+
+  test("reads the second deadline, not the second row", () => {
+    // The "Running now" header says what falls due after the top row. The list
+    // arrives in whichever order the reader chose, so under "doing first" its
+    // second row is the second thing they are partway through — the mistake
+    // `firstToExpire` prevents one row up.
+    const rows = [
+      row("mid-run", "genshin", 9 * 24 * HOUR),
+      row("next-week", "hsr", 5 * 24 * HOUR),
+      row("tonight", "zzz", 3 * HOUR),
+    ];
+    expect(followingDeadlineMs(rows)).toBe(5 * 24 * HOUR);
+  });
+
+  test("an unannounced end is not a deadline of zero", () => {
+    // The old code took `rows[1].msRemaining ?? 0`, and `formatRemaining(0)` is
+    // the string "ended" — so a second row with `endsAt: null` had the header
+    // reading "next after this ends in ended". Null means there is nothing to
+    // say, and the caller says nothing.
+    expect(followingDeadlineMs([row("tonight", "genshin", 3 * HOUR), row("undated", "hsr", null)]))
+      .toBeNull();
+  });
+
+  test("one deadline has nothing behind it", () => {
+    expect(followingDeadlineMs([row("only", "genshin", 3 * HOUR)])).toBeNull();
+  });
+
+  test("an empty list is null, not a zero", () => {
+    expect(followingDeadlineMs([])).toBeNull();
   });
 });
 

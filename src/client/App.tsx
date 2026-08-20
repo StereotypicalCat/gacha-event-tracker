@@ -24,6 +24,7 @@ import { compareRows, SORT_MODES, type Activity, type SortMode } from "./state/s
 import {
   advanceFocus,
   countByGame,
+  followingDeadlineMs,
   nextToExpire,
   outstanding,
   resolveFocus,
@@ -301,6 +302,15 @@ export function App() {
   const live = visible.filter((r) => r.clock.live);
   const upcoming = visible.filter((r) => r.clock.upcoming);
   /**
+   * What falls due after the row at the top of "Running now".
+   *
+   * Read off the deadlines rather than off the list, because the list is in
+   * whichever order the reader chose — see `followingDeadlineMs`. Null when
+   * there is no second dated end, and the header then says nothing rather than
+   * counting down to a placeholder.
+   */
+  const following = followingDeadlineMs(live);
+  /**
    * The unstarted events the checklist actually lists.
    *
    * `upcoming` stays the full count either way, because the page header states
@@ -512,11 +522,9 @@ export function App() {
               legend
               title="Running now"
               hint={
-                live.length > 1
-                  ? `next after this ends in ${formatRemaining(
-                      live[1]?.clock.msRemaining ?? 0,
-                    )}`
-                  : undefined
+                following === null
+                  ? undefined
+                  : `next after this ends in ${formatRemaining(following)}`
               }
               action={
                 visible.length > 1 ? (
