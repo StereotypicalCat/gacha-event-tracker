@@ -97,9 +97,15 @@ export function timelineLanes<T extends Row>(
     return [{ id: "all", game: null, rows: [...rows].sort(order) }];
   }
 
+  // Appended into rather than rebuilt per row: the copy-and-reset form this
+  // replaced was quadratic in a lane's length, and it runs on every render of a
+  // board that redraws each second. `Map` keeps insertion order, so the lanes
+  // still arrive in the order their first row did.
   const byGame = new Map<LaneId, T[]>();
   for (const row of rows) {
-    byGame.set(row.event.game, [...(byGame.get(row.event.game) ?? []), row]);
+    const lane = byGame.get(row.event.game);
+    if (lane === undefined) byGame.set(row.event.game, [row]);
+    else lane.push(row);
   }
 
   let lanes = [...byGame];
