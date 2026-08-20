@@ -14,6 +14,60 @@ const PORT = Number(process.env.PORT ?? 3000);
 const ROOT = process.env.PUBLIC_DIR ?? "public";
 const ROOT_DIR = resolve(ROOT);
 
+/**
+ * Types worth compressing, and the only ones that are.
+ *
+ * Everything this app serves is text — JS, CSS, JSON, HTML, SVG — and the two
+ * biggest files are also the two most compressible: the bundle is 344 KB raw and
+ * 100 KB gzipped, the feed 90 KB and 10 KB. Serving them raw is roughly three
+ * times the bytes and, on anything slower than a laptop on wifi, three times the
+ * download.
+ *
+ * GitHub Pages compresses for us, so the deployed site never had this problem;
+ * the Docker image serves through this file and did. An image whose payload is
+ * 3x the site's is not a placeholder detail — it is the only thing a self-hoster
+ * ever sees.
+ */
+const COMPRESSIBLE = new Set([
+  ".html",
+  ".js",
+  ".css",
+  ".json",
+  ".svg",
+  ".webmanifest",
+]);
+
+/**
+ * Compressed bytes, keyed by path and invalidated by the file's mtime.
+ *
+ * These files change only on deploy, so gzipping the bundle on every request is
+ * pure waste — and at 344 KB it is not cheap waste. Keyed on mtime rather than
+ * held forever so `bun run dev` still serves what was just rebuilt.
+ */
+const gzipped = new Map<string, { mtimeMs: number; body: Uint8Array<ArrayBuffer> }>();
+
+async function gzipFor(
+  path: string,
+  file: Bun.BunFile,
+): Promise<Uint8Array<ArrayBuffer> | null> {
+  try {
+    const { mtimeMs } = await file.stat();
+    const hit = gzipped.get(path);
+    if (hit !== undefined && hit.mtimeMs === mtimeMs) return hit.body;
+    // `gzipSync` is typed over `ArrayBufferLike` to allow a SharedArrayBuffer it
+    // never returns here, and `Response` only takes the plain-buffer view.
+    const body = Bun.gzipSync(
+      new Uint8Array(await file.arrayBuffer()),
+    ) as Uint8Array<ArrayBuffer>;
+    gzipped.set(path, { mtimeMs, body });
+    return body;
+  } catch {
+    // Compression is an optimisation, never a reason to fail a request: fall
+    // back to sending the file as it is.
+    return null;
+  }
+}
+
 /** Long-lived for fingerprint-free assets is wrong; keep it short and revalidate. */
 const CACHE: Record<string, string> = {
   ".html": "public, max-age=0, must-revalidate",
@@ -67,16 +121,39 @@ const server = Bun.serve({
     const file = Bun.file(resolved);
 
     if (await file.exists()) {
-      return new Response(file, {
-        headers: {
-          "cache-control": CACHE[extname(path)] ?? "public, max-age=600",
-          // The service worker must never be served stale, or a deploy can be
-          // pinned by an old worker indefinitely.
-          ...(path === "/sw.js"
-            ? { "cache-control": "no-cache", "service-worker-allowed": "/" }
-            : {}),
-        },
-      });
+      const ext = extname(path);
+      const headers: Record<string, string> = {
+        "cache-control": CACHE[ext] ?? "public, max-age=600",
+        // The service worker must never be served stale, or a deploy can be
+        // pinned by an old worker indefinitely.
+        ...(path === "/sw.js"
+          ? { "cache-control": "no-cache", "service-worker-allowed": "/" }
+          : {}),
+      };
+
+      // `Vary` whether or not this response is compressed: the answer depends on
+      // the request header either way, and a cache that does not know that will
+      // hand gzipped bytes to a client that never asked for them.
+      if (COMPRESSIBLE.has(ext)) headers["vary"] = "accept-encoding";
+
+      const wantsGzip =
+        COMPRESSIBLE.has(ext) &&
+        (request.headers.get("accept-encoding") ?? "").includes("gzip");
+
+      if (wantsGzip) {
+        const body = await gzipFor(resolved, file);
+        if (body !== null) {
+          return new Response(body, {
+            headers: {
+              ...headers,
+              "content-type": file.type,
+              "content-encoding": "gzip",
+            },
+          });
+        }
+      }
+
+      return new Response(file, { headers });
     }
 
     // Single-page app: unknown paths fall back to the shell so client routing
