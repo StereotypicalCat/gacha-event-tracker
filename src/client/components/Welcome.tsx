@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useGameMeta } from "../state/gameMeta.tsx";
+import { orderGames } from "../state/gameOrder.ts";
 import type { LaneId } from "../../shared/custom.ts";
 import type { View } from "../state/usePrefs.ts";
 
@@ -40,19 +41,16 @@ export function Welcome({
   /**
    * Alphabetical, by the name on the button.
    *
-   * `available` arrives in feed order — whichever game happened to hold the
-   * first row — which is meaningful everywhere else in the app and meaningless
-   * here, where the reader is not reading the list but looking for the two or
-   * three names they already know. Sorted by `name` and not by `LaneId`,
-   * because the id is not what is printed: `hsr` is Honkai: Star Rail. And
-   * through `localeCompare`, because `<` orders by code point and would file
-   * hololive Dreams after every capitalised name on the screen.
+   * `available` arrives in lane order, which everywhere else in the app means
+   * the reader's own game order — but this screen runs before they have one, so
+   * it asks `orderGames` for the no-stored-order case and gets the alphabetical
+   * rule. Through the shared function rather than a comparator of its own, so
+   * the picker and the four surfaces behind it cannot drift apart: the reader is
+   * not reading this list, they are looking for the two or three names they
+   * already know.
    */
   const ordered = useMemo(
-    () =>
-      [...available].sort((a, b) =>
-        gameMeta(a).name.localeCompare(gameMeta(b).name),
-      ),
+    () => orderGames(available, undefined, (id) => gameMeta(id).name),
     [available, gameMeta],
   );
 

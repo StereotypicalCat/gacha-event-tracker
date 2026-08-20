@@ -74,11 +74,21 @@ export interface Lane<T> {
  * modes, lane mode included: leaving a lane's given order alone there would
  * produce the block it was told not to draw, minus the heading that explained
  * it, which is the worst of both answers.
+ *
+ * `gameOrder` stacks the lanes themselves — the reader's own game order, so
+ * their main game is the top lane instead of whichever one held the first row.
+ * It orders **lanes and never the rows inside one**, which is the same rule as
+ * above read one level up. A game the order does not name sorts after the ones
+ * it does, in the order its rows arrived, so this stays total for a lane the
+ * reader never placed. Omitted leaves the stacking exactly as it was.
+ *
+ * The merged mode ignores it, having one lane and no game to order by.
  */
 export function timelineLanes<T extends Row>(
   rows: readonly T[],
   mode: TimelineGroup,
   split = true,
+  gameOrder?: readonly LaneId[],
 ): Array<Lane<T>> {
   const order = split ? endingSoonestFirst : byDeadline;
 
@@ -91,7 +101,20 @@ export function timelineLanes<T extends Row>(
   for (const row of rows) {
     byGame.set(row.event.game, [...(byGame.get(row.event.game) ?? []), row]);
   }
-  return [...byGame].map(([game, laneRows]) => ({
+
+  let lanes = [...byGame];
+  if (gameOrder !== undefined) {
+    // Unplaced lanes take a rank past every placed one, and ties keep their
+    // arrival order — `sort` is stable, so a game the reader never placed does
+    // not jump the ones they did.
+    const rank = (game: LaneId) => {
+      const at = gameOrder.indexOf(game);
+      return at === -1 ? gameOrder.length : at;
+    };
+    lanes = lanes.sort(([a], [b]) => rank(a) - rank(b));
+  }
+
+  return lanes.map(([game, laneRows]) => ({
     id: game,
     game,
     rows: split ? laneRows : [...laneRows].sort(byDeadline),

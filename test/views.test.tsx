@@ -8,10 +8,12 @@ import {
   startMarkers,
   Timeline,
 } from "../src/client/components/Timeline.tsx";
+import { CatchUpPanel, dailyGroups } from "../src/client/components/Dailies.tsx";
 import { Welcome } from "../src/client/components/Welcome.tsx";
 import { timelineLanes } from "../src/client/state/lanes.ts";
 import { GameMetaProvider } from "../src/client/state/gameMeta.tsx";
 import { metaFor } from "../src/shared/games.ts";
+import { dayKey } from "../src/shared/daily.ts";
 import { clockFor } from "../src/shared/time.ts";
 import { GachaEvent, type GameId } from "../src/shared/schema.ts";
 
@@ -260,6 +262,39 @@ describe("timelineLanes", () => {
       "Closing Ceremony",
       "Third Rail",
     ]);
+  });
+
+  test("the reader's game order stacks the lanes", () => {
+    const lanes = timelineLanes(rows, "game", true, ["zzz", "hsr", "genshin"]);
+    expect(lanes.map((l) => l.game)).toEqual(["zzz", "hsr", "genshin"]);
+  });
+
+  test("ordering the lanes does not re-sort the rows inside one", () => {
+    // The same rule the mode itself follows, read one level up.
+    const lanes = timelineLanes(rows, "game", true, ["genshin"]);
+    expect(lanes[0]?.rows.map((r) => r.event.title)).toEqual([
+      "Closing Ceremony",
+      "Third Rail",
+    ]);
+  });
+
+  test("a game the order does not name keeps its place behind the ones it does", () => {
+    // Total for a lane the reader never placed — and stable, so the unplaced
+    // games stay in the order their rows arrived rather than shuffling.
+    const lanes = timelineLanes(rows, "game", true, ["zzz"]);
+    expect(lanes.map((l) => l.game)).toEqual(["zzz", "genshin", "hsr"]);
+  });
+
+  test("no order given stacks exactly as it did before", () => {
+    expect(timelineLanes(rows, "game", true).map((l) => l.game)).toEqual(
+      timelineLanes(rows, "game", true, undefined).map((l) => l.game),
+    );
+  });
+
+  test("the merged stack ignores it, having one lane and no game", () => {
+    const lanes = timelineLanes(rows, "ending", true, ["zzz", "hsr", "genshin"]);
+    expect(lanes).toHaveLength(1);
+    expect(lanes[0]?.game).toBeNull();
   });
 
   test("ending soonest: every game in one stack, deadline order", () => {
@@ -567,5 +602,222 @@ describe("markerLabel", () => {
     // small confident wrongness this codebase exists to avoid.
     const label = markerLabel({ ms: 5 * DAY, through: 9 * DAY, count: 2 });
     expect(label).toContain("–");
+  });
+});
+
+describe("dailyGroups", () => {
+  const NOW = Date.parse("2026-08-17T12:00:00.000Z");
+  const meta = (id: string) => metaFor(id, {});
+  const startOf = (e: { startsAt: string }) => Date.parse(e.startsAt);
+
+  const repeating = (id: string, game: string, title: string) =>
+    ({
+      id,
+      game,
+      title,
+      type: "login",
+      summary: null,
+      startsAt: "2026-08-10T00:00:00.000Z",
+      startPrecision: "day",
+      endsAt: null,
+      endPrecision: "unknown",
+      regionScoped: false,
+      regionEnds: null,
+      sourceUrl: "https://example.test",
+    }) as never;
+
+  test("a game's chore and its events are adjacent, chore first", () => {
+    // This is the whole point: the strip used to list every chore and then
+    // every event, so Genshin's commissions and Genshin's login event sat at
+    // opposite ends with a dozen games between them.
+    const groups = dailyGroups(
+      ["genshin", "hsr"],
+      [repeating("e1", "genshin", "Login Bonus"), repeating("e2", "hsr", "Sign In")],
+      NOW,
+      "europe",
+      meta,
+      startOf,
+    );
+    expect(groups.map((g) => g.items.map((i) => i.key))).toEqual([
+      ["dailies:genshin", "e1"],
+      ["dailies:hsr", "e2"],
+    ]);
+  });
+
+  test("groups follow the order the games arrive in", () => {
+    // The reader's order, resolved upstream by `orderGames`.
+    const groups = dailyGroups(["hsr", "genshin"], [], NOW, "europe", meta, startOf);
+    expect(groups.map((g) => g.game)).toEqual(["hsr", "genshin"]);
+  });
+
+  test("events keep their given order inside a game", () => {
+    // Grouping is not a licence to re-sort within a group.
+    const groups = dailyGroups(
+      ["genshin"],
+      [
+        repeating("late", "genshin", "Second"),
+        repeating("early", "genshin", "First"),
+      ],
+      NOW,
+      "europe",
+      meta,
+      startOf,
+    );
+    expect(groups[0]?.items.map((i) => i.key)).toEqual([
+      "dailies:genshin",
+      "late",
+      "early",
+    ]);
+  });
+
+  test("a lane the reader invented gets no standing chore", () => {
+    // There is no routine we could name on their behalf — but their repeating
+    // events still group under it.
+    const groups = dailyGroups(
+      ["mygame:mine"],
+      [repeating("m1", "mygame:mine", "My Daily")],
+      NOW,
+      "europe",
+      meta,
+      startOf,
+    );
+    expect(groups[0]?.items.map((i) => i.key)).toEqual(["m1"]);
+  });
+
+  test("a lane with nothing to tick is dropped, not rendered as an empty heading", () => {
+    const groups = dailyGroups(["mygame:empty"], [], NOW, "europe", meta, startOf);
+    expect(groups).toEqual([]);
+  });
+
+  test("an event whose lane is not listed still gets a line", () => {
+    // Dropping it would quietly remove something tickable. It trails the lanes
+    // that were listed.
+    const groups = dailyGroups(
+      ["genshin"],
+      [repeating("stray", "zzz", "Stray Daily")],
+      NOW,
+      "europe",
+      meta,
+      startOf,
+    );
+    expect(groups.map((g) => g.game)).toEqual(["genshin", "zzz"]);
+  });
+
+  test("a done event contributes nothing, because it never arrives here", () => {
+    // The strip is an instruction, not a record: App filters completed and
+    // ignored events out before this sees them (`outstanding` in lens.ts), so
+    // catch-up cannot resurrect a chip for something the reader finished.
+    const groups = dailyGroups(["genshin"], [], NOW, "europe", meta, startOf);
+    expect(groups[0]?.items.map((i) => i.key)).toEqual(["dailies:genshin"]);
+  });
+
+  test("a chore has no start to clip a catch-up strip at; an event does", () => {
+    const groups = dailyGroups(
+      ["genshin"],
+      [repeating("e1", "genshin", "Login Bonus")],
+      NOW,
+      "europe",
+      meta,
+      startOf,
+    );
+    const [chore, event] = groups[0]?.items ?? [];
+    expect(chore?.notBefore).toBeNull();
+    expect(event?.notBefore).toBe(Date.parse("2026-08-10T00:00:00.000Z"));
+  });
+
+  test("each item carries its own game's reset clock", () => {
+    // Endfield serves Europe off the Americas machine, so its day rolls at
+    // 09:00 UTC. A section-wide "today" would tick the wrong box for hours.
+    const dawn = Date.parse("2026-08-17T05:00:00.000Z");
+    const groups = dailyGroups(
+      ["genshin", "endfield"],
+      [],
+      dawn,
+      "europe",
+      meta,
+      startOf,
+    );
+    const today = groups.map((g) => g.items[0]?.today);
+    expect(today[0]).not.toBe(today[1]);
+  });
+});
+
+describe("CatchUpPanel", () => {
+  const NOW = Date.parse("2026-08-17T12:00:00.000Z");
+  const meta = (id: string) => metaFor(id, {});
+  const startOf = (e: { startsAt: string }) => Date.parse(e.startsAt);
+
+  const groups = () =>
+    dailyGroups(["genshin"], [], NOW, "europe", meta, startOf);
+
+  const panel = (logged: string[] = []) =>
+    render(
+      <CatchUpPanel
+        groups={groups()}
+        now={NOW}
+        region="europe"
+        daysFor={() => logged}
+        onToggleDay={() => {}}
+      />,
+    );
+
+  test("a fortnight of days, each one tickable", () => {
+    const markup = panel();
+    const pips = [...markup.matchAll(/aria-label="[^"]*(?:not )?done"/g)];
+    expect(pips).toHaveLength(14);
+  });
+
+  test("no day later than today, because nobody can have done tomorrow", () => {
+    // The pip for a future day would be a control for a claim that cannot be
+    // true. It is absent rather than present-and-disabled.
+    expect(panel()).not.toContain('disabled=""');
+  });
+
+  test("a logged day reads as done, an unlogged one does not", () => {
+    const markup = panel([dayKey(NOW, "europe", "genshin")]);
+    expect(markup).toContain(", done\"");
+    expect(markup).toContain(", not done\"");
+  });
+
+  test("names the game, so an expanded strip says whose days these are", () => {
+    expect(panel()).toContain("Genshin Impact");
+  });
+
+  test("an undated event's strip starts at the event, not a fortnight ago", () => {
+    const started = NOW - 2 * 86_400_000;
+    const withEvent = dailyGroups(
+      ["genshin"],
+      [
+        {
+          id: "e1",
+          game: "genshin",
+          title: "Login Bonus",
+          type: "login",
+          summary: null,
+          startsAt: new Date(started).toISOString(),
+          startPrecision: "day",
+          endsAt: null,
+          endPrecision: "unknown",
+          regionScoped: false,
+          regionEnds: null,
+          sourceUrl: "https://example.test",
+        } as never,
+      ],
+      NOW,
+      "europe",
+      meta,
+      startOf,
+    );
+    const markup = render(
+      <CatchUpPanel
+        groups={withEvent}
+        now={NOW}
+        region="europe"
+        daysFor={() => []}
+        onToggleDay={() => {}}
+      />,
+    );
+    // The chore's fourteen, plus three for an event that opened two days ago.
+    expect([...markup.matchAll(/aria-label="[^"]*(?:not )?done"/g)]).toHaveLength(17);
   });
 });

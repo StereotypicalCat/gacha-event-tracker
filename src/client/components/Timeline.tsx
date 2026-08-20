@@ -1,5 +1,6 @@
 import { Fragment, useLayoutEffect, useRef } from "react";
 import { useGameMeta } from "../state/gameMeta.tsx";
+import type { LaneId } from "../../shared/custom.ts";
 import { DAY } from "../../shared/time.ts";
 import type { RowEvent } from "./EventRow.tsx";
 import { URGENCY_COLOR } from "./Meter.tsx";
@@ -99,6 +100,7 @@ export function Timeline({
   onGroup,
   showUpcoming,
   splitUpcoming,
+  gameOrder,
   onOpen,
   isDone,
 }: {
@@ -138,6 +140,11 @@ export function Timeline({
    * re-sorts instead, and this only decides whether the heading is drawn.
    */
   splitUpcoming: boolean;
+  /**
+   * The reader's game order, which stacks the lanes. Orders lanes only — the
+   * rows inside one keep the order they arrived in.
+   */
+  gameOrder?: readonly LaneId[];
   onOpen: (id: string) => void;
   /**
    * Asked rather than derived from the progress store: an entry exists there
@@ -215,7 +222,7 @@ export function Timeline({
     );
   }
 
-  const lanes = timelineLanes(plotted, group, splitUpcoming);
+  const lanes = timelineLanes(plotted, group, splitUpcoming, gameOrder);
   const marks = startMarkers(plotted, x);
 
   const months = monthBoundaries(min, max);

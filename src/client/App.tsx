@@ -30,10 +30,10 @@ import {
 } from "./state/lens.ts";
 import { clockFor, formatRemaining } from "../shared/time.ts";
 import { dailySummary, isDaily, resolveDaily } from "../shared/daily.ts";
+import { orderGames } from "./state/gameOrder.ts";
 import { GameMetaProvider, type MetaResolver } from "./state/gameMeta.tsx";
 import { metaOnTheme, useTheme } from "./state/theme.ts";
 import {
-  isCustomGameId,
   type CustomEvents,
   type CustomGames,
   type LaneId,
@@ -238,10 +238,24 @@ export function App() {
     if (patch !== null) update(patch);
   }, [state.status, games, prefs.knownGames, prefs.hiddenGames, update]);
 
-  /** Games the reader plays, in feed order. The focus bar rotates through these. */
+  /**
+   * Every lane in the order the reader reads them in.
+   *
+   * `games` above stays the lane-*identity* list: `adoptNewLanes` diffs it to
+   * decide which games arrive switched off and `knownGames` is seeded from it,
+   * so reordering it at source would let a display preference reach the logic
+   * that hides a reader's games. Ordering is applied here instead, once, and
+   * handed to every surface that shows a game.
+   */
+  const ordered = useMemo(
+    () => orderGames(games, prefs.gameOrder, (id) => gameMeta(id).name),
+    [games, prefs.gameOrder, gameMeta],
+  );
+
+  /** Games the reader plays, in their order. The focus bar rotates through these. */
   const enabled = useMemo(
-    () => games.filter((g) => !prefs.hiddenGames.includes(g)),
-    [games, prefs.hiddenGames],
+    () => ordered.filter((g) => !prefs.hiddenGames.includes(g)),
+    [ordered, prefs.hiddenGames],
   );
 
   // A focus on a game they have since switched off is ignored, not obeyed —
@@ -359,7 +373,7 @@ export function App() {
       <GameMetaProvider value={gameMeta}>
         <Shell>
           <Welcome
-            available={games}
+            available={ordered}
             onConfirm={(chosen, chosenView) =>
               update({
                 onboarded: true,
@@ -477,11 +491,12 @@ export function App() {
               that expires tonight rather than next patch. */}
           {/* Standing chores are a tracked-game notion: there is no routine we
               could name on behalf of a game the reader invented, so their lanes
-              contribute repeating events here but no chore of their own. */}
+              contribute repeating events here but no chore of their own. That
+              exclusion is `dailyGroups`' to make, not this call site's — filtering
+              the lanes out here would also cost a reader's own game its place in
+              the order their repeating events are grouped under. */}
           <Dailies
-            games={(focus === null ? enabled : [focus]).filter(
-              (id) => !isCustomGameId(id),
-            )}
+            games={focus === null ? enabled : [focus]}
             events={todo.filter(repeatsDaily).map((r) => r.event)}
             region={prefs.region}
             now={now}
@@ -571,6 +586,9 @@ export function App() {
             // nothing else left to draw. The switch is in settings.
             showUpcoming={prefs.showUpcoming}
             splitUpcoming={prefs.timelineSplitUpcoming}
+            // Lanes stack in the reader's game order, so their main game is the
+            // top lane rather than whichever one held the first row.
+            gameOrder={ordered}
             onOpen={setOpenId}
             isDone={isDone}
           />
@@ -578,7 +596,7 @@ export function App() {
       )}
 
       <Controls
-        games={games}
+        games={ordered}
         prefs={prefs}
         onToggleGame={toggleGame}
         onUpdate={update}
