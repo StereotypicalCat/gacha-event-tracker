@@ -866,8 +866,17 @@ function exportProgress(
   const a = document.createElement("a");
   a.href = url;
   a.download = `event-clock-progress-${new Date().toISOString().slice(0, 10)}.json`;
+  // In the document, and revoked on a later task. This is the only copy of
+  // everything the reader typed, ticked and marked — there is no account and no
+  // server that has ever seen it — so a download that quietly does not happen is
+  // the lossy backup this function exists to prevent. A detached anchor is not
+  // reliably clickable, and revoking the URL in the same task can pull the blob
+  // out from under a download that had not started reading it yet.
+  a.style.display = "none";
+  document.body.append(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 async function importProgress(
