@@ -133,3 +133,40 @@ describe("Controls: what am I allowed to look at", () => {
     expect(render(PREFS, 3)).toContain("Show the 3 events I&#x27;m");
   });
 });
+
+describe("Controls: the game order editor", () => {
+  const html = () => render(PREFS);
+
+  test("both affordances ship, because touch fires no drag events", () => {
+    // The arrows are the mechanism and the handle is the pointer fast path. A
+    // drag-only list is unreachable on a phone and by keyboard alike.
+    expect(html()).toContain("draggable");
+    expect(html()).toContain('aria-label="Move Genshin Impact up (1 of 2)"');
+    expect(html()).toContain('aria-label="Move Honkai: Star Rail down (2 of 2)"');
+  });
+
+  test("an arrow at the end is disabled, not missing", () => {
+    // A control that disappears on the first row slides the other one under the
+    // finger aiming at it.
+    const markup = html();
+    // The whole tag: `disabled` is serialised before `aria-label`.
+    const tag = (label: string) =>
+      new RegExp(`<button[^>]*aria-label="${label}"[^>]*>`).exec(markup)?.[0] ?? "";
+    expect(tag("Move Genshin Impact up \\(1 of 2\\)")).toContain("disabled");
+    expect(tag("Move Genshin Impact down \\(1 of 2\\)")).not.toContain("disabled");
+    expect(tag("Move Honkai: Star Rail down \\(2 of 2\\)")).toContain("disabled");
+  });
+
+  test("the row names the game in full, and still toggles it", () => {
+    // Rows have room for the real name where the chips only had `short`.
+    expect(html()).toContain("Honkai: Star Rail");
+    expect(html()).toContain('aria-pressed="true"');
+  });
+
+  test("reset appears only once the reader has an order to reset", () => {
+    expect(html()).not.toContain("Reset to A–Z");
+    expect(render({ ...PREFS, gameOrder: ["hsr", "genshin"] })).toContain(
+      "Reset to A–Z",
+    );
+  });
+});

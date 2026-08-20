@@ -1,7 +1,9 @@
+import { useState } from "react";
 import type { LaneId } from "../../shared/custom.ts";
 import type { Region } from "../../shared/schema.ts";
 import { REGION_LABEL } from "../../shared/time.ts";
 import { useGameMeta } from "../state/gameMeta.tsx";
+import { moveGame } from "../state/gameOrder.ts";
 import type { ThemeChoice } from "../state/theme.ts";
 import type { Prefs } from "../state/usePrefs.ts";
 import { YourOwn } from "./YourOwn.tsx";
@@ -72,31 +74,19 @@ export function Controls({
           you came to change. */}
       <div className="lg:grid lg:grid-cols-2 lg:gap-x-10">
         <div>
-          <p className="eyebrow">Games</p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {games.map((id) => {
-              const game = gameMeta(id);
-              const on = !prefs.hiddenGames.includes(id);
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => onToggleGame(id)}
-                  aria-pressed={on}
-                  className="rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
-                  style={{
-                    borderColor: on ? game.hue : "var(--color-hairline)",
-                    color: on ? game.hue : "var(--color-faint)",
-                    background: on
-                      ? `color-mix(in srgb, ${game.hue} 12%, transparent)`
-                      : "transparent",
-                  }}
-                >
-                  {game.short}
-                </button>
-              );
-            })}
-          </div>
+          <GameOrder
+            games={games}
+            hidden={prefs.hiddenGames}
+            custom={prefs.gameOrder !== undefined}
+            onToggleGame={onToggleGame}
+            onReorder={(from, to) =>
+              // The whole displayed list, every time: the indices are positions
+              // on screen, and what the reader is looking at is the order they
+              // mean. See `moveGame`.
+              onUpdate({ gameOrder: moveGame(games, from, to) })
+            }
+            onReset={() => onUpdate({ gameOrder: undefined })}
+          />
 
           <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-4">
             <div>
@@ -288,5 +278,171 @@ export function Controls({
         </div>
       </div>
     </section>
+  );
+}
+
+/**
+ * Which games the reader plays, and the order they read them in.
+ *
+ * One row per game rather than the chip row this replaced: a reorder affordance
+ * needs somewhere to put a handle and two arrows, and at fourteen games a list
+ * reads better than a wrapped row of pills anyway.
+ *
+ * **Reordering lives here and nowhere else.** The focus bar and the dailies strip
+ * are the fastest tap targets on the page — the strip is the part of it that is
+ * answerable in ten seconds — and a drag target sitting on top of a tick target
+ * costs somebody a streak the first time it misfires. So the live surfaces stay
+ * drag-free and this is the screen you visit on purpose.
+ *
+ * The row itself is not a target. The handle, the two arrows and the on/off
+ * switch are four explicit controls, and nothing else here is clickable — which
+ * is what keeps this the right side of "a list row is one target": that rule is
+ * about a full-bleed row target with a second control hidden inside it.
+ */
+function GameOrder({
+  games,
+  hidden,
+  custom,
+  onToggleGame,
+  onReorder,
+  onReset,
+}: {
+  /** Every lane, already in the reader's order. */
+  games: LaneId[];
+  hidden: LaneId[];
+  /** Whether the reader has an order of their own, so reset has something to do. */
+  custom: boolean;
+  onToggleGame: (g: LaneId) => void;
+  onReorder: (from: number, to: number) => void;
+  onReset: () => void;
+}) {
+  const gameMeta = useGameMeta();
+  const [dragging, setDragging] = useState<number | null>(null);
+
+  return (
+    <>
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="eyebrow">Games</p>
+        {custom && (
+          <button
+            type="button"
+            onClick={onReset}
+            className="text-[0.6875rem] text-faint transition-colors hover:text-muted"
+          >
+            Reset to A–Z
+          </button>
+        )}
+      </div>
+
+      {/* Both affordances, always visible. Touch fires no drag events at all, so
+          the arrows are the mechanism and the handle is the fast path where a
+          pointer exists — and the arrows are ordinary buttons, which is what
+          makes this reachable by keyboard and screen reader without a second
+          implementation of the same interaction. */}
+      <p className="mt-1 text-[0.6875rem] leading-relaxed text-faint">
+        Drag a row, or use the arrows, to put your games in order. Everything
+        that lists a game follows it.
+      </p>
+
+      <ul className="mt-2">
+        {games.map((id, i) => {
+          const game = gameMeta(id);
+          const on = !hidden.includes(id);
+          return (
+            <li
+              key={id}
+              draggable
+              onDragStart={(e) => {
+                setDragging(i);
+                e.dataTransfer.effectAllowed = "move";
+              }}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => {
+                if (dragging !== null && dragging !== i) onReorder(dragging, i);
+                setDragging(null);
+              }}
+              onDragEnd={() => setDragging(null)}
+              className={`flex items-center gap-2 rounded-lg py-1 ${
+                dragging === i ? "opacity-40" : ""
+              }`}
+            >
+              <span
+                aria-hidden
+                title="Drag to reorder"
+                className="cursor-grab select-none px-0.5 text-xs leading-none text-faint"
+              >
+                ⠿
+              </span>
+              <span className="tnum w-4 shrink-0 text-[0.625rem] text-faint">
+                {i + 1}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => onToggleGame(id)}
+                aria-pressed={on}
+                className="flex min-w-0 flex-1 items-center gap-2 rounded-full border px-3 py-1.5 text-left text-xs font-medium transition-colors"
+                style={{
+                  borderColor: on ? game.hue : "var(--color-hairline)",
+                  color: on ? game.hue : "var(--color-faint)",
+                  background: on
+                    ? `color-mix(in srgb, ${game.hue} 12%, transparent)`
+                    : "transparent",
+                }}
+              >
+                <span className="truncate">{game.name}</span>
+              </button>
+
+              {/* Rendered at the ends too, and inert there. A control that
+                  disappears on the first row slides the other one under the
+                  finger that was aiming at it. */}
+              <Nudge
+                label={`Move ${game.name} up (${i + 1} of ${games.length})`}
+                disabled={i === 0}
+                onClick={() => onReorder(i, i - 1)}
+                d="M8 3.5l4.5 5h-9z"
+              />
+              <Nudge
+                label={`Move ${game.name} down (${i + 1} of ${games.length})`}
+                disabled={i === games.length - 1}
+                onClick={() => onReorder(i, i + 1)}
+                d="M8 12.5l-4.5-5h9z"
+              />
+            </li>
+          );
+        })}
+      </ul>
+    </>
+  );
+}
+
+/** One arrow. Disabled at the ends rather than removed — see above. */
+function Nudge({
+  label,
+  disabled,
+  onClick,
+  d,
+}: {
+  label: string;
+  disabled: boolean;
+  onClick: () => void;
+  d: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      className={`grid size-6 shrink-0 place-items-center rounded-md border border-hairline transition-colors ${
+        disabled
+          ? "cursor-not-allowed opacity-25"
+          : "text-muted hover:border-faint hover:text-ink"
+      }`}
+    >
+      <svg viewBox="0 0 16 16" aria-hidden className="size-2.5">
+        <path d={d} fill="currentColor" />
+      </svg>
+    </button>
   );
 }
