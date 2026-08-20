@@ -48,6 +48,28 @@ export interface Prefs {
    */
   knownGames?: LaneId[];
   /**
+   * The order the reader put their games in.
+   *
+   * Absent means they have never placed one — not that they have no order, and
+   * not an empty order. Every install predating this is in that state, so the
+   * fallback has to be a rule rather than a stored value: `orderGames` sorts
+   * alphabetically by name, which is what the first-run picker already does.
+   * A game added later trails everything they placed by hand.
+   *
+   * `| undefined` is explicit because `exactOptionalPropertyTypes` is on and
+   * "Reset to A–Z" is a patch that writes the field away — `{ gameOrder:
+   * undefined }` has to be assignable for the reset to typecheck, and
+   * `JSON.stringify` drops it on the way to storage.
+   *
+   * Not a key space and not a migration: one more field in the single `prefs`
+   * blob, like `timelineGroup`. It rides the export for free, though note that
+   * `importProgress` restores progress, dailies, ignores and the reader's own
+   * games — never prefs — so an imported file does not bring an order back.
+   * That asymmetry predates this field and applies to region, theme and view
+   * alike.
+   */
+  gameOrder?: LaneId[] | undefined;
+  /**
    * One game to look at right now, or null for all of them.
    *
    * A lens, not a setting: it never changes `hiddenGames`, and a focus on a
