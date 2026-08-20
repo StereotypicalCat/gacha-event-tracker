@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
+  catchUpDays,
+  CATCH_UP_DAYS,
   dailiesId,
   dailyDays,
   dailyOverride,
@@ -406,5 +408,89 @@ describe("a game whose day rolls on a different hour", () => {
       "2026-08-14",
       "2026-08-15",
     ]);
+  });
+});
+
+describe("catchUpDays", () => {
+  const NOW = at("2026-08-20T12:00:00.000Z");
+
+  test("the last fortnight, oldest first, ending today", () => {
+    const days = catchUpDays(NOW, "europe", "genshin", null);
+    expect(days).toHaveLength(CATCH_UP_DAYS);
+    expect(days[days.length - 1]).toBe(dayKey(NOW, "europe", "genshin"));
+    expect(days[0]).toBe(dayKey(NOW - 13 * DAY, "europe", "genshin"));
+    expect([...days].sort()).toEqual(days);
+  });
+
+  test("never a day past today", () => {
+    // A tick is a claim that you did it. Tomorrow is not a thing a reader can
+    // have done, so it is not rendered at all rather than rendered and disabled.
+    const days = catchUpDays(NOW, "europe", "genshin", null);
+    const today = dayKey(NOW, "europe", "genshin");
+    expect(days.filter((d) => d > today)).toEqual([]);
+  });
+
+  test("stops at the day the event began", () => {
+    // An event that opened three days ago has three days to catch up on, not
+    // fourteen — the days before it existed were never claimable.
+    const started = NOW - 2 * DAY;
+    const days = catchUpDays(NOW, "europe", "genshin", started);
+    expect(days).toEqual([
+      dayKey(started, "europe", "genshin"),
+      dayKey(NOW - DAY, "europe", "genshin"),
+      dayKey(NOW, "europe", "genshin"),
+    ]);
+  });
+
+  test("a long-running event is still capped at the fortnight", () => {
+    // A standing login campaign can have opened half a year ago. Its whole
+    // history would be a wall of pips nobody scrolls, and reconstructing March
+    // from memory is not recording what you did.
+    const days = catchUpDays(NOW, "europe", "genshin", NOW - 200 * DAY);
+    expect(days).toHaveLength(CATCH_UP_DAYS);
+  });
+
+  test("an event that has not started yet offers nothing", () => {
+    expect(catchUpDays(NOW, "europe", "genshin", NOW + 3 * DAY)).toEqual([]);
+  });
+
+  test("cut on the game's own reset clock, not the region's", () => {
+    // Endfield serves Europe off the Americas machine, so its European day
+    // rolls at 09:00 UTC rather than 03:00 — a strip cut on the wrong clock
+    // writes a tick under one day key and reads it under another.
+    const dawn = at("2026-08-20T05:00:00.000Z");
+    const generic = catchUpDays(dawn, "europe", undefined, null);
+    const endfield = catchUpDays(dawn, "europe", "endfield", null);
+    expect(endfield).not.toEqual(generic);
+    expect(endfield[endfield.length - 1]).toBe(dayKey(dawn, "europe", "endfield"));
+  });
+
+  test("the window bounds what is shown and never what is stored", () => {
+    // A tick from five weeks ago is off-screen, still logged, and still counted.
+    // Nothing here removes a day the reader did not remove themselves.
+    const old = dayKey(NOW - 35 * DAY, "europe", "genshin");
+    const days = catchUpDays(NOW, "europe", "genshin", null);
+    expect(days).not.toContain(old);
+
+    const logged = [old, dayKey(NOW, "europe", "genshin")];
+    const summary = dailySummary({
+      startsMs: NOW - 40 * DAY,
+      endsMs: null,
+      region: "europe",
+      game: "genshin",
+      now: NOW,
+      logged,
+    });
+    expect(summary.logged).toBe(2);
+    expect(summary.doneToday).toBe(true);
+  });
+
+  test("a streak built outside the window still counts", () => {
+    const today = dayKey(NOW, "europe", "genshin");
+    const logged = Array.from({ length: 30 }, (_, i) =>
+      dayKey(NOW - i * DAY, "europe", "genshin"),
+    );
+    expect(streakOf(logged, today)).toBe(30);
+    expect(catchUpDays(NOW, "europe", "genshin", null)).toHaveLength(CATCH_UP_DAYS);
   });
 });

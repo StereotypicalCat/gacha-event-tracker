@@ -1,9 +1,12 @@
 import {
+  CATCH_UP_DAYS,
+  catchUpDays,
   dailySummary,
   msUntilReset,
   type DailySummary,
 } from "../../shared/daily.ts";
 import type { LaneId } from "../../shared/custom.ts";
+import { DayPip } from "./DayPip.tsx";
 import type { Region } from "../../shared/schema.ts";
 import { formatRemaining } from "../../shared/time.ts";
 
@@ -95,10 +98,30 @@ export function DailyChecklist({
       </button>
 
       {days === null ? (
-        <p className="mt-3 text-xs leading-relaxed text-faint">
-          The source hasn't announced an end date, so how many days are left is
-          unknown. Your ticks are still counted — {summary.logged} so far.
-        </p>
+        <>
+          {/* No published end means no run to draw, but the days already gone
+              are just as claimable as an announced event's — and until this
+              existed they were unreachable, so a reader who forgot to tick
+              yesterday could never say so. Only the past, and only as far back
+              as `catchUpDays` goes. */}
+          <div className="mt-3 flex flex-wrap gap-1">
+            {catchUpDays(now, region, game, startsMs).map((day) => (
+              <DayPip
+                key={day}
+                day={day}
+                today={today}
+                done={logged.includes(day)}
+                onToggle={() => onToggleDay(day)}
+              />
+            ))}
+          </div>
+          <p className="mt-2.5 text-xs leading-relaxed text-faint">
+            The source hasn't announced an end date, so how many days are left is
+            unknown. Your ticks are still counted — {summary.logged} so far, and
+            the last {CATCH_UP_DAYS} days are above if you did one and forgot to
+            say.
+          </p>
+        </>
       ) : (
         <>
           <div className="mt-3 flex flex-wrap gap-1">
@@ -118,57 +141,6 @@ export function DailyChecklist({
         </>
       )}
     </div>
-  );
-}
-
-/**
- * One day. Future days are dimmed but not disabled-looking, past misses read as
- * empty rather than as an error — a missed daily is information, not a telling
- * off.
- */
-function DayPip({
-  day,
-  today,
-  done,
-  onToggle,
-}: {
-  day: string;
-  today: string;
-  done: boolean;
-  onToggle: () => void;
-}) {
-  const isToday = day === today;
-  const isFuture = day > today;
-  // Rendered in UTC on purpose. A day key is a game-day, not an instant, and
-  // formatting it in the reader's own zone shifts it a day backwards for
-  // everyone west of UTC — so the pip would read "12" while the label a screen
-  // reader announces said "Aug 11".
-  const label = new Date(`${day}T00:00:00Z`).toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-    timeZone: "UTC",
-  });
-
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      disabled={isFuture}
-      aria-pressed={done}
-      aria-label={`${label}${done ? ", done" : ", not done"}`}
-      title={label}
-      className={`tnum size-6 rounded-[5px] border text-[0.625rem] leading-none transition-colors ${
-        done
-          ? "border-transparent bg-near/25 text-near"
-          : isFuture
-            ? "border-hairline/60 text-faint/50"
-            : "border-hairline text-faint hover:border-faint"
-      } ${isToday ? "ring-1 ring-ink/40" : ""} ${
-        isFuture ? "cursor-default" : "cursor-pointer"
-      }`}
-    >
-      {day.slice(8)}
-    </button>
   );
 }
 

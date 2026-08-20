@@ -161,6 +161,59 @@ export function dailyDays(
   return out;
 }
 
+/**
+ * How far back a catch-up strip reaches.
+ *
+ * A fortnight: long enough to repair a holiday or a bad week, short enough that
+ * it is still recording what you did rather than reconstructing a month from
+ * memory. It bounds *display* only — see `catchUpDays`.
+ */
+export const CATCH_UP_DAYS = 14;
+
+/**
+ * The days a reader can still say they did, oldest first.
+ *
+ * `dailyDays` answers this for an event whose end was announced, because there
+ * the whole run is known. Two things it cannot answer: a game's standing chore,
+ * which has no start and no end because it is a routine rather than an event,
+ * and an event with `endsAt: null`, where `dailyDays` returns null and the
+ * checklist has nothing to draw. Both leave the reader with today and no way to
+ * record yesterday, which is the day they actually did and forgot to tick.
+ *
+ * `notBefore` is an instant to clip at — an event's start — or null when there
+ * is nothing to clip at, which is the chore case. Never returns a day past
+ * today: a tick is a claim you did it, and tomorrow is not something anyone can
+ * have done, so it is absent rather than present-and-disabled.
+ *
+ * **This bounds what is shown and never what is stored.** A tick older than the
+ * window stays in the log, keeps counting toward `streakOf` and toward
+ * `dailySummary`'s totals, and is simply off-screen — nothing here removes a day
+ * the reader did not remove themselves.
+ */
+export function catchUpDays(
+  now: number,
+  region: Region,
+  game: LaneId | undefined,
+  notBefore: number | null,
+  span = CATCH_UP_DAYS,
+): string[] {
+  const today = dayKey(now, region, game);
+  const floor = notBefore === null ? null : dayKey(notBefore, region, game);
+
+  const out: string[] = [];
+  // Walked in day-key space rather than in instants, like `streakOf`: these are
+  // keys cut on a game's reset clock, and stepping a calendar day back is the
+  // only operation that keeps them lined up with what was written.
+  let cursor = Date.parse(`${today}T00:00:00Z`);
+  while (out.length < span) {
+    const key = keyOf(cursor);
+    if (floor !== null && key < floor) break;
+    out.push(key);
+    cursor -= DAY;
+  }
+  return out.reverse();
+}
+
 export interface DailySummary {
   /** Every claimable day, oldest first. Null when the end is unannounced. */
   days: string[] | null;
