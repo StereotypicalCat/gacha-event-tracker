@@ -226,8 +226,17 @@ These come from how gacha games actually schedule things, and they cause most bu
   between the calendar and a year of expired banners.
 - **Check what fences a section off.** Inclusion is decided by headings, and the level varies: Persona
   5 hides fifty finished events behind nothing but an `<h4>Finished Events</h4>` in a collapsed
-  accordion, while Genshin uses `h4` for sub-headings *inside* one event. So `h4` gates sections but
-  never names one — an unrecognised `h4` must leave the current event title alone.
+  accordion, while Genshin uses `h4` for sub-headings *inside* one event and Wuthering Waves titles
+  each event of its summary block with one. So `h4` gates sections, and names one only when nothing
+  else has: an unrecognised `h4` may **fill an empty event title but never take one**. Genshin's h3
+  has already claimed the slot before its labels arrive; Wuthering Waves' block sits under a
+  recognised section heading, so the slot is empty and the `h4` is the only name there is.
+- **A blurb the listing table lacks is usually further down the page.** Two Game8 templates put
+  unlock conditions (`Reach Union Level 8`, `Unlocked by default`) in the cell where a description
+  belongs, and `isRequirementOnly` drops those rather than answer "what is this event?" with "how
+  do I qualify for it?". The real prose sits in a per-event section — under an `h3` on Persona 5's
+  page and an `h4` on Wuthering Waves'. `dedupe` blends it onto the better-dated copy and never
+  blends a date, so reading both shapes adds information and can never contradict any.
 - **Prefer a source that states machine-readable times.** wiki.gg emits ISO timestamps with a timer
   per server region, which is the only reason `regionEnds` carries real data anywhere.
 - **Silent drops are the dangerous failure.** A date format the parser does not recognise makes

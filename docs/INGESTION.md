@@ -250,17 +250,31 @@ several:
    contains both column words, resolves, and puts the range at an index no data row has, so the
    table yields nothing at all with no error. `readColumnTable` therefore decides the header by what
    it produces — row 1 is tried **only when row 0 produced nothing**. *(Umamusume)*
+9. **An events-summary block** — shape 7's idea one heading level down: a
+   `<h3>3.6 Events Summary</h3>` section whose every event is a sub-section titled by an `h4`, over
+   an `Event Duration` row and a paragraph of prose. The listing tables above it put *unlock
+   conditions* where a blurb would go, so this block is the only place on the page a description
+   exists, and two events are dated nowhere else. *(Wuthering Waves)*
 
-Shapes 1, 2, 4, 5, 6, 7 and 8 are handled. Before assuming a new Game8 page will work, dump its heading/table
-structure and check which shape it uses — and check **every** table, not just the obvious one.
-Endfield was written off as undatable on a first pass that only inspected its `Duration` rows; its
-two real events were in a table further down.
+Shapes 1, 2, 4, 5, 6, 7, 8 and 9 are handled. Before assuming a new Game8 page will work, dump its
+heading/table structure and check which shape it uses — and check **every** table, not just the
+obvious one. Endfield was written off as undatable on a first pass that only inspected its
+`Duration` rows; its two real events were in a table further down.
 
 **Check what ends a section, too.** Headings decide inclusion and the level is not consistent: Persona
 5 puts its whole finished back catalogue behind an `<h4>Finished Events</h4>` inside a collapsed
 accordion, so a reader that ignores `h4` publishes fifty dead events. Genshin uses `h4` the opposite
-way — for sub-headings *within* one event ("Availability Period") — so an unrecognised `h4` gates the
-section but must never claim the event title.
+way — for sub-headings *within* one event ("Availability Period"), while Wuthering Waves names
+each event of its summary block with one. Both are served by the same rule: an unrecognised `h4`
+may **fill an empty event title but never take one**. Genshin's event has already claimed the slot
+by the time its labels arrive, so they cannot rename it; Wuthering Waves' block sits under a
+*recognised* section heading, which leaves the slot empty for the `h4` that is the only name on
+offer.
+
+That last part is why `events summary` is in the section vocabulary rather than left to fall
+through. An unrecognised heading is read as an event name, so falling through would spend the title
+on the section and leave every `h4` beneath it unable to take it back — publishing
+"3.6 Events Summary" as an event and dropping the ten real ones under it.
 
 ## Stage 1 — fetch
 
