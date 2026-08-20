@@ -937,6 +937,16 @@ to an open page). Four things hold it up:
   Native `<details>` for the reason the reorder arrows are ordinary buttons: keyboard and screen
   reader reach it without a second implementation. `summary` is not an `a`, `button` or `[tabindex]`,
   so it needs its own `:focus-visible` rule in `styles.css` — the shared one does not reach it.
+- **The panel is one column of groups, and it uses the page's width.** Those are two claims and only
+  the first survived a desktop read: the rows were held to `max-w-3xl` inside a shell a third wider,
+  so every rule inside the panel stopped short of the panel's own, and it was the one block on a wide
+  page not using the width — between a two-column checklist and a three-column footer that both do.
+  A name at one end of a row and its state at the other is what "running now" already does with a
+  title and its countdown, so full width is the house pattern rather than a stretch. Prose inside a
+  group keeps its own measure, and the game list — the one thing tall enough to need it — takes **two
+  columns of its own past `lg` once there are nine or more games**, flowing down then across so the
+  numbers still read in a straight line and an arrow still swaps a row with its neighbour. Eighteen
+  rows in one column was a 1,000px ribbon with two thirds of the width empty beside it.
 - **A game's dailies stay together, and grouping never re-sorts inside a group.** `dailyGroups`
   (`Dailies.tsx`) emits a game's standing chore followed by that game's repeating events, in the
   order those arrived; it replaced `[...chores, ...repeating]`, which put a game's chore and its own

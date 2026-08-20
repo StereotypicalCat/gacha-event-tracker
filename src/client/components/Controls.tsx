@@ -61,11 +61,11 @@ const SPLITS: Array<{ id: boolean; label: string; hint: string }> = [
  * report of how the app is configured, and makes opening one a deliberate act
  * rather than the price of reading it.
  *
- * One column rather than the two this replaced. The two-column split was there
- * because the panel was tall and a wide screen had room to halve it; with the
- * groups closed the whole thing is shorter than the header above it, so the
- * argument is gone, and full-width rows give the summary state somewhere to sit
- * on the right of the name it belongs to.
+ * One column of groups rather than the two this replaced: the split was there
+ * because the panel was tall, and with the groups closed the whole thing is
+ * shorter than the header above it. That is a claim about the *groups*, not
+ * about the panel's width — the rows run the full column, and the one list long
+ * enough to need it takes two columns of its own inside its group.
  */
 export function Controls({
   games,
@@ -104,11 +104,16 @@ export function Controls({
         you only have to open the one you came to change.
       </p>
 
-      {/* Held to a readable measure rather than the container's full width. Each
-          row pairs a name on the left with its state on the right, and across a
-          wide screen those two ends stop reading as one line — which is the whole
-          point of putting the state there. */}
-      <div className="mt-3.5 max-w-3xl border-t border-hairline">
+      {/* Full width, like every other row on this page. This was held to
+          `max-w-3xl` on the argument that a name and its state stop reading as
+          one line across a wide screen — but the section's own rule spans the
+          shell, so every rule inside it stopped short of that by a third of the
+          column, and the panel became the one block on a desktop page not using
+          the width, between a two-column checklist and a three-column footer
+          that both do. The pairing itself is what the page already does: a
+          deadline and its countdown sit at opposite ends of a full-width row
+          directly above this. Prose inside a group keeps its own measure. */}
+      <div className="mt-3.5 border-t border-hairline">
         <Group name="Games" state={gamesState(games.length, shown, prefs.gameOrder !== undefined)}>
           <GameOrder
             games={games}
@@ -499,7 +504,19 @@ function GameOrder({
         )}
       </div>
 
-      <ul className="mt-2 max-w-md">
+      {/* Two columns once there are enough games to make one tall, and once the
+          screen is wide enough to hold them — eighteen rows was a 1,000px ribbon
+          down the left of a desktop page with two thirds of the width empty
+          beside it. It flows *down* then across, not across then down, so the
+          numbers still read 1‑2‑3 in a straight line and an arrow still swaps a
+          row with the one it is next to. Below nine games it stays one column:
+          splitting a list short enough to take in at a glance only strands a
+          couple of rows in a second column. */}
+      <ul
+        className={`mt-2 max-w-md ${
+          games.length >= 9 ? "lg:max-w-4xl lg:columns-2 lg:gap-x-10" : ""
+        }`}
+      >
         {games.map((id, i) => {
           const game = gameMeta(id);
           const on = !hidden.includes(id);
@@ -517,7 +534,7 @@ function GameOrder({
                 setDragging(null);
               }}
               onDragEnd={() => setDragging(null)}
-              className={`flex items-center gap-2 rounded-lg py-1 ${
+              className={`flex break-inside-avoid items-center gap-2 rounded-lg py-1 ${
                 dragging === i ? "opacity-40" : ""
               }`}
             >

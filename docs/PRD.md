@@ -217,6 +217,15 @@ points at: the empty states name both the switch and the group it is in, which i
 a checkbox in a wall was. And **the summary states are derived, never stored** — they are a reading
 of `prefs`, so they cannot disagree with the controls inside.
 
+**The panel uses the page's width**, like every other block on it. The rows were held to a narrower
+measure on the argument that a name and its state stop reading as one line across a wide screen, but
+the panel's own rule spans the shell, so the rules inside it stopped a third of the column short and
+the panel became the one thing on a desktop page not using the width — sitting between a two-column
+checklist and a three-column footer that both do. A title at one end of a full-width row and its
+countdown at the other is what "running now" does directly above it. Prose inside a group keeps a
+readable measure, and the game list takes two columns of its own on a wide screen once there are nine
+or more games, because eighteen rows in one column is a thousand pixels of ribbon down the left.
+
 **F4a — Focus one game at a time.**
 Switching games on and off says *which games the reader plays*, and is set once. It is the wrong
 tool for the thing a player of four games actually does while reading: clear one game, move to the

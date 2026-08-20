@@ -448,6 +448,15 @@ body {
   border-radius: 3px;
 }
 
+/*
+ * The last group closes the list, so its rule would be a second hairline a few
+ * pixels above the footer's own — two parallel lines with nothing between them,
+ * which reads as a mistake rather than as a boundary.
+ */
+.settings-group:last-child {
+  border-bottom-width: 0;
+}
+
 .settings-chevron {
   transition: transform 150ms ease;
 }
