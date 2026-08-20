@@ -112,6 +112,7 @@ src/ingest/       html.ts, dates.ts (sixteen formats), merge.ts, sanitize.ts, ro
   adapters/       index.ts — SOURCES registry binding url+game+parser, and the sanitize seam
 src/client/       React app, service worker, manifest
   state/          progress, daily log, ignores, prefs, sort — all localStorage
+                  gameOrder.ts — the reader's game order, and the A–Z fallback; pure
                   useCustom.ts — the reader's own games and events (PRD F13)
                   lens.ts — who sees which rows (focus, outstanding, next-to-expire); pure
                   zoom.ts — the timeline's scale ladder; pure
@@ -119,7 +120,7 @@ src/client/       React app, service worker, manifest
                   theme.ts — dark or light, and what a game hue reads as on each
 scripts/          build-feed.ts, build-static.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             772 tests
+test/             831 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
@@ -878,6 +879,40 @@ to an open page). Four things hold it up:
   and treating that as "has been offered nothing" switches off every game they already read. Seeding
   records what is on their screen and changes nothing else. Lanes they invented (`mygame:`) are
   recorded but never hidden.
+- **The order games appear in is the reader's, and absent means unplaced.** Nothing used to decide
+  it: the focus bar, the settings list, the timeline's lanes and the dailies strip all rendered
+  `App`'s `games`, which is whichever game happened to hold the first event row. `orderGames`
+  (`src/client/state/gameOrder.ts`) is now the one rule, and every surface goes through it — sorted
+  on the **name** and never the `LaneId`, because the id is not what is printed, and through
+  `localeCompare`, because `<` files hololive Dreams after every capitalised game. An absent
+  `prefs.gameOrder` means *the reader has never placed a game*, not an empty order, so they get the
+  alphabetical rule — the `knownGames` distinction again, and the same trap. Two properties are
+  load-bearing rather than incidental. The result is **always a permutation of the lanes it was
+  given**: a game dropped there is indistinguishable on screen from one the reader switched off, and
+  switching it back on would not bring it back. And a lane it does not name **trails** the ones it
+  does, which is what keeps a game we add later out of the middle of a hand-made order, and what
+  keeps a retired source's slot warm rather than pruning it. `games` itself is left in feed order on
+  purpose: `adoptNewLanes` diffs it and `knownGames` is seeded from it, so ordering it at source
+  would let a display preference reach the code that hides a reader's games.
+- **Reordering is a settings-only affordance.** The focus bar and the dailies strip are the fastest
+  tap targets in the app, and a drag target on top of a tick target costs somebody a streak the first
+  time it misfires — so the live surfaces are never draggable. Both a handle and ↑↓ buttons ship,
+  because touch fires no drag events at all: the arrows are the mechanism and the drag is the pointer
+  fast path, and being ordinary buttons is what makes the whole thing reachable by keyboard and
+  screen reader without a second implementation of the same interaction.
+- **A game's dailies stay together, and grouping never re-sorts inside a group.** `dailyGroups`
+  (`Dailies.tsx`) emits a game's standing chore followed by that game's repeating events, in the
+  order those arrived; it replaced `[...chores, ...repeating]`, which put a game's chore and its own
+  login event at opposite ends of the strip. Collapsed, the grouping is **adjacency only** — no
+  per-game headings, because that strip is the part of the page answerable in ten seconds and a
+  heading per game makes it the tallest block on it, pushing "next to expire" down the page.
+- **A day already gone is still tickable, and the window bounds display and never data.** People play
+  at midnight and tick at breakfast, so `catchUpDays` (`src/shared/daily.ts`) offers the last
+  `CATCH_UP_DAYS` game-days for a standing chore and for an event whose end was never announced —
+  the two cases `dailyDays` cannot answer. It never returns a day past today: a tick claims you did
+  it, and a future pip is a control for a claim that cannot be true, so it is absent rather than
+  disabled. A tick older than the window stays logged and keeps counting toward the streak — nothing
+  prunes the log against a window, here or anywhere else.
 - **Which view opens is the reader's answer.** `prefs.view` is asked once on the first run (PRD F8)
   and written by the tabs from then on. It was component state, which meant a reader who preferred
   the timeline was put back on the list by every reload, with nothing to blame but the app

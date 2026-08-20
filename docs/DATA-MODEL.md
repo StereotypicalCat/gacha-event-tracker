@@ -217,7 +217,8 @@ Namespaced, versioned, and small. Nothing here ever goes to the server.
 "gacha-tracker:v1:progress"     // { [eventId]: { status?, effort?, note?, at } }
 "gacha-tracker:v1:daily"        // { [id]: { days: ["2026-08-15", ...], at } }
 "gacha-tracker:v1:ignored"      // { [eventId]: { at } }  — "stop showing me this"
-"gacha-tracker:v1:prefs"        // { region, hiddenGames[], knownGames[]?, focusGame, sort, view,
+"gacha-tracker:v1:prefs"        // { region, hiddenGames[], knownGames[]?, gameOrder[]?,
+                                //   focusGame, sort, view,
                                 //   timelineDayWidth, timelineGroup, showUpcoming,
                                 //   timelineSplitUpcoming, detectDaily, showCompleted,
                                 //   showIgnored, theme, regionConfirmed, onboarded }
@@ -250,6 +251,19 @@ Namespaced, versioned, and small. Nothing here ever goes to the server.
                                 // knownGames is every lane the reader has been offered. Absent
                                 // means unrecorded, not "offered nothing" — see PRD F8; a lane
                                 // missing from it is new to them and arrives switched off.
+                                // gameOrder is the order the reader put their games in, and it
+                                // governs every surface that lists a game: the focus bar, the
+                                // dailies strip, the settings list and the timeline's lanes.
+                                // Absent means they have never placed one — NOT an empty order
+                                // — and `orderGames` then sorts alphabetically by name, which
+                                // is what the first-run picker does. The same distinction
+                                // knownGames draws, for the same reason: every install
+                                // predating the field is in that state. A lane it does not
+                                // name trails the ones it does, so a game we add later never
+                                // lands in the middle of a hand-made order, and a lane that
+                                // has left the feed keeps its slot rather than being pruned —
+                                // a source that comes back returns where the reader put it.
+                                // Reset writes the field away rather than storing []. PRD F16.
                                 // theme is "dark" | "light" | "system", defaulting to dark — see
                                 // PRD F15. It is read by the app *and* by a pre-paint script in
                                 // index.html, which is the only thing outside the client bundle
@@ -295,6 +309,19 @@ Day keys are `YYYY-MM-DD` in **game-day space, not UTC**: gacha servers roll the
 server time, so a player finishing at 02:00 is still on the previous day's dailies, and the key is
 computed against the reader's chosen region (`RESET_HOUR_LOCAL`, `dayKey`). Keys sort
 lexicographically, which is what "how many days are left" and streak counting rely on.
+
+**A day already gone is still writable, and `catchUpDays` decides how far back.** People play at
+midnight and tick at breakfast; a log that only accepts today goes wrong on its first bad evening.
+`dailyDays` already answers this for an event whose end was published, because the whole run is
+known — the two cases it cannot answer are a `dailies:<game>` chore, which has no start or end
+because it is a routine, and an event with `endsAt: null`, where it returns null. `catchUpDays`
+answers both with the last `CATCH_UP_DAYS` (14) game-days, clipped at an event's start where there is
+one and **never extending past today**: a tick claims you did it, and nobody can have done tomorrow.
+
+That window bounds **display and never storage**. A tick older than it stays in `daily`, keeps
+counting toward `streakOf` and `dailySummary`, and is simply not drawn — the same rule as a tick
+outside the window the feed now claims. Nothing prunes the log against either window, because a
+fortnight's streak exists on that device and nowhere else.
 
 **Not every game has a server per region.** `GameMeta.resetOffsets` records the regions where a
 game's server clock differs from `REGION_RESET_UTC_OFFSET`. Endfield is the case this exists for: it

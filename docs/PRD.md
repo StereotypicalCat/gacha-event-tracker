@@ -248,6 +248,26 @@ The heuristic assumes about an hour of play a day and says so. It never hides or
 it adds a flag the reader can ignore. **An event with no recorded effort never gets a warning**,
 because inferring an estimate in order to warn about it would be fabricating their input.
 
+**A day you did but never ticked can be recorded.** People play at midnight and tick at breakfast, or
+forget for a week and come back — a log that only accepts today is a log that goes wrong on its first
+bad evening and is never trusted again. An event whose end was announced already allowed this, since
+its checklist draws every day of the run and past days are clickable. The two that did not are the
+ones this closes: a game's **standing chore**, which had no history surface at all and is the
+most-missed thing in these games, and an event with **`endsAt: null`**, whose checklist could draw no
+run and so offered only today. Both now show the last fortnight as a strip of days, on the dailies
+section behind a "Catch up" disclosure and in the detail sheet respectively.
+
+Three rules hold it honest:
+
+- **Never a day later than today.** A tick is a claim that you did it, and tomorrow is not something
+  anyone can have done, so a future day is absent rather than shown and disabled.
+- **An event's strip starts when the event did**, capped at the same fortnight. A standing login
+  campaign that opened in March gets fourteen days, not a hundred and eighty — and never a day before
+  it was claimable.
+- **The window bounds what is shown and never what is stored.** A tick from five weeks ago stays
+  logged, keeps counting toward the streak and the totals, and is simply off-screen. Nothing removes a
+  day the reader did not remove themselves.
+
 **F13 — Your own games and your own events.**
 No feasible adapter set covers everyone. Fourteen games were named in the first release thread and
 the reader with the largest collection asked for exactly one thing — *"can you add a custom game
@@ -374,6 +394,30 @@ wrong:
 Switching is instant, costs nothing and saves nothing: no reload, and nothing marked, typed or
 ticked is touched. And it survives the load it is chosen on — the shell sets the theme before first
 paint, so a reader on light is never shown a dark page while the bundle downloads.
+
+**F16 — Your own game order.**
+Nothing used to decide the order games appear in. The focus bar, the settings list, the timeline's
+lanes and the dailies strip all rendered whichever game happened to hold the first event row — which
+is arbitrary, and shifts as events come and go. Two answers, and the reader gets both:
+
+- **A rule, for everybody.** Absent any choice of theirs, games are alphabetical by name, which is
+  what the first-run picker does (F8). Absent means *they have never placed a game*, not that they
+  have no order — so every existing reader gets the rule rather than an empty list, the same
+  distinction `knownGames` draws.
+- **An order, for anyone who wants one.** Games can be dragged, or nudged with arrows, into any order
+  in settings. Every surface that lists a game follows it, so the game they actually play is first
+  everywhere at once.
+
+**Reordering lives in settings and nowhere else.** The focus bar and the dailies strip are the fastest
+tap targets in the app — the strip is the part of the page answerable in ten seconds — and a drag
+target on top of a tick target costs somebody a streak the first time it misfires. Both a drag handle
+and arrow buttons ship, because touch fires no drag events at all and a drag-only list is unreachable
+on a phone and by keyboard alike.
+
+A game added later is not slotted into an order the reader made by hand: it trails everything they
+placed. It also arrives switched off (F8), so settings is where they meet it, which is where they
+would move it anyway. **A game's dailies stay together** — a repeating event the reader marked sits
+with the standing chore of the game it came from, because the reader thinks in games and not in kinds.
 
 ## Out of scope for v1
 
