@@ -203,6 +203,20 @@ but de-emphasized; a filter toggles them out entirely.
 Filter by game (multi-select, persisted) and by event type. Hiding a game hides it from both views.
 Preferences persist in `localStorage`.
 
+The panel holding them is **five collapsed groups, each stating its own answer on the summary line**
+— games, reading, what you see, your own games and events, your progress. It was one open block of
+everything, laid out in two columns on a wide screen, which read fine at four games and stopped
+working at eighteen: the game list alone is eighteen rows of four controls, and it sat above the
+checkbox a reader had come down here to tick. Collapsing on its own would only trade that friction
+for another, though — a group that shows nothing but its name turns *what is my region set to?* into
+a click — so each summary answers its group's question, and the closed panel is a five-line report
+of how the app is configured. Opening one is for changing an answer, not for reading it.
+
+Two things follow. **The groups ship closed**, including the one holding the filters that other copy
+points at: the empty states name both the switch and the group it is in, which is more findable than
+a checkbox in a wall was. And **the summary states are derived, never stored** — they are a reading
+of `prefs`, so they cannot disagree with the controls inside.
+
 **F4a — Focus one game at a time.**
 Switching games on and off says *which games the reader plays*, and is set once. It is the wrong
 tool for the thing a player of four games actually does while reading: clear one game, move to the

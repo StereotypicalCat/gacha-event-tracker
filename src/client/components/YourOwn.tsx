@@ -4,7 +4,7 @@ import type { EventDraft } from "../state/useCustom.ts";
 import { EventForm, GameForm } from "./CustomForms.tsx";
 
 /**
- * The reader's own games and events, in the settings panel (PRD F13).
+ * The reader's own games and events — a group of the settings panel (PRD F13).
  *
  * Their events are managed from the event itself — open it and the detail sheet
  * offers edit and delete, exactly where you would look for them. What has no
@@ -36,9 +36,10 @@ export function YourOwn({
   const list = Object.values(games);
 
   return (
-    <div className="mt-6 border-t border-hairline pt-4">
-      <p className="eyebrow">Your own games and events</p>
-      <p className="mt-1.5 max-w-md text-xs leading-relaxed text-faint">
+    // No heading or rule of its own: this is the body of a settings group that
+    // already carries both, and drew a second border under the first one.
+    <div>
+      <p className="max-w-md text-xs leading-relaxed text-faint">
         Track something this app doesn't cover, or an event a source missed. Your
         dates are yours — they're never presented as coming from a wiki, and they
         travel in your export.

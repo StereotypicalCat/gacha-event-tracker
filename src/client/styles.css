@@ -423,6 +423,45 @@ body {
   border-radius: 3px;
 }
 
+/* ---- Settings: collapsible groups -------------------------------------- */
+/*
+ * Native `<details>`, so the disclosure is keyboard- and screen-reader-reachable
+ * without a second implementation of the same interaction — the argument the
+ * game-order arrows already make. Only three things need CSS. The browser's own
+ * marker cannot be placed and differs between engines, so it goes and the
+ * summary draws its own chevron; and `summary` is not an `a`, a `button` or a
+ * `[tabindex]`, so the focus rule above does not reach it and the one control
+ * that opens a group would have no visible focus at all.
+ */
+.settings-group > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.settings-group > summary::-webkit-details-marker {
+  display: none;
+}
+
+.settings-group > summary:focus-visible {
+  outline: 2px solid var(--color-near);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.settings-chevron {
+  transition: transform 150ms ease;
+}
+
+.settings-group[open] > summary .settings-chevron {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-chevron {
+    transition: none;
+  }
+}
+
 /* Horizontal scrollers keep their gutter but hide the bar chrome. */
 .scroll-x {
   overflow-x: auto;

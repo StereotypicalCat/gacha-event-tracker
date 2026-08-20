@@ -6,12 +6,17 @@ import { metaFor } from "../src/shared/games.ts";
 import type { Prefs } from "../src/client/state/usePrefs.ts";
 
 /**
- * The settings panel's view filters.
+ * The settings panel: its view filters, its group summaries, its game order.
  *
  * Three rows answer the same question — *what am I allowed to look at?* — and
  * they are the only place two of them can be reached from, so what they are
  * bound to is worth pinning. A checkbox wired to the wrong preference is
  * invisible in a diff and obvious only to the reader it happens to.
+ *
+ * The summaries are pinned for a related reason. The groups ship closed, so
+ * those lines are the only account a reader gets of how the app is set up
+ * without opening anything, and a line that drifts from the control inside it
+ * is worse than no line at all.
  */
 
 const PREFS: Prefs = {
@@ -131,6 +136,61 @@ describe("Controls: what am I allowed to look at", () => {
     // over an empty set.
     expect(render(PREFS)).not.toContain("I&#x27;m ignoring");
     expect(render(PREFS, 3)).toContain("Show the 3 events I&#x27;m");
+  });
+});
+
+describe("Controls: what a closed group says", () => {
+  /**
+   * The summaries are the whole reason collapsing the panel is not a regression.
+   * A group that shows only its name turns "what is my region set to?" into a
+   * click, so each one has to answer its own question from `prefs` — and being
+   * derived rather than stored is what stops them disagreeing with the controls
+   * inside.
+   */
+  const summaries = (html: string): string[] =>
+    [...html.matchAll(/<summary[^>]*>(.*?)<\/summary>/g)].map((m) =>
+      (m[1] ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(),
+    );
+
+  test("every group is named, and states where it stands", () => {
+    const lines = summaries(render(PREFS));
+    expect(lines).toHaveLength(5);
+    expect(lines[0]).toBe("Games 2 of 2 on · A–Z");
+    expect(lines[1]).toBe("Reading Europe · Dark");
+    expect(lines[3]).toBe("Your own games and events none yet");
+  });
+
+  test("the games line counts what is on, and whose order it is in", () => {
+    const some = render({ ...PREFS, hiddenGames: ["hsr"], gameOrder: ["hsr", "genshin"] });
+    expect(summaries(some)[0]).toBe("Games 1 of 2 on · your order");
+  });
+
+  test("the visibility line names the additions, not the switches", () => {
+    // The app's answer is what expires next; each of these puts something else
+    // alongside it, so that is how the line reads.
+    expect(summaries(render({ ...PREFS, showCompleted: false }))[2]).toBe(
+      "What you see live deadlines only",
+    );
+    expect(
+      summaries(render({ ...PREFS, showUpcoming: true }))[2],
+    ).toBe("What you see plus finished, not started");
+  });
+
+  test("ignored counts in the line only once it is actually revealed", () => {
+    // `showIgnored` with nothing ignored is a filter over an empty set, and the
+    // row itself is not even offered — so the summary must not claim it either.
+    expect(summaries(render({ ...PREFS, showIgnored: true }, 0))[2]).toBe(
+      "What you see plus finished",
+    );
+    expect(summaries(render({ ...PREFS, showIgnored: true }, 3))[2]).toBe(
+      "What you see plus finished, ignored",
+    );
+  });
+
+  test("the panel has a heading of its own", () => {
+    // It used to begin with an unannounced wall of controls, which reads as more
+    // of the page rather than as the place settings live.
+    expect(render(PREFS)).toContain("Settings");
   });
 });
 

@@ -32,19 +32,41 @@ const THEMES: Array<{ id: ThemeChoice; label: string }> = [
  * switched off. A checkbox would name one of them and leave the other as
  * whatever is left over.
  */
-const SPLITS: Array<{ split: boolean; label: string; hint: string }> = [
+const SPLITS: Array<{ id: boolean; label: string; hint: string }> = [
   {
-    split: true,
+    id: true,
     label: "In their own group",
-    hint: "Each lane runs out, then a \u201cNot started yet\u201d heading and what is queued behind it \u2014 the shape the checklist has either way.",
+    hint: "Each lane runs out, then a “Not started yet” heading and what is queued behind it — the shape the checklist has either way.",
   },
   {
-    split: false,
+    id: false,
     label: "Mixed in",
     hint: "One deadline order, started or not — so something opening Friday and closing Sunday sits above an event running until October.",
   },
 ];
 
+/**
+ * The settings panel.
+ *
+ * Five groups, each collapsed until asked for, and each stating its own answer
+ * on the summary line. It used to be one open block of everything in two
+ * columns, which was readable at four games and is not at eighteen: the game
+ * list alone is eighteen rows of four controls, and it sat above the pills and
+ * checkboxes a reader had actually come down here to find. Scrolling past a
+ * wall to reach a checkbox is the whole complaint.
+ *
+ * Collapsing it is only half an answer, though — a closed group that says
+ * nothing turns "what is my region set to?" into a click. So every summary
+ * carries its group's current state, which makes the closed panel a five-line
+ * report of how the app is configured, and makes opening one a deliberate act
+ * rather than the price of reading it.
+ *
+ * One column rather than the two this replaced. The two-column split was there
+ * because the panel was tall and a wide screen had room to halve it; with the
+ * groups closed the whole thing is shorter than the header above it, so the
+ * argument is gone, and full-width rows give the summary state somewhere to sit
+ * on the right of the name it belongs to.
+ */
 export function Controls({
   games,
   prefs,
@@ -65,14 +87,29 @@ export function Controls({
   /** Everything the reader entered themselves, and the ways to change it. */
   own: React.ComponentProps<typeof YourOwn>;
 }) {
+  const shown = games.filter((g) => !prefs.hiddenGames.includes(g)).length;
+  const ownGames = Object.keys(own.games).length;
+  const ownEvents = Object.keys(own.events).length;
+
   return (
-    <section className="border-t border-hairline px-4 py-5">
-      {/* Which games and how they are read on one side, what the reader has
-          added and what they can take away with them on the other. Two short
-          columns beat one tall one here: settings are scanned for the one row
-          you came to change. */}
-      <div className="lg:grid lg:grid-cols-2 lg:gap-x-10">
-        <div>
+    <section
+      aria-labelledby="settings-heading"
+      className="border-t border-hairline px-4 py-5"
+    >
+      <h2 id="settings-heading" className="eyebrow">
+        Settings
+      </h2>
+      <p className="mt-1.5 max-w-md text-xs leading-relaxed text-faint">
+        All of this stays in this browser. Each group says where it stands, so
+        you only have to open the one you came to change.
+      </p>
+
+      {/* Held to a readable measure rather than the container's full width. Each
+          row pairs a name on the left with its state on the right, and across a
+          wide screen those two ends stop reading as one line — which is the whole
+          point of putting the state there. */}
+      <div className="mt-3.5 max-w-3xl border-t border-hairline">
+        <Group name="Games" state={gamesState(games.length, shown, prefs.gameOrder !== undefined)}>
           <GameOrder
             games={games}
             hidden={prefs.hiddenGames}
@@ -86,197 +123,318 @@ export function Controls({
             }
             onReset={() => onUpdate({ gameOrder: undefined })}
           />
+        </Group>
 
-          <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-4">
-            <div>
-              <p className="eyebrow">Server region</p>
-              <div className="mt-2 flex gap-1.5">
-                {REGIONS.map((r) => (
-                  <button
-                    key={r.id}
-                    type="button"
-                    onClick={() => onUpdate({ region: r.id, regionConfirmed: true })}
-                    aria-pressed={prefs.region === r.id}
-                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                      prefs.region === r.id
-                        ? "border-ink/70 text-ink"
-                        : "border-hairline text-faint hover:text-muted"
-                    }`}
-                  >
-                    {r.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Next to the region rather than off in a corner: both are
-                "how do I read this?", and neither changes what the page
-                knows. Switching is instant and costs nothing — no reload, and
-                nothing marked, typed or ticked is touched. */}
-            <div>
-              <p className="eyebrow">Appearance</p>
-              <div className="mt-2 flex gap-1.5">
-                {THEMES.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => onUpdate({ theme: t.id })}
-                    aria-pressed={prefs.theme === t.id}
-                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                      prefs.theme === t.id
-                        ? "border-ink/70 text-ink"
-                        : "border-hairline text-faint hover:text-muted"
-                    }`}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-muted">
-                <input
-                  type="checkbox"
-                  checked={prefs.showCompleted}
-                  onChange={(e) => onUpdate({ showCompleted: e.target.checked })}
-                  className="size-4 accent-[var(--color-near)]"
-                />
-                Show events I've finished
-              </label>
-
-              {/* One of the three "what am I allowed to look at" rows, and it
-                  reaches both views: the checklist's "Not started yet" section
-                  and the board's future bars are the same events answering the
-                  same question. Off is the default because this app answers
-                  *what expires next* — see PRD F1. */}
-              <label className="flex cursor-pointer select-none items-start gap-2 text-xs text-muted">
-                <input
-                  type="checkbox"
-                  checked={prefs.showUpcoming}
-                  onChange={(e) => onUpdate({ showUpcoming: e.target.checked })}
-                  className="mt-px size-4 accent-[var(--color-near)]"
-                />
-                <span>
-                  Show events that haven't started
-                  <span className="mt-0.5 block max-w-xs leading-relaxed text-faint">
-                    Adds the checklist's "Not started yet" section, and plots
-                    them on the timeline — which draws its span from what it
-                    plots, so the board stretches weeks past today.
-                  </span>
-                </span>
-              </label>
-
-              {/* Only while there is something to arrange. A choice about how
-                  unstarted events sit on the board is unanswerable when none
-                  are on it, and offering it anyway is a control that does
-                  nothing — the stored answer is kept either way, so switching
-                  the row above back on restores it rather than a default. */}
-              {prefs.showUpcoming && (
-                <div className="ml-6 flex flex-col gap-1.5">
-                  <div className="flex gap-1.5">
-                    {SPLITS.map((s) => (
-                      <button
-                        key={String(s.split)}
-                        type="button"
-                        onClick={() =>
-                          onUpdate({ timelineSplitUpcoming: s.split })
-                        }
-                        aria-pressed={prefs.timelineSplitUpcoming === s.split}
-                        className={`rounded-full border px-3 py-1 text-[0.6875rem] font-medium transition-colors ${
-                          prefs.timelineSplitUpcoming === s.split
-                            ? "border-ink/70 text-ink"
-                            : "border-hairline text-faint hover:text-muted"
-                        }`}
-                      >
-                        {s.label}
-                      </button>
-                    ))}
-                  </div>
-                  <p className="max-w-xs text-xs leading-relaxed text-faint">
-                    On the timeline.{" "}
-                    {SPLITS.find((s) => s.split === prefs.timelineSplitUpcoming)
-                      ?.hint}
-                  </p>
-                </div>
-              )}
-
-              {/* Detection reads the source's wording and is wrong in both
-                  directions, so it ships off and says so. Off leaves only the
-                  events the reader marked, and discards nothing — every mark and
-                  logged day survives, so it can be switched back on. */}
-              <label className="flex cursor-pointer select-none items-start gap-2 text-xs text-muted">
-                <input
-                  type="checkbox"
-                  checked={prefs.detectDaily}
-                  onChange={(e) => onUpdate({ detectDaily: e.target.checked })}
-                  className="mt-px size-4 accent-[var(--color-near)]"
-                />
-                <span>
-                  Spot daily events automatically
-                  <span className="ml-1.5 rounded-full border border-hairline px-1.5 py-0.5 align-[1px] text-[0.5625rem] font-medium uppercase tracking-wider text-faint">
-                    Experimental
-                  </span>
-                  <span className="mt-0.5 block max-w-xs leading-relaxed text-faint">
-                    Guessed from what the source wrote, so it misses some and
-                    invents others. Off, only events you mark yourself get a
-                    checklist. Your ticks and streaks are kept either way.
-                  </span>
-                </span>
-              </label>
-
-              {ignoredCount > 0 && (
-                <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-muted">
-                  <input
-                    type="checkbox"
-                    checked={prefs.showIgnored}
-                    onChange={(e) => onUpdate({ showIgnored: e.target.checked })}
-                    className="size-4 accent-[var(--color-near)]"
-                  />
-                  Show the {ignoredCount} event{ignoredCount > 1 ? "s" : ""} I'm
-                  ignoring
-                </label>
-              )}
-            </div>
+        {/* Region and appearance together: both are "how do I read this?", and
+            neither changes what the page knows. Switching either is instant and
+            costs nothing — no reload, and nothing marked, typed or ticked is
+            touched. */}
+        <Group
+          name="Reading"
+          state={`${REGION_LABEL[prefs.region]} · ${
+            THEMES.find((t) => t.id === prefs.theme)?.label ?? prefs.theme
+          }`}
+        >
+          <div className="flex flex-wrap gap-x-8 gap-y-4">
+            <PillGroup
+              label="Server region"
+              options={REGIONS}
+              value={prefs.region}
+              onChange={(region) => onUpdate({ region, regionConfirmed: true })}
+            />
+            <PillGroup
+              label="Appearance"
+              options={THEMES}
+              value={prefs.theme}
+              onChange={(theme) => onUpdate({ theme })}
+            />
           </div>
-        </div>
+        </Group>
 
-        <div>
+        <Group
+          name="What you see"
+          state={visibilityState(
+            prefs.showCompleted,
+            prefs.showUpcoming,
+            prefs.showIgnored && ignoredCount > 0,
+          )}
+        >
+          <div className="flex flex-col gap-3">
+            <Check
+              checked={prefs.showCompleted}
+              onChange={(showCompleted) => onUpdate({ showCompleted })}
+              label="Show events I've finished"
+            />
+
+            {/* One of the three "what am I allowed to look at" rows, and it
+                reaches both views: the checklist's "Not started yet" section
+                and the board's future bars are the same events answering the
+                same question. Off is the default because this app answers
+                *what expires next* — see PRD F1. */}
+            <Check
+              checked={prefs.showUpcoming}
+              onChange={(showUpcoming) => onUpdate({ showUpcoming })}
+              label="Show events that haven't started"
+              hint="Adds the checklist's “Not started yet” section, and plots them on the timeline — which draws its span from what it plots, so the board stretches weeks past today."
+            />
+
+            {/* Only while there is something to arrange. A choice about how
+                unstarted events sit on the board is unanswerable when none
+                are on it, and offering it anyway is a control that does
+                nothing — the stored answer is kept either way, so switching
+                the row above back on restores it rather than a default. */}
+            {prefs.showUpcoming && (
+              <div className="ml-6">
+                <PillGroup
+                  small
+                  label="Where unstarted events sit on the board"
+                  options={SPLITS}
+                  value={prefs.timelineSplitUpcoming}
+                  onChange={(timelineSplitUpcoming) =>
+                    onUpdate({ timelineSplitUpcoming })
+                  }
+                />
+                <p className="mt-1.5 max-w-sm text-xs leading-relaxed text-faint">
+                  On the timeline.{" "}
+                  {SPLITS.find((s) => s.id === prefs.timelineSplitUpcoming)?.hint}
+                </p>
+              </div>
+            )}
+
+            {/* Detection reads the source's wording and is wrong in both
+                directions, so it ships off and says so. Off leaves only the
+                events the reader marked, and discards nothing — every mark and
+                logged day survives, so it can be switched back on. */}
+            <Check
+              checked={prefs.detectDaily}
+              onChange={(detectDaily) => onUpdate({ detectDaily })}
+              label="Spot daily events automatically"
+              badge="Experimental"
+              hint="Guessed from what the source wrote, so it misses some and invents others. Off, only events you mark yourself get a checklist. Your ticks and streaks are kept either way."
+            />
+
+            {ignoredCount > 0 && (
+              <Check
+                checked={prefs.showIgnored}
+                onChange={(showIgnored) => onUpdate({ showIgnored })}
+                label={`Show the ${ignoredCount} event${
+                  ignoredCount > 1 ? "s" : ""
+                } I'm ignoring`}
+              />
+            )}
+          </div>
+        </Group>
+
+        <Group name="Your own games and events" state={ownState(ownGames, ownEvents)}>
           <YourOwn {...own} />
+        </Group>
 
-          <div className="mt-6 border-t border-hairline pt-4">
-            <p className="eyebrow">Your progress</p>
-            <p className="mt-1.5 max-w-md text-xs leading-relaxed text-faint">
-              What you've finished, and every daily you've ticked off, are saved in
-              this browser only — there is no account. Anything you added yourself is
-              in there too. Move it all to another device with a file.
-            </p>
-            <div className="mt-3 flex gap-2">
-              <button
-                type="button"
-                onClick={onExport}
-                className="rounded-lg border border-hairline px-3 py-1.5 text-xs text-muted transition-colors hover:text-ink"
-              >
-                Export
-              </button>
-              <label className="cursor-pointer rounded-lg border border-hairline px-3 py-1.5 text-xs text-muted transition-colors hover:text-ink">
-                Import
-                <input
-                  type="file"
-                  accept="application/json,.json"
-                  className="sr-only"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) onImport(file);
-                    e.target.value = "";
-                  }}
-                />
-              </label>
-            </div>
+        <Group name="Your progress" state="Backup to a file">
+          <p className="max-w-md text-xs leading-relaxed text-faint">
+            What you've finished, and every daily you've ticked off, are saved in
+            this browser only — there is no account. Anything you added yourself is
+            in there too. Move it all to another device with a file.
+          </p>
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={onExport}
+              className="rounded-lg border border-hairline px-3 py-1.5 text-xs text-muted transition-colors hover:text-ink"
+            >
+              Export
+            </button>
+            <label className="cursor-pointer rounded-lg border border-hairline px-3 py-1.5 text-xs text-muted transition-colors hover:text-ink">
+              Import
+              <input
+                type="file"
+                accept="application/json,.json"
+                className="sr-only"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) onImport(file);
+                  e.target.value = "";
+                }}
+              />
+            </label>
           </div>
-        </div>
+        </Group>
       </div>
     </section>
+  );
+}
+
+/** "12 of 18 on · your order" — what the games group is set to, without opening it. */
+function gamesState(total: number, shown: number, ordered: boolean): string {
+  if (total === 0) return "none yet";
+  return `${shown} of ${total} on · ${ordered ? "your order" : "A–Z"}`;
+}
+
+/**
+ * What the visibility group is letting through.
+ *
+ * Named as additions to the deadlines, because that is what they are: the app's
+ * answer is *what expires next*, and each of these switches puts something else
+ * alongside it.
+ */
+function visibilityState(
+  completed: boolean,
+  upcoming: boolean,
+  ignored: boolean,
+): string {
+  const also: string[] = [];
+  if (completed) also.push("finished");
+  if (upcoming) also.push("not started");
+  if (ignored) also.push("ignored");
+  return also.length === 0 ? "live deadlines only" : `plus ${also.join(", ")}`;
+}
+
+function ownState(games: number, events: number): string {
+  if (games === 0 && events === 0) return "none yet";
+  const plural = (n: number, word: string) =>
+    `${n} ${word}${n === 1 ? "" : "s"}`;
+  return `${plural(games, "game")} · ${plural(events, "event")}`;
+}
+
+/**
+ * One collapsible group of settings.
+ *
+ * Native `<details>` rather than a button and a piece of state, for the reason
+ * the game-order arrows are ordinary buttons: the disclosure is then reachable
+ * by keyboard and screen reader without a second implementation of the same
+ * interaction, and it survives with JavaScript half-loaded.
+ *
+ * The state line is not decoration. A group that collapses to its name alone
+ * turns every question about how the app is set up into a click, which trades
+ * one kind of friction for another — so the summary answers the group's own
+ * question, and opening it is for changing the answer rather than reading it.
+ */
+function Group({
+  name,
+  state,
+  children,
+}: {
+  name: string;
+  /** This group's current answer, in the reader's words. */
+  state: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <details className="settings-group border-b border-hairline">
+      <summary className="flex items-center gap-2.5 py-3 text-sm">
+        <svg
+          aria-hidden
+          viewBox="0 0 16 16"
+          className="settings-chevron size-2.5 shrink-0 text-faint"
+        >
+          <path d="M5 2.5l6 5.5-6 5.5z" fill="currentColor" />
+        </svg>
+        <span className="min-w-0 flex-1 truncate font-medium text-ink">
+          {name}
+        </span>
+        <span className="shrink-0 text-xs text-faint">{state}</span>
+      </summary>
+      {/* Indented to the group name, clear of the chevron. */}
+      <div className="pb-5 pl-5">{children}</div>
+    </details>
+  );
+}
+
+/**
+ * One row of mutually exclusive answers.
+ *
+ * The region, the theme and the board's grouping of unstarted events were three
+ * copies of the same markup carrying the same pressed-state rules. Being one
+ * component is also what gives each of them an accessible name: the first two
+ * had none, so a screen reader read six unlabelled buttons in a row with
+ * nothing saying which question either half answered — the `role="group"` the
+ * board's own controls already carry.
+ */
+function PillGroup<T extends string | boolean>({
+  label,
+  options,
+  value,
+  onChange,
+  small = false,
+}: {
+  label: string;
+  options: ReadonlyArray<{ id: T; label: string }>;
+  value: T;
+  onChange: (id: T) => void;
+  /** Subordinate to the control above it, rather than a question of its own. */
+  small?: boolean;
+}) {
+  return (
+    <div>
+      <p className="eyebrow">{label}</p>
+      <div role="group" aria-label={label} className="mt-2 flex flex-wrap gap-1.5">
+        {options.map((option) => {
+          const on = option.id === value;
+          return (
+            <button
+              key={String(option.id)}
+              type="button"
+              onClick={() => onChange(option.id)}
+              aria-pressed={on}
+              className={`rounded-full border font-medium transition-colors ${
+                small ? "px-3 py-1 text-[0.6875rem]" : "px-3 py-1.5 text-xs"
+              } ${
+                on
+                  ? "border-ink/70 text-ink"
+                  : "border-hairline text-faint hover:text-muted"
+              }`}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * One switch, with room to say what it does.
+ *
+ * The explanations were inline in the panel, which is what made three checkboxes
+ * as tall as the game list. They belong to the control, so they live with it.
+ */
+function Check({
+  checked,
+  onChange,
+  label,
+  hint,
+  badge,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label: string;
+  /** Why a reader might want this, when the label cannot carry it. */
+  hint?: string | undefined;
+  /** A caveat on the control itself — "Experimental" and nothing else so far. */
+  badge?: string | undefined;
+}) {
+  return (
+    <label className="flex cursor-pointer select-none items-start gap-2 text-xs text-muted">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-px size-4 accent-[var(--color-near)]"
+      />
+      <span>
+        {label}
+        {badge !== undefined && (
+          <span className="ml-1.5 rounded-full border border-hairline px-1.5 py-0.5 align-[1px] text-[0.5625rem] font-medium uppercase tracking-wider text-faint">
+            {badge}
+          </span>
+        )}
+        {hint !== undefined && (
+          <span className="mt-0.5 block max-w-sm leading-relaxed text-faint">
+            {hint}
+          </span>
+        )}
+      </span>
+    </label>
   );
 }
 
@@ -320,30 +478,28 @@ function GameOrder({
 
   return (
     <>
+      {/* Both affordances, always visible. Touch fires no drag events at all, so
+          the arrows are the mechanism and the handle is the fast path where a
+          pointer exists — and the arrows are ordinary buttons, which is what
+          makes this reachable by keyboard and screen reader without a second
+          implementation of the same interaction. */}
       <div className="flex items-baseline justify-between gap-3">
-        <p className="eyebrow">Games</p>
+        <p className="max-w-sm text-[0.6875rem] leading-relaxed text-faint">
+          Drag a row, or use the arrows, to put your games in order. Everything
+          that lists a game follows it.
+        </p>
         {custom && (
           <button
             type="button"
             onClick={onReset}
-            className="text-[0.6875rem] text-faint transition-colors hover:text-muted"
+            className="shrink-0 text-[0.6875rem] text-faint transition-colors hover:text-muted"
           >
             Reset to A–Z
           </button>
         )}
       </div>
 
-      {/* Both affordances, always visible. Touch fires no drag events at all, so
-          the arrows are the mechanism and the handle is the fast path where a
-          pointer exists — and the arrows are ordinary buttons, which is what
-          makes this reachable by keyboard and screen reader without a second
-          implementation of the same interaction. */}
-      <p className="mt-1 text-[0.6875rem] leading-relaxed text-faint">
-        Drag a row, or use the arrows, to put your games in order. Everything
-        that lists a game follows it.
-      </p>
-
-      <ul className="mt-2">
+      <ul className="mt-2 max-w-md">
         {games.map((id, i) => {
           const game = gameMeta(id);
           const on = !hidden.includes(id);

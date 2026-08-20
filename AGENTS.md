@@ -907,6 +907,19 @@ to an open page). Four things hold it up:
   because touch fires no drag events at all: the arrows are the mechanism and the drag is the pointer
   fast path, and being ordinary buttons is what makes the whole thing reachable by keyboard and
   screen reader without a second implementation of the same interaction.
+- **The settings panel is groups that state their own answer, and they ship closed.** Five
+  `<details>` groups — games, reading, what you see, your own, your progress — each with its current
+  state on the summary line (`Europe · Dark`, `17 of 18 on · A–Z`, `plus finished, not started`). It
+  was one open block in two columns, which is readable at four games and not at eighteen, where the
+  game list is eighteen rows of four controls sitting above the checkbox somebody came to tick. The
+  state line is the half that makes collapsing honest: without it every question about how the app is
+  set up costs a click, so the closed panel has to be a report and not a menu. Two rules follow.
+  **Do not default a group open** to make something inside it findable — the empty states name the
+  group as well as the switch, which is what makes that unnecessary. And the summaries are **derived
+  from `prefs` at render**, never stored, so they cannot drift from the controls they describe.
+  Native `<details>` for the reason the reorder arrows are ordinary buttons: keyboard and screen
+  reader reach it without a second implementation. `summary` is not an `a`, `button` or `[tabindex]`,
+  so it needs its own `:focus-visible` rule in `styles.css` — the shared one does not reach it.
 - **A game's dailies stay together, and grouping never re-sorts inside a group.** `dailyGroups`
   (`Dailies.tsx`) emits a game's standing chore followed by that game's repeating events, in the
   order those arrived; it replaced `[...chores, ...repeating]`, which put a game's chore and its own

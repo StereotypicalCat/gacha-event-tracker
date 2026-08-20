@@ -567,7 +567,7 @@ export function App() {
                     upcoming.length === 1
                       ? "One event has"
                       : `${upcoming.length} events have`
-                  } not started yet — switch on “Show events that haven't started” below to list them.`
+                  } not started yet — switch on “Show events that haven't started”, under “What you see” in settings below.`
                 : focus !== null
                   ? `Nothing running in ${gameMeta(focus).name}. Try another game, or show all of them.`
                   : "Nothing to show. Every game is switched off, or you've finished everything and hidden completed events."}

@@ -276,8 +276,8 @@ export function Timeline({
           {waiting.length === 1
             ? "One event has not started yet"
             : `${waiting.length} events have not started yet`}{" "}
-          — switch on “Show events that haven't started” below to see when they
-          begin.
+          — switch on “Show events that haven't started”, under “What you see”
+          in settings below.
         </p>
       ) : (
       <div
