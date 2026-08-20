@@ -23,7 +23,12 @@ export function GameFocus({
   onFocus,
   onAdvance,
 }: {
-  /** Games the reader has switched on, in feed order. */
+  /**
+   * Games the reader has switched on, in **their** order.
+   *
+   * Was feed order — whichever game held the first event row — until
+   * `orderGames` became the one rule every surface listing a game goes through.
+   */
   games: LaneId[];
   focus: LaneId | null;
   /** Outstanding rows per game, so a chip says whether it is worth a visit. */
