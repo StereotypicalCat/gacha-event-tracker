@@ -62,6 +62,50 @@ function isEmpty(p: Progress): boolean {
   );
 }
 
+/**
+ * Union merge on import, keeping whichever copy was touched last. Never removes.
+ *
+ * `useMarkSet` keeps the **earlier** of two marks and is right to. There `at` is
+ * when the reader made the mark, membership in the set is the whole fact, and
+ * the oldest timestamp is the truest answer to "when did they say this?" —
+ * nothing is lost by preferring it.
+ *
+ * This store is the opposite shape, and it was merging the same way. Here the
+ * record *is* the data — a status, an effort, a note, whether it repeats — and
+ * `at` is when they last changed one of those. Keeping the earlier copy
+ * therefore discards every edit made after it, in both of the directions an
+ * import actually happens in: restoring a backup taken before an evening's work
+ * rolls that evening back, and importing an old file into a device with newer
+ * progress rolls the device back. Neither is recoverable, because nothing else
+ * holds a copy.
+ *
+ * So the later record wins. Nothing is removed either way — an id present on
+ * only one side always survives — which is the guarantee docs/DATA-MODEL.md
+ * § Import makes, and taking the maximum of two timestamps keeps the merge
+ * order-independent and idempotent exactly as the old rule was.
+ *
+ * A record whose `at` is not a string is an import that has been edited or
+ * truncated. It can still land under an id nothing holds yet, but it never wins
+ * a comparison against a record that does carry one.
+ */
+export function mergeProgress(
+  current: ProgressMap,
+  incoming: ProgressMap,
+): ProgressMap {
+  const touchedAt = (p: Progress): string =>
+    typeof p.at === "string" ? p.at : "";
+
+  const next = { ...current };
+  for (const [id, value] of Object.entries(incoming)) {
+    const existing = next[id];
+    next[id] =
+      existing === undefined || touchedAt(value) > touchedAt(existing)
+        ? value
+        : existing;
+  }
+  return next;
+}
+
 export function useProgress() {
   const [progress, setProgress] = useState<ProgressMap>(load);
 
@@ -112,17 +156,8 @@ export function useProgress() {
     [patch],
   );
 
-  /** Union merge on import, keeping the earlier entry. Never removes. */
   const merge = useCallback((incoming: ProgressMap) => {
-    setProgress((prev) => {
-      const next = { ...prev };
-      for (const [id, value] of Object.entries(incoming)) {
-        const existing = next[id];
-        next[id] =
-          existing === undefined || value.at < existing.at ? value : existing;
-      }
-      return next;
-    });
+    setProgress((prev) => mergeProgress(prev, incoming));
   }, []);
 
   return {

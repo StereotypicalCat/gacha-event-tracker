@@ -563,7 +563,18 @@ event whose lane is missing.
 
 Import **merges** every set: a mark present in either the file or the current device survives, and
 import never removes one. `daily` merges as a **union of days per ID** — every day either side
-recorded is a day the reader actually played. An export written before daily checklists existed
+recorded is a day the reader actually played.
+
+**Which copy wins a conflict differs by store, and the difference is the shape of the data.** For
+`ignored` (and the legacy `completions`) the **earlier** mark wins: `at` records when the reader made
+it, membership in the set is the whole fact, and the oldest timestamp is the truest answer to when
+they said it. For `progress` the **later** record wins, because there the record *is* the data — a
+status, an effort, a note, whether it repeats — and `at` is when one of those last changed. Keeping
+the earlier copy there discards every edit made after it, in both directions an import happens in:
+restoring a backup taken before an evening's work would roll that evening back, and importing an old
+file onto a device with newer progress would roll the device back. Taking the maximum of the two
+timestamps keeps the merge order-independent and idempotent either way, and removes nothing.
+`mergeProgress` is pure and `test/progress.test.ts` pins it. An export written before daily checklists existed
 simply has no `daily` key, which is not an error. Losing a user's marks to a bad import is unrecoverable, so the merge is
 deliberately one-directional. A file whose `format` is unrecognised is refused outright rather than
 partly applied.
