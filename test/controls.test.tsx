@@ -152,39 +152,79 @@ describe("Controls: what a closed group says", () => {
       (m[1] ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(),
     );
 
+  /**
+   * One group's line, found by its name rather than its position.
+   *
+   * These used to be indexed, which meant splitting one group in two moved
+   * every assertion below it onto a neighbour — and a test that fails because
+   * the panel gained a group says nothing about the line it was written for.
+   */
+  const line = (html: string, name: string): string =>
+    summaries(html).find((l) => l.startsWith(`${name} `)) ?? "";
+
   test("every group is named, and states where it stands", () => {
     const lines = summaries(render(PREFS));
-    expect(lines).toHaveLength(5);
+    expect(lines).toHaveLength(6);
     expect(lines[0]).toBe("Games 2 of 2 on · A–Z");
-    expect(lines[1]).toBe("Reading Europe · Dark");
-    expect(lines[3]).toBe("Your own games and events none yet");
+    expect(lines[5]).toBe("Your progress Backup to a file");
+    expect(line(render(PREFS), "Your own games and events")).toBe(
+      "Your own games and events none yet",
+    );
+  });
+
+  test("the region and the theme are two questions, not one line", () => {
+    // They were one group called "Reading", summarising as "Europe · Dark" —
+    // two unrelated answers joined by a dot, under a name that described
+    // neither. The region is the one setting here that can make a countdown
+    // wrong, so it gets its own line rather than sharing a word for the theme.
+    const lines = summaries(render(PREFS));
+    expect(lines).not.toContain("Reading Europe · Dark");
+    expect(line(render(PREFS), "Server region")).toBe("Server region Europe");
+    expect(line(render(PREFS), "Appearance")).toBe("Appearance Dark");
+    expect(line(render({ ...PREFS, theme: "system" }), "Appearance")).toBe(
+      "Appearance System",
+    );
   });
 
   test("the games line counts what is on, and whose order it is in", () => {
     const some = render({ ...PREFS, hiddenGames: ["hsr"], gameOrder: ["hsr", "genshin"] });
-    expect(summaries(some)[0]).toBe("Games 1 of 2 on · your order");
+    expect(line(some, "Games")).toBe("Games 1 of 2 on · your order");
   });
 
   test("the visibility line names the additions, not the switches", () => {
     // The app's answer is what expires next; each of these puts something else
     // alongside it, so that is how the line reads.
-    expect(summaries(render({ ...PREFS, showCompleted: false }))[2]).toBe(
+    expect(line(render({ ...PREFS, showCompleted: false }), "What you see")).toBe(
       "What you see live deadlines only",
     );
-    expect(
-      summaries(render({ ...PREFS, showUpcoming: true }))[2],
-    ).toBe("What you see plus finished, not started");
+    expect(line(render({ ...PREFS, showUpcoming: true }), "What you see")).toBe(
+      "What you see plus finished, not started",
+    );
   });
 
   test("ignored counts in the line only once it is actually revealed", () => {
     // `showIgnored` with nothing ignored is a filter over an empty set, and the
     // row itself is not even offered — so the summary must not claim it either.
-    expect(summaries(render({ ...PREFS, showIgnored: true }, 0))[2]).toBe(
+    expect(line(render({ ...PREFS, showIgnored: true }, 0), "What you see")).toBe(
       "What you see plus finished",
     );
-    expect(summaries(render({ ...PREFS, showIgnored: true }, 3))[2]).toBe(
+    expect(line(render({ ...PREFS, showIgnored: true }, 3), "What you see")).toBe(
       "What you see plus finished, ignored",
     );
+  });
+
+  test("dropping a repeated eyebrow does not drop the accessible name", () => {
+    // The region and theme pills sit in groups whose summaries already ask the
+    // question, so the eyebrow above them would only say it twice and is gone.
+    // `aria-label` is the half that has to survive that: without it a screen
+    // reader reads six unlabelled buttons in a row with nothing saying which
+    // question either half answers.
+    const html = render(PREFS);
+    expect(html).toContain('aria-label="Server region"');
+    expect(html).toContain('aria-label="Appearance"');
+    // Twice and no more: the summary a reader sees, and the label a screen
+    // reader hears. A third copy is the eyebrow coming back.
+    expect([...html.matchAll(/Server region/g)]).toHaveLength(2);
   });
 
   test("the panel has a heading of its own", () => {

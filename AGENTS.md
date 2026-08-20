@@ -924,16 +924,23 @@ to an open page). Four things hold it up:
   because touch fires no drag events at all: the arrows are the mechanism and the drag is the pointer
   fast path, and being ordinary buttons is what makes the whole thing reachable by keyboard and
   screen reader without a second implementation of the same interaction.
-- **The settings panel is groups that state their own answer, and they ship closed.** Five
-  `<details>` groups — games, reading, what you see, your own, your progress — each with its current
-  state on the summary line (`Europe · Dark`, `17 of 18 on · A–Z`, `plus finished, not started`). It
-  was one open block in two columns, which is readable at four games and not at eighteen, where the
-  game list is eighteen rows of four controls sitting above the checkbox somebody came to tick. The
-  state line is the half that makes collapsing honest: without it every question about how the app is
-  set up costs a click, so the closed panel has to be a report and not a menu. Two rules follow.
-  **Do not default a group open** to make something inside it findable — the empty states name the
-  group as well as the switch, which is what makes that unnecessary. And the summaries are **derived
-  from `prefs` at render**, never stored, so they cannot drift from the controls they describe.
+- **The settings panel is groups that state their own answer, and they ship closed.** Six
+  `<details>` groups — games, server region, appearance, what you see, your own, your progress — each
+  with its current state on the summary line (`Europe`, `17 of 18 on · A–Z`, `plus finished, not
+  started`). It was one open block in two columns, which is readable at four games and not at
+  eighteen, where the game list is eighteen rows of four controls sitting above the checkbox somebody
+  came to tick. The state line is the half that makes collapsing honest: without it every question
+  about how the app is set up costs a click, so the closed panel has to be a report and not a menu.
+  Three rules follow. **Do not default a group open** to make something inside it findable — the empty
+  states name the group as well as the switch, which is what makes that unnecessary. The summaries are
+  **derived from `prefs` at render**, never stored, so they cannot drift from the controls they
+  describe. And **one group answers one question**, which is what the sixth group is: the region and
+  the theme were a group called `Reading`, grouped on "both are how do I read this?" and summarising
+  as `Europe · Dark` — two unrelated answers joined by a dot, under a name for neither of them, in a
+  panel whose whole premise is that a closed line answers *its* group. The region is not a reading
+  preference: region-scoped ends and every daily reset are cut on that server's clock (§ Domain
+  rules), so it is the one control here that can make a countdown wrong, and it is now a line of its
+  own rather than filed behind a word for the theme.
   Native `<details>` for the reason the reorder arrows are ordinary buttons: keyboard and screen
   reader reach it without a second implementation. `summary` is not an `a`, `button` or `[tabindex]`,
   so it needs its own `:focus-visible` rule in `styles.css` — the shared one does not reach it.

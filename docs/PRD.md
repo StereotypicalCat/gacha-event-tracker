@@ -203,19 +203,25 @@ but de-emphasized; a filter toggles them out entirely.
 Filter by game (multi-select, persisted) and by event type. Hiding a game hides it from both views.
 Preferences persist in `localStorage`.
 
-The panel holding them is **five collapsed groups, each stating its own answer on the summary line**
-— games, reading, what you see, your own games and events, your progress. It was one open block of
-everything, laid out in two columns on a wide screen, which read fine at four games and stopped
-working at eighteen: the game list alone is eighteen rows of four controls, and it sat above the
-checkbox a reader had come down here to tick. Collapsing on its own would only trade that friction
-for another, though — a group that shows nothing but its name turns *what is my region set to?* into
-a click — so each summary answers its group's question, and the closed panel is a five-line report
-of how the app is configured. Opening one is for changing an answer, not for reading it.
+The panel holding them is **six collapsed groups, each stating its own answer on the summary line**
+— games, server region, appearance, what you see, your own games and events, your progress. It was
+one open block of everything, laid out in two columns on a wide screen, which read fine at four games
+and stopped working at eighteen: the game list alone is eighteen rows of four controls, and it sat
+above the checkbox a reader had come down here to tick. Collapsing on its own would only trade that
+friction for another, though — a group that shows nothing but its name turns *what is my region set
+to?* into a click — so each summary answers its group's question, and the closed panel is a six-line
+report of how the app is configured. Opening one is for changing an answer, not for reading it.
 
-Two things follow. **The groups ship closed**, including the one holding the filters that other copy
-points at: the empty states name both the switch and the group it is in, which is more findable than
-a checkbox in a wall was. And **the summary states are derived, never stored** — they are a reading
-of `prefs`, so they cannot disagree with the controls inside.
+Three things follow. **The groups ship closed**, including the one holding the filters that other
+copy points at: the empty states name both the switch and the group it is in, which is more findable
+than a checkbox in a wall was. **The summary states are derived, never stored** — they are a reading
+of `prefs`, so they cannot disagree with the controls inside. And **a group answers one question**.
+The region and the theme began as one group called *Reading*, on the argument that both are "how do I
+read this?" — which summarised as `Europe · Dark`, two unrelated answers joined by a dot, under a
+name for neither. The region is not a reading preference: it is which server the reader's account is
+on, and region-scoped ends, undated deadlines and every daily streak are read off that server's
+clock, so it is the one control in this panel that can make a countdown wrong. It gets its own line,
+and says as much when opened.
 
 **The panel uses the page's width**, like every other block on it. The rows were held to a narrower
 measure on the argument that a name and its state stop reading as one line across a wide screen, but

@@ -48,7 +48,7 @@ const SPLITS: Array<{ id: boolean; label: string; hint: string }> = [
 /**
  * The settings panel.
  *
- * Five groups, each collapsed until asked for, and each stating its own answer
+ * Six groups, each collapsed until asked for, and each stating its own answer
  * on the summary line. It used to be one open block of everything in two
  * columns, which was readable at four games and is not at eighteen: the game
  * list alone is eighteen rows of four controls, and it sat above the pills and
@@ -57,7 +57,7 @@ const SPLITS: Array<{ id: boolean; label: string; hint: string }> = [
  *
  * Collapsing it is only half an answer, though — a closed group that says
  * nothing turns "what is my region set to?" into a click. So every summary
- * carries its group's current state, which makes the closed panel a five-line
+ * carries its group's current state, which makes the closed panel a six-line
  * report of how the app is configured, and makes opening one a deliberate act
  * rather than the price of reading it.
  *
@@ -130,30 +130,42 @@ export function Controls({
           />
         </Group>
 
-        {/* Region and appearance together: both are "how do I read this?", and
-            neither changes what the page knows. Switching either is instant and
-            costs nothing — no reload, and nothing marked, typed or ticked is
-            touched. */}
-        <Group
-          name="Reading"
-          state={`${REGION_LABEL[prefs.region]} · ${
-            THEMES.find((t) => t.id === prefs.theme)?.label ?? prefs.theme
-          }`}
-        >
-          <div className="flex flex-wrap gap-x-8 gap-y-4">
-            <PillGroup
-              label="Server region"
-              options={REGIONS}
-              value={prefs.region}
-              onChange={(region) => onUpdate({ region, regionConfirmed: true })}
-            />
-            <PillGroup
-              label="Appearance"
-              options={THEMES}
-              value={prefs.theme}
-              onChange={(theme) => onUpdate({ theme })}
-            />
-          </div>
+        {/* Two groups, where this was one called "Reading" — a name that
+            described neither of them. It was grouped on "both are how do I read
+            this?", which is true of the theme and not of the region: the region
+            is a fact about the reader's account, and it is the one setting here
+            that can make a countdown wrong, because region-scoped ends and every
+            daily reset are read off that server's clock. So it summarised as
+            "Europe · Dark", two unrelated answers joined by a dot, in a panel
+            whose whole premise is that a closed group states *its* answer. Split,
+            each line answers one question and the consequential one is no longer
+            filed behind a word for the other. */}
+        <Group name="Server region" state={REGION_LABEL[prefs.region]}>
+          <PillGroup
+            label="Server region"
+            labelHidden
+            options={REGIONS}
+            value={prefs.region}
+            onChange={(region) => onUpdate({ region, regionConfirmed: true })}
+          />
+          <p className="mt-2.5 max-w-md text-xs leading-relaxed text-faint">
+            Which server your account plays on. Events that end per region end on
+            its clock, a date printed without a time is read as that server's
+            daily reset, and every streak is counted in its days — so this is the
+            setting to get right before trusting a countdown.
+          </p>
+        </Group>
+
+        {/* Genuinely only how the page looks, and instant: no reload, and
+            nothing marked, typed or ticked is touched. */}
+        <Group name="Appearance" state={themeLabel(prefs.theme)}>
+          <PillGroup
+            label="Appearance"
+            labelHidden
+            options={THEMES}
+            value={prefs.theme}
+            onChange={(theme) => onUpdate({ theme })}
+          />
         </Group>
 
         <Group
@@ -268,6 +280,11 @@ export function Controls({
   );
 }
 
+/** The theme in the reader's words, falling back to the stored value. */
+function themeLabel(theme: ThemeChoice): string {
+  return THEMES.find((t) => t.id === theme)?.label ?? theme;
+}
+
 /** "12 of 18 on · your order" — what the games group is set to, without opening it. */
 function gamesState(total: number, shown: number, ordered: boolean): string {
   if (total === 0) return "none yet";
@@ -360,6 +377,7 @@ function PillGroup<T extends string | boolean>({
   value,
   onChange,
   small = false,
+  labelHidden = false,
 }: {
   label: string;
   options: ReadonlyArray<{ id: T; label: string }>;
@@ -367,11 +385,21 @@ function PillGroup<T extends string | boolean>({
   onChange: (id: T) => void;
   /** Subordinate to the control above it, rather than a question of its own. */
   small?: boolean;
+  /**
+   * For the group whose own summary already asks the question. Drops the
+   * eyebrow and nothing else — `aria-label` still names the row, so the
+   * accessible name survives the visual one going away.
+   */
+  labelHidden?: boolean;
 }) {
   return (
     <div>
-      <p className="eyebrow">{label}</p>
-      <div role="group" aria-label={label} className="mt-2 flex flex-wrap gap-1.5">
+      {!labelHidden && <p className="eyebrow">{label}</p>}
+      <div
+        role="group"
+        aria-label={label}
+        className={`flex flex-wrap gap-1.5 ${labelHidden ? "" : "mt-2"}`}
+      >
         {options.map((option) => {
           const on = option.id === value;
           return (
