@@ -62,6 +62,24 @@
         }
       })();
     </script>
+    <!--
+      The feed, in flight before the bundle that asks for it.
+
+      `fetchFeed` cannot run until main.js has downloaded, parsed and mounted
+      React, so the one request the page exists to make was starting last: on a
+      4G/4x-CPU profile the bundle finished at ~900ms and the feed only then
+      began, landing at ~1260ms. Nothing about it depends on the bundle — the URL
+      is a constant — so the preload scanner can have it on the wire in the first
+      few milliseconds instead, alongside the JS rather than behind it.
+
+      Resolved against `<base>` above, exactly as `fetchFeed` resolves it against
+      `document.baseURI`, so this is correct at a domain root and under a Pages
+      subpath alike. `crossorigin` is not decoration: `as="fetch"` has to match
+      the credentials mode of the `fetch()` that follows, and a mismatch is not a
+      no-op — the browser discards the preload and downloads the feed a second
+      time, which is worse than not preloading at all.
+    -->
+    <link rel="preload" href="data/events.v1.json" as="fetch" crossorigin />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

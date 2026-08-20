@@ -240,6 +240,33 @@ back to the last copy seen). Countdowns run off the device clock, so the app sta
 network. Offline state is surfaced in the header and above the footer — stale data must never be
 presented as current.
 
+### First load
+
+The critical path on a cold visit is short and worth keeping that way: `index.html` → `styles.css` +
+`main.js` in parallel → React mounts → the feed renders. Two things about it are deliberate.
+
+**The bundle is built with `--production`** (`package.json` → `build:js`). Without that flag Bun
+ships React's development build, which is 222 KB of extra JavaScript, validates every element
+creation at runtime, and leaves `StrictMode` double-invoking effects — so `fetchFeed` runs twice and
+every reader downloads the feed twice. It shipped that way until 2026-08-20. See AGENTS.md § Commands
+for the trap in the obvious-looking alternative, which builds cleanly and does not run.
+
+**The feed is preloaded from the shell.** `fetchFeed` cannot start until `main.js` has downloaded,
+parsed and mounted, so the one request the page exists to make was starting last — measured on a
+4G/4×-CPU profile, the bundle finished at ~400 ms and the feed then ran to ~570 ms. Nothing about
+that URL depends on the bundle, so `<link rel="preload" as="fetch">` puts it on the wire in the first
+few milliseconds and it is already in cache when React asks: the events are on screen at ~470 ms
+instead, and the loading state is gone rather than merely brief.
+
+The `crossorigin` attribute on that link is load-bearing. `as="fetch"` must match the credentials
+mode of the `fetch()` that follows it, and a mismatch is not a no-op — the browser discards the
+preload and fetches the feed a second time, which is worse than not preloading. If that link is ever
+edited, count the feed requests in a real browser; nothing in the test suite can see this.
+
+Compression is the server's job and both hosts do it: GitHub Pages transparently, and `serve.ts` —
+which is what the Docker image runs — by negotiating `accept-encoding` per request. It matters more
+than it sounds: the bundle is 344 KB raw and 100 KB gzipped.
+
 ### The theme, before the bundle arrives
 
 The page is drawn dark by default and light when the reader has asked for it (PRD F15). Which one
