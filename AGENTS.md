@@ -101,6 +101,23 @@ bun test --test-name-pattern "year-less"
 BASE_PATH=/gacha-event-tracker/ bun run build
 ```
 
+**`build:js` passes `--production`, and that flag is load-bearing.** Without it Bun bundles React's
+*development* build: 566 KB rather than 344 KB (164 KB vs 103 KB gzipped), every element creation
+validated at runtime, and `StrictMode` double-invoking effects — which in this app means
+`fetchFeed` runs twice and every reader downloads the feed twice on every load. It shipped that way
+until 2026-08-20; on a 4G/4×-CPU profile fixing it moved first contentful paint from 1480 ms to
+972 ms.
+
+**Do not reach for `--define process.env.NODE_ENV='"production"'` instead.** It looks equivalent and
+produces a bundle that does not run. The define flips React to its production build while the JSX
+transform still emits `jsxDEV` calls into `react/jsx-dev-runtime`, so the page dies on
+`jsxDEV is not a function` — minified to `z is not a function`, which is what it looks like in a
+built copy. `--production` switches the transform *and* the env together, which is why it is the
+only one of the two that works. Setting `NODE_ENV=production` in the environment has the same defect
+as the define. **A change here must be loaded in a browser, not merely built** — both broken variants
+build clean, typecheck clean and pass all 843 tests, because nothing in the suite executes the
+bundle.
+
 **Tests must never need build output.** They run before `bun run build` in CI; anything reading
 `public/` must create its own fixture tree instead.
 

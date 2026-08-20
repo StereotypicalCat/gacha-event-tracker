@@ -9,7 +9,7 @@
     "build:feed": "bun run scripts/build-feed.ts",
     "refresh": "bun run scripts/refresh-sources.ts",
     "build:css": "bunx @tailwindcss/cli -i src/client/styles.css -o public/styles.css --minify",
-    "build:js": "bun build src/client/main.tsx --outfile public/main.js --minify",
+    "build:js": "bun build src/client/main.tsx --outfile public/main.js --minify --production",
     "build": "bun run build:feed && bun run build:css && bun run build:js && bun run build:static",
     "dev": "bun run build && bun run serve.ts",
     "build:static": "bun run scripts/build-static.ts",
