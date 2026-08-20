@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useGameMeta } from "../state/gameMeta.tsx";
 import type { LaneId } from "../../shared/custom.ts";
 import type { View } from "../state/usePrefs.ts";
@@ -37,6 +37,25 @@ export function Welcome({
       prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id],
     );
 
+  /**
+   * Alphabetical, by the name on the button.
+   *
+   * `available` arrives in feed order — whichever game happened to hold the
+   * first row — which is meaningful everywhere else in the app and meaningless
+   * here, where the reader is not reading the list but looking for the two or
+   * three names they already know. Sorted by `name` and not by `LaneId`,
+   * because the id is not what is printed: `hsr` is Honkai: Star Rail. And
+   * through `localeCompare`, because `<` orders by code point and would file
+   * hololive Dreams after every capitalised name on the screen.
+   */
+  const ordered = useMemo(
+    () =>
+      [...available].sort((a, b) =>
+        gameMeta(a).name.localeCompare(gameMeta(b).name),
+      ),
+    [available, gameMeta],
+  );
+
   return (
     <div className="mx-auto flex min-h-full w-full max-w-2xl flex-col px-5 py-12">
       <p className="font-display text-[0.9375rem] font-bold tracking-[0.02em]">
@@ -55,7 +74,7 @@ export function Welcome({
           pushes the view question and the way in off the bottom of the screen,
           on the one screen where both need to be seen. */}
       <div className="mt-8 grid gap-2 sm:grid-cols-2">
-        {available.map((id) => {
+        {ordered.map((id) => {
           const game = gameMeta(id);
           const on = chosen.includes(id);
           return (
@@ -111,7 +130,7 @@ export function Welcome({
       <ViewChoice
         value={view}
         onChange={setView}
-        hues={available.slice(0, 3).map((id) => gameMeta(id).hue)}
+        hues={ordered.slice(0, 3).map((id) => gameMeta(id).hue)}
       />
 
       <div className="mt-8 flex flex-col gap-3">
@@ -127,7 +146,7 @@ export function Welcome({
         </button>
         <button
           type="button"
-          onClick={() => onConfirm(available, view)}
+          onClick={() => onConfirm(ordered, view)}
           className="text-xs text-faint transition-colors duration-150 hover:text-muted"
         >
           Show everything instead

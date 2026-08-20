@@ -279,7 +279,10 @@ Before any events are shown, the reader picks which games they play, and how the
 them. A calendar full of games they
 don't play is worse than an empty one — it buries the thing they came for. Nothing is preselected
 and the button stays disabled until something is chosen; guessing on their behalf and hoping they
-notice is worse than asking. The choice is stored as *hidden* games, the inverse — which is a storage
+notice is worse than asking. **The games are listed alphabetically by name**, not in feed order:
+everywhere else a lane's position carries meaning, but here the reader is scanning for the two or
+three names they already know, and a list ordered by which game happened to hold the first event row
+gives them nothing to scan by. The choice is stored as *hidden* games, the inverse — which is a storage
 shape, not a policy: what happens to a game added later is decided separately, below.
 
 **A game added later arrives switched off.** Adding a source is our decision, not the reader's, and

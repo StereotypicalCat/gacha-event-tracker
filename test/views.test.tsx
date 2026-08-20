@@ -165,7 +165,51 @@ describe("Welcome (first run)", () => {
     // layouts they have not seen yet.
     expect(html()).toContain('aria-checked="true"');
   });
+
+  test("lists the games alphabetically by the name on the button", () => {
+    // Two games here each pin one half of the sort, and neither is decoration:
+    //
+    // `nikke` is Goddess of Victory: Nikke, so its id sorts fifth and its name
+    // third. That is what makes this a test of sorting by *name* rather than by
+    // `LaneId` — every other set of ids in this table happens to sort into the
+    // same order as its names, so a comparator on the id passes them all.
+    //
+    // `holodori` is hololive Dreams, the one lowercase name in `games.ts`. A
+    // code-point sort files it after every capitalised game instead of between
+    // Goddess and Honkai, which is why the comparator has to be `localeCompare`.
+    //
+    // The input order is neither feed order nor id order, so nothing lines up
+    // by luck.
+    const markup = render(
+      <Welcome
+        available={["zzz", "genshin", "holodori", "hsr", "nikke", "arknights"]}
+        onConfirm={() => {}}
+      />,
+    );
+    expect(pickerNames(markup)).toEqual([
+      "Arknights",
+      "Genshin Impact",
+      "Goddess of Victory: Nikke",
+      "hololive Dreams",
+      "Honkai: Star Rail",
+      "Zenless Zone Zero",
+    ]);
+  });
 });
+
+/**
+ * The game names on the picker buttons, in the order they render.
+ *
+ * Pinned to the name span's `flex-1` class: edit that className and this
+ * returns nothing and the assertion fails loudly, which is the safe direction
+ * to break in. The text arrives HTML-escaped, so a fixture using a name with an
+ * apostrophe — Girls' Frontline 2: Exilium — must expect `&#x27;` in it.
+ */
+function pickerNames(markup: string): string[] {
+  return [...markup.matchAll(/<span class="flex-1[^"]*"[^>]*>([^<]+)<\/span>/g)].map(
+    (m) => m[1] ?? "",
+  );
+}
 
 describe("Timeline window", () => {
   const DAY = 86_400_000;
