@@ -240,9 +240,17 @@ These come from how gacha games actually schedule things, and they cause most bu
 - **Prefer a source that states machine-readable times.** wiki.gg emits ISO timestamps with a timer
   per server region, which is the only reason `regionEnds` carries real data anywhere.
 - **Silent drops are the dangerous failure.** A date format the parser does not recognise makes
-  events vanish with no error. Abbreviated months (`Apr. 29 - May 13, 2026`) are supported for
-  exactly this reason. When adding a source, compare the parser's event count against an
-  independent count of the page.
+  events vanish with no error. Abbreviated months (`Apr. 29 - May 13, 2026`) and slash-dated open
+  ends (`09/02/2026 - TBA`) are supported for exactly this reason. When adding a source, compare the
+  parser's event count against an independent count of the page.
+- **A source resting on one row is a source about to read zero.** `eventCount` in a snapshot's
+  `.meta.json` is the count the whole lane depends on, and a small one is a warning rather than a
+  fact about the game. Endfield's Game8 page read `1` for a week — one row of an *upcoming* table,
+  while four live events sat in a card grid the parser cannot see — and when Game8 re-cut that table
+  for the next version in a notation `parseOpenRange` did not know, the source read `0` and the
+  refresh reported a shape change. Neither number was ever a count of the page. When a source's
+  count is far below what the page shows, find out which shape is being skipped before the count
+  reaches zero and the gate has to guess for you.
 
 ## Event IDs are localStorage keys
 

@@ -146,7 +146,7 @@ All live in `src/ingest/dates.ts`, each returning null rather than inferring any
 | `parseIsoOffsetInstant` | `2026-08-03T21:00-07:00` (a machine-readable `<time datetime>` attribute; **offset required**) | Stella Sora |
 | `parseDayMonthYearClock` | `12 August 2026`, `10 September 202604:59:59` (day-first; the offset comes from the **column header**, and a clockless boundary keeps its printed day) | Nikke |
 | `parseZonelessClockRange` | `July 20, 2026 04:00 – August 10, 2026 03:49` (reads the clock and **discards** it — the page states no zone, so only the printed day is publishable) | Infinity Nikki |
-| `parseOpenRange` | `Jul. 24, 2026 - End of 4.6`, `July 10, 2026 - Permanent` | Star Rail, Wuthering Waves |
+| `parseOpenRange` | `Jul. 24, 2026 - End of 4.6`, `July 10, 2026 - Permanent`, `09/02/2026 - TBA` (**a year is required**, in either notation) | Star Rail, Wuthering Waves, Endfield |
 
 **A day-precision result is 00:00Z, and that is a placeholder rather than a time.** Every reader
 above returns `precision: "day"` when the source printed no clock, and stores the date at UTC
@@ -168,7 +168,18 @@ reader rather than for the earliest of them. Being generous by nine hours costs 
 the bottom of a list; being strict costs a live one.
 
 `parseOpenRange` is tried last because it is the most permissive — it accepts any leading full date
-and reports no end.
+and reports no end. It reads **both** notations, month-name and slash, because which one a page uses
+is house style rather than a statement about certainty: Star Rail writes `End of 4.6` after a month
+name, and Endfield's Game8 page published its entire 1.5 schedule as `09/02/2026 - TBA`. Reading only
+the first notation made all nine of those rows undatable, and an undatable row is dropped in silence —
+the source went from one event to zero and the run reported a shape change. What it may never do is
+infer a missing year: Game8's summary rows write `08/12 - 08/24`, and this being the last reader tried
+means a year guessed here becomes a confidently dated event with nothing left to catch it.
+
+The open-end vocabulary is listed in two places that must agree — `parseOpenRange` decides whether the
+row is datable, and `RANGE_PREFIX` in `game8.ts` strips the range off the cell to recover the blurb. A
+word the first knows and the second does not still yields the event, with the leftover end tacked onto
+the front of its summary (`- TBA Sign-in to get extra pulls for Typhoeus!`).
 
 `parseAdjacentFullRange` and `parseYearFirstSlashRange` are anchored at both ends and require a year
 on each half, which is what keeps them from eating prose. `August 12, 2026 Day 3 rewards are doubled`
