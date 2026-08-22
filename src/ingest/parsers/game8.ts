@@ -362,15 +362,19 @@ const DATED_YEAR = String.raw`(?:\d{1,2}/\d{1,2}/\d{2,4}|[A-Za-z]+\.?\s+\d{1,2},
 
 /**
  * A leading range, whose end may be a date or a stated non-date such as
- * "Permanent" or "End of 4.6". Those words are listed rather than matched
- * loosely, so a real description is never mistaken for a range end.
+ * "Permanent", "TBA" or "End of 4.6". Those words are listed rather than
+ * matched loosely, so a real description is never mistaken for a range end.
+ *
+ * The list must track `parseOpenRange`'s: a shape that reader dates but this
+ * one does not strip still yields the event, with the leftover end tacked onto
+ * the front of its summary — "- TBA Sign-in to get extra pulls for Typhoeus!".
  */
 const RANGE_PREFIX = new RegExp(
   String.raw`^\s*` +
     ONE_DATE +
     String.raw`(?:\s*[-\u2013\u2014]\s*(?:` +
     ONE_DATE +
-    String.raw`|permanent|tbd|ongoing|end of [\d.]+)|\s+` +
+    String.raw`|permanent|tba|tbd|ongoing|end of [\d.]+)|\s+` +
     DATED_YEAR +
     String.raw`)?\s*`,
   "i",

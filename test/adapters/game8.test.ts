@@ -31,6 +31,10 @@ const CASES: Array<{ adapter: Adapter; fixture: string }> = [
   { adapter: adapter("wuwa-game8-events"), fixture: "fixtures/wuwa/game8-events-2026-08-14" },
   { adapter: adapter("zzz-game8-events"), fixture: "fixtures/zzz/game8-events-2026-08-14" },
   { adapter: adapter("endfield-game8-events"), fixture: "fixtures/endfield/game8-events-2026-08-14" },
+  // The same page a version later. 1.4's upcoming table held one dated row;
+  // 1.5's holds nine, every one of them ending "- TBA". Both are pinned because
+  // they are different shapes, not different data.
+  { adapter: adapter("endfield-game8-events"), fixture: "fixtures/endfield/game8-events-2026-08-23" },
   { adapter: adapter("endfield-wikigg-events"), fixture: "fixtures/endfield/wikigg-events-2026-08-14" },
   { adapter: adapter("p5x-game8-events"), fixture: "fixtures/p5x/game8-events-2026-08-17" },
   { adapter: adapter("arknights-akwiki-events"), fixture: "fixtures/arknights/akwiki-events-2026-08-17" },
@@ -59,7 +63,7 @@ async function runAdapter(adapter: Adapter, fixture: string) {
   });
 }
 
-describe.each(CASES)("$adapter.id", ({ adapter, fixture }) => {
+describe.each(CASES)("$adapter.id $fixture", ({ adapter, fixture }) => {
   test("matches the checked-in expected output", async () => {
     const events = await runAdapter(adapter, fixture);
     const expected = await Bun.file(`${fixture}.expected.json`).json();
@@ -172,6 +176,35 @@ describe("nte fixture specifics", () => {
     );
     const circleGift = events.find((e) => e.title === "Circle Gift");
     expect(circleGift?.summary).toContain("Log in");
+  });
+});
+
+describe("endfield fixture specifics", () => {
+  const fixture = "fixtures/endfield/game8-events-2026-08-23";
+
+  test("reads an upcoming version whose ends are unannounced", async () => {
+    // Game8 published the whole 1.5 schedule as "Period: 09/02/2026 - TBA".
+    // Nine rows; the ninth reads "Period: TBA" with no start at all, so it is
+    // undatable and dropped rather than guessed.
+    const events = await runAdapter(adapter("endfield-game8-events"), fixture);
+    expect(events).toHaveLength(8);
+
+    const signIn = events.find((e) => e.title === "Fletched Irontip Sign-In");
+    expect(signIn?.startsAt).toBe("2026-09-02T00:00:00.000Z");
+    expect(signIn?.endsAt).toBeNull();
+    expect(events.map((e) => e.title)).not.toContain(
+      "Ridgeline Flows of Autumn Sign-In",
+    );
+  });
+
+  test("keeps the unannounced end out of the summary", async () => {
+    // The range is structure, not prose. Left in, "- TBA" reaches the reader as
+    // the opening words of every blurb on the page.
+    const events = await runAdapter(adapter("endfield-game8-events"), fixture);
+    expect(
+      events.find((e) => e.title === "Fletched Irontip Sign-In")?.summary,
+    ).toBe("Sign-in to get extra pulls for Typhoeus!");
+    for (const e of events) expect(e.summary ?? "").not.toMatch(/\bTBA\b/i);
   });
 });
 
