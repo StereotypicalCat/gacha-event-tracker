@@ -57,6 +57,16 @@ function iso(
 }
 
 /** "August 12, 2026" → 2026-08-12T00:00:00.000Z, day precision. */
+/**
+ * Two-digit years pivot at 70: 26 → 2026, 84 → 1984. A four-digit year is
+ * returned as written. The validator's sanity window (start within
+ * [now-2y, now+1y]) catches anything this gets wrong.
+ */
+function pivotYear(raw: string): number {
+  const n = Number(raw);
+  return raw.length <= 2 ? (n < 70 ? 2000 + n : 1900 + n) : n;
+}
+
 export function parseMonthDayYear(input: string): ParsedInstant | null {
   const m = /([A-Za-z]+)\.?\s+(\d{1,2}),\s*(\d{4})/.exec(input);
   if (!m) return null;
@@ -164,14 +174,10 @@ export function parseShortSlashRange(
   const m = re.exec(input);
   if (!m) return null;
 
-  const year = (raw: string) => {
-    const n = Number(raw);
-    return raw.length <= 2 ? (n < 70 ? 2000 + n : 1900 + n) : n;
-  };
   const n = (i: number) => Number(m[i]);
 
-  const startIso = iso(year(m[3] ?? ""), n(1), n(2));
-  const endIso = iso(year(m[6] ?? ""), n(4), n(5));
+  const startIso = iso(pivotYear(m[3] ?? ""), n(1), n(2));
+  const endIso = iso(pivotYear(m[6] ?? ""), n(4), n(5));
   if (startIso === null || endIso === null) return null;
 
   return {
@@ -240,19 +246,42 @@ export function parseLabelledStartEnd(
 }
 
 /**
+ * A leading `MM/DD/YY` or `MM/DD/YYYY`, month-first for the reasons
+ * `parseShortSlashRange` gives, and sharing its year pivot.
+ *
+ * The year is not optional. Game8's summary rows write "08/12 - 08/24" with no
+ * year at all, and this reader feeds the most permissive range shape there is —
+ * inferring the year here would turn every one of those rows into a confidently
+ * dated event.
+ */
+function parseSlashDay(input: string): ParsedInstant | null {
+  const m = /(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(input);
+  if (!m) return null;
+  const value = iso(pivotYear(m[3] ?? ""), Number(m[1]), Number(m[2]));
+  return value === null ? null : { iso: value, precision: "day" };
+}
+
+/**
  * A range whose start is a real date but whose end is not: "July 10, 2026 -
- * Permanent", "Jul. 24, 2026 - End of 4.6", or a lone start date.
+ * Permanent", "Jul. 24, 2026 - End of 4.6", "09/02/2026 - TBA", or a lone start
+ * date.
  *
  * Returns a null end rather than inventing one. These are common and correct —
  * the source genuinely has not announced an end — and the UI renders them
  * distinctly from an event ending far in the future.
+ *
+ * Both date shapes are read, because which one a page uses is a house style
+ * rather than a statement about certainty: Star Rail writes "End of 4.6" after
+ * a month name, Endfield publishes a whole version of "- TBA" rows after slash
+ * dates. Reading only the first made those nine rows undatable, and an
+ * undatable row is dropped in silence.
  *
  * Deliberately the last parser tried, because it is the most permissive.
  */
 export function parseOpenRange(
   input: string,
 ): { start: ParsedInstant; end: null } | null {
-  const start = parseMonthDayYear(input);
+  const start = parseMonthDayYear(input) ?? parseSlashDay(input);
   return start === null ? null : { start, end: null };
 }
 

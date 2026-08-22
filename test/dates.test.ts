@@ -144,6 +144,21 @@ describe("parseOpenRange", () => {
     }
   });
 
+  test("keeps a slash-dated start when the end is not a date", () => {
+    // Game8 schedules a version before it announces the ends: Endfield's
+    // upcoming table reads "Period: 09/02/2026 - TBA". That is the same honest
+    // unknown as "End of 4.6", written in slashes instead of month names, and
+    // dropping the row makes nine announced events vanish with no error.
+    expect(parseOpenRange("09/02/2026 - TBA")).toEqual({
+      start: { iso: "2026-09-02T00:00:00.000Z", precision: "day" },
+      end: null,
+    });
+    expect(parseOpenRange("09/09/26 - TBA")).toEqual({
+      start: { iso: "2026-09-09T00:00:00.000Z", precision: "day" },
+      end: null,
+    });
+  });
+
   test("returns null when there is no full date at all", () => {
     expect(parseOpenRange("08/12 - 08/24")).toBeNull();
     expect(parseOpenRange("Releases in Version 3.6")).toBeNull();
