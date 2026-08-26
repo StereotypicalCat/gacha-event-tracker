@@ -1,4 +1,5 @@
 import { arknightsWikiParser } from "./akwiki.ts";
+import { aruStatsParser } from "./arustats.ts";
 import { blueArchiveWikiParser } from "./bawiki.ts";
 import { fandomParser } from "./fandom.ts";
 import { game8Parser } from "./game8.ts";
@@ -22,6 +23,7 @@ export const PARSERS: SourceParser[] = [
   holodoriWikiParser,
   iopWikiParser,
   stellaSoraWikiParser,
+  aruStatsParser,
 ];
 
 export function parserById(id: string): SourceParser | undefined {
@@ -30,6 +32,7 @@ export function parserById(id: string): SourceParser | undefined {
 
 export type { SourceParser } from "./types.ts";
 export { arknightsWikiParser } from "./akwiki.ts";
+export { aruStatsParser } from "./arustats.ts";
 export { blueArchiveWikiParser } from "./bawiki.ts";
 export { fandomParser } from "./fandom.ts";
 export { game8Parser } from "./game8.ts";
