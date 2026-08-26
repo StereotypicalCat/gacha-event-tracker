@@ -151,6 +151,17 @@ export const GAMES: Record<GameId, GameMeta> = {
   // logged ticks under.
   nikke: { id: "nikke", name: "Goddess of Victory: Nikke", short: "Nikke", hue: "#E4572E", studio: "Shift Up", dailyTasks: "Daily missions, outpost", resetOffsets: { asia: 9, america: 9, europe: 9 }, resetHourLocal: 5 },
   uma: { id: "uma", name: "Umamusume: Pretty Derby", short: "Umamusume", hue: "#6FBF44", studio: "Cygames", dailyTasks: "Daily races, missions" },
+  // No `resetOffsets`, and the source is silent in the strongest sense: every
+  // boundary Honkai Impact 3rd has here is a **week bucket**, and every one of
+  // those states its time as `0:0:0` — a placeholder the grid needs to draw a
+  // column, not a clock anyone published. There is no time of day on that page
+  // to read a reset out of, and the schedule's own header calls the week
+  // estimated. Same silence as p5x, ba and czn, and the same answer.
+  //
+  // Note also that `GLB/SEA` is one label over one grid: the source draws no
+  // per-region split, so there is nothing here that could evidence a server
+  // map even if a clock appeared. See src/ingest/parsers/arustats.ts.
+  hi3: { id: "hi3", name: "Honkai Impact 3rd", short: "Honkai 3rd", hue: "#8B5CF6", studio: "HoYoverse", dailyTasks: "Daily missions, stamina" },
 };
 
 export const GAME_LIST: GameMeta[] = Object.values(GAMES);
