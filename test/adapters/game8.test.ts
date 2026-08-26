@@ -51,6 +51,10 @@ const CASES: Array<{ adapter: Adapter; fixture: string }> = [
   { adapter: adapter("uma-game8-events"), fixture: "fixtures/uma/game8-events-2026-08-19" },
   { adapter: adapter("nikke-fandom-events"), fixture: "fixtures/nikke/fandom-events-2026-08-19" },
   { adapter: adapter("nikki-fandom-events"), fixture: "fixtures/nikki/fandom-events-2026-08-19" },
+  // Honkai Impact 3rd. Every boundary in this expected file is a week-bucket
+  // edge the source labels `ESTIMATED WEEK`, not an announced date — see
+  // src/ingest/parsers/arustats.ts and docs/SOURCES.md § 14.
+  { adapter: adapter("hi3-arustats-events"), fixture: "fixtures/hi3/arustats-events-2026-08-27" },
 ];
 
 async function runAdapter(adapter: Adapter, fixture: string) {

@@ -194,6 +194,22 @@ const SOURCES: SourceSpec[] = [
     url: "https://game8.co/games/Umamusume-Pretty-Derby/archives/536311",
     parserId: "game8",
   },
+  {
+    id: "hi3-arustats-events",
+    game: "hi3",
+    // **Version-less on purpose.** This path answers `307` to the current
+    // version — `/en-us/hi3/timeline/9.0` today — so the site names its own
+    // live version and the runner follows it. Pinning `/9.0` here would publish
+    // a finished schedule as current the day the game moves on.
+    //
+    // **These dates are estimates.** The page schedules by week bucket and heads
+    // the grid `ESTIMATED WEEK`; this source publishes bucket edges, not
+    // announced dates, which is the trade `docs/SOURCES.md` § 14 records and
+    // `ESTIMATE_CONFIDENCE` (0.4) carries into the data. A real Honkai Impact
+    // 3rd source outranks it on confidence alone if one is ever found.
+    url: "https://www.arustats.com/en-us/hi3/timeline",
+    parserId: "arustats",
+  },
 ];
 
 function toAdapter(spec: SourceSpec): Adapter {
