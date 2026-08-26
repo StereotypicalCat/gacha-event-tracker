@@ -58,6 +58,7 @@ Two things this method cannot tell you, and both matter:
 | Punishing: Gray Raven, Guardian Tales, Aether Gazer | Declined — see §§ 6, 7, 9 |
 | Infinity Nikki | **Rebuilt** (2026-08-19) on `infinity-nikki.fandom.com` at day precision, replacing a Game8 page stale since August 2025 — see § 11 |
 | Silver Palace | Unreleased |
+| Honkai Impact 3rd | **Built** (2026-08-27) on `arustats.com`, and the only lane here whose dates are **estimates** — see § 14 |
 
 ## Summary of findings
 
@@ -467,7 +468,7 @@ table.
 
 **One cost applies to both builds and should be in the commit message, not discovered later.** Both
 candidates are game8.co, which does not answer the Actions runner (`AGENTS.md` § Scraping conduct).
-Nine of the nineteen sources are game8 pages today, now that Infinity Nikki has moved to Fandom
+Nine of the twenty sources are game8 pages today, now that Infinity Nikki has moved to Fandom
 (§ 11); these would make ten and eleven. Each is a lane fixture-backed in CI from day one and only
 ever as fresh as someone's last manual `bun run refresh`, and one more request to a single host every
 cycle — the per-host arithmetic § Scraping conduct already calls uncomfortable.
@@ -673,6 +674,72 @@ perfectly writable. The blocker is what the numbers mean, not how to read them.
 an estimate over the CN one — plus a stable URL for the current version, or an index page naming it.
 Any two of the three still leaves the other. No alternative HI3 source was looked for in this pass, so
 the game is unsourced rather than declined outright.
+
+**Superseded 2026-08-27.** The alternative this section did not look for exists — `arustats.com`,
+§ 14 below — and it answers three of the four objections above. `marisaimpact.com` itself stays
+declined on all four; nothing here has been re-tested and this verdict is not the live one for the
+game.
+
+## 14. Honkai Impact 3rd — BUILT 2026-08-27, on estimated week buckets, by decision
+
+**Source:** `https://www.arustats.com/en-us/hi3/timeline` — AruStats' per-version timeline. Assessed
+on request as an alternative to the `marisaimpact.com` page § 13 declined, and built with one of
+§ 13's four objections still standing.
+
+**Conduct is clean, and better than most things here.** `robots.txt` is `User-agent: *` / `Allow: /`
+with `/hi3/*` and `/en-us/*` named explicitly, no `Disallow` anywhere, no `Content-Signal` header and
+none of the named AI-crawler blocks; `Crawl-delay: 1`, far below our 6h floor. Verified through the
+real `RobotsCache` and the runner's own User-Agent rather than `curl` — `robots.txt ok`,
+`crawlDelayMs: 1000` — per AGENTS.md § Fandom on why the instrument matters. The page carries its own
+"not affiliated with miHoYo" attribution line, and the host advertises a sitemap.
+
+**Three of § 13's four objections are answered:**
+
+| § 13 objection | Here |
+|---|---|
+| Dates are CN estimates redrawn for regions | The grid is headed `GLB/SEA` — our readers' server, not a CN schedule with an estimate over it |
+| No year appears anywhere | `scheduleDates` states full dates with years — `2026-8-20`, `2026-10-22` |
+| The URL is per-version with no stable route | **`/en-us/hi3/timeline` answers `307` to the live version.** The site names its own current version server-side; the runner follows it and no URL ever needs editing |
+| The unit is a week column, not an event boundary | **Still true.** Unchanged, and it is the whole cost below |
+
+**The objection that stands.** No event on the page states a date. Events are bars carrying
+`startWeek` / `endWeek` *integers* into a nine-column week grid, and the header over that grid reads
+`ESTIMATED WEEK`. So every boundary this source publishes is the edge of a bucket the site estimated.
+That is weaker than the day-precision reading Game8 and Infinity Nikki get — there the page printed a
+date per event and we declined only to invent a time of day for it — and § 13 declined
+`marisaimpact.com` on exactly this ground.
+
+**It was built anyway, and that is a decision rather than an oversight** (repository owner,
+2026-08-27, with the cost stated before the adapter was written). The reasoning: Honkai Impact 3rd
+had no source at all, this page is otherwise healthy and current, and a lane of approximate
+six-week windows was judged better than no lane. Be exact about what that buys and what it costs:
+
+- **What is honest about it.** The week grid's *outer* boundaries are real and independently
+  checkable: v8.9 reads `2026-6-25` → `2026-8-20` and v9.0 picks up at `2026-8-20` → `2026-10-22`,
+  which are the version's actual maintenance dates and chain exactly. Sixteen bars on the page yield
+  sixteen events, so nothing is silently dropped.
+- **What is not.** Where a banner swaps *inside* a version is the estimated part, and those are most
+  of the boundaries. `startsAt` is also half of every event ID, so a week grid the site revises moves
+  IDs and orphans completion marks — a hazard no wiki source here carries.
+- **How the fact is carried.** `ESTIMATE_CONFIDENCE` (0.4) on every event, against the 0.85–0.95 a
+  date-stating source earns. `mergeEvents` prefers the higher number, so a real HI3 source outranks
+  this one the moment one is added, with no cleanup step to forget.
+- **The gap left open.** `confidence` is read nowhere in `src/client/`, so nothing on screen tells a
+  reader this lane is estimated while every other lane is announced. Closing that needs a schema
+  field or a client change — a design question, not adapter work — and it is the obvious next step
+  if this source stays.
+
+**What would retire it:** any HI3 source that states a date per event. That is a strictly lower bar
+than § 13's list, and this source outranks nothing — it is the floor, not the ceiling.
+
+**The markup, so nobody re-derives it.** The site is Next.js and server-renders the whole schedule
+into `__NEXT_DATA__` (`props.pageProps.timeline`), so `parsers/arustats.ts` reads JSON and ignores the
+rendered grid entirely — the bars carry their geometry in Tailwind `col-span-N` classes and their
+offsets in bare spacer `<div>`s, which a DOM reader would have to count positionally. `endWeek` is
+exclusive and runs one past the grid to mean "to the end of the version". `scheduleBosses` is the
+only exactly-dated material on the page (Abyss and Memorial Arena openings, three a week) and is
+deliberately unread: a recurring rotation with no end is not a deadline, and `endsAt: null` on each
+would render them live-with-unknown-end forever.
 
 ## What every one of these costs, beyond the source
 

@@ -10,7 +10,7 @@ import { z } from "zod";
 
 export const GameId = z.enum([
   "genshin", "hsr", "zzz", "wuwa", "arknights", "endfield", "nte", "nikki", "p5x", "r1999",
-  "ba", "fgo", "holodori", "gfl2", "stellasora", "czn", "uma", "nikke",
+  "ba", "fgo", "holodori", "gfl2", "stellasora", "czn", "uma", "nikke", "hi3",
 ]);
 
 export const EventType = z.enum([

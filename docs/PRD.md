@@ -59,7 +59,7 @@ have a source — this table is the launch scope, not a roster to keep in sync.
 
 Adding a game must require no change to `GachaEvent` — only a `GameId` entry, its `games.ts`
 metadata, and a source registration. That is the test of whether the data model is right, and it has
-held: the eighteen games here have cost the event schema nothing. Per-game *metadata* does occasionally
+held: the nineteen games here have cost the event schema nothing. Per-game *metadata* does occasionally
 grow (Reverse: 1999 needed `resetHourLocal` for a 05:00 reset), which is a different file and moves
 no stored key. A game may have several sources; see `docs/INGESTION.md` § Three layers.
 
@@ -90,7 +90,7 @@ default `"game"` — the board every existing reader already has). Merged, the o
 `endingSoonestFirst`, the same comparator behind the list's "Ending soonest" (F2), so the two views
 cannot mean different things by the same words and an unannounced end still sorts behind every dated
 one rather than claiming a place in the queue. Merged there is also no lane heading to say whose
-event a bar is, and hue alone cannot answer that once eighteen games share a stack — so each bar
+event a bar is, and hue alone cannot answer that once nineteen games share a stack — so each bar
 carries its game's short name, with the full name in its tooltip. A bar too narrow for a tag and a
 title both keeps the title: a chopped game name reads as a broken word, and the hue and the tooltip
 still answer it.

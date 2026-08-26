@@ -56,10 +56,17 @@ Consequences worth internalising:
 | `holodoriwiki` | holodori.wiki's rendered `/wiki/Events` — `Current Events` and `Past Events` wikitables over `Event \| Type \| Start Date \| End Date` | hololive Dreams |
 | `iopwiki` | iopwiki.com's `gf-table event-period` tables — `Title \| Period (start/end) \| Server \| Type \| Comment`, one table per event and one row per server | Girls' Frontline 2 |
 | `stellasorawiki` | stellasora.miraheze.org's front-page `Current Banners` module — `<time datetime>` pairs inside `stellasora-home-banner` blocks | Stella Sora |
+| `arustats` | arustats.com's Next.js `__NEXT_DATA__` blob — a per-version week grid, with events carrying `startWeek`/`endWeek` **integers** rather than dates. **Estimated boundaries** — see AGENTS.md § Honkai Impact 3rd | Honkai Impact 3rd |
 
 `wikigg` is the better shape by a distance: it emits ISO timestamps with one timer per server
 region, so its events carry exact precision and real `regionEnds`. Prefer a source like that over a
 prose wiki when both exist, and give it a higher `priority`.
+
+`arustats` is the outlier on precision rather than on markup, and it is the only source in the
+project that does not publish a date per event: its page schedules by week bucket and labels the grid
+`ESTIMATED WEEK`, so every boundary it emits is an estimate. It carries `confidence: 0.4` for that
+reason, against the 0.85–0.95 everything else earns, which is also what makes `mergeEvents` prefer
+any real source that replaces it. Read AGENTS.md § Honkai Impact 3rd before changing it.
 
 `fandom` is the only parser whose body is not HTML: it reads an `action=parse` JSON envelope and
 takes the rendered wikitext out of `parse.text`. That is not a preference — the rendered page is

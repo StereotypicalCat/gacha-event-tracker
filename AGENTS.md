@@ -37,8 +37,8 @@ A web app that aggregates live and upcoming events across popular gacha games, p
 calendar, sorts them by end date or by what the reader is partway through, tracks day-by-day
 progress on events that repeat daily, and lets a user mark events completed.
 
-**Status: working app, refreshing itself on a schedule.** Schema, eight parsers, nineteen sources across
-eighteen games, the full interface, offline support, a static server, a Docker image and CI all exist and
+**Status: working app, refreshing itself on a schedule.** Schema, nine parsers, twenty sources across
+nineteen games, the full interface, offline support, a static server, a Docker image and CI all exist and
 are tested. The refresh runner (`bun run refresh`) fetches, caches raw snapshots and rebuilds the
 feed; `.github/workflows/refresh.yml` runs it twice a day and commits only when a page actually
 changed. The SQLite layer and the review queue are still specified in `docs/` but not built, so the
@@ -144,7 +144,7 @@ src/client/       React app, service worker, manifest
                   theme.ts — dark or light, and what a game hue reads as on each
 scripts/          build-feed.ts, build-static.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             831 tests
+test/             898 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
@@ -196,10 +196,13 @@ These come from how gacha games actually schedule things, and they cause most bu
   year, month, or end. `readColumnTable` drops a row it cannot date. An omitted event is a
   recoverable disappointment; a confidently wrong date is the failure this product exists to prevent.
 - **Parsers are keyed by site, not game.** One `game8` parser serves nine sources and `fandom` four;
-  `wikigg`, `akwiki`, `bawiki`, `holodoriwiki`, `iopwiki` and `stellasorawiki` serve one each — the first two share a host family
-  and have entirely different templates, and the last two are both Miraheze wikis whose page
-  templates have nothing in common. Adding a source for a known site is one `SOURCES` entry; a new
-  site is a parser module.
+  `wikigg`, `akwiki`, `bawiki`, `holodoriwiki`, `iopwiki`, `stellasorawiki` and `arustats` serve one
+  each — `wikigg` and `akwiki` share a host family and have entirely different templates, and
+  `bawiki`, `holodoriwiki` and `stellasorawiki` are all Miraheze wikis whose page templates have
+  nothing in common. `arustats` is the odd one out and the only parser here that does not read
+  markup at all: that site server-renders its schedule into a Next.js `__NEXT_DATA__` blob, so the
+  parser reads JSON and the rendered grid is ignored. Adding a source for a known site is one
+  `SOURCES` entry; a new site is a parser module.
 - **A source may publish more than one region's schedule.** Arknights' wiki lists CN and Global on
   every row, five months apart. Publish the one our readers are on and skip the row that lacks it —
   a CN date on a Global calendar is a confidently wrong date, not a near miss.
@@ -309,11 +312,11 @@ Sources are community wikis. Treat them as a guest would:
   the obligation. What makes it defensible is what it does *not* change: conditional headers still go
   out, so a page that has not moved costs the host a `304` rather than a re-serve, and per-host
   spacing, robots, the one-request-per-source rule and the no-retry rule all still apply. Prefer it
-  with `--only`: forcing nineteen sources to re-ask a question they answered an hour ago is the
+  with `--only`: forcing twenty sources to re-ask a question they answered an hour ago is the
   behaviour this bullet exists to prevent, whatever flag authorised it. The run names every source it
   asked early, and a run that was due anyway is never reported as forced.
 - **Space requests to one host**, honouring its `Crawl-delay` and defaulting to 2s. Nine of the
-  nineteen sources are game8.co pages, so the per-source floor alone still permits one cycle to arrive
+  twenty sources are game8.co pages, so the per-source floor alone still permits one cycle to arrive
   as nine back-to-back requests to a single site — which is the shape an edge network throttles, and
   what a burst looks like from the far end regardless of our intent.
 - Send `If-None-Match` / `If-Modified-Since`; treat `304` as "skip, unchanged".
@@ -365,6 +368,7 @@ re-litigated each pass:
 | `guardian-tales.fandom.com` | **Declined.** Parses fine and contains no 2026 date at all — newest dated entry is 2025. The `bluearchive.fandom.com` failure again: parses cleanly to nothing live |
 | `blhx.fandom.com`, `azurlane-archive.fandom.com` | **Declined.** The two Fandom alternatives to the declined koumakan wiki are dead archives — `Event_Calendar` stops in **2021**, and the archive wiki's headings have nothing under them. Azur Lane still has no source |
 | Aether Gazer | **Do not build.** The developer confirmed no further content updates after 23 July 2026, with store listings removed 17 October 2026. The wiki dates nothing anyway — `Event_Guide_List` is an image gallery. A lane that will be empty by winter |
+| `arustats.com` (Honkai Impact 3rd) | **Built** (2026-08-27), and the only source here that publishes **estimated** dates — see § Honkai Impact 3rd below before touching it. `robots.txt` is `Allow: /` for `*` with `/hi3/*` and `/en-us/*` named explicitly, no `Disallow`, no `Content-Signal`, `Crawl-delay: 1`. Solves the per-version URL problem `marisaimpact` failed: `/en-us/hi3/timeline` answers `307` to the live version |
 | `marisaimpact.com` (Honkai Impact 3rd) | **Declined** (2026-08-19). Conduct is clear — its `robots.txt` is comments only, with no directive and no `Content-Signal`, and the page answers our own `User-Agent` with a `200`. The data is the problem: the schedule is a grid of week columns headed `Estimated date for Regional Servers` under a page that says `Based on CN server`, it states **no year anywhere**, and it lives at a per-version URL — `/calendar89` is v8.9 and expires on 20 August, with no stable route to the current one. `docs/SOURCES.md` § 13 |
 | game8.co hubs for Black Beacon, Brawl Stars, Destiny: Rising, Diablo Immortal, Epic Seven, Fire Emblem Shadows, Gundam UC Engage, Mongil: Star Dive, Pokémon Champions, Pokémon UNITE, Tower of Fantasy | **Declined** (2026-08-19). All thirteen hubs in that sweep exist and answer `200`; these eleven have no usable schedule. Six are abandoned wikis whose newest page is 2021–2025 — the Infinity Nikki failure mode, a source that parses perfectly and publishes history. Gundam's calendar prints ends with no starts, so no event ID; Pokémon UNITE is fresh but its template fails `canParse`, which is the check working. Per-game evidence in `docs/SOURCES.md` § 12 |
 | `game8.co/games/MementoMori`, `game8.co/games/fire-emblem-heroes` | **Assessed, not yet built** (2026-08-19) — the two live finds of that sweep, and proposals rather than decisions. MementoMori parses today with no parser change; FEH has the freshest page of any source here and needs a ninth Game8 column shape plus a ruling on the 180-day rule, which one real seven-month banner breaks. See `docs/SOURCES.md` §§ 12a–12b |
@@ -739,6 +743,47 @@ and the page URL stands in — the `holodori.ts` rule.
 Stella Sora takes no `resetOffsets` either, and for the opposite reason to most: it states an offset
 outright, and the offset is `-07:00` — US Pacific, which shifts by an hour twice a year. That is the
 Fate/Grand Order problem arriving through a source that looks like it answered the question.
+
+**Honkai Impact 3rd: the one source here whose dates are estimates, and the only one whose URL
+tracks itself.** `arustats.com` publishes a per-version timeline, and both halves of that sentence
+matter.
+
+- **The URL is version-less on purpose, and must stay that way.**
+  `/en-us/hi3/timeline` answers `307` to the live version — `/en-us/hi3/timeline/9.0` today — so the
+  site names its own current version server-side and the runner's `redirect: "follow"` lands on it.
+  That is the stable route `docs/SOURCES.md` § 13 recorded `marisaimpact.com` as lacking, and it is
+  why this game needs no scheduled URL edit. **Pinning `/9.0` in `SOURCES` would publish a finished
+  schedule as current the day 9.1 ships** — § 11's stale-source failure on a six-week clock. A test
+  asserts the registered URL carries no version.
+- **Every boundary it publishes is an estimate, which nothing else here does.** The page schedules by
+  *week bucket*: an event is a bar spanning whole week columns, no event states a date of its own,
+  and the header over the grid reads `GLB/SEA` / `ESTIMATED WEEK`. So a start or end from this source
+  is the edge of a bucket the site estimated, not a date anybody announced. That is a weaker claim
+  than the day-precision reading Game8 and Infinity Nikki get, where the page did print a date per
+  event and we only declined to invent a time of day for it.
+- **It was built with that cost named, not overlooked.** `docs/SOURCES.md` § 13 declined
+  `marisaimpact.com` on this exact ground; § 14 records the decision to take the trade here anyway
+  (repository owner, 2026-08-27) and what would retire it. `ESTIMATE_CONFIDENCE` (0.4, in
+  `parsers/arustats.ts`) is what carries the fact into the data, well below the 0.85–0.95 a
+  date-stating source earns — so a real Honkai Impact 3rd source outranks this one on `mergeEvents`
+  automatically, with nobody having to remember to remove it. **Do not raise that number** without
+  re-opening the decision.
+- **Nothing on screen says "estimated" yet.** `confidence` is not read anywhere in `src/client/`, so
+  the reader currently sees this lane exactly as they see a wiki-sourced one. That is a known gap
+  rather than an oversight: saying so in the UI needs a schema field or a client change, which
+  § Adding a game source calls a design question rather than adapter work. If this source stays,
+  that gap is the thing to close next.
+- **Two shapes to know.** `startsAt` is half of every event ID, so an estimated start the site
+  revises moves IDs and orphans completion marks — a hazard the wiki sources do not carry. And
+  `endWeek` is *exclusive* and runs one past the grid to mean "to the end of the version"; an index
+  further out than that is skipped rather than clamped, because pinning an unreadable bar to the
+  version's edge would be inventing the boundary.
+
+Also unlike everything else here, this parser reads no markup: the site is Next.js and
+server-renders the schedule into `__NEXT_DATA__`, so the parser reads that JSON and ignores the
+grid. `canParse` asserts the blob, the week array and its dates, so a redesign fails the source
+rather than emptying the lane. The host sends neither `ETag` nor `Last-Modified`, so conditional
+requests buy nothing and the 6h floor is the only thing sparing it — do not lower it here.
 
 `scripts/refresh-sources.ts` enforces all of the above in code — the 6h floor (except under the
 opt-in `--force` above), one request, no retries, conditional headers, per-host spacing, robots
