@@ -1,11 +1,11 @@
 {
   "sourceId": "holodori-holodoriwiki-events",
   "url": "https://holodori.wiki/wiki/Events",
-  "contentHash": "07dcde71ae3c53009f1ff780ed2b694bf3a1b652bd690d6d36976554bf934fb4",
-  "bytes": 65914,
+  "contentHash": "d17647d80398bd3728939bc675246093da8ef9e7851a08317649d9501ba50344",
+  "bytes": 66050,
   "etag": null,
-  "lastModified": "Tue, 25 Aug 2026 06:38:00 GMT",
-  "contentChangedAt": "2026-08-25T17:50:57.544Z",
+  "lastModified": "Wed, 26 Aug 2026 05:25:20 GMT",
+  "contentChangedAt": "2026-08-26T05:55:14.137Z",
   "eventCount": 2,
   "charset": "utf-8"
 }
