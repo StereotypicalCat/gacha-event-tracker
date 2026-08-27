@@ -69,11 +69,39 @@ export function strandedNotice(count: number): string | null {
   } you've already recorded.`;
 }
 
-/** How often a rule comes round, in the words the form offered. */
+/** Whether a number opens on a vowel sound when read aloud. */
+function takesAn(n: number): boolean {
+  // Eight, eleven and eighteen, plus every number in the eighties — which is
+  // still inside the 365 ceiling `interval` is capped at, so nothing larger
+  // needs considering.
+  return n === 8 || n === 11 || n === 18 || (n >= 80 && n <= 89);
+}
+
+/**
+ * How often a rule comes round, in the words the form offered.
+ *
+ * "Cycle" rather than "every N days", because this sits directly beneath a
+ * start and an end — a duration — and a reader who has just been thinking in
+ * durations reads "every 26 days" as another one. Naming the shape of the
+ * repetition is what separates the two, and "cycle" is the word this genre
+ * already uses for it.
+ *
+ * A cycle of one unit is named rather than numbered: nobody says "a 1-week
+ * cycle". A longer one takes the singular unit, because a hyphenated
+ * "26-day" is an adjective, not a count.
+ */
 export function cadenceLabel(repeat: Repeat | null): string | null {
   if (repeat === null) return null;
-  if (repeat.interval === 1) return `every ${repeat.unit.replace(/s$/, "")}`;
-  return `every ${repeat.interval} ${repeat.unit}`;
+  if (repeat.interval === 1) {
+    const named: Record<RepeatUnit, string> = {
+      days: "daily",
+      weeks: "weekly",
+      months: "monthly",
+    };
+    return `on a ${named[repeat.unit]} cycle`;
+  }
+  const article = takesAn(repeat.interval) ? "an" : "a";
+  return `on ${article} ${repeat.interval}-${repeat.unit.replace(/s$/, "")} cycle`;
 }
 
 /**
@@ -617,7 +645,7 @@ export function EventForm({
       {repeatMode === "forever" && !measuring && (
         <div className="mt-2 grid grid-cols-2 gap-2">
           <label className={labelClass()}>
-            Every
+            Cycle length
             <input
               type="number"
               min={1}
@@ -678,7 +706,7 @@ export function EventForm({
               seeing that spelled out is how they catch a wrong number. */}
           <p className="mt-1.5 text-xs leading-relaxed text-faint">
             after it ends
-            {repeat !== null ? ` · ${cadenceLabel(repeat)} in all` : ""}
+            {repeat !== null ? ` · ${cadenceLabel(repeat)}` : ""}
           </p>
         </>
       )}

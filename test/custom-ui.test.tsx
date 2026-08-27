@@ -399,7 +399,7 @@ describe("stating a repeat", () => {
         onCancel={() => {}}
       />,
     );
-    expect(html).toContain("every 8 days");
+    expect(html).toContain("on an 8-day cycle");
     expect(html).toContain("from your dates");
     expect(html).not.toContain("Wait");
   });
@@ -433,7 +433,7 @@ describe("stating a repeat", () => {
     expect(html).toContain("after it ends");
     // A week's gap after a week's window is a fortnightly rule; both readings
     // are shown so the reader can check the one against the other.
-    expect(html).toContain("every 2 weeks");
+    expect(html).toContain("on a 2-week cycle");
   });
 
   test("with no end date there is nothing to measure, so it asks", () => {
@@ -446,7 +446,7 @@ describe("stating a repeat", () => {
         onCancel={() => {}}
       />,
     );
-    expect(html).toContain("Every");
+    expect(html).toContain("Cycle length");
   });
 
   test("a delay needs an end date to be measured from", () => {
@@ -564,12 +564,33 @@ describe("the sheet says how often", () => {
       at: AT,
       updatedAt: AT,
     });
-    expect(cadenceLabel(rule.repeat)).toBe("every 2 weeks");
+    expect(cadenceLabel(rule.repeat)).toBe("on a 2-week cycle");
   });
 
-  test("an interval of one drops the number and the plural", () => {
-    expect(cadenceLabel({ unit: "weeks", interval: 1, until: null })).toBe("every week");
-    expect(cadenceLabel({ unit: "months", interval: 1, until: null })).toBe("every month");
+  test("a cycle of one unit is named, not numbered", () => {
+    // "on a 1-week cycle" is what the general form would produce and nobody
+    // says it. The adverb is the natural reading and costs one lookup.
+    expect(cadenceLabel({ unit: "days", interval: 1, until: null })).toBe("on a daily cycle");
+    expect(cadenceLabel({ unit: "weeks", interval: 1, until: null })).toBe("on a weekly cycle");
+    expect(cadenceLabel({ unit: "months", interval: 1, until: null })).toBe("on a monthly cycle");
+  });
+
+  test("a longer cycle takes the singular unit as an adjective", () => {
+    // "26-day", not "26-days" — the hyphenated form is adjectival.
+    expect(cadenceLabel({ unit: "days", interval: 26, until: null })).toBe("on a 26-day cycle");
+    expect(cadenceLabel({ unit: "months", interval: 3, until: null })).toBe("on a 3-month cycle");
+  });
+
+  test("the article follows how the number sounds, not how it is spelled", () => {
+    // "a 8-day cycle" is the kind of wrong that reads as sloppiness rather
+    // than as a bug. Eight, eleven and eighteen open on a vowel; so does
+    // everything in the eighties, which is still inside the 365 ceiling.
+    expect(cadenceLabel({ unit: "days", interval: 8, until: null })).toBe("on an 8-day cycle");
+    expect(cadenceLabel({ unit: "days", interval: 11, until: null })).toBe("on an 11-day cycle");
+    expect(cadenceLabel({ unit: "days", interval: 18, until: null })).toBe("on an 18-day cycle");
+    expect(cadenceLabel({ unit: "days", interval: 84, until: null })).toBe("on an 84-day cycle");
+    expect(cadenceLabel({ unit: "days", interval: 7, until: null })).toBe("on a 7-day cycle");
+    expect(cadenceLabel({ unit: "days", interval: 80, until: null })).toBe("on an 80-day cycle");
   });
 
   test("a non-repeating event has no cadence to show", () => {
