@@ -368,17 +368,58 @@ describe("stating a repeat", () => {
       ...over,
     });
 
-  test("a fresh form offers a repeat, set to never", () => {
+  // The fixture runs 1-8 Sep inclusive with no times given, so it closes at
+  // 23:59:59 on the 8th and a successor opening "the moment it closes" opens
+  // at midnight on the 9th — eight days after the anchor, not seven. Its rule
+  // is every two weeks, which leaves a gap, so `repeating()` is the delay
+  // case; `forever()` narrows the interval to exactly that eight-day step.
+  const forever = () => repeating({ repeat: { unit: "days", interval: 8, until: null } });
+
+  test("a fresh form offers the three answers, set to never", () => {
     const html = renderToStaticMarkup(
       <EventForm lanes={["mygame:limbus-company"]} customGames={GAMES} onSave={() => {}} onCancel={() => {}} />,
     );
-    expect(html).toContain("Repeats");
-    // The interval field is hidden until there is something to count, so the
-    // form a reader already knows is unchanged until they reach for this.
+    expect(html).toContain("Repeat");
+    expect(html).toContain("with a delay");
+    // Nothing to configure until they pick one, so the form a reader already
+    // knows is unchanged until they reach for this.
     expect(html).not.toContain("Every");
+    expect(html).not.toContain("Wait");
   });
 
-  test("editing a rule shows the rule it already has", () => {
+  test("a rule that reopens as it closes shows its cadence rather than a control", () => {
+    // The whole point of "forever": the dates already say how often, so the
+    // form reports what it measured instead of asking for a number.
+    const html = renderToStaticMarkup(
+      <EventForm
+        lanes={["mygame:limbus-company"]}
+        customGames={GAMES}
+        initial={forever()}
+        onSave={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    expect(html).toContain("every 8 days");
+    expect(html).toContain("from your dates");
+    expect(html).not.toContain("Wait");
+  });
+
+  test("a measured cadence can still be overridden by hand", () => {
+    // Measuring is the convenience, not a cage — an irregular rotation has to
+    // be sayable even when the first window does not describe it.
+    const html = renderToStaticMarkup(
+      <EventForm
+        lanes={["mygame:limbus-company"]}
+        customGames={GAMES}
+        initial={forever()}
+        onSave={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    expect(html).toContain("state it myself");
+  });
+
+  test("a rule with a gap opens as a delay, showing the gap", () => {
     const html = renderToStaticMarkup(
       <EventForm
         lanes={["mygame:limbus-company"]}
@@ -388,8 +429,37 @@ describe("stating a repeat", () => {
         onCancel={() => {}}
       />,
     );
+    expect(html).toContain("Wait");
+    expect(html).toContain("after it ends");
+    // A week's gap after a week's window is a fortnightly rule; both readings
+    // are shown so the reader can check the one against the other.
+    expect(html).toContain("every 2 weeks");
+  });
+
+  test("with no end date there is nothing to measure, so it asks", () => {
+    const html = renderToStaticMarkup(
+      <EventForm
+        lanes={["mygame:limbus-company"]}
+        customGames={GAMES}
+        initial={repeating({ endsAt: null, endPrecision: "unknown", repeat: { unit: "weeks", interval: 1, until: null } })}
+        onSave={() => {}}
+        onCancel={() => {}}
+      />,
+    );
     expect(html).toContain("Every");
-    expect(html).toContain('value="2"');
+  });
+
+  test("a delay needs an end date to be measured from", () => {
+    const html = renderToStaticMarkup(
+      <EventForm
+        lanes={["mygame:limbus-company"]}
+        customGames={GAMES}
+        initial={repeating({ endsAt: null, endPrecision: "unknown", repeat: { unit: "weeks", interval: 1, until: null } })}
+        onSave={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    expect(html).toContain("needs an end date");
   });
 
   test("an unknown end with a rule stops claiming there is no countdown", () => {

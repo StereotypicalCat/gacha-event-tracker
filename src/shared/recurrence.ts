@@ -161,18 +161,27 @@ export type RepeatMode = "never" | "forever" | "delay";
  * state describes it, rather than in whichever state happens to be the
  * default.
  *
+ * **`contiguousMs` is the instant a successor would open if it opened the
+ * moment this one closed — which is not always the stored end.** A boundary
+ * the reader gave a time to is an instant, and a successor opens on it. One
+ * they gave only a date to is stored as the last second of that day, so its
+ * successor opens a second later, at the following midnight. Passing the
+ * stored end for both would read every day-precision rule as having a gap it
+ * does not have. The caller owns that convention because the caller is what
+ * wrote the boundary.
+ *
  * An unstated end is `forever`: the reader gave a cadence and no end, so each
  * occurrence runs until the next opens. There is no gap to describe, and a
  * delay would have nothing to be measured from.
  */
 export function repeatModeOf(
   startsMs: number,
-  endsMs: number | null,
+  contiguousMs: number | null,
   repeat: Repeat | null,
 ): RepeatMode {
   if (repeat === null) return "never";
-  if (endsMs === null) return "forever";
-  return addUnits(startsMs, repeat.unit, repeat.interval) === endsMs
+  if (contiguousMs === null) return "forever";
+  return addUnits(startsMs, repeat.unit, repeat.interval) === contiguousMs
     ? "forever"
     : "delay";
 }

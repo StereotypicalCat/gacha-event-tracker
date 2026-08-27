@@ -6,10 +6,14 @@ import {
   type LaneId,
 } from "../../shared/custom.ts";
 import {
+  addUnits,
   comesRoundEarly,
   movesOccurrences,
+  repeatModeOf,
+  repeatSpanning,
   RepeatUnit,
   type Repeat,
+  type RepeatMode,
 } from "../../shared/recurrence.ts";
 import { EventType } from "../../shared/schema.ts";
 import { useGameMeta } from "../state/gameMeta.tsx";
@@ -93,6 +97,99 @@ export function repeatFrom(
   const intervalValid = Number.isInteger(interval) && interval >= 1 && interval <= 365;
   if (unit === "never" || !intervalValid) return null;
   return { unit, interval, until: existingUntil };
+}
+
+/**
+ * The instant a successor opens if it opens the moment this window closes.
+ *
+ * `readerInstant` resolves an end the reader gave no time to as 23:59:59 —
+ * the last second of the day they named, because that is what "runs until the
+ * 8th" means to a person. The next window therefore opens at midnight, one
+ * second later, not on that final second. An end they *did* give a time to is
+ * an instant they chose, and a successor opens on it exactly.
+ *
+ * One second is not a fudge factor: it is the exact distance between this
+ * form's end-of-day convention and the midnight that follows it. The
+ * convention lives here rather than in `recurrence.ts` because this form is
+ * what wrote the boundary in the first place.
+ */
+function contiguousOpening(endsMs: number, endHasTime: boolean): number {
+  return endHasTime ? endsMs : endsMs + 1000;
+}
+
+/**
+ * What to put in the number-and-unit pair when the form opens.
+ *
+ * Both the delay control and the hand-stated cadence share one pair, because
+ * only one of them is ever on screen and carrying the number across when the
+ * reader changes their mind is kinder than resetting it to 1.
+ *
+ * For a rule that already has a gap this recovers the gap itself — the stored
+ * interval spans the window *and* the wait, and the reader entered the wait —
+ * so reopening shows them the number they typed rather than the one derived
+ * from it. A rule with no gap has none to recover and falls back to its own
+ * cadence, which is the sensible starting point if they switch to a delay.
+ */
+function openingControls(
+  startsAt: string | null,
+  endsAt: string | null,
+  endHasTime: boolean,
+  rule: Repeat | null,
+): { unit: RepeatUnit; amount: number } {
+  if (rule === null || startsAt === null) return { unit: "weeks", amount: 1 };
+
+  const contiguousMs =
+    endsAt === null ? null : contiguousOpening(Date.parse(endsAt), endHasTime);
+  const gap =
+    contiguousMs === null
+      ? null
+      : repeatSpanning(
+          contiguousMs,
+          addUnits(Date.parse(startsAt), rule.unit, rule.interval),
+        );
+  return gap === null
+    ? { unit: rule.unit, amount: rule.interval }
+    : { unit: gap.unit, amount: gap.interval };
+}
+
+/**
+ * The rule the three-way control currently describes.
+ *
+ * Pulled out of the component because it is the one place the three answers
+ * become the single `{unit, interval}` the schema stores, and that translation
+ * is worth reading in one piece rather than spread through the render.
+ *
+ * A delay is expressed by where it lands: the next opening is the wait added
+ * to the close, and the interval is whatever spans the anchor to there. That
+ * is why a delay can never produce a rule that comes round before it ends —
+ * the next opening is at or after the close by construction. Only a
+ * hand-stated cadence can, which is why `comesRoundEarly` still guards the
+ * form.
+ */
+function repeatOf(input: {
+  mode: RepeatMode;
+  measuring: boolean;
+  measured: Repeat | null;
+  startMs: number | null;
+  contiguousMs: number | null;
+  unit: RepeatUnit;
+  amount: number;
+  until: string | null;
+}): Repeat | null {
+  const { mode, measuring, measured, startMs, contiguousMs, unit, amount, until } =
+    input;
+
+  if (mode === "never") return null;
+  if (mode === "forever") {
+    return measuring && measured !== null
+      ? repeatFrom(measured.unit, measured.interval, until)
+      : repeatFrom(unit, amount, until);
+  }
+
+  if (startMs === null || contiguousMs === null) return null;
+  if (!Number.isInteger(amount) || amount < 1 || amount > 365) return null;
+  const span = repeatSpanning(startMs, addUnits(contiguousMs, unit, amount));
+  return span === null ? null : repeatFrom(span.unit, span.interval, until);
 }
 
 function labelClass(): string {
@@ -211,6 +308,24 @@ export function EventForm({
   const start = fields(initial?.startsAt ?? null);
   const end = fields(initial?.endsAt ?? null);
 
+  // Round-tripped through the same fields-then-readerInstant path the live
+  // form uses, rather than read straight off the record. The two disagree: a
+  // day-precision end is stored as whatever instant it was written at, and the
+  // form re-resolves it to the end of the reader's own day. Deriving the
+  // opening state from the stored value and everything after it from the
+  // re-resolved one is how the control opens saying "with a delay" about a
+  // rule that has no gap at all.
+  const initialStartTime = initial?.startPrecision === "exact" ? start.time : "";
+  const initialEndTime = initial?.endPrecision === "exact" ? end.time : "";
+  const initialStartsAt =
+    start.date === ""
+      ? null
+      : (readerInstant(start.date, initialStartTime, "start") ?? null);
+  const initialEndsAt =
+    initial?.endsAt == null || end.date === ""
+      ? null
+      : (readerInstant(end.date, initialEndTime, "end") ?? null);
+
   // The reader's own games first, and so the default too. Someone filling this
   // in by hand is usually doing it *because* the game isn't tracked; making
   // them scroll past nine that are gets the common case backwards. Stable
@@ -227,23 +342,36 @@ export function EventForm({
   const [summary, setSummary] = useState(initial?.summary ?? "");
   const [startDate, setStartDate] = useState(start.date);
   const [startTime, setStartTime] = useState(
-    initial?.startPrecision === "exact" ? start.time : "",
+    initialStartTime,
   );
   // Separate from an empty end date so "I don't know" is a thing the reader
   // states, not a field they leave blank and hope about.
   const [endKnown, setEndKnown] = useState(initial ? initial.endsAt !== null : true);
   const [endDate, setEndDate] = useState(end.date);
   const [endTime, setEndTime] = useState(
-    initial?.endPrecision === "exact" ? end.time : "",
+    initialEndTime,
   );
-  // "never" rather than a null unit, so the select has one vocabulary and the
-  // default reads as an answer the reader gave rather than a field they left.
-  const [repeatUnit, setRepeatUnit] = useState<RepeatUnit | "never">(
-    initial?.repeat?.unit ?? "never",
+  // Three answers rather than a unit and a number, because "how often" is
+  // rarely the question a reader actually has. They know it comes back the
+  // moment it ends, or that it comes back after a wait; the cadence follows
+  // from that and from dates they have already typed.
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>(() =>
+    initial === undefined
+      ? "never"
+      : repeatModeOf(
+          Date.parse(initialStartsAt ?? initial.startsAt),
+          initialEndsAt === null
+            ? null
+            : contiguousOpening(Date.parse(initialEndsAt), initialEndTime !== ""),
+          initial.repeat,
+        ),
   );
-  const [repeatInterval, setRepeatInterval] = useState(
-    String(initial?.repeat?.interval ?? 1),
-  );
+  // Measuring is the convenience, not a cage: an irregular rotation still has
+  // to be sayable when the first window does not describe it.
+  const [ownCadence, setOwnCadence] = useState(false);
+  const opening = openingControls(initialStartsAt, initialEndsAt, initialEndTime !== "", initial?.repeat ?? null);
+  const [cadenceUnit, setCadenceUnit] = useState<RepeatUnit>(opening.unit);
+  const [cadenceAmount, setCadenceAmount] = useState(String(opening.amount));
 
   const startsAt = startDate === "" ? null : readerInstant(startDate, startTime, "start");
   const endsAt =
@@ -252,10 +380,44 @@ export function EventForm({
   const endMissing = endKnown && endDate !== "" && endsAt === null;
   const backwards = startsAt !== null && endsAt !== null && endsAt <= startsAt;
 
-  const interval = Number(repeatInterval);
-  const intervalValid =
-    Number.isInteger(interval) && interval >= 1 && interval <= 365;
-  const repeat = repeatFrom(repeatUnit, interval, initial?.repeat?.until ?? null);
+  const startMs = startsAt === null ? null : Date.parse(startsAt);
+  const endMs = endsAt === null ? null : Date.parse(endsAt);
+
+  const amount = Number(cadenceAmount);
+  const amountValid = Number.isInteger(amount) && amount >= 1 && amount <= 365;
+  const existingUntil = initial?.repeat?.until ?? null;
+
+  // What the dates already say, when they say anything. Null covers both "no
+  // end given yet" and a window that is no whole number of any unit — two
+  // exact times a few hours apart — where rounding would move a boundary the
+  // reader chose, so the form asks instead.
+  const contiguousMs =
+    endMs === null ? null : contiguousOpening(endMs, endTime !== "");
+  const measured =
+    startMs === null || contiguousMs === null
+      ? null
+      : repeatSpanning(startMs, contiguousMs);
+  const measuring = repeatMode === "forever" && !ownCadence && measured !== null;
+
+  // A delay is measured from the end, so it has nothing to work with until one
+  // is given. Forever still does: the reader states the cadence and each
+  // occurrence runs until the next opens.
+  const delayNeedsEnd = repeatMode === "delay" && endMs === null;
+
+  const repeat = repeatOf({
+    mode: repeatMode,
+    measuring,
+    measured,
+    startMs,
+    contiguousMs,
+    unit: cadenceUnit,
+    amount,
+    until: existingUntil,
+  });
+
+  const repeatIncomplete =
+    (repeatMode === "forever" && !measuring && !amountValid) ||
+    (repeatMode === "delay" && (delayNeedsEnd || repeat === null));
 
   // The same predicate the schema refines on, so the form cannot start
   // refusing saves the schema would accept or promising ones it will reject.
@@ -275,7 +437,7 @@ export function EventForm({
     !endMissing &&
     (!endKnown || endDate !== "") &&
     !earlyReturn &&
-    (repeatUnit === "never" || intervalValid);
+    !repeatIncomplete;
 
   const draft: EventDraft | null =
     startsAt === null
@@ -414,36 +576,112 @@ export function EventForm({
         </div>
       )}
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <label className={labelClass()}>
-          Repeats
-          <select
-            value={repeatUnit}
-            onChange={(e) => setRepeatUnit(e.target.value as RepeatUnit | "never")}
-            className={inputClass()}
+      <label className={`${labelClass()} mt-3`}>
+        Repeat
+        <select
+          value={repeatMode}
+          onChange={(e) => setRepeatMode(e.target.value as RepeatMode)}
+          className={inputClass()}
+        >
+          <option value="never">never</option>
+          <option value="forever">forever</option>
+          <option value="delay" disabled={endMs === null}>
+            with a delay
+          </option>
+        </select>
+      </label>
+
+      {repeatMode !== "never" && endMs === null && (
+        <p className="mt-1.5 text-xs leading-relaxed text-faint">
+          A delay needs an end date to be measured from. With none, each one
+          just runs until the next opens.
+        </p>
+      )}
+
+      {/* Measured, and said out loud — a cadence the form worked out silently
+          would be a date the reader never agreed to, which is the one thing
+          this product does not do. */}
+      {measuring && measured !== null && (
+        <p className="mt-2 text-xs leading-relaxed text-faint">
+          {cadenceLabel(measured)} · worked out from your dates.{" "}
+          <button
+            type="button"
+            onClick={() => setOwnCadence(true)}
+            className="underline transition-colors hover:text-ink"
           >
-            <option value="never">never</option>
-            {RepeatUnit.options.map((u) => (
-              <option key={u} value={u}>
-                {u}
-              </option>
-            ))}
-          </select>
-        </label>
-        {repeatUnit !== "never" && (
+            state it myself
+          </button>
+        </p>
+      )}
+
+      {repeatMode === "forever" && !measuring && (
+        <div className="mt-2 grid grid-cols-2 gap-2">
           <label className={labelClass()}>
             Every
             <input
               type="number"
               min={1}
               max={365}
-              value={repeatInterval}
-              onChange={(e) => setRepeatInterval(e.target.value)}
+              value={cadenceAmount}
+              onChange={(e) => setCadenceAmount(e.target.value)}
               className={inputClass()}
             />
           </label>
-        )}
-      </div>
+          <label className={labelClass()}>
+            <span className="invisible">Unit</span>
+            <select
+              value={cadenceUnit}
+              onChange={(e) => setCadenceUnit(e.target.value as RepeatUnit)}
+              className={inputClass()}
+            >
+              {RepeatUnit.options.map((u) => (
+                <option key={u} value={u}>
+                  {u}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
+
+      {repeatMode === "delay" && (
+        <>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <label className={labelClass()}>
+              Wait
+              <input
+                type="number"
+                min={1}
+                max={365}
+                value={cadenceAmount}
+                onChange={(e) => setCadenceAmount(e.target.value)}
+                className={inputClass()}
+              />
+            </label>
+            <label className={labelClass()}>
+              <span className="invisible">Unit</span>
+              <select
+                value={cadenceUnit}
+                onChange={(e) => setCadenceUnit(e.target.value as RepeatUnit)}
+                className={inputClass()}
+              >
+                {RepeatUnit.options.map((u) => (
+                  <option key={u} value={u}>
+                    {u}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          {/* Both readings, so the reader can check one against the other: a
+              week's wait after a week's window is a fortnightly rule, and
+              seeing that spelled out is how they catch a wrong number. */}
+          <p className="mt-1.5 text-xs leading-relaxed text-faint">
+            after it ends
+            {repeat !== null ? ` · ${cadenceLabel(repeat)} in all` : ""}
+          </p>
+        </>
+      )}
 
       {earlyReturn && (
         <p className="mt-2 text-xs text-critical">
@@ -462,13 +700,13 @@ export function EventForm({
         />
       </label>
 
-      {!endKnown && repeatUnit === "never" && (
+      {!endKnown && repeatMode === "never" && (
         <p className="mt-2 text-xs leading-relaxed text-faint">
           It'll show with no countdown and no daily checklist, the same as an
           event whose source hasn't announced an end.
         </p>
       )}
-      {!endKnown && repeatUnit !== "never" && (
+      {!endKnown && repeatMode !== "never" && (
         /* Not a degraded answer here — the interval bounds it. */
         <p className="mt-2 text-xs leading-relaxed text-faint">
           Each one runs until the next one opens, so it still counts down.
