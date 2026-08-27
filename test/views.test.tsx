@@ -448,6 +448,61 @@ describe("Timeline: expand", () => {
     const html = board(() => [upcoming("Future Wave", "zzz", 48)], false);
     expect(html).not.toContain("Future Wave");
   });
+
+  test("no drawn bar's right edge runs past the board's own width", () => {
+    // `boardWindow`'s `max` comes from `plotted` alone, so a base row can
+    // never cross it — but an expanded occurrence can: `occurrencesOf` admits
+    // anything that only *starts* at or before the window's edge, and one
+    // with no stated end then runs a full interval past it. Uncapped, that
+    // grows the pane's scrollWidth past the gridlines and the axis, which is
+    // the reader scrolling into empty space the spec says the board must
+    // never have. A year out is a stand-in for that: nowhere near the two
+    // base rows' window, so nothing but a clamp keeps it on the board.
+    const farEvent = GachaEvent.parse({
+      id: "zzz:open-ended-rerun:2026-08-10",
+      game: "zzz",
+      title: "Open-Ended Rerun",
+      type: "story",
+      summary: null,
+      startsAt: "2026-08-10T00:00:00.000Z",
+      startPrecision: "day",
+      endsAt: "2027-08-10T00:00:00.000Z",
+      endPrecision: "exact",
+      regionScoped: false,
+      regionEnds: null,
+      sourceUrl: "https://example.invalid/events",
+      sourceId: "example-events",
+      status: "published",
+      confidence: 1,
+      extractionMethod: "parser",
+      version: 1,
+      firstSeenAt: "2026-08-17T00:00:00.000Z",
+      updatedAt: "2026-08-17T00:00:00.000Z",
+    });
+    const farRow = { event: farEvent, clock: clockFor(farEvent, "europe", NOW) };
+    const html = board(() => [farRow], true);
+
+    const chartWidth = Number(
+      /style="width:([\d.]+)px;min-width:100%"/.exec(html)?.[1],
+    );
+    // The bar's box is `margin-left` plus `width`; both are inline styles on
+    // the same button this fixture's title makes unique to find.
+    const bar = /title="Open-Ended Rerun"[^>]*style="([^"]+)"/.exec(html)?.[1] ?? "";
+    const marginLeft = Number(/margin-left:([\d.]+)px/.exec(bar)?.[1]);
+    const width = Number(/width:([\d.]+)px/.exec(bar)?.[1]);
+
+    expect(marginLeft + width).toBeLessThanOrEqual(chartWidth);
+  });
+
+  test("a start marker counts an occurrence that only arrived through expand", () => {
+    // Neither base row has started yet as far as this window's concerned —
+    // both `row()` fixtures already opened on the 10th — so with no expanded
+    // extra there is nothing upcoming to mark. An extra that has not started
+    // yet is exactly the case a start marker exists to label, and it has to
+    // show up whether it came from the base rows or from expand.
+    const html = board(() => [upcoming("Future Wave", "zzz", 48)], true);
+    expect(html).toContain("starts ");
+  });
 });
 
 describe("Timeline: events that have not started", () => {
@@ -906,5 +961,56 @@ describe("boardWindow is not widened by expansion", () => {
     expect(base.max).toBeLessThan(ifItLeaked.max);
     // Which is exactly why Timeline must compute starts/ends from `plotted`
     // before calling expand — asserted structurally in the component below.
+  });
+
+  test("Timeline itself never widens the board it hands to expand", () => {
+    // The unit test above only pins `boardWindow`'s own purity; it never
+    // renders `Timeline`, so nothing here catches the ordering itself moving —
+    // `expand` called before `boardWindow` settles its window leaves the
+    // suite green otherwise. This renders the component and compares the
+    // actual chart width against a year of occurrences `expand` hands back,
+    // against the same board with no `expand` at all.
+    const rows = [row("Closing Ceremony", "genshin", 100)];
+    const chartWidthOf = (html: string) =>
+      Number(/style="width:([\d.]+)px;min-width:100%"/.exec(html)?.[1]);
+
+    const withoutExpand = render(
+      <Timeline
+        rows={rows}
+        now={NOW}
+        dayWidth={13}
+        onZoom={() => {}}
+        group="game"
+        onGroup={() => {}}
+        showUpcoming
+        splitUpcoming
+        onOpen={() => {}}
+        isDone={() => false}
+      />,
+    );
+
+    // A year of weekly occurrences, exactly the shape a bare rotation with no
+    // `until` would hand back — if these reached `boardWindow` the chart
+    // would grow to fit them.
+    const yearOfOccurrences = Array.from({ length: 52 }, (_, i) =>
+      row(`Rerun ${i}`, "zzz", 100 + i * 7 * 24),
+    );
+    const withExpand = render(
+      <Timeline
+        rows={rows}
+        now={NOW}
+        dayWidth={13}
+        onZoom={() => {}}
+        group="game"
+        onGroup={() => {}}
+        showUpcoming
+        splitUpcoming
+        onOpen={() => {}}
+        isDone={() => false}
+        expand={() => yearOfOccurrences}
+      />,
+    );
+
+    expect(chartWidthOf(withExpand)).toBe(chartWidthOf(withoutExpand));
   });
 });

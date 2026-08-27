@@ -253,7 +253,10 @@ export function Timeline({
   }
 
   const lanes = timelineLanes(drawn, group, splitUpcoming, gameOrder);
-  const marks = startMarkers(plotted, x);
+  // From `drawn`, not `plotted`: the bars on the board include whatever
+  // `expand` added, and a start-marker label counting only the base rows
+  // under-counts what is actually drawn there.
+  const marks = startMarkers(drawn, x);
 
   const months = monthBoundaries(min, max);
   const weeks = weekBoundaries(min, max);
@@ -433,7 +436,28 @@ export function Timeline({
                       // reserved for genuinely truncated ones.
                       const clippedStart = clock.startsMs < min;
                       const left = Math.max(x(clock.startsMs), 0);
-                      const right = x(clock.endsMs ?? clock.startsMs + 14 * DAY);
+                      // `boardWindow`'s `max` is derived from `plotted` alone, so a
+                      // base row can never run past it — but an expanded occurrence
+                      // can: `occurrencesOf` admits anything *starting* at or before
+                      // the window's edge, and one with no stated end then runs a
+                      // full interval past it. Clamped the same way `left` is
+                      // clamped to 0, so a rule can fill the board but never enlarge
+                      // it — growing `overflow-auto`'s scrollWidth into empty space
+                      // with no gridlines or axis is exactly what the board exists
+                      // to avoid.
+                      // `boardWindow`'s `max` is derived from `plotted` alone, so a
+                      // base row can never run past it — but an expanded occurrence
+                      // can: `occurrencesOf` admits anything *starting* at or before
+                      // the window's edge, and one with no stated end then runs a
+                      // full interval past it. Clamped the same way `left` is
+                      // clamped to 0, so a rule can fill the board but never enlarge
+                      // it — growing `overflow-auto`'s scrollWidth into empty space
+                      // with no gridlines or axis is exactly what the board exists
+                      // to avoid.
+                      const right = Math.min(
+                        x(clock.endsMs ?? clock.startsMs + 14 * DAY),
+                        chartWidth,
+                      );
                       const width = Math.max(right - left, MIN_BAR);
                       const done = isDone(event.id);
                       return (
