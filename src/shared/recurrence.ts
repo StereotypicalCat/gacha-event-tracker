@@ -278,6 +278,49 @@ export function occurrencesOf(
 }
 
 /**
+ * The one occurrence a row's id names, or null.
+ *
+ * The lists and the timeline's own click-to-open lookup only ever hold the
+ * first two occurrences of a rule (`LIST_OCCURRENCES`), but the timeline
+ * draws every occurrence the board window admits. A bar past the second is an
+ * id nothing else can resolve, so this is the other half: parse the local day
+ * the id names, bracket it with a window one interval wide on each side, and
+ * let `occurrencesOf` regenerate just that neighbourhood — cheap, and no
+ * caller has to walk a whole series to open one sheet.
+ *
+ * One interval each way is enough because `occurrencesOf` admits an
+ * occurrence whose *window* overlaps the range, not only one that *starts*
+ * inside it — an unstated end runs a full interval past its own start, so the
+ * occurrence naming a given day can start up to one interval before or after
+ * that day and still be the one the id points at.
+ */
+export function occurrenceForId(rule: RepeatingEvent, id: string): Occurrence | null {
+  if (rule.repeat === null) return null;
+  const sepAt = id.indexOf(OCCURRENCE_SEP);
+  if (sepAt === -1) return null;
+
+  const suffix = id.slice(sepAt + 1);
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(suffix);
+  if (m === null) return null;
+  const [, y, mo, d] = m as unknown as [string, string, string, string];
+  const day = new Date(Number(y), Number(mo) - 1, Number(d));
+  // Same silent-rollover hazard `readerInstant` refuses on the way in: "30
+  // February" parses to a real Date, just not the one the id claims to name.
+  if (
+    day.getFullYear() !== Number(y) ||
+    day.getMonth() !== Number(mo) - 1 ||
+    day.getDate() !== Number(d)
+  ) {
+    return null;
+  }
+
+  const dayStartMs = day.getTime();
+  const spanMs = addUnits(dayStartMs, rule.repeat.unit, rule.repeat.interval) - dayStartMs;
+  const window = occurrencesOf(rule, dayStartMs - spanMs, dayStartMs + spanMs);
+  return window.find((o) => o.id === id) ?? null;
+}
+
+/**
  * The next `count` occurrences that have not finished, oldest first.
  *
  * "Not finished" rather than "running", so a rule between cycles answers
@@ -299,4 +342,29 @@ export function nextOccurrences(
     event.repeat.interval * (count + 1),
   );
   return occurrencesOf(event, nowMs, horizon, count);
+}
+
+/**
+ * How many of a rule's ids the reader has actually recorded something
+ * against — what a schedule edit that re-keys ids would strand.
+ *
+ * **A plain event has exactly one id at risk: its own.** That is the
+ * transition that matters most, and the one a `repeat === null` short-circuit
+ * used to hide entirely: a reader who has already marked a plain event done
+ * or ticked days against it, then edits it to add a repeat, moves every row
+ * from `id` to `id#<date>` on save — orphaning marks the form never warned
+ * about. A rule already repeating checks its next `count` occurrences
+ * instead, since those are the ids the same edit would re-key.
+ */
+export function strandedOccurrences(
+  record: RepeatingEvent,
+  nowMs: number,
+  hasMark: (id: string) => boolean,
+  count = 12,
+): number {
+  const ids =
+    record.repeat === null
+      ? [record.id]
+      : nextOccurrences(record, nowMs, count).map((o) => o.id);
+  return ids.filter(hasMark).length;
 }

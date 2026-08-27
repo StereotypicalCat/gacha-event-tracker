@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { addUnits, comesRoundEarly, Repeat, isOccurrenceId, occurrenceId, ruleIdOf, movesOccurrences, nextOccurrences, occurrencesOf, type RepeatingEvent } from "../src/shared/recurrence.ts";
+import { addUnits, comesRoundEarly, Repeat, isOccurrenceId, occurrenceId, occurrenceForId, ruleIdOf, movesOccurrences, nextOccurrences, occurrencesOf, strandedOccurrences, type RepeatingEvent } from "../src/shared/recurrence.ts";
 import { CustomEventId, isCustomEventId } from "../src/shared/custom.ts";
 
 // Pinned so the DST cases mean something. Copenhagen is UTC+1 in winter and
@@ -321,6 +321,95 @@ describe("occurrencesOf", () => {
       "myevent:k3f9qa2m01#2026-09-02",
       "myevent:k3f9qa2m01#2026-09-03",
     ]);
+  });
+});
+
+describe("occurrenceForId", () => {
+  function rule(over: Partial<RepeatingEvent> = {}): RepeatingEvent {
+    return {
+      id: "myevent:k3f9qa2m01",
+      startsAt: new Date("2026-09-01T09:00:00").toISOString(),
+      startPrecision: "exact",
+      endsAt: new Date("2026-09-08T09:00:00").toISOString(),
+      endPrecision: "exact",
+      repeat: { unit: "weeks", interval: 2, until: null },
+      ...over,
+    };
+  }
+
+  test("an id off a real occurrence round-trips to that occurrence", () => {
+    const got = occurrenceForId(rule(), "myevent:k3f9qa2m01#2026-09-15");
+    expect(got?.id).toBe("myevent:k3f9qa2m01#2026-09-15");
+    expect(got?.startsAt).toBe(new Date("2026-09-15T09:00:00").toISOString());
+  });
+
+  test("this is exactly what click-to-open needs beyond the list's first two",
+    () => {
+      // LIST_OCCURRENCES only ever carries the first two; the third is exactly
+      // the case a timeline bar can name but `allRows.find` cannot resolve.
+      const got = occurrenceForId(rule(), "myevent:k3f9qa2m01#2026-09-29");
+      expect(got?.id).toBe("myevent:k3f9qa2m01#2026-09-29");
+    });
+
+  test("a bogus suffix returns null", () => {
+    expect(occurrenceForId(rule(), "myevent:k3f9qa2m01#not-a-date")).toBeNull();
+    expect(occurrenceForId(rule(), "myevent:k3f9qa2m01#2026-02-30")).toBeNull();
+    expect(occurrenceForId(rule(), "myevent:k3f9qa2m01")).toBeNull();
+  });
+
+  test("a suffix that names no occurrence of this rule returns null", () => {
+    // 2026-09-08 falls between two fortnightly openings (1st and 15th) and
+    // matches none of them.
+    expect(occurrenceForId(rule(), "myevent:k3f9qa2m01#2026-09-08")).toBeNull();
+    // A day inside a running occurrence's window but not that occurrence's
+    // own start day — ids are keyed by start day only.
+    expect(occurrenceForId(rule(), "myevent:k3f9qa2m01#2026-09-04")).toBeNull();
+  });
+
+  test("a non-repeating rule has no occurrences to resolve", () => {
+    expect(occurrenceForId(rule({ repeat: null }), "myevent:k3f9qa2m01#2026-09-01")).toBeNull();
+  });
+});
+
+describe("strandedOccurrences", () => {
+  function rule(over: Partial<RepeatingEvent> = {}): RepeatingEvent {
+    return {
+      id: "myevent:k3f9qa2m01",
+      startsAt: new Date("2026-09-01T09:00:00").toISOString(),
+      startPrecision: "exact",
+      endsAt: new Date("2026-09-08T09:00:00").toISOString(),
+      endPrecision: "exact",
+      repeat: { unit: "weeks", interval: 2, until: null },
+      ...over,
+    };
+  }
+
+  test("a plain event checks its own bare id, not the empty occurrence list", () => {
+    // This is the transition that matters most: a reader marks a plain event
+    // done, then edits it to add a repeat. `record.repeat === null` used to
+    // short-circuit straight to 0 here, hiding the warning on exactly the
+    // save that re-keys every row out from under the mark.
+    const plain = rule({ repeat: null });
+    expect(strandedOccurrences(plain, Date.now(), (id) => id === "myevent:k3f9qa2m01")).toBe(1);
+    expect(strandedOccurrences(plain, Date.now(), () => false)).toBe(0);
+  });
+
+  test("a repeating rule checks its next occurrences, not its own bare id", () => {
+    const now = new Date("2026-09-03T12:00:00").getTime();
+    const marked = new Set(["myevent:k3f9qa2m01#2026-09-15"]);
+    expect(strandedOccurrences(rule(), now, (id) => marked.has(id))).toBe(1);
+    // The bare id is never at risk once a rule repeats — nothing is stored
+    // under it.
+    expect(strandedOccurrences(rule(), now, (id) => id === "myevent:k3f9qa2m01")).toBe(0);
+  });
+
+  test("counts every marked id among the next `count` occurrences", () => {
+    const now = new Date("2026-09-03T12:00:00").getTime();
+    const marked = new Set([
+      "myevent:k3f9qa2m01#2026-09-15",
+      "myevent:k3f9qa2m01#2026-09-29",
+    ]);
+    expect(strandedOccurrences(rule(), now, (id) => marked.has(id), 3)).toBe(2);
   });
 });
 

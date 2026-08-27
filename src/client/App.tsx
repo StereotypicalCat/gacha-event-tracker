@@ -30,11 +30,12 @@ import {
 } from "./state/lens.ts";
 import { clockFor, formatRemaining } from "../shared/time.ts";
 import { dailySummary, isDaily, resolveDaily } from "../shared/daily.ts";
-import { nextOccurrences } from "../shared/recurrence.ts";
+import { occurrenceForId, strandedOccurrences } from "../shared/recurrence.ts";
 import { orderGames } from "./state/gameOrder.ts";
 import { GameMetaProvider, type MetaResolver } from "./state/gameMeta.tsx";
 import { metaOnTheme, useTheme } from "./state/theme.ts";
 import {
+  asOccurrenceEvent,
   recordFor,
   type CustomEvents,
   type CustomGames,
@@ -357,7 +358,24 @@ export function App() {
   );
   const perGame = useMemo(() => countByGame(scopedTodo), [scopedTodo]);
 
-  const openRow = allRows.find((r) => r.event.id === openId) ?? null;
+  /**
+   * The lists only ever build `allRows` from a rule's first two occurrences
+   * (`LIST_OCCURRENCES`), but the timeline draws every occurrence the board
+   * window admits — so a bar past the second names an id `allRows` cannot
+   * resolve. Resolved through the rule behind it rather than dropped, or every
+   * later bar would be a dead click with no way to reach per-occurrence
+   * completion.
+   */
+  const openRow = (() => {
+    const hit = allRows.find((r) => r.event.id === openId) ?? null;
+    if (hit !== null || openId === null) return hit;
+    const record = recordFor(custom.events, openId);
+    if (record === undefined) return null;
+    const occurrence = occurrenceForId(record, openId);
+    if (occurrence === null) return null;
+    const event = asOccurrenceEvent(record, occurrence);
+    return { event, clock: clockFor(event, prefs.region, now) };
+  })();
 
   /** One row, wired up. Both lists render the same thing from the same props. */
   const renderRow = (row: RowEvent) => (
@@ -706,19 +724,14 @@ export function App() {
               onSave: (_id: string, draft: EventDraft) =>
                 custom.editEvent(record.id, draft),
               onDelete: () => custom.removeEvent(record.id),
-              strandedBy: () => {
-                // What the reader has actually recorded against the occurrences
-                // this rule generates today, and would no longer reach once the
-                // ids move. Twelve is a season of a fortnightly rule — enough to
-                // make the number meaningful without walking a decade of a
-                // daily one.
-                if (record.repeat === null) return 0;
-                return nextOccurrences(record, now, 12).filter(
-                  (o) =>
-                    prog.progress[o.id] !== undefined ||
-                    (daily.logs[o.id]?.days.length ?? 0) > 0,
-                ).length;
-              },
+              strandedBy: () =>
+                strandedOccurrences(
+                  record,
+                  now,
+                  (id) =>
+                    prog.progress[id] !== undefined ||
+                    (daily.logs[id]?.days.length ?? 0) > 0,
+                ),
             };
           })()}
         />
