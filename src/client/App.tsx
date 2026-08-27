@@ -19,7 +19,7 @@ import { useProgress } from "./state/useProgress.ts";
 import { useDailyLog, type DailyLogMap } from "./state/useDailyLog.ts";
 import { adoptNewLanes, usePrefs } from "./state/usePrefs.ts";
 import { snapDayWidth } from "./state/zoom.ts";
-import { useCustom } from "./state/useCustom.ts";
+import { useCustom, type EventDraft } from "./state/useCustom.ts";
 import { compareRows, SORT_MODES, type Activity, type SortMode } from "./state/sort.ts";
 import {
   advanceFocus,
@@ -34,6 +34,7 @@ import { orderGames } from "./state/gameOrder.ts";
 import { GameMetaProvider, type MetaResolver } from "./state/gameMeta.tsx";
 import { metaOnTheme, useTheme } from "./state/theme.ts";
 import {
+  recordFor,
   type CustomEvents,
   type CustomGames,
   type LaneId,
@@ -692,17 +693,20 @@ export function App() {
           onNote={prog.setNote}
           onIgnore={(id) => toggleIgnored(id, openRow.event.title)}
           onClose={() => setOpenId(null)}
-          own={
-            custom.events[openRow.event.id] === undefined
-              ? undefined
-              : {
-                  record: custom.events[openRow.event.id]!,
-                  lanes: games,
-                  games: custom.games,
-                  onSave: custom.editEvent,
-                  onDelete: custom.removeEvent,
-                }
-          }
+          own={(() => {
+            // The row may be one occurrence of a rule. Marks key off the
+            // occurrence; the record to edit is the rule behind it.
+            const record = recordFor(custom.events, openRow.event.id);
+            if (record === undefined) return undefined;
+            return {
+              record,
+              lanes: games,
+              games: custom.games,
+              onSave: (_id: string, draft: EventDraft) =>
+                custom.editEvent(record.id, draft),
+              onDelete: () => custom.removeEvent(record.id),
+            };
+          })()}
         />
       )}
     </Shell>

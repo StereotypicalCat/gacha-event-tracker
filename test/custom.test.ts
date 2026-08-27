@@ -10,6 +10,7 @@ import {
   mintCustomEventId,
   mintCustomGameId,
   precisionOf,
+  recordFor,
   RESERVED_ID_SEGMENTS,
   type CustomGames,
 } from "../src/shared/custom.ts";
@@ -605,5 +606,37 @@ describe("expanding rules into rows", () => {
       new Date("2027-01-01T00:00:00").getTime(),
     );
     expect(rows).toEqual([]);
+  });
+});
+
+describe("recordFor", () => {
+  const rule = ownEvent({
+    id: "myevent:k3f9qa2m01",
+    startsAt: new Date("2026-09-01T09:00:00").toISOString(),
+    startPrecision: "exact",
+    endsAt: new Date("2026-09-08T09:00:00").toISOString(),
+    endPrecision: "exact",
+    repeat: { unit: "weeks", interval: 2, until: null },
+  });
+  const store = { [rule.id]: rule };
+
+  test("an occurrence row finds the rule behind it", () => {
+    // Marks key off the occurrence — that is what gives each time round its own
+    // completion — but the record to edit is the rule. Without this the detail
+    // sheet looks up a key that does not exist and edit and delete vanish.
+    expect(recordFor(store, "myevent:k3f9qa2m01#2026-09-15")?.id).toBe("myevent:k3f9qa2m01");
+  });
+
+  test("a plain event finds itself", () => {
+    const plain = ownEvent({ id: "myevent:plain00001", repeat: null });
+    expect(recordFor({ [plain.id]: plain }, "myevent:plain00001")?.id).toBe("myevent:plain00001");
+  });
+
+  test("a feed event belongs to nobody here", () => {
+    expect(recordFor(store, "genshin:some-event:2026-09-01")).toBeUndefined();
+  });
+
+  test("an occurrence of a rule the reader has since deleted finds nothing", () => {
+    expect(recordFor({}, "myevent:k3f9qa2m01#2026-09-15")).toBeUndefined();
   });
 });

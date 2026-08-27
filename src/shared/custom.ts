@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { comesRoundEarly, Repeat } from "./recurrence.ts";
+import { comesRoundEarly, Repeat, ruleIdOf } from "./recurrence.ts";
 import type { Occurrence } from "./recurrence.ts";
 import { EventType, GachaEvent, Precision, slugify } from "./schema.ts";
 
@@ -270,4 +270,22 @@ export function asOccurrenceEvent(
     endsAt: occurrence.endsAt,
     endPrecision: occurrence.endPrecision,
   };
+}
+
+/**
+ * The stored record a row belongs to, whichever kind of id it carries.
+ *
+ * A row may be one occurrence of a rule, whose id carries a `#` suffix and is
+ * deliberately not a key in the store. Marks, ignores and ticks key off that
+ * suffixed id — each time round has its own completion — but there is only ever
+ * one record to edit, and it is the rule.
+ *
+ * Total, and safe for a feed id: `ruleIdOf` returns anything without a
+ * separator unchanged, and a feed id is simply not in this store.
+ */
+export function recordFor(
+  events: CustomEvents,
+  rowId: string,
+): CustomEvent | undefined {
+  return events[ruleIdOf(rowId)];
 }
