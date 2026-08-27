@@ -72,6 +72,29 @@ export function cadenceLabel(repeat: Repeat | null): string | null {
   return `every ${repeat.interval} ${repeat.unit}`;
 }
 
+/**
+ * The `repeat` a save would write, given what the form's own controls state
+ * plus whatever `until` the record being edited already carries.
+ *
+ * The form has no control for `until` — descoped from the control surface
+ * during planning, not from the schema — so it is never this function's to
+ * set. But a rule reaching the form already carrying one, reachable today
+ * only by importing a file that has it, has to keep it: rebuilding `repeat`
+ * from the unit and interval fields alone would silently turn a terminating
+ * rule eternal on a save as unrelated as a title fix. Exported, and separated
+ * from the component's own state wiring, so that survival is provable without
+ * a submit nothing in this test suite can click.
+ */
+export function repeatFrom(
+  unit: RepeatUnit | "never",
+  interval: number,
+  existingUntil: string | null,
+): Repeat | null {
+  const intervalValid = Number.isInteger(interval) && interval >= 1 && interval <= 365;
+  if (unit === "never" || !intervalValid) return null;
+  return { unit, interval, until: existingUntil };
+}
+
 function labelClass(): string {
   return "block text-xs font-medium text-muted";
 }
@@ -232,10 +255,7 @@ export function EventForm({
   const interval = Number(repeatInterval);
   const intervalValid =
     Number.isInteger(interval) && interval >= 1 && interval <= 365;
-  const repeat =
-    repeatUnit === "never" || !intervalValid
-      ? null
-      : { unit: repeatUnit, interval, until: null };
+  const repeat = repeatFrom(repeatUnit, interval, initial?.repeat?.until ?? null);
 
   // The same predicate the schema refines on, so the form cannot start
   // refusing saves the schema would accept or promising ones it will reject.

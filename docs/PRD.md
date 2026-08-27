@@ -324,9 +324,17 @@ Four constraints, each protecting something that already exists:
   no server to restore from.
 
 A reader's event may also state how it comes round again — every N days, weeks
-or months, optionally stopping on a date. The rule is stored; its occurrences
-are derived, and each one is an ordinary event everywhere in the app: its own
-countdown, its own completion, its own daily checklist.
+or months. The rule is stored; its occurrences are derived, and each one is an
+ordinary event everywhere in the app: its own countdown, its own completion,
+its own daily checklist.
+
+**The schedule can stop on a date (`until`), but the form has no control for
+setting one.** The field exists in the schema — descoped from the form during
+planning rather than removed from the data — so a rule already carrying one,
+reachable today only by importing a file that has it, keeps it: editing such a
+rule preserves its `until` rather than resetting it to "never" on save. There
+is simply no way for a reader to give a rule an end date through the form
+itself.
 
 **An occurrence need not state its end.** With none, it runs until the next one
 opens. That is not the app inventing a date to fill a form — it is entailed by

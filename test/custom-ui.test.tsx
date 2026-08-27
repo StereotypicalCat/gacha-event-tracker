@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import {
   cadenceLabel,
   EventForm,
+  repeatFrom,
   strandedNotice,
 } from "../src/client/components/CustomForms.tsx";
 import { YourOwn } from "../src/client/components/YourOwn.tsx";
@@ -419,6 +420,41 @@ describe("stating a repeat", () => {
       />,
     );
     expect(html).toContain("no countdown");
+  });
+});
+
+describe("repeatFrom", () => {
+  test("a fresh rule has no `until` to carry — there is no control for one", () => {
+    expect(repeatFrom("weeks", 2, null)).toEqual({ unit: "weeks", interval: 2, until: null });
+  });
+
+  test("an edit preserves the `until` already on the record", () => {
+    // The form has no field for this, so the only way it can end up on the
+    // save is by surviving from what was already there — an import-sourced
+    // rule, since that is the only door `until` has today.
+    const existing = "2027-01-01T00:00:00.000Z";
+    expect(repeatFrom("weeks", 2, existing)).toEqual({
+      unit: "weeks",
+      interval: 2,
+      until: existing,
+    });
+    // It survives a schedule change too — changing the unit or interval is a
+    // different edit from changing when the series stops, and the reader
+    // never touched the latter.
+    expect(repeatFrom("months", 1, existing)).toEqual({
+      unit: "months",
+      interval: 1,
+      until: existing,
+    });
+  });
+
+  test("turning the repeat off drops it, existing `until` included", () => {
+    expect(repeatFrom("never", 2, "2027-01-01T00:00:00.000Z")).toBeNull();
+  });
+
+  test("an invalid interval is refused the same way regardless of `until`", () => {
+    expect(repeatFrom("weeks", 0, "2027-01-01T00:00:00.000Z")).toBeNull();
+    expect(repeatFrom("weeks", 400, null)).toBeNull();
   });
 });
 
