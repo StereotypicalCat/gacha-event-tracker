@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import { EventForm } from "../src/client/components/CustomForms.tsx";
+import {
+  cadenceLabel,
+  EventForm,
+  strandedNotice,
+} from "../src/client/components/CustomForms.tsx";
 import { YourOwn } from "../src/client/components/YourOwn.tsx";
 import { EventRow } from "../src/client/components/EventRow.tsx";
 import { AUTHOR, Colophon, REPO_URL } from "../src/client/components/Colophon.tsx";
@@ -413,5 +417,54 @@ describe("stating a repeat", () => {
       />,
     );
     expect(html).toContain("no countdown");
+  });
+});
+
+describe("what a reschedule costs", () => {
+  test("says nothing when nothing would be stranded", () => {
+    expect(strandedNotice(0)).toBe(null);
+  });
+
+  test("counts, and agrees with itself about plurals", () => {
+    expect(strandedNotice(1)).toContain("1 tick");
+    expect(strandedNotice(1)).not.toContain("ticks");
+    expect(strandedNotice(3)).toContain("3 ticks");
+  });
+
+  test("says what happens, not what is forbidden", () => {
+    // It informs; it never blocks. Their data is theirs to reorganise, and a
+    // form that refused the edit would be a worse answer than one that says
+    // what it costs — removeGame refuses because a cascade is unrecoverable,
+    // and an orphaned mark is not.
+    expect(strandedNotice(3)!.toLowerCase()).toContain("strand");
+  });
+});
+
+describe("the sheet says how often", () => {
+  test("a repeating event shows its cadence", () => {
+    const rule = CustomEvent.parse({
+      id: "myevent:k3f9qa2m01",
+      game: "mygame:limbus-company",
+      title: "Abyss",
+      type: "challenge",
+      summary: null,
+      startsAt: "2026-09-01T00:00:00.000Z",
+      startPrecision: "day",
+      endsAt: "2026-09-08T00:00:00.000Z",
+      endPrecision: "day",
+      repeat: { unit: "weeks", interval: 2, until: null },
+      at: AT,
+      updatedAt: AT,
+    });
+    expect(cadenceLabel(rule.repeat)).toBe("every 2 weeks");
+  });
+
+  test("an interval of one drops the number and the plural", () => {
+    expect(cadenceLabel({ unit: "weeks", interval: 1, until: null })).toBe("every week");
+    expect(cadenceLabel({ unit: "months", interval: 1, until: null })).toBe("every month");
+  });
+
+  test("a non-repeating event has no cadence to show", () => {
+    expect(cadenceLabel(null)).toBe(null);
   });
 });

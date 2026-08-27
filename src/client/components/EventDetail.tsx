@@ -7,7 +7,7 @@ import {
   type LaneId,
 } from "../../shared/custom.ts";
 import type { EventDraft } from "../state/useCustom.ts";
-import { EventForm } from "./CustomForms.tsx";
+import { cadenceLabel, EventForm } from "./CustomForms.tsx";
 import {
   formatAbsolute,
   formatRemaining,
@@ -76,6 +76,7 @@ export function EventDetail({
         games: CustomGames;
         onSave: (id: string, draft: EventDraft) => void;
         onDelete: (id: string) => void;
+        strandedBy: (draft: EventDraft) => number;
       }
     | undefined;
 }) {
@@ -159,6 +160,10 @@ export function EventDetail({
           <Field label="Type">{event.type}</Field>
         </dl>
 
+        {cadenceLabel(own?.record.repeat ?? null) !== null && (
+          <p className="text-xs text-faint">{cadenceLabel(own!.record.repeat)}</p>
+        )}
+
         {risk !== "fine" && effort !== undefined && clock.msRemaining !== null && (
           <p
             className="mt-4 rounded-lg border px-3 py-2 text-xs leading-relaxed"
@@ -241,6 +246,7 @@ export function EventDetail({
                   setEditing(false);
                 }}
                 onCancel={() => setEditing(false)}
+                strandedBy={own.strandedBy}
               />
             ) : (
               <div className="flex gap-2">

@@ -30,6 +30,7 @@ import {
 } from "./state/lens.ts";
 import { clockFor, formatRemaining } from "../shared/time.ts";
 import { dailySummary, isDaily, resolveDaily } from "../shared/daily.ts";
+import { nextOccurrences } from "../shared/recurrence.ts";
 import { orderGames } from "./state/gameOrder.ts";
 import { GameMetaProvider, type MetaResolver } from "./state/gameMeta.tsx";
 import { metaOnTheme, useTheme } from "./state/theme.ts";
@@ -705,6 +706,19 @@ export function App() {
               onSave: (_id: string, draft: EventDraft) =>
                 custom.editEvent(record.id, draft),
               onDelete: () => custom.removeEvent(record.id),
+              strandedBy: () => {
+                // What the reader has actually recorded against the occurrences
+                // this rule generates today, and would no longer reach once the
+                // ids move. Twelve is a season of a fortnightly rule — enough to
+                // make the number meaningful without walking a decade of a
+                // daily one.
+                if (record.repeat === null) return 0;
+                return nextOccurrences(record, now, 12).filter(
+                  (o) =>
+                    prog.progress[o.id] !== undefined ||
+                    (daily.logs[o.id]?.days.length ?? 0) > 0,
+                ).length;
+              },
             };
           })()}
         />

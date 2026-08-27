@@ -5,7 +5,12 @@ import {
   type CustomGames,
   type LaneId,
 } from "../../shared/custom.ts";
-import { comesRoundEarly, RepeatUnit } from "../../shared/recurrence.ts";
+import {
+  comesRoundEarly,
+  movesOccurrences,
+  RepeatUnit,
+  type Repeat,
+} from "../../shared/recurrence.ts";
 import { EventType } from "../../shared/schema.ts";
 import { useGameMeta } from "../state/gameMeta.tsx";
 import { readerInstant, type EventDraft } from "../state/useCustom.ts";
@@ -40,6 +45,32 @@ export const CUSTOM_HUES = [
 ];
 
 const TYPES = EventType.options;
+
+/**
+ * What a schedule change costs, or null when it costs nothing.
+ *
+ * Occurrence ids carry their own start day, so moving the anchor or the
+ * interval re-keys every occurrence and the marks stored under the old ids stop
+ * being reachable. Nothing is rewritten — `removeEvent` makes the same trade,
+ * and `useMarkSet.merge` never removes because nothing else holds a copy — but
+ * the reader is told the count first, the way `removeGame` reports `blockedBy`
+ * instead of cascading.
+ *
+ * Informs; never blocks.
+ */
+export function strandedNotice(count: number): string | null {
+  if (count <= 0) return null;
+  return `Changing the schedule will strand ${count} tick${
+    count === 1 ? "" : "s"
+  } you've already recorded.`;
+}
+
+/** How often a rule comes round, in the words the form offered. */
+export function cadenceLabel(repeat: Repeat | null): string | null {
+  if (repeat === null) return null;
+  if (repeat.interval === 1) return `every ${repeat.unit.replace(/s$/, "")}`;
+  return `every ${repeat.interval} ${repeat.unit}`;
+}
 
 function labelClass(): string {
   return "block text-xs font-medium text-muted";
@@ -136,6 +167,7 @@ export function EventForm({
   initial,
   onSave,
   onCancel,
+  strandedBy,
 }: {
   /** Every lane an event can belong to — a source can miss an event too. */
   lanes: LaneId[];
@@ -143,6 +175,14 @@ export function EventForm({
   initial?: CustomEvent | undefined;
   onSave: (draft: EventDraft) => void;
   onCancel: () => void;
+  /**
+   * How many stored marks this draft's schedule would leave behind.
+   *
+   * Supplied by the caller because only it can see the mark stores. Absent —
+   * on the add form, where there is nothing to strand — the notice never
+   * renders.
+   */
+  strandedBy?: ((draft: EventDraft) => number) | undefined;
 }) {
   const gameMeta = useGameMeta();
   const start = fields(initial?.startsAt ?? null);
@@ -217,23 +257,32 @@ export function EventForm({
     !earlyReturn &&
     (repeatUnit === "never" || intervalValid);
 
+  const draft: EventDraft | null =
+    startsAt === null
+      ? null
+      : {
+          game, title, type,
+          summary: summary === "" ? null : summary,
+          startsAt, startHasTime: startTime !== "",
+          endsAt, endHasTime: endTime !== "",
+          repeat,
+        };
+  // Only a schedule change re-keys anything. Renaming does not — the token is
+  // random precisely so fixing a typo never costs the marks attached to it.
+  const stranded =
+    initial !== undefined && draft !== null && strandedBy !== undefined &&
+    movesOccurrences(initial, draft)
+      ? strandedBy(draft)
+      : 0;
+  const notice = strandedNotice(stranded);
+
   return (
     <form
       className="mt-3 rounded-xl border border-hairline p-3"
       onSubmit={(e) => {
         e.preventDefault();
-        if (!valid || startsAt === null) return;
-        onSave({
-          game,
-          title,
-          type,
-          summary,
-          startsAt,
-          startHasTime: startTime !== "",
-          endsAt,
-          endHasTime: endTime !== "",
-          repeat,
-        });
+        if (!valid || draft === null) return;
+        onSave(draft);
       }}
     >
       <label className={labelClass()}>
@@ -418,6 +467,10 @@ export function EventForm({
           No time given, so this counts from the start of the day where you are —
           and to the end of the day it finishes on.
         </p>
+      )}
+
+      {notice !== null && (
+        <p className="mt-2 text-xs leading-relaxed text-muted">{notice}</p>
       )}
 
       <div className="mt-4 flex gap-2">
