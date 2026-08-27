@@ -362,6 +362,42 @@ describe("occurrence ids", () => {
     expect(CustomEventId.safeParse("myevent:k3f9qa2m01#2026-09-01").success).toBe(false);
   });
 });
+
+describe("movesOccurrences", () => {
+  const rule = (startsAt: string, interval: number) => ({
+    startsAt,
+    repeat: { unit: "weeks" as const, interval, until: null },
+  });
+
+  test("a changed anchor or interval re-keys every occurrence", () => {
+    const a = rule("2026-09-01T07:00:00.000Z", 2);
+    expect(movesOccurrences(a, rule("2026-09-02T07:00:00.000Z", 2))).toBe(true);
+    expect(movesOccurrences(a, rule("2026-09-01T07:00:00.000Z", 3))).toBe(true);
+  });
+
+  test("changing only `until` does not", () => {
+    // It truncates the series; it does not move what is already in it, so no
+    // mark is stranded and the reader should not be warned that one is.
+    const a = rule("2026-09-01T07:00:00.000Z", 2);
+    const b = {
+      startsAt: "2026-09-01T07:00:00.000Z",
+      repeat: { unit: "weeks" as const, interval: 2, until: "2027-01-01T00:00:00.000Z" },
+    };
+    expect(movesOccurrences(a, b)).toBe(false);
+  });
+
+  test("adding or dropping a rule entirely counts as a move", () => {
+    const plain = { startsAt: "2026-09-01T07:00:00.000Z", repeat: null };
+    expect(movesOccurrences(plain, rule("2026-09-01T07:00:00.000Z", 2))).toBe(true);
+    expect(movesOccurrences(rule("2026-09-01T07:00:00.000Z", 2), plain)).toBe(true);
+  });
+
+  test("an untouched schedule moves nothing", () => {
+    const a = rule("2026-09-01T07:00:00.000Z", 2);
+    expect(movesOccurrences(a, rule("2026-09-01T07:00:00.000Z", 2))).toBe(false);
+  });
+});
+
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -689,41 +725,6 @@ MSG
 Append to `test/recurrence.test.ts`, adding `nextOccurrences, occurrencesOf, type RepeatingEvent` to the `recurrence.ts` import.
 
 ```ts
-describe("movesOccurrences", () => {
-  const rule = (startsAt: string, interval: number) => ({
-    startsAt,
-    repeat: { unit: "weeks" as const, interval, until: null },
-  });
-
-  test("a changed anchor or interval re-keys every occurrence", () => {
-    const a = rule("2026-09-01T07:00:00.000Z", 2);
-    expect(movesOccurrences(a, rule("2026-09-02T07:00:00.000Z", 2))).toBe(true);
-    expect(movesOccurrences(a, rule("2026-09-01T07:00:00.000Z", 3))).toBe(true);
-  });
-
-  test("changing only `until` does not", () => {
-    // It truncates the series; it does not move what is already in it, so no
-    // mark is stranded and the reader should not be warned that one is.
-    const a = rule("2026-09-01T07:00:00.000Z", 2);
-    const b = {
-      startsAt: "2026-09-01T07:00:00.000Z",
-      repeat: { unit: "weeks" as const, interval: 2, until: "2027-01-01T00:00:00.000Z" },
-    };
-    expect(movesOccurrences(a, b)).toBe(false);
-  });
-
-  test("adding or dropping a rule entirely counts as a move", () => {
-    const plain = { startsAt: "2026-09-01T07:00:00.000Z", repeat: null };
-    expect(movesOccurrences(plain, rule("2026-09-01T07:00:00.000Z", 2))).toBe(true);
-    expect(movesOccurrences(rule("2026-09-01T07:00:00.000Z", 2), plain)).toBe(true);
-  });
-
-  test("an untouched schedule moves nothing", () => {
-    const a = rule("2026-09-01T07:00:00.000Z", 2);
-    expect(movesOccurrences(a, rule("2026-09-01T07:00:00.000Z", 2))).toBe(false);
-  });
-});
-
 describe("occurrencesOf", () => {
   function rule(over: Partial<RepeatingEvent> = {}): RepeatingEvent {
     return {
@@ -1034,7 +1035,7 @@ export function nextOccurrences(
 - [ ] **Step 4: Run tests and typecheck**
 
 Run: `bun test test/recurrence.test.ts`
-Expected: PASS, 36 tests.
+Expected: PASS, 35 tests.
 
 Run: `bun run typecheck`
 Expected: exit 0.
