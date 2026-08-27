@@ -5,6 +5,7 @@ import {
   type CustomGames,
   type LaneId,
 } from "../../shared/custom.ts";
+import { comesRoundEarly, RepeatUnit } from "../../shared/recurrence.ts";
 import { EventType } from "../../shared/schema.ts";
 import { useGameMeta } from "../state/gameMeta.tsx";
 import { readerInstant, type EventDraft } from "../state/useCustom.ts";
@@ -172,6 +173,14 @@ export function EventForm({
   const [endTime, setEndTime] = useState(
     initial?.endPrecision === "exact" ? end.time : "",
   );
+  // "never" rather than a null unit, so the select has one vocabulary and the
+  // default reads as an answer the reader gave rather than a field they left.
+  const [repeatUnit, setRepeatUnit] = useState<RepeatUnit | "never">(
+    initial?.repeat?.unit ?? "never",
+  );
+  const [repeatInterval, setRepeatInterval] = useState(
+    String(initial?.repeat?.interval ?? 1),
+  );
 
   const startsAt = startDate === "" ? null : readerInstant(startDate, startTime, "start");
   const endsAt =
@@ -179,13 +188,34 @@ export function EventForm({
 
   const endMissing = endKnown && endDate !== "" && endsAt === null;
   const backwards = startsAt !== null && endsAt !== null && endsAt <= startsAt;
+
+  const interval = Number(repeatInterval);
+  const intervalValid =
+    Number.isInteger(interval) && interval >= 1 && interval <= 365;
+  const repeat =
+    repeatUnit === "never" || !intervalValid
+      ? null
+      : { unit: repeatUnit, interval, until: null };
+
+  // The same predicate the schema refines on, so the form cannot start
+  // refusing saves the schema would accept or promising ones it will reject.
+  const earlyReturn =
+    startsAt !== null &&
+    comesRoundEarly(
+      Date.parse(startsAt),
+      endsAt === null ? null : Date.parse(endsAt),
+      repeat,
+    );
+
   const valid =
     title.trim().length > 0 &&
     game !== "" &&
     startsAt !== null &&
     !backwards &&
     !endMissing &&
-    (!endKnown || endDate !== "");
+    (!endKnown || endDate !== "") &&
+    !earlyReturn &&
+    (repeatUnit === "never" || intervalValid);
 
   return (
     <form
@@ -202,9 +232,7 @@ export function EventForm({
           startHasTime: startTime !== "",
           endsAt,
           endHasTime: endTime !== "",
-          // This form has no repeat control yet — every event it saves is
-          // still a single occurrence, exactly as before.
-          repeat: null,
+          repeat,
         });
       }}
     >
@@ -317,6 +345,43 @@ export function EventForm({
         </div>
       )}
 
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <label className={labelClass()}>
+          Repeats
+          <select
+            value={repeatUnit}
+            onChange={(e) => setRepeatUnit(e.target.value as RepeatUnit | "never")}
+            className={inputClass()}
+          >
+            <option value="never">never</option>
+            {RepeatUnit.options.map((u) => (
+              <option key={u} value={u}>
+                {u}
+              </option>
+            ))}
+          </select>
+        </label>
+        {repeatUnit !== "never" && (
+          <label className={labelClass()}>
+            Every
+            <input
+              type="number"
+              min={1}
+              max={365}
+              value={repeatInterval}
+              onChange={(e) => setRepeatInterval(e.target.value)}
+              className={inputClass()}
+            />
+          </label>
+        )}
+      </div>
+
+      {earlyReturn && (
+        <p className="mt-2 text-xs text-critical">
+          That comes round before it ends.
+        </p>
+      )}
+
       <label className={`${labelClass()} mt-3`}>
         Note (optional)
         <input
@@ -328,10 +393,16 @@ export function EventForm({
         />
       </label>
 
-      {!endKnown && (
+      {!endKnown && repeatUnit === "never" && (
         <p className="mt-2 text-xs leading-relaxed text-faint">
           It'll show with no countdown and no daily checklist, the same as an
           event whose source hasn't announced an end.
+        </p>
+      )}
+      {!endKnown && repeatUnit !== "never" && (
+        /* Not a degraded answer here — the interval bounds it. */
+        <p className="mt-2 text-xs leading-relaxed text-faint">
+          Each one runs until the next one opens, so it still counts down.
         </p>
       )}
       {backwards && (

@@ -342,3 +342,76 @@ describe("Colophon freshness notice (PRD F7)", () => {
     expect(html).not.toMatch(/support me|buy me|donate|tip jar/i);
   });
 });
+
+describe("stating a repeat", () => {
+  const repeating = (over: Record<string, unknown> = {}) =>
+    CustomEvent.parse({
+      id: "myevent:k3f9qa2m01",
+      game: "mygame:limbus-company",
+      title: "Abyss",
+      type: "challenge",
+      summary: null,
+      startsAt: "2026-09-01T00:00:00.000Z",
+      startPrecision: "day",
+      endsAt: "2026-09-08T00:00:00.000Z",
+      endPrecision: "day",
+      repeat: { unit: "weeks", interval: 2, until: null },
+      at: AT,
+      updatedAt: AT,
+      ...over,
+    });
+
+  test("a fresh form offers a repeat, set to never", () => {
+    const html = renderToStaticMarkup(
+      <EventForm lanes={["mygame:limbus-company"]} customGames={GAMES} onSave={() => {}} onCancel={() => {}} />,
+    );
+    expect(html).toContain("Repeats");
+    // The interval field is hidden until there is something to count, so the
+    // form a reader already knows is unchanged until they reach for this.
+    expect(html).not.toContain("Every");
+  });
+
+  test("editing a rule shows the rule it already has", () => {
+    const html = renderToStaticMarkup(
+      <EventForm
+        lanes={["mygame:limbus-company"]}
+        customGames={GAMES}
+        initial={repeating()}
+        onSave={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    expect(html).toContain("Every");
+    expect(html).toContain('value="2"');
+  });
+
+  test("an unknown end with a rule stops claiming there is no countdown", () => {
+    // "It'll show with no countdown and no daily checklist" is true of an
+    // unbounded event and false once an interval bounds it. Leaving it there
+    // would talk a reader out of the simplest way to record a weekly reset.
+    const html = renderToStaticMarkup(
+      <EventForm
+        lanes={["mygame:limbus-company"]}
+        customGames={GAMES}
+        initial={repeating({ endsAt: null, endPrecision: "unknown" })}
+        onSave={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    expect(html).toContain("until the next one opens");
+    expect(html).not.toContain("no countdown");
+  });
+
+  test("an unknown end with no rule keeps the original note", () => {
+    const html = renderToStaticMarkup(
+      <EventForm
+        lanes={["mygame:limbus-company"]}
+        customGames={GAMES}
+        initial={repeating({ endsAt: null, endPrecision: "unknown", repeat: null })}
+        onSave={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    expect(html).toContain("no countdown");
+  });
+});
