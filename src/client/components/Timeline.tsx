@@ -445,15 +445,6 @@ export function Timeline({
                       // it — growing `overflow-auto`'s scrollWidth into empty space
                       // with no gridlines or axis is exactly what the board exists
                       // to avoid.
-                      // `boardWindow`'s `max` is derived from `plotted` alone, so a
-                      // base row can never run past it — but an expanded occurrence
-                      // can: `occurrencesOf` admits anything *starting* at or before
-                      // the window's edge, and one with no stated end then runs a
-                      // full interval past it. Clamped the same way `left` is
-                      // clamped to 0, so a rule can fill the board but never enlarge
-                      // it — growing `overflow-auto`'s scrollWidth into empty space
-                      // with no gridlines or axis is exactly what the board exists
-                      // to avoid.
                       const right = Math.min(
                         x(clock.endsMs ?? clock.startsMs + 14 * DAY),
                         chartWidth,
