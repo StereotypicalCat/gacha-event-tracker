@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { addUnits, comesRoundEarly, Repeat, isOccurrenceId, occurrenceId, occurrenceForId, ruleIdOf, movesOccurrences, nextOccurrences, occurrencesOf, strandedOccurrences, type RepeatingEvent } from "../src/shared/recurrence.ts";
+import { addUnits, comesRoundEarly, Repeat, repeatSpanning, repeatModeOf, isOccurrenceId, occurrenceId, occurrenceForId, ruleIdOf, movesOccurrences, nextOccurrences, occurrencesOf, strandedOccurrences, type RepeatingEvent } from "../src/shared/recurrence.ts";
 import { CustomEventId, isCustomEventId } from "../src/shared/custom.ts";
 
 // Pinned so the DST cases mean something. Copenhagen is UTC+1 in winter and
@@ -453,5 +453,101 @@ describe("nextOccurrences", () => {
       2,
     );
     expect(got).toEqual([]);
+  });
+});
+
+describe("repeatSpanning", () => {
+  // The three-state repeat control ("never / forever / with a delay") never
+  // asks the reader for a cadence when it can measure one. Forever asks for
+  // the next opening to land exactly where this occurrence closes; a delay
+  // pushes that target later. Both reduce to the same question, which is what
+  // this function answers: which {unit, interval} steps from the anchor to
+  // that target exactly.
+
+  test("a window that is a calendar month reads as every month", () => {
+    // Not "every 31 days" — a fixed day count drifts out of step by February,
+    // and the reader who typed 1 Jul to 1 Aug meant the month.
+    expect(repeatSpanning(at("2026-07-01T09:00:00"), at("2026-08-01T09:00:00")))
+      .toEqual({ unit: "months", interval: 1, until: null });
+  });
+
+  test("whole weeks read as weeks, not days", () => {
+    expect(repeatSpanning(at("2026-07-01T09:00:00"), at("2026-08-12T09:00:00")))
+      .toEqual({ unit: "weeks", interval: 6, until: null });
+    expect(repeatSpanning(at("2026-07-01T09:00:00"), at("2026-07-15T09:00:00")))
+      .toEqual({ unit: "weeks", interval: 2, until: null });
+  });
+
+  test("anything else falls back to days", () => {
+    // The walkthrough case: 1 Jul to 26 Jul is 25 days, which is neither a
+    // month nor whole weeks, so it stays in the unit the reader can verify.
+    expect(repeatSpanning(at("2026-07-01T09:00:00"), at("2026-07-26T09:00:00")))
+      .toEqual({ unit: "days", interval: 25, until: null });
+  });
+
+  test("a delayed target is the same question asked later", () => {
+    // A 7-day window with a 21-day delay: the next opening is 28 days after
+    // the anchor, which is four whole weeks.
+    const anchor = at("2026-07-01T09:00:00");
+    const closes = at("2026-07-08T09:00:00");
+    const delayed = addUnits(closes, "days", 21);
+    expect(repeatSpanning(anchor, delayed))
+      .toEqual({ unit: "weeks", interval: 4, until: null });
+  });
+
+  test("a span crossing a DST transition is still exact", () => {
+    // Spring forward is 29 March 2026. Measured in milliseconds this span is
+    // an hour short of four weeks and would fall through to no answer at all.
+    expect(repeatSpanning(at("2026-03-15T09:00:00"), at("2026-04-12T09:00:00")))
+      .toEqual({ unit: "weeks", interval: 4, until: null });
+  });
+
+  test("a target at or before the anchor has no answer", () => {
+    const anchor = at("2026-07-01T09:00:00");
+    expect(repeatSpanning(anchor, anchor)).toBe(null);
+    expect(repeatSpanning(anchor, at("2026-06-30T09:00:00"))).toBe(null);
+  });
+
+  test("a span that is not whole days has no answer", () => {
+    // Two exact times a few hours apart. Rounding to a day would move the
+    // reader's boundary, so the form asks them instead of guessing.
+    expect(repeatSpanning(at("2026-07-01T09:00:00"), at("2026-07-08T14:30:00"))).toBe(null);
+  });
+
+  test("a span past the schema's ceiling has no answer", () => {
+    // `interval` is capped at 365, so a span no unit can express within that
+    // returns null rather than a rule the schema would reject.
+    expect(repeatSpanning(at("2026-07-01T09:00:00"), at("2030-07-01T09:00:00"))).toBe(null);
+  });
+});
+
+describe("repeatModeOf", () => {
+  // Which of the three states the form should open in. Deliberately derived
+  // from the rule rather than stored beside it: "forever" and "a delay of
+  // zero" are the same rule, so remembering which button was pressed would be
+  // remembering something that makes no difference to the reader's schedule.
+  const start = at("2026-07-01T09:00:00");
+  const close = at("2026-07-08T09:00:00");
+
+  test("no rule is never", () => {
+    expect(repeatModeOf(start, close, null)).toBe("never");
+  });
+
+  test("a window that reopens exactly as it closes is forever", () => {
+    expect(repeatModeOf(start, close, { unit: "weeks", interval: 1, until: null }))
+      .toBe("forever");
+  });
+
+  test("a gap between closing and reopening is a delay", () => {
+    expect(repeatModeOf(start, close, { unit: "weeks", interval: 4, until: null }))
+      .toBe("delay");
+  });
+
+  test("an unstated end is forever, because there is no gap to describe", () => {
+    // "Weekly missions, resets Monday": the reader gave a cadence and no end,
+    // so each occurrence runs until the next opens. Contiguous by definition,
+    // and a delay would have nothing to be measured from.
+    expect(repeatModeOf(start, null, { unit: "weeks", interval: 1, until: null }))
+      .toBe("forever");
   });
 });

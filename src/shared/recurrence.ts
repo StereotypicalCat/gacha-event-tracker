@@ -103,6 +103,81 @@ export function comesRoundEarly(
 }
 
 /**
+ * The rule whose next opening lands exactly on `toMs`, or null if none does.
+ *
+ * The form asks the reader to choose between never repeating, repeating
+ * forever, and repeating after a delay — and in the last two it measures the
+ * cadence rather than asking for it. Both reduce to this one question: which
+ * `{unit, interval}` steps from the anchor to the instant the next occurrence
+ * should open? Forever passes the instant this one closes; a delay passes that
+ * instant pushed further out.
+ *
+ * **Searched with `addUnits` rather than divided out of a millisecond span.**
+ * A month is not a fixed number of days and a week is not always 168 hours —
+ * across a DST transition it is 167 or 169 — so arithmetic on the raw span
+ * would miss the exact answers this is looking for. Stepping the calendar and
+ * comparing is the only reading that agrees with how the occurrences are
+ * actually generated.
+ *
+ * Largest honest unit wins, which is why the ladder runs months before weeks
+ * before days: a reader who typed 1 July to 1 August meant the month, and
+ * storing "every 31 days" would drift out of step by February. The bounds are
+ * the schema's own ceiling — nothing here can return an interval `Repeat`
+ * would reject.
+ *
+ * Null is a real answer, not a failure: two exact times a few hours apart span
+ * no whole number of any unit, and rounding to the nearest day would move a
+ * boundary the reader chose. The form asks them instead of guessing.
+ */
+export function repeatSpanning(fromMs: number, toMs: number): Repeat | null {
+  if (toMs <= fromMs) return null;
+
+  const ladder: Array<{ unit: RepeatUnit; max: number }> = [
+    { unit: "months", max: 12 },
+    { unit: "weeks", max: 52 },
+    { unit: "days", max: 365 },
+  ];
+
+  for (const { unit, max } of ladder) {
+    for (let interval = 1; interval <= max; interval += 1) {
+      if (addUnits(fromMs, unit, interval) === toMs) {
+        return { unit, interval, until: null };
+      }
+    }
+  }
+  return null;
+}
+
+/** The three answers the form offers for "does this come round again?". */
+export type RepeatMode = "never" | "forever" | "delay";
+
+/**
+ * Which of the three states a saved rule belongs to.
+ *
+ * Derived rather than stored beside the rule, because "repeats forever" and "a
+ * delay of zero" are the same rule — remembering which control produced it
+ * would be remembering something that makes no difference to a single
+ * occurrence. It also means a rule that arrived by import opens in whichever
+ * state describes it, rather than in whichever state happens to be the
+ * default.
+ *
+ * An unstated end is `forever`: the reader gave a cadence and no end, so each
+ * occurrence runs until the next opens. There is no gap to describe, and a
+ * delay would have nothing to be measured from.
+ */
+export function repeatModeOf(
+  startsMs: number,
+  endsMs: number | null,
+  repeat: Repeat | null,
+): RepeatMode {
+  if (repeat === null) return "never";
+  if (endsMs === null) return "forever";
+  return addUnits(startsMs, repeat.unit, repeat.interval) === endsMs
+    ? "forever"
+    : "delay";
+}
+
+/**
  * What separates a rule from one of its occurrences.
  *
  * Deliberately outside `[a-z0-9]`, and therefore outside `CustomEventId`. An
