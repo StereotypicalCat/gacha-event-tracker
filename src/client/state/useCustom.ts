@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   asDisplayEvent,
+  asOccurrenceEvent,
   CustomEvent,
   CustomGame,
   mintCustomEventId,
@@ -11,6 +12,7 @@ import {
   type DisplayEvent,
   type LaneId,
 } from "../../shared/custom.ts";
+import { nextOccurrences, occurrencesOf, type Repeat } from "../../shared/recurrence.ts";
 import type { EventType } from "../../shared/schema.ts";
 import { KEYS, readJson, writeJson } from "./storage.ts";
 
@@ -34,6 +36,8 @@ export interface EventDraft {
   startHasTime: boolean;
   endsAt: string | null;
   endHasTime: boolean;
+  /** How it comes round again, or null when it does not. */
+  repeat: Repeat | null;
 }
 
 /**
@@ -114,7 +118,65 @@ export function validRecords<T>(
   return out;
 }
 
-export function useCustom() {
+/**
+ * How many occurrences of a rule the lists carry.
+ *
+ * Two: the one that has not finished, and the one after it. A rule repeating
+ * weekly would otherwise put thirteen rows into the lists that exist to answer
+ * "what ends soonest", which is the clutter PRD F1 is built to avoid. The
+ * timeline is the surface where repetition is the reading, and it asks for the
+ * whole range instead — see `occurrencesInFor`.
+ */
+const LIST_OCCURRENCES = 2;
+
+/**
+ * The reader's events as rows, rules expanded.
+ *
+ * Pure and exported so the expansion is testable without mounting anything —
+ * the same reason `gameOrder.ts` and `daily.ts` keep their logic outside React.
+ */
+export function rowsFor(events: CustomEvents, nowMs: number): DisplayEvent[] {
+  const out: DisplayEvent[] = [];
+  for (const event of Object.values(events)) {
+    if (event.repeat === null) {
+      out.push(asDisplayEvent(event));
+      continue;
+    }
+    for (const occurrence of nextOccurrences(event, nowMs, LIST_OCCURRENCES)) {
+      out.push(asOccurrenceEvent(event, occurrence));
+    }
+  }
+  return out;
+}
+
+/**
+ * Every occurrence of every rule inside a range.
+ *
+ * Only rules. A non-repeating event is already in `rowsFor`, and returning it
+ * here as well would draw each of the reader's plain events twice on the board.
+ */
+export function occurrencesInFor(
+  events: CustomEvents,
+  minMs: number,
+  maxMs: number,
+): DisplayEvent[] {
+  const out: DisplayEvent[] = [];
+  for (const event of Object.values(events)) {
+    if (event.repeat === null) continue;
+    for (const occurrence of occurrencesOf(event, minMs, maxMs)) {
+      out.push(asOccurrenceEvent(event, occurrence));
+    }
+  }
+  return out;
+}
+
+/**
+ * `nowMs` is passed in rather than read here, for the reason everything else in
+ * this codebase takes its clock as an argument — and because the rows have to
+ * change as time passes: the occurrence a rule is showing rolls to the next one
+ * when the current one finishes.
+ */
+export function useCustom(nowMs: number) {
   const [games, setGames] = useState<CustomGames>(() =>
     readValid(KEYS.customGames, CustomGame, "custom game"),
   );
@@ -186,6 +248,7 @@ export function useCustom() {
       // An unannounced end is a supported answer here exactly as it is in the
       // feed. Nobody is made to invent a date to satisfy a form.
       endPrecision: draft.endsAt === null ? "unknown" : precisionOf(draft.endHasTime),
+      repeat: draft.repeat,
       at: now,
       updatedAt: now,
     });
@@ -209,6 +272,7 @@ export function useCustom() {
         startPrecision: precisionOf(draft.startHasTime),
         endsAt: draft.endsAt,
         endPrecision: draft.endsAt === null ? "unknown" : precisionOf(draft.endHasTime),
+        repeat: draft.repeat,
         updatedAt: new Date().toISOString(),
       });
       return { ...prev, [id]: next };
@@ -240,9 +304,22 @@ export function useCustom() {
     [],
   );
 
-  /** The reader's events, in the shape every view reads. */
+  /**
+   * The reader's events, in the shape every view reads, rules expanded.
+   *
+   * Bucketed to the minute rather than recomputed per tick: expanding every
+   * rule each second would be wasted work, and no countdown is wrong by less
+   * than a minute's delay in rolling to the next occurrence.
+   */
+  const minute = Math.floor(nowMs / 60_000);
   const rows = useMemo<DisplayEvent[]>(
-    () => Object.values(events).map(asDisplayEvent),
+    () => rowsFor(events, minute * 60_000),
+    [events, minute],
+  );
+
+  /** Every occurrence of every rule inside a range — the timeline's question. */
+  const occurrencesIn = useCallback(
+    (minMs: number, maxMs: number) => occurrencesInFor(events, minMs, maxMs),
     [events],
   );
 
@@ -253,6 +330,7 @@ export function useCustom() {
     games,
     events,
     rows,
+    occurrencesIn,
     lanes,
     addGame,
     editGame,

@@ -18,7 +18,12 @@ import { dailiesId } from "../src/shared/daily.ts";
 import { nextOccurrences, Repeat } from "../src/shared/recurrence.ts";
 import { eventId, GameId } from "../src/shared/schema.ts";
 import { clockFor } from "../src/shared/time.ts";
-import { readerInstant, validRecords } from "../src/client/state/useCustom.ts";
+import {
+  occurrencesInFor,
+  readerInstant,
+  rowsFor,
+  validRecords,
+} from "../src/client/state/useCustom.ts";
 
 const AT = "2026-08-17T12:00:00.000Z";
 
@@ -544,5 +549,61 @@ describe("asOccurrenceEvent", () => {
     const clock = clockFor(row, "europe", new Date("2026-09-02T12:00:00").getTime());
     expect(clock.msRemaining).not.toBe(null);
     expect(clock.live).toBe(true);
+  });
+});
+
+describe("expanding rules into rows", () => {
+  const NOW = new Date("2026-09-03T12:00:00").getTime();
+
+  const plain = ownEvent({ id: "myevent:plain00001" });
+  const repeating = ownEvent({
+    id: "myevent:k3f9qa2m01",
+    startsAt: new Date("2026-09-01T09:00:00").toISOString(),
+    startPrecision: "exact",
+    endsAt: new Date("2026-09-08T09:00:00").toISOString(),
+    endPrecision: "exact",
+    repeat: { unit: "weeks", interval: 2, until: null },
+  });
+  const store = { [plain.id]: plain, [repeating.id]: repeating };
+
+  test("a non-repeating event still yields exactly one row, unchanged", () => {
+    const rows = rowsFor({ [plain.id]: plain }, NOW);
+    expect(rows.map((r) => r.id)).toEqual(["myevent:plain00001"]);
+  });
+
+  test("a rule yields two rows however often it repeats", () => {
+    // The lists answer "what ends soonest". Thirteen rows for one weekly rule
+    // is the clutter F1 exists to avoid.
+    const rows = rowsFor(store, NOW);
+    expect(rows.filter((r) => r.id.startsWith("myevent:k3f9qa2m01")).map((r) => r.id)).toEqual([
+      "myevent:k3f9qa2m01#2026-09-01",
+      "myevent:k3f9qa2m01#2026-09-15",
+    ]);
+  });
+
+  test("each occurrence is a separate key, so marks do not bleed between them", () => {
+    const rows = rowsFor(store, NOW);
+    const ids = rows.map((r) => r.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  test("occurrencesIn covers a whole range, not just the next two", () => {
+    const rows = occurrencesInFor(
+      store,
+      new Date("2026-09-01T00:00:00").getTime(),
+      new Date("2026-11-01T00:00:00").getTime(),
+    );
+    expect(rows.filter((r) => r.id.startsWith("myevent:k3f9qa2m01"))).toHaveLength(5);
+  });
+
+  test("occurrencesIn ignores non-repeating events", () => {
+    // They are already in `rows`; returning them here would double every one of
+    // the reader's plain events on the board.
+    const rows = occurrencesInFor(
+      { [plain.id]: plain },
+      new Date("2026-01-01T00:00:00").getTime(),
+      new Date("2027-01-01T00:00:00").getTime(),
+    );
+    expect(rows).toEqual([]);
   });
 });

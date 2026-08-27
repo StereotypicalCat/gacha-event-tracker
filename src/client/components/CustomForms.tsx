@@ -202,6 +202,9 @@ export function EventForm({
           startHasTime: startTime !== "",
           endsAt,
           endHasTime: endTime !== "",
+          // This form has no repeat control yet — every event it saves is
+          // still a single occurrence, exactly as before.
+          repeat: null,
         });
       }}
     >

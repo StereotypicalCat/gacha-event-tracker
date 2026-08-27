@@ -108,7 +108,7 @@ export function App() {
   const ignored = useMarkSet(KEYS.ignored);
   const prog = useProgress();
   const daily = useDailyLog();
-  const custom = useCustom();
+  const custom = useCustom(now);
   // Colour only: which ground the page is drawn on, written to the document by
   // the hook. Nothing else in the app asks what it is — the tokens in
   // styles.css answer for every component — except the hues below.
