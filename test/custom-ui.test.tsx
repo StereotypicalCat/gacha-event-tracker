@@ -7,6 +7,7 @@ import {
 } from "../src/client/components/CustomForms.tsx";
 import { YourOwn } from "../src/client/components/YourOwn.tsx";
 import { EventRow } from "../src/client/components/EventRow.tsx";
+import { EventDetail } from "../src/client/components/EventDetail.tsx";
 import { AUTHOR, Colophon, REPO_URL } from "../src/client/components/Colophon.tsx";
 import { GameMetaProvider } from "../src/client/state/gameMeta.tsx";
 import {
@@ -14,6 +15,7 @@ import {
   CustomEvent,
   type CustomEvents,
   type CustomGames,
+  type DisplayEvent,
 } from "../src/shared/custom.ts";
 import { metaFor } from "../src/shared/games.ts";
 import { clockFor } from "../src/shared/time.ts";
@@ -466,5 +468,83 @@ describe("the sheet says how often", () => {
 
   test("a non-repeating event has no cadence to show", () => {
     expect(cadenceLabel(null)).toBe(null);
+  });
+});
+
+describe("the derived-boundary note", () => {
+  const NOW = Date.parse("2026-08-25T12:00:00.000Z");
+
+  const noop = () => {};
+  const detailProps = {
+    completed: false,
+    ignored: false,
+    status: undefined,
+    effort: undefined,
+    note: "",
+    region: "europe" as const,
+    now: NOW,
+    daily: false,
+    detectedDaily: false,
+    dailyDays: [],
+    onDaily: noop,
+    onToggleDay: noop,
+    onIgnore: noop,
+    onStatus: noop,
+    onEffort: noop,
+    onNote: noop,
+    onClose: noop,
+  };
+
+  // A parser declining to guess a time of day — the case the note was written
+  // for. `dates.ts` stores the placeholder as 00:00Z, and `boundaryMs` reads
+  // it against the game's own server reset rather than literally.
+  const PARSED: DisplayEvent = {
+    id: "genshin:walpurgisnacht:2026-09-03",
+    game: "genshin",
+    title: "Walpurgisnacht",
+    type: "banner",
+    summary: null,
+    startsAt: "2026-08-20T00:00:00.000Z",
+    startPrecision: "day",
+    endsAt: "2026-09-03T00:00:00.000Z",
+    endPrecision: "day",
+    regionScoped: false,
+    regionEnds: null,
+    sourceUrl: "https://example.com/events",
+    sourceId: "genshin-game8-events",
+    status: "published",
+    confidence: 1,
+    extractionMethod: "parser",
+    version: 1,
+    firstSeenAt: AT,
+    updatedAt: AT,
+  };
+
+  test("present for a parser-sourced day-precision event", () => {
+    const html = renderToStaticMarkup(
+      <GameMetaProvider value={(id) => metaFor(id, GAMES)}>
+        <EventDetail
+          {...detailProps}
+          row={{ event: PARSED, clock: clockFor(PARSED, detailProps.region, NOW) }}
+        />
+      </GameMetaProvider>,
+    );
+    expect(html).toContain("server reset");
+  });
+
+  test("absent for a reader's own day-precision event", () => {
+    // False three times over: no source, nobody "gave" a date, and
+    // `boundaryMs` only applies the reset shift for `extractionMethod ===
+    // "parser"` — a reader's own event is "manual" even at day precision.
+    const own = asDisplayEvent(OWN);
+    const html = renderToStaticMarkup(
+      <GameMetaProvider value={(id) => metaFor(id, GAMES)}>
+        <EventDetail
+          {...detailProps}
+          row={{ event: own, clock: clockFor(own, detailProps.region, NOW) }}
+        />
+      </GameMetaProvider>,
+    );
+    expect(html).not.toContain("server reset");
   });
 });

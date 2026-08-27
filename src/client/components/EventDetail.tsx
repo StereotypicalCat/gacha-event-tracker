@@ -281,7 +281,16 @@ export function EventDetail({
           </div>
         )}
 
-        {event.endPrecision === "day" && event.endsAt !== null && (
+        {/* Gated on the same condition `boundaryMs` uses to apply the reset
+            shift, so the copy never claims a countdown the clock is not
+            actually running. A reader's own event is day-precision exactly as
+            often as a parsed one, but `extractionMethod` is "manual" — there
+            is no source to have "given" a date, and `readerInstant` already
+            resolved it to the instant they meant rather than a placeholder
+            `boundaryMs` has to reinterpret. */}
+        {event.endPrecision === "day" &&
+          event.endsAt !== null &&
+          event.extractionMethod === "parser" && (
           <p className="mt-3 text-xs leading-relaxed text-faint">
             The source gave a date but no time of day, so this counts down to
             that day's {REGION_LABEL[region]} server reset — where these usually land, but a
