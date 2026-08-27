@@ -113,11 +113,14 @@ describe("occurrence ids", () => {
   });
 
   test("the day is the reader's local day, not UTC's", () => {
-    // 23:30 local on 1 September is 21:30Z — a UTC reading would label this
-    // occurrence with the right day here, but the reverse case would not, and
-    // the reader typed a local date. Assert the local reading directly.
-    const id = occurrenceId(RULE, new Date("2026-09-01T23:30:00").getTime());
-    expect(id).toBe("myevent:k3f9qa2m01#2026-09-01");
+    // 00:30 local on 2 September is 22:30Z on the 1st, so the two readings
+    // disagree about which day this is. That disagreement is the whole point:
+    // the reader typed a local date and is shown a local date back, and a UTC
+    // reading would file this occurrence under the previous day for every
+    // reader east of UTC. Asserted with an instant where the two differ,
+    // because an instant where they agree proves nothing.
+    const id = occurrenceId(RULE, new Date("2026-09-02T00:30:00").getTime());
+    expect(id).toBe("myevent:k3f9qa2m01#2026-09-02");
   });
 
   test("the rule id is recoverable, and a plain id is its own rule", () => {
@@ -136,14 +139,6 @@ describe("occurrence ids", () => {
     // isCustomEventId is a startsWith check on the first segment, so lane
     // logic, RESERVED_ID_SEGMENTS and "never attributed to a source" all hold.
     expect(isCustomEventId("myevent:k3f9qa2m01#2026-09-01")).toBe(true);
-  });
-
-  test("renaming a rule cannot move its occurrence ids", () => {
-    // The title is not an input here, and that is the guarantee: the token is
-    // random precisely so fixing a typo never costs the marks attached to it,
-    // exactly as mintCustomEventId describes.
-    const start = new Date("2026-09-01T09:00:00").getTime();
-    expect(occurrenceId(RULE, start)).toBe(occurrenceId(RULE, start));
   });
 
   test("CustomEventId REJECTS an occurrence id", () => {
