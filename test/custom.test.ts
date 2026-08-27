@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   asDisplayEvent,
+  asOccurrenceEvent,
   CustomEvent,
   CustomGame,
   isCustomEventId,
@@ -14,7 +15,7 @@ import {
 } from "../src/shared/custom.ts";
 import { metaFor } from "../src/shared/games.ts";
 import { dailiesId } from "../src/shared/daily.ts";
-import { Repeat } from "../src/shared/recurrence.ts";
+import { nextOccurrences, Repeat } from "../src/shared/recurrence.ts";
 import { eventId, GameId } from "../src/shared/schema.ts";
 import { clockFor } from "../src/shared/time.ts";
 import { readerInstant, validRecords } from "../src/client/state/useCustom.ts";
@@ -471,5 +472,77 @@ describe("a custom event may carry a repeat rule", () => {
       updatedAt: AT,
     });
     expect(parsed.success).toBe(true);
+  });
+});
+
+describe("asOccurrenceEvent", () => {
+  const repeating = () =>
+    ownEvent({
+      startsAt: new Date("2026-09-01T09:00:00").toISOString(),
+      startPrecision: "exact",
+      endsAt: new Date("2026-09-08T09:00:00").toISOString(),
+      endPrecision: "exact",
+      repeat: { unit: "weeks", interval: 2, until: null },
+    });
+
+  test("carries the occurrence's id and dates, and the rule's everything else", () => {
+    const rule = repeating();
+    const occ = nextOccurrences(rule, new Date("2026-09-15T12:00:00").getTime(), 1)[0]!;
+    const row = asOccurrenceEvent(rule, occ);
+
+    expect(row.id).toBe("myevent:k3f9qa2m01#2026-09-15");
+    expect(row.startsAt).toBe(occ.startsAt);
+    expect(row.endsAt).toBe(occ.endsAt);
+    expect(row.title).toBe(rule.title);
+    expect(row.game).toBe(rule.game);
+    expect(row.type).toBe(rule.type);
+  });
+
+  test("is still the reader's own, and still claims no source", () => {
+    const rule = repeating();
+    const occ = nextOccurrences(rule, new Date("2026-09-01T12:00:00").getTime(), 1)[0]!;
+    const row = asOccurrenceEvent(rule, occ);
+
+    expect(row.sourceUrl).toBe(null);
+    expect(row.sourceId).toBe("you");
+    expect(row.extractionMethod).toBe("manual");
+    expect(isCustomEventId(row.id)).toBe(true);
+  });
+
+  test("renaming a rule does not move its occurrence ids", () => {
+    // The token is random precisely so fixing a typo never costs the marks
+    // attached to an occurrence. Exercised here rather than against
+    // occurrenceId, which never takes a title and so could not fail it: this
+    // path passes the whole rule, so a rename is a real input to the result.
+    const rule = repeating();
+    const renamed = { ...rule, title: "Abyss, actually" };
+    const now = new Date("2026-09-15T12:00:00").getTime();
+    const before = asOccurrenceEvent(rule, nextOccurrences(rule, now, 1)[0]!);
+    const after = asOccurrenceEvent(renamed, nextOccurrences(renamed, now, 1)[0]!);
+
+    expect(after.id).toBe(before.id);
+    expect(after.title).toBe("Abyss, actually");
+  });
+
+  test("a derived end is a real end, so the clock counts down to it", () => {
+    // The rule stores endsAt: null; the occurrence resolves it. A row reaching
+    // a view must never carry the unresolved form, or it renders as
+    // live-with-unknown-end forever — the exact failure this design exists to
+    // avoid.
+    const rule = ownEvent({
+      startsAt: new Date("2026-09-01T09:00:00").toISOString(),
+      startPrecision: "exact",
+      endsAt: null,
+      endPrecision: "unknown",
+      repeat: { unit: "weeks", interval: 1, until: null },
+    });
+    const occ = nextOccurrences(rule, new Date("2026-09-02T12:00:00").getTime(), 1)[0]!;
+    const row = asOccurrenceEvent(rule, occ);
+
+    expect(row.endsAt).not.toBe(null);
+    expect(row.endPrecision).not.toBe("unknown");
+    const clock = clockFor(row, "europe", new Date("2026-09-02T12:00:00").getTime());
+    expect(clock.msRemaining).not.toBe(null);
+    expect(clock.live).toBe(true);
   });
 });

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { comesRoundEarly, Repeat } from "./recurrence.ts";
+import type { Occurrence } from "./recurrence.ts";
 import { EventType, GachaEvent, Precision, slugify } from "./schema.ts";
 
 /**
@@ -241,4 +242,32 @@ export function precisionOf(hasTime: boolean): Extract<Precision, "exact" | "day
 /** True when `id` is a game this reader defined and still has. */
 export function knownLane(id: LaneId, games: CustomGames): boolean {
   return !isCustomGameId(id) || games[id] !== undefined;
+}
+
+/**
+ * Project one occurrence of a rule into the shape the views read.
+ *
+ * Everything that identifies the *thing* comes from the rule; everything that
+ * identifies *which time round* comes from the occurrence. Nothing downstream
+ * is told which it is looking at, which is what lets sort, focus, lanes,
+ * filters, progress, ignores and the daily checklist work with no narrowing at
+ * any call site.
+ *
+ * The end is always resolved here, never `null`. A rule with no stated end
+ * stores `null` and means "until the next one opens"; a row that reached a view
+ * still carrying the unresolved form would render as live-with-unknown-end
+ * forever, which is the failure this whole design exists to avoid.
+ */
+export function asOccurrenceEvent(
+  rule: CustomEvent,
+  occurrence: Occurrence,
+): DisplayEvent {
+  return {
+    ...asDisplayEvent(rule),
+    id: occurrence.id,
+    startsAt: occurrence.startsAt,
+    startPrecision: occurrence.startPrecision,
+    endsAt: occurrence.endsAt,
+    endPrecision: occurrence.endPrecision,
+  };
 }
