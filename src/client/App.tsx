@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { fetchFeed, type FeedState } from "./api.ts";
 import { Controls } from "./components/Controls.tsx";
 import { Dailies } from "./components/Dailies.tsx";
@@ -265,28 +265,31 @@ export function App() {
   const focus = resolveFocus(prefs.focusGame, enabled);
 
   /**
-   * Everything the reader could be looking at, before focus narrows it. The
-   * focus chips count off this, so a chip can say what is waiting in a game
-   * that is not the one currently on screen.
+   * The filters that decide whether a row is on screen at all.
+   *
+   * Extracted from `inScope` so the timeline's expanded occurrences pass
+   * through the same four questions. Restating them there would be a second
+   * copy that drifts, and each drift is a row the reader told us to hide
+   * appearing on the board.
    */
-  const inScope = useMemo(
-    () =>
-      allRows
+  const inScopeOf = useCallback(
+    (rows: RowEvent[]) =>
+      rows
         .filter((r) => !prefs.hiddenGames.includes(r.event.game))
         .filter((r) => !r.clock.ended)
         // Ignored events are gone from both views unless deliberately revealed
         // — that is the whole point of ignoring one.
         .filter((r) => prefs.showIgnored || !isIgnored(r.event.id))
         .filter((r) => prefs.showCompleted || !isDone(r.event.id)),
-    [
-      allRows,
-      prefs.hiddenGames,
-      prefs.showCompleted,
-      prefs.showIgnored,
-      prog.progress,
-      ignored.marks,
-    ],
+    [prefs.hiddenGames, prefs.showCompleted, prefs.showIgnored, prog.progress, ignored.marks],
   );
+
+  /**
+   * Everything the reader could be looking at, before focus narrows it. The
+   * focus chips count off this, so a chip can say what is waiting in a game
+   * that is not the one currently on screen.
+   */
+  const inScope = useMemo(() => inScopeOf(allRows), [allRows, inScopeOf]);
 
   const visible = useMemo(
     () =>
@@ -296,6 +299,27 @@ export function App() {
         // inside a group, so choosing one never costs the deadline order.
         .sort(compareRows(prefs.sort, activityOf)),
     [inScope, focus, prefs.sort, prog.progress, daily.logs],
+  );
+
+  /**
+   * Fills the timeline's settled window with the rest of a rule's rhythm.
+   *
+   * Passed to `<Timeline>` as `expand` rather than inlined there — a hook
+   * cannot be called inside JSX. Filtered through `inScopeOf` and the focus
+   * chip so an expanded occurrence obeys exactly what a base row obeys: a
+   * hidden game, an ignored event, or a finished one stays off the board.
+   */
+  const expandOccurrences = useCallback(
+    (min: number, max: number) =>
+      inScopeOf(
+        custom
+          .occurrencesIn(min, max)
+          .map((event) => ({ event, clock: clockFor(event, prefs.region, now) })),
+      ).filter((r) => focus === null || r.event.game === focus),
+    // `now` is deliberately coarse here, as it is for `allRows`:
+    // re-expanding every rule each second would be wasted work.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [custom.occurrencesIn, inScopeOf, focus, prefs.region, Math.floor(now / 60_000)],
   );
 
   const live = visible.filter((r) => r.clock.live);
@@ -585,6 +609,7 @@ export function App() {
             gameOrder={ordered}
             onOpen={setOpenId}
             isDone={isDone}
+            expand={expandOccurrences}
           />
         </>
       )}

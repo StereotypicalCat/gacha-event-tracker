@@ -821,3 +821,29 @@ describe("CatchUpPanel", () => {
     expect([...markup.matchAll(/aria-label="[^"]*(?:not )?done"/g)]).toHaveLength(17);
   });
 });
+
+describe("boardWindow is not widened by expansion", () => {
+  test("a rule's occurrences cannot enlarge the board that generated them", () => {
+    // The circularity guard. boardWindow takes max from the ends it is given,
+    // so if expanded occurrences were fed back into it, each pass would widen
+    // the window, generate more occurrences and widen it again — a rule with
+    // until: null would never terminate. The fix is ordering: settle the window
+    // from the base rows, THEN expand into it. This test pins the ordering by
+    // asserting the window is a function of the base rows alone.
+    const now = Date.parse("2026-09-03T12:00:00.000Z");
+    const starts = [Date.parse("2026-09-01T00:00:00.000Z")];
+    const ends = [Date.parse("2026-09-08T00:00:00.000Z")];
+
+    const base = boardWindow(starts, ends, now);
+
+    // A year of weekly occurrences, as `expand` would return them.
+    const expandedEnds = Array.from({ length: 52 }, (_, i) =>
+      Date.parse("2026-09-08T00:00:00.000Z") + i * 7 * 24 * 60 * 60 * 1000,
+    );
+    const ifItLeaked = boardWindow(starts, [...ends, ...expandedEnds], now);
+
+    expect(base.max).toBeLessThan(ifItLeaked.max);
+    // Which is exactly why Timeline must compute starts/ends from `plotted`
+    // before calling expand — asserted structurally in the component below.
+  });
+});

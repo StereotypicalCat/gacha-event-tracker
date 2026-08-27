@@ -1,7 +1,7 @@
 import { Fragment, useLayoutEffect, useRef } from "react";
 import { useGameMeta } from "../state/gameMeta.tsx";
 import type { LaneId } from "../../shared/custom.ts";
-import { DAY } from "../../shared/time.ts";
+import { DAY, endingSoonestFirst } from "../../shared/time.ts";
 import type { RowEvent } from "./EventRow.tsx";
 import { URGENCY_COLOR } from "./Meter.tsx";
 import {
@@ -103,6 +103,7 @@ export function Timeline({
   gameOrder,
   onOpen,
   isDone,
+  expand,
 }: {
   rows: RowEvent[];
   now: number;
@@ -152,6 +153,18 @@ export function Timeline({
    * that would say "finished" about something they have not started.
    */
   isDone: (id: string) => boolean;
+  /**
+   * More rows to draw, once the board's range is known.
+   *
+   * Called with the settled window rather than returning everything up front,
+   * because a repeating rule has no natural end — it fills whatever it is
+   * given. **It must be called after `boardWindow`, never before:** the window
+   * takes its `max` from the ends it is handed, so feeding expanded
+   * occurrences back into it would widen the window, generate more
+   * occurrences, and widen it again, and a rule with no `until` would never
+   * terminate.
+   */
+  expand?: ((minMs: number, maxMs: number) => RowEvent[]) | undefined;
 }) {
   const gameMeta = useGameMeta();
   const scroller = useRef<HTMLDivElement>(null);
@@ -162,9 +175,26 @@ export function Timeline({
   const waiting = rows.filter((r) => r.clock.upcoming);
   const plotted = showUpcoming ? rows : rows.filter((r) => !r.clock.upcoming);
 
+  // From `plotted` alone, and settled before `expand` is called. See the prop's
+  // note: this is the ordering that keeps a repeating rule from growing the
+  // board it is being drawn onto.
   const ends = plotted.map((r) => r.clock.endsMs ?? r.clock.startsMs + 14 * DAY);
   const starts = plotted.map((r) => r.clock.startsMs);
   const { min, max } = boardWindow(starts, ends, now);
+
+  // Rules fill the settled window. Deduplicated because the first two
+  // occurrences of every rule are already in `plotted` — they are what the
+  // lists carry — and drawn on top of each other they would read as a bolder
+  // bar rather than as a duplicate.
+  const seen = new Set(plotted.map((r) => r.event.id));
+  const extra = (expand?.(min, max) ?? []).filter(
+    (r) => !seen.has(r.event.id) && (showUpcoming || !r.clock.upcoming),
+  );
+  // Re-sorted only when there is something to merge, so a reader with no
+  // repeating events sees byte-identical behaviour. `endingSoonestFirst` is the
+  // order `splitAt` relies on — live before upcoming — and appending unsorted
+  // rows would break the split point it looks for.
+  const drawn = extra.length === 0 ? plotted : [...plotted, ...extra].sort(endingSoonestFirst);
   const totalDays = Math.ceil((max - min) / DAY);
   const chartWidth = totalDays * dayWidth;
   /** One coordinate space for everything: bars, gridlines and the now rule. */
@@ -222,7 +252,7 @@ export function Timeline({
     );
   }
 
-  const lanes = timelineLanes(plotted, group, splitUpcoming, gameOrder);
+  const lanes = timelineLanes(drawn, group, splitUpcoming, gameOrder);
   const marks = startMarkers(plotted, x);
 
   const months = monthBoundaries(min, max);
