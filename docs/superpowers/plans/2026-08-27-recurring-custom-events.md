@@ -850,6 +850,10 @@ describe("occurrencesOf", () => {
       day("2026-09-04T00:00:00"),
     );
     expect(got.map((o) => o.id)).toEqual([
+      // The 31st opens at 09:00 and, having no stated end, runs to 09:00 on the
+      // 1st — which is inside a window that opens at midnight. Half off the
+      // left edge is still on the board, so it counts.
+      "myevent:k3f9qa2m01#2026-08-31",
       "myevent:k3f9qa2m01#2026-09-01",
       "myevent:k3f9qa2m01#2026-09-02",
       "myevent:k3f9qa2m01#2026-09-03",
@@ -1035,7 +1039,7 @@ export function nextOccurrences(
 - [ ] **Step 4: Run tests and typecheck**
 
 Run: `bun test test/recurrence.test.ts`
-Expected: PASS, 35 tests.
+Expected: PASS, 34 tests.
 
 Run: `bun run typecheck`
 Expected: exit 0.
