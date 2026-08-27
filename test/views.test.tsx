@@ -389,6 +389,67 @@ describe("Timeline stacking", () => {
   });
 });
 
+describe("Timeline: expand", () => {
+  const rows = [
+    row("Closing Ceremony", "genshin", 100),
+    row("Second Wind", "hsr", 6),
+  ];
+
+  const board = (
+    expand: (min: number, max: number) => ReturnType<typeof row>[],
+    showUpcoming = false,
+  ) =>
+    render(
+      <Timeline
+        rows={rows}
+        now={NOW}
+        dayWidth={13}
+        onZoom={() => {}}
+        group="game"
+        onGroup={() => {}}
+        showUpcoming={showUpcoming}
+        splitUpcoming
+        onOpen={() => {}}
+        isDone={() => false}
+        expand={expand}
+      />,
+    );
+
+  test("an occurrence expand hands back is drawn alongside the base rows", () => {
+    // The lists only ever carry a rule's first two occurrences — expand exists
+    // so the rest of its rhythm still reaches the board. This is the
+    // straightforward half of that promise: something expand hands back that
+    // is not already among the base rows has to actually appear.
+    const extra = row("Third Rail", "zzz", 50);
+    const html = board(() => [extra]);
+    expect(html).toContain("Third Rail");
+  });
+
+  test("an occurrence already among the base rows is not drawn twice", () => {
+    // expand does not know what the lists already showed, so it is free to
+    // hand back the same occurrences that are already in the base rows —
+    // exactly what happens for the first two of every rule. Undeduped, each
+    // would draw a second bar directly on top of the first: not a visible
+    // duplicate row a reader would notice, but one bar reading subtly bolder
+    // than the rest, which is a far easier thing to miss. Comparing the whole
+    // rendered markup, rather than counting how many times a title appears,
+    // is what catches a bar drawn twice in the same place.
+    const extra = row("Third Rail", "zzz", 50);
+    const withDuplicates = board(() => [rows[0]!, rows[1]!, extra]);
+    const withoutDuplicates = board(() => [extra]);
+    expect(withDuplicates).toBe(withoutDuplicates);
+  });
+
+  test("showUpcoming={false} holds back an upcoming extra same as a base row", () => {
+    // Expanded occurrences answer to the same switch as everything else on the
+    // board. An extra that has not started yet is exactly the "next patch
+    // queued behind it" noise showUpcoming exists to hold back — it does not
+    // get a pass for having arrived through expand instead of rows.
+    const html = board(() => [upcoming("Future Wave", "zzz", 48)], false);
+    expect(html).not.toContain("Future Wave");
+  });
+});
+
 describe("Timeline: events that have not started", () => {
   const rows = [
     row("Closing Ceremony", "genshin", 100),
