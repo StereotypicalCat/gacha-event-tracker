@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { addUnits, comesRoundEarly, Repeat, isOccurrenceId, occurrenceId, ruleIdOf, movesOccurrences } from "../src/shared/recurrence.ts";
+import { addUnits, comesRoundEarly, Repeat, isOccurrenceId, occurrenceId, ruleIdOf, movesOccurrences, nextOccurrences, occurrencesOf, type RepeatingEvent } from "../src/shared/recurrence.ts";
 import { CustomEventId, isCustomEventId } from "../src/shared/custom.ts";
 
 // Pinned so the DST cases mean something. Copenhagen is UTC+1 in winter and
@@ -183,5 +183,186 @@ describe("movesOccurrences", () => {
   test("an untouched schedule moves nothing", () => {
     const a = rule("2026-09-01T07:00:00.000Z", 2);
     expect(movesOccurrences(a, rule("2026-09-01T07:00:00.000Z", 2))).toBe(false);
+  });
+});
+
+describe("occurrencesOf", () => {
+  function rule(over: Partial<RepeatingEvent> = {}): RepeatingEvent {
+    return {
+      id: "myevent:k3f9qa2m01",
+      startsAt: new Date("2026-09-01T09:00:00").toISOString(),
+      startPrecision: "exact",
+      endsAt: new Date("2026-09-08T09:00:00").toISOString(),
+      endPrecision: "exact",
+      repeat: { unit: "weeks", interval: 2, until: null },
+      ...over,
+    };
+  }
+
+  const day = (local: string) => new Date(local).getTime();
+
+  test("a non-repeating event yields nothing", () => {
+    // Callers keep the existing single-event path; this function is only ever
+    // about rules, which keeps the blast radius off events that already exist.
+    expect(occurrencesOf(rule({ repeat: null }), day("2026-01-01T00:00:00"), day("2027-01-01T00:00:00"))).toEqual([]);
+  });
+
+  test("slides the stated window forward by the interval", () => {
+    const got = occurrencesOf(rule(), day("2026-09-01T00:00:00"), day("2026-10-01T00:00:00"));
+    expect(got.map((o) => o.id)).toEqual([
+      "myevent:k3f9qa2m01#2026-09-01",
+      "myevent:k3f9qa2m01#2026-09-15",
+      "myevent:k3f9qa2m01#2026-09-29",
+    ]);
+    // The duration is held constant, not recomputed.
+    expect(new Date(got[1]!.endsAt).getTime() - new Date(got[1]!.startsAt).getTime())
+      .toBe(7 * 24 * 60 * 60 * 1000);
+  });
+
+  test("with no stated end, each occurrence runs until the next opens", () => {
+    // The point of the whole design: a rule supplies the boundary the rotation
+    // was missing, so `endsAt: null` here is not the unbounded case
+    // docs/SOURCES.md refuses. Occurrences are contiguous, with no gap.
+    const got = occurrencesOf(
+      rule({ endsAt: null, endPrecision: "unknown", repeat: { unit: "weeks", interval: 1, until: null } }),
+      day("2026-09-01T00:00:00"),
+      day("2026-09-23T00:00:00"),
+    );
+    expect(got).toHaveLength(4);
+    expect(got[0]!.endsAt).toBe(got[1]!.startsAt);
+    expect(got[1]!.endsAt).toBe(got[2]!.startsAt);
+    // Derived from the reader's own anchor, so it inherits that precision
+    // rather than claiming to be exact when their start was only a day.
+    expect(got[0]!.endPrecision).toBe("exact");
+  });
+
+  test("a derived end inherits the anchor's start precision", () => {
+    const got = occurrencesOf(
+      rule({ startPrecision: "day", endsAt: null, endPrecision: "unknown" }),
+      day("2026-09-01T00:00:00"),
+      day("2026-09-20T00:00:00"),
+    );
+    expect(got[0]!.endPrecision).toBe("day");
+  });
+
+  test("until stops the series, and the last window still closes on schedule", () => {
+    const got = occurrencesOf(
+      rule({
+        endsAt: null,
+        endPrecision: "unknown",
+        repeat: { unit: "weeks", interval: 1, until: new Date("2026-09-16T00:00:00").toISOString() },
+      }),
+      day("2026-09-01T00:00:00"),
+      day("2026-12-01T00:00:00"),
+    );
+    // Opens 1, 8, 15 Sep. The 22nd is past `until`, so it never opens — but the
+    // 15th's window still runs its full week rather than being truncated.
+    expect(got.map((o) => o.id)).toEqual([
+      "myevent:k3f9qa2m01#2026-09-01",
+      "myevent:k3f9qa2m01#2026-09-08",
+      "myevent:k3f9qa2m01#2026-09-15",
+    ]);
+    expect(got[2]!.endsAt).toBe(new Date("2026-09-22T09:00:00").toISOString());
+  });
+
+  test("an occurrence overlapping the window at either edge is included", () => {
+    // A bar half off the left of the board is still on the board.
+    const got = occurrencesOf(rule(), day("2026-09-03T00:00:00"), day("2026-09-04T00:00:00"));
+    expect(got.map((o) => o.id)).toEqual(["myevent:k3f9qa2m01#2026-09-01"]);
+  });
+
+  test("monthly rules clamp and do not accumulate", () => {
+    const got = occurrencesOf(
+      rule({
+        startsAt: new Date("2026-01-31T09:00:00").toISOString(),
+        endsAt: null,
+        endPrecision: "unknown",
+        repeat: { unit: "months", interval: 1, until: null },
+      }),
+      day("2026-01-01T00:00:00"),
+      day("2026-04-15T00:00:00"),
+    );
+    expect(got.map((o) => o.id)).toEqual([
+      "myevent:k3f9qa2m01#2026-01-31",
+      "myevent:k3f9qa2m01#2026-02-28",
+      "myevent:k3f9qa2m01#2026-03-31",
+    ]);
+  });
+
+  test("the cap bounds what one call can allocate", () => {
+    const got = occurrencesOf(
+      rule({ endsAt: null, endPrecision: "unknown", repeat: { unit: "days", interval: 1, until: null } }),
+      day("2026-01-01T00:00:00"),
+      day("2030-01-01T00:00:00"),
+      10,
+    );
+    expect(got).toHaveLength(10);
+  });
+
+  test("an ancient anchor still reaches a window years later", () => {
+    const got = occurrencesOf(
+      rule({
+        startsAt: new Date("2020-09-01T09:00:00").toISOString(),
+        endsAt: null,
+        endPrecision: "unknown",
+        repeat: { unit: "days", interval: 1, until: null },
+      }),
+      day("2026-09-01T00:00:00"),
+      day("2026-09-04T00:00:00"),
+    );
+    // The anchor's 09:00 wall clock does not line up with the window's
+    // midnight boundary, so 31 August's occurrence — which, having no stated
+    // end, runs until 1 September 09:00 opens the next one — overlaps the
+    // window's first nine hours. Same edge rule as the test above, just
+    // reached from six years back instead of a few days.
+    expect(got.map((o) => o.id)).toEqual([
+      "myevent:k3f9qa2m01#2026-08-31",
+      "myevent:k3f9qa2m01#2026-09-01",
+      "myevent:k3f9qa2m01#2026-09-02",
+      "myevent:k3f9qa2m01#2026-09-03",
+    ]);
+  });
+});
+
+describe("nextOccurrences", () => {
+  function rule(over: Partial<RepeatingEvent> = {}): RepeatingEvent {
+    return {
+      id: "myevent:k3f9qa2m01",
+      startsAt: new Date("2026-09-01T09:00:00").toISOString(),
+      startPrecision: "exact",
+      endsAt: new Date("2026-09-08T09:00:00").toISOString(),
+      endPrecision: "exact",
+      repeat: { unit: "weeks", interval: 2, until: null },
+      ...over,
+    };
+  }
+
+  test("returns the running occurrence and the one after it", () => {
+    const now = new Date("2026-09-03T12:00:00").getTime();
+    const got = nextOccurrences(rule(), now, 2);
+    expect(got.map((o) => o.id)).toEqual([
+      "myevent:k3f9qa2m01#2026-09-01",
+      "myevent:k3f9qa2m01#2026-09-15",
+    ]);
+  });
+
+  test("between cycles it returns the next to open, plus the one after", () => {
+    // A rule with a gap has nothing running on 10 September. "Opens Saturday"
+    // is the honest answer; showing nothing would read as the rule being over.
+    const now = new Date("2026-09-10T12:00:00").getTime();
+    const got = nextOccurrences(rule(), now, 2);
+    expect(got.map((o) => o.id)).toEqual([
+      "myevent:k3f9qa2m01#2026-09-15",
+      "myevent:k3f9qa2m01#2026-09-29",
+    ]);
+  });
+
+  test("a series past its until yields nothing", () => {
+    const got = nextOccurrences(
+      rule({ repeat: { unit: "weeks", interval: 2, until: new Date("2026-09-02T00:00:00").toISOString() } }),
+      new Date("2027-01-01T00:00:00").getTime(),
+      2,
+    );
+    expect(got).toEqual([]);
   });
 });

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { Precision } from "./schema.ts";
 
 /**
  * Events that come round again (PRD F13).
@@ -178,4 +179,124 @@ export function movesOccurrences(
     before.repeat?.unit !== after.repeat?.unit ||
     before.repeat?.interval !== after.repeat?.interval
   );
+}
+
+/**
+ * The fields a rule is expanded from — everything else is irrelevant.
+ *
+ * Structural rather than `CustomEvent` on purpose, and not only for the usual
+ * reason: `custom.ts` imports this module, so importing it back would be
+ * circular. It also means the ingest side can adopt this without a second
+ * implementation when `GachaEvent` grows the same field (see the spec's
+ * Phase B).
+ */
+export interface RepeatingEvent {
+  id: string;
+  startsAt: string;
+  startPrecision: Precision;
+  endsAt: string | null;
+  endPrecision: Precision;
+  repeat: Repeat | null;
+}
+
+/** One time round. Both boundaries are resolved; neither is ever null. */
+export interface Occurrence {
+  id: string;
+  /** How many times round this is, counting the anchor as 0. */
+  index: number;
+  startsAt: string;
+  startPrecision: Precision;
+  endsAt: string;
+  endPrecision: Precision;
+}
+
+/**
+ * How far the walk will seek before giving up looking for the window.
+ *
+ * Occurrences are walked from the anchor rather than jumped to arithmetically,
+ * because month stepping clamps and so has no closed form to jump with. Fifty
+ * years of a daily rule is a fraction of a millisecond and the result is
+ * memoised, so the simple walk is worth more than the arithmetic would save.
+ */
+const MAX_SEEK = 20_000;
+
+/**
+ * Every occurrence overlapping `[fromMs, toMs]`, oldest first.
+ *
+ * A non-repeating event yields nothing: callers keep their existing
+ * single-event path, so nothing about an event that already exists changes.
+ *
+ * **An occurrence with no stated end runs until the next one opens.** That is
+ * the boundary a bare rotation was missing — `docs/SOURCES.md` § arustats
+ * declines to publish one precisely because nothing bounded it — and it is
+ * derived from the interval the reader typed rather than invented for them. The
+ * store still holds `endsAt: null`; only this projection resolves it.
+ */
+export function occurrencesOf(
+  event: RepeatingEvent,
+  fromMs: number,
+  toMs: number,
+  cap: number = MAX_OCCURRENCES,
+): Occurrence[] {
+  const repeat = event.repeat;
+  if (repeat === null) return [];
+
+  const anchor = Date.parse(event.startsAt);
+  if (Number.isNaN(anchor)) return [];
+
+  // Held constant and slid forward, rather than recomputed per occurrence: the
+  // reader stated one window's length, not a rule for deriving lengths.
+  const stated = event.endsAt === null ? null : Date.parse(event.endsAt) - anchor;
+  const untilMs = repeat.until === null ? Infinity : Date.parse(repeat.until);
+
+  const out: Occurrence[] = [];
+  for (let n = 0; n < MAX_SEEK && out.length < cap; n += 1) {
+    const startsMs = addUnits(anchor, repeat.unit, n * repeat.interval);
+    if (startsMs > untilMs || startsMs > toMs) break;
+
+    // Always defined, even for the last occurrence of a terminating series: the
+    // window still closes on schedule, it simply is not followed by another.
+    const nextOpening = addUnits(startsMs, repeat.unit, repeat.interval);
+    const endsMs = stated === null ? nextOpening : startsMs + stated;
+
+    // Overlapping the window at either edge counts — a bar half off the left of
+    // the board is still on the board.
+    if (endsMs >= fromMs) {
+      out.push({
+        id: occurrenceId(event.id, startsMs),
+        index: n,
+        startsAt: new Date(startsMs).toISOString(),
+        startPrecision: event.startPrecision,
+        endsAt: new Date(endsMs).toISOString(),
+        // A derived end is exactly as well known as the anchor it was derived
+        // from; a stated one keeps the precision the reader stated it to.
+        endPrecision: stated === null ? event.startPrecision : event.endPrecision,
+      });
+    }
+  }
+  return out;
+}
+
+/**
+ * The next `count` occurrences that have not finished, oldest first.
+ *
+ * "Not finished" rather than "running", so a rule between cycles answers
+ * "opens Saturday" instead of answering nothing — a gap in a rotation is not
+ * the rotation being over, and the lists would otherwise lose the rule for the
+ * whole of its off week.
+ */
+export function nextOccurrences(
+  event: RepeatingEvent,
+  nowMs: number,
+  count: number,
+): Occurrence[] {
+  if (event.repeat === null || count <= 0) return [];
+  // Bounded rather than open-ended: `count` occurrences can never span more
+  // than `count` intervals past now, whatever the unit.
+  const horizon = addUnits(
+    nowMs,
+    event.repeat.unit,
+    event.repeat.interval * (count + 1),
+  );
+  return occurrencesOf(event, nowMs, horizon, count);
 }
