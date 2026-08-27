@@ -14,6 +14,7 @@ import {
 } from "../src/shared/custom.ts";
 import { metaFor } from "../src/shared/games.ts";
 import { dailiesId } from "../src/shared/daily.ts";
+import { Repeat } from "../src/shared/recurrence.ts";
 import { eventId, GameId } from "../src/shared/schema.ts";
 import { clockFor } from "../src/shared/time.ts";
 import { readerInstant, validRecords } from "../src/client/state/useCustom.ts";
@@ -395,5 +396,80 @@ describe("retiring a game, a source or a page", () => {
     const c = clockFor(asDisplayEvent(orphaned), "europe", Date.parse("2026-08-25T00:00:00.000Z"));
     expect(c.live).toBe(true);
     expect(c.endsMs).not.toBeNull();
+  });
+});
+
+describe("a custom event may carry a repeat rule", () => {
+  test("a record stored before this field existed still parses", () => {
+    // THE migration guarantee. readValid drops records that fail this schema,
+    // and the survivors are what the next write persists — so a required or
+    // bare-nullable field here would silently delete every custom event on
+    // every device that has one, with no server-side copy to restore from.
+    const legacy = {
+      id: "myevent:k3f9qa2m01",
+      game: "mygame:limbus-company",
+      title: "Walpurgisnacht",
+      type: "banner",
+      summary: null,
+      startsAt: "2026-08-20T00:00:00.000Z",
+      startPrecision: "day",
+      endsAt: "2026-09-03T00:00:00.000Z",
+      endPrecision: "day",
+      at: AT,
+      updatedAt: AT,
+      // no `repeat` key at all — this is the shape already in localStorage
+    };
+    const parsed = CustomEvent.safeParse(legacy);
+    expect(parsed.success).toBe(true);
+    expect(parsed.data!.repeat).toBe(null);
+  });
+
+  test("accepts a rule whose window closes before it comes round again", () => {
+    const event = ownEvent({
+      startsAt: "2026-09-01T00:00:00.000Z",
+      endsAt: "2026-09-08T00:00:00.000Z",
+      repeat: Repeat.parse({ unit: "weeks", interval: 2, until: null }),
+    });
+    expect(event.repeat?.interval).toBe(2);
+  });
+
+  test("rejects a rule that comes round before it ends", () => {
+    // A 14-day window repeating every 7 days puts two live occurrences of one
+    // rule in the same list, which makes "what ends soonest" ambiguous. Refused
+    // at the schema so an imported file cannot carry one in either.
+    const overlapping = CustomEvent.safeParse({
+      id: "myevent:k3f9qa2m01",
+      game: "mygame:limbus-company",
+      title: "Walpurgisnacht",
+      type: "banner",
+      summary: null,
+      startsAt: "2026-09-01T00:00:00.000Z",
+      startPrecision: "day",
+      endsAt: "2026-09-15T00:00:00.000Z",
+      endPrecision: "day",
+      repeat: { unit: "weeks", interval: 1, until: null },
+      at: AT,
+      updatedAt: AT,
+    });
+    expect(overlapping.success).toBe(false);
+  });
+
+  test("no stated end means there is no overlap to check", () => {
+    // The window runs to the next opening by definition, so it cannot overlap.
+    const parsed = CustomEvent.safeParse({
+      id: "myevent:k3f9qa2m01",
+      game: "mygame:limbus-company",
+      title: "Weekly missions",
+      type: "other",
+      summary: null,
+      startsAt: "2026-09-01T00:00:00.000Z",
+      startPrecision: "day",
+      endsAt: null,
+      endPrecision: "unknown",
+      repeat: { unit: "weeks", interval: 1, until: null },
+      at: AT,
+      updatedAt: AT,
+    });
+    expect(parsed.success).toBe(true);
   });
 });

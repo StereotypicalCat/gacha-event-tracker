@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { comesRoundEarly, Repeat } from "./recurrence.ts";
 import { EventType, GachaEvent, Precision, slugify } from "./schema.ts";
 
 /**
@@ -92,6 +93,19 @@ export const CustomEvent = z
     endsAt: z.string().datetime().nullable(),
     endPrecision: Precision,
 
+    /**
+     * How this comes round again, or null when it does not.
+     *
+     * **`.default(null)`, never a bare `.nullable()`.** A record written before
+     * this field existed has no `repeat` key at all, and a bare `.nullable()`
+     * rejects a *missing* key rather than supplying one. `useCustom` reads
+     * through `validRecords`, which drops what fails this schema, and the
+     * survivors are what the next write persists — so the stricter form would
+     * erase every reader's custom events on first launch, silently, with no
+     * server-side copy. The same hazard `game: z.string()` above is guarding.
+     */
+    repeat: Repeat.nullable().default(null),
+
     at: z.string().datetime(),
     updatedAt: z.string().datetime(),
   })
@@ -105,7 +119,23 @@ export const CustomEvent = z
   .refine((e) => e.endsAt === null || e.endsAt > e.startsAt, {
     message: "endsAt must be after startsAt",
     path: ["endsAt"],
-  });
+  })
+  // A window that has not closed by the time it comes round again puts two
+  // live occurrences of one rule in the same list, and "what ends soonest" no
+  // longer has an answer. Checked only when an end is stated: with none, the
+  // window runs to the next opening by definition and cannot overlap.
+  .refine(
+    (e) =>
+      !comesRoundEarly(
+        Date.parse(e.startsAt),
+        e.endsAt === null ? null : Date.parse(e.endsAt),
+        e.repeat,
+      ),
+    {
+      message: "a repeat cannot come round before it ends",
+      path: ["repeat"],
+    },
+  );
 export type CustomEvent = z.infer<typeof CustomEvent>;
 
 export const CustomGames = z.record(z.string(), CustomGame);
