@@ -1116,6 +1116,21 @@ describe("asOccurrenceEvent", () => {
     expect(isCustomEventId(row.id)).toBe(true);
   });
 
+  test("renaming a rule does not move its occurrence ids", () => {
+    // The token is random precisely so fixing a typo never costs the marks
+    // attached to an occurrence. Exercised here rather than against
+    // occurrenceId, which never takes a title and so could not fail it: this
+    // path passes the whole rule, so a rename is a real input to the result.
+    const rule = repeating();
+    const renamed = { ...rule, title: "Abyss, actually" };
+    const now = new Date("2026-09-15T12:00:00").getTime();
+    const before = asOccurrenceEvent(rule, nextOccurrences(rule, now, 1)[0]!);
+    const after = asOccurrenceEvent(renamed, nextOccurrences(renamed, now, 1)[0]!);
+
+    expect(after.id).toBe(before.id);
+    expect(after.title).toBe("Abyss, actually");
+  });
+
   test("a derived end is a real end, so the clock counts down to it", () => {
     // The rule stores endsAt: null; the occurrence resolves it. A row reaching
     // a view must never carry the unresolved form, or it renders as
