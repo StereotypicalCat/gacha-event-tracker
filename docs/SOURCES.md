@@ -741,6 +741,16 @@ only exactly-dated material on the page (Abyss and Memorial Arena openings, thre
 deliberately unread: a recurring rotation with no end is not a deadline, and `endsAt: null` on each
 would render them live-with-unknown-end forever.
 
+**As of 2026-08-27 the blocker above is addressable.** `src/shared/recurrence.ts`
+gives an event a repeat rule, and a rule supplies the boundary the rotation was
+missing: an occurrence with no stated end runs until the next one opens, so
+`endsAt: null` no longer means live-with-unknown-end forever. Reading
+`scheduleBosses` is now a parser change rather than a design question, and it is
+Phase B's first target in
+`docs/superpowers/specs/2026-08-27-recurring-events-design.md`. Nothing has been
+changed on the ingest side yet — `GachaEvent` does not carry a rule, and this
+note is what stops the next person re-deriving the reason it does not.
+
 ## What every one of these costs, beyond the source
 
 Adding a game is never only a `SOURCES` entry:

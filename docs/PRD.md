@@ -323,6 +323,21 @@ Four constraints, each protecting something that already exists:
   which is the same argument the code already makes for streaks. This is the *only* copy — there is
   no server to restore from.
 
+A reader's event may also state how it comes round again — every N days, weeks
+or months, optionally stopping on a date. The rule is stored; its occurrences
+are derived, and each one is an ordinary event everywhere in the app: its own
+countdown, its own completion, its own daily checklist.
+
+**An occurrence need not state its end.** With none, it runs until the next one
+opens. That is not the app inventing a date to fill a form — it is entailed by
+the interval the reader typed, and it is what separates a rule from the
+unbounded rotation § Quality bar refuses to publish. It also means a plain
+"resets every Monday" needs no end date at all.
+
+The lists carry two occurrences of any rule — the one that has not finished and
+the one after it — because they answer "what ends soonest". The timeline draws
+every occurrence in view, because it answers "what is the rhythm".
+
 **F8 — First-run setup.**
 Before any events are shown, the reader picks which games they play, and how they want to read
 them. A calendar full of games they

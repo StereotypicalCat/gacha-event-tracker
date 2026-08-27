@@ -502,6 +502,32 @@ There is deliberately **no `dailyTasks` for a custom game**, so it contributes n
 reader to invent one is a form to fill in for a reminder they already have. Their events can still be
 marked as repeating, per event, like any other.
 
+### Occurrence ids
+
+A reader's event may carry a repeat rule. The rule is what is stored; its
+occurrences are derived on read and never written.
+
+    myevent:<token>              the rule, as stored
+    myevent:<token>#YYYY-MM-DD   one occurrence, derived
+
+The suffix is the occurrence's own start day, read in the reader's local
+timezone — the same reading `readerInstant` wrote it with and `fields()` shows
+back. `#` is outside `[a-z0-9]` and therefore outside `CustomEventId`, so an
+occurrence id cannot be written into `customEvents` and cannot survive an
+import; `validRecords` drops it. That is the guardrail, and
+`test/recurrence.test.ts` pins it in both directions.
+
+Marks, ignores, progress and daily ticks key off the whole string, so each
+occurrence carries its own completion and its own streak.
+
+**Rescheduling a rule strands its marks.** Moving the anchor start or the
+interval re-keys every occurrence; the marks under the old ids stay in
+localStorage and stop being reachable. This is not migrated, for the reason
+`removeEvent` does not cascade and `useMarkSet.merge` never removes — nothing
+else holds a copy, so a silent rewrite is unrecoverable. The edit form counts
+what will be stranded and says so first. Renaming a rule costs nothing: the
+token is random.
+
 **Deleting.** Removing your own event leaves any marks and logged days behind rather than reaching
 into three other stores on a single tap; they are inert, and the alternative is a misclick that
 deletes a streak. Removing a game that still has events is refused and says how many, rather than
