@@ -86,6 +86,9 @@ export function EventDetail({
   const game = gameMeta(event.game);
   const heat = URGENCY_COLOR[clock.urgency];
   const risk = status === "done" ? "fine" : pressure(effort, clock.msRemaining);
+  // Read once rather than at both the guard and the render: calling it twice
+  // was what forced the non-null assertion below it.
+  const cadence = cadenceLabel(own?.record.repeat ?? null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -160,8 +163,8 @@ export function EventDetail({
           <Field label="Type">{event.type}</Field>
         </dl>
 
-        {cadenceLabel(own?.record.repeat ?? null) !== null && (
-          <p className="text-xs text-faint">{cadenceLabel(own!.record.repeat)}</p>
+        {cadence !== null && (
+          <p className="mt-2 text-xs text-faint">{cadence}</p>
         )}
 
         {risk !== "fine" && effort !== undefined && clock.msRemaining !== null && (
