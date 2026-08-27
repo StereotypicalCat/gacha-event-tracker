@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { addUnits, comesRoundEarly, Repeat } from "../src/shared/recurrence.ts";
+import { addUnits, comesRoundEarly, Repeat, isOccurrenceId, occurrenceId, ruleIdOf, movesOccurrences } from "../src/shared/recurrence.ts";
+import { CustomEventId, isCustomEventId } from "../src/shared/custom.ts";
 
 // Pinned so the DST cases mean something. Copenhagen is UTC+1 in winter and
 // UTC+2 in summer, so a step across 29 March 2026 crosses a real transition;
@@ -100,5 +101,92 @@ describe("Repeat", () => {
 
   test("rejects an unknown unit", () => {
     expect(Repeat.safeParse({ unit: "fortnights", interval: 1, until: null }).success).toBe(false);
+  });
+});
+
+describe("occurrence ids", () => {
+  const RULE = "myevent:k3f9qa2m01";
+
+  test("suffixes the rule id with the occurrence's own local start day", () => {
+    const id = occurrenceId(RULE, new Date("2026-09-01T09:00:00").getTime());
+    expect(id).toBe("myevent:k3f9qa2m01#2026-09-01");
+  });
+
+  test("the day is the reader's local day, not UTC's", () => {
+    // 23:30 local on 1 September is 21:30Z — a UTC reading would label this
+    // occurrence with the right day here, but the reverse case would not, and
+    // the reader typed a local date. Assert the local reading directly.
+    const id = occurrenceId(RULE, new Date("2026-09-01T23:30:00").getTime());
+    expect(id).toBe("myevent:k3f9qa2m01#2026-09-01");
+  });
+
+  test("the rule id is recoverable, and a plain id is its own rule", () => {
+    expect(ruleIdOf("myevent:k3f9qa2m01#2026-09-01")).toBe(RULE);
+    expect(ruleIdOf(RULE)).toBe(RULE);
+    // A feed id is colon-separated and carries no separator, so it survives.
+    expect(ruleIdOf("genshin:some-event:2026-09-01")).toBe("genshin:some-event:2026-09-01");
+  });
+
+  test("an occurrence is recognisable as one", () => {
+    expect(isOccurrenceId("myevent:k3f9qa2m01#2026-09-01")).toBe(true);
+    expect(isOccurrenceId(RULE)).toBe(false);
+  });
+
+  test("an occurrence id still reads as the reader's own", () => {
+    // isCustomEventId is a startsWith check on the first segment, so lane
+    // logic, RESERVED_ID_SEGMENTS and "never attributed to a source" all hold.
+    expect(isCustomEventId("myevent:k3f9qa2m01#2026-09-01")).toBe(true);
+  });
+
+  test("renaming a rule cannot move its occurrence ids", () => {
+    // The title is not an input here, and that is the guarantee: the token is
+    // random precisely so fixing a typo never costs the marks attached to it,
+    // exactly as mintCustomEventId describes.
+    const start = new Date("2026-09-01T09:00:00").getTime();
+    expect(occurrenceId(RULE, start)).toBe(occurrenceId(RULE, start));
+  });
+
+  test("CustomEventId REJECTS an occurrence id", () => {
+    // The guardrail, asserted rather than assumed. '#' is outside [a-z0-9], so
+    // an occurrence cannot be written back into the customEvents store and
+    // cannot survive an import if one ever appears in a file. validRecords
+    // drops what fails this schema, which is exactly the behaviour we want.
+    expect(CustomEventId.safeParse(RULE).success).toBe(true);
+    expect(CustomEventId.safeParse("myevent:k3f9qa2m01#2026-09-01").success).toBe(false);
+  });
+});
+
+describe("movesOccurrences", () => {
+  const rule = (startsAt: string, interval: number) => ({
+    startsAt,
+    repeat: { unit: "weeks" as const, interval, until: null },
+  });
+
+  test("a changed anchor or interval re-keys every occurrence", () => {
+    const a = rule("2026-09-01T07:00:00.000Z", 2);
+    expect(movesOccurrences(a, rule("2026-09-02T07:00:00.000Z", 2))).toBe(true);
+    expect(movesOccurrences(a, rule("2026-09-01T07:00:00.000Z", 3))).toBe(true);
+  });
+
+  test("changing only `until` does not", () => {
+    // It truncates the series; it does not move what is already in it, so no
+    // mark is stranded and the reader should not be warned that one is.
+    const a = rule("2026-09-01T07:00:00.000Z", 2);
+    const b = {
+      startsAt: "2026-09-01T07:00:00.000Z",
+      repeat: { unit: "weeks" as const, interval: 2, until: "2027-01-01T00:00:00.000Z" },
+    };
+    expect(movesOccurrences(a, b)).toBe(false);
+  });
+
+  test("adding or dropping a rule entirely counts as a move", () => {
+    const plain = { startsAt: "2026-09-01T07:00:00.000Z", repeat: null };
+    expect(movesOccurrences(plain, rule("2026-09-01T07:00:00.000Z", 2))).toBe(true);
+    expect(movesOccurrences(rule("2026-09-01T07:00:00.000Z", 2), plain)).toBe(true);
+  });
+
+  test("an untouched schedule moves nothing", () => {
+    const a = rule("2026-09-01T07:00:00.000Z", 2);
+    expect(movesOccurrences(a, rule("2026-09-01T07:00:00.000Z", 2))).toBe(false);
   });
 });
