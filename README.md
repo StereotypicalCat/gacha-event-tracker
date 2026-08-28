@@ -12,14 +12,16 @@ your device.
 
 ## Status
 
-Usable, and it now keeps itself up to date. The parsing pipeline and the interface work end to end,
-a scheduled job refreshes the sources twice a day, and the whole thing builds, serves, containerises
-and deploys. The database and review queue are specified but not built.
+Usable, and mostly keeping itself up to date. The parsing pipeline and the interface work end to
+end, a scheduled job refreshes the wiki sources twice a day, and the whole thing builds, serves,
+containerises and deploys. The Game8 lanes still need a manual refresh — see below. The database and
+review queue are specified but not built.
 
 | Piece | State |
 |---|---|
 | Event schema, date parsing, Game8 parser | Built, tested |
-| Six game sources | Built, tested |
+| Twenty sources across nineteen games | Built, tested |
+| Your own games and events, one-off or repeating | Built, tested |
 | Cross-source merge and conflict detection | Built, tested |
 | Input sanitization at the ingest boundary | Built, tested |
 | Scheduled refresh — robots, snapshots, commit-on-change | Built, tested offline |
@@ -31,8 +33,11 @@ The feed is still a static JSON file rather than a database read: the refresh jo
 pages it fetched, CI rebuilds the feed from them, and a clean checkout with no snapshots falls back
 to the checked-in fixtures — so the build stays offline and reproducible either way.
 
-The refresh runner is tested against a fake fetch, never a live wiki. Its first real run against
-game8.co and wiki.gg is unproven.
+**The scheduled refresh does not reach every source.** game8.co answers the GitHub Actions runner
+with a bot-management `202` instead of the page, so the nine Game8 sources only move when someone
+runs `bun run refresh` by hand from an address it will talk to. The wiki sources refresh on schedule
+as intended. `docs/SOURCES.md` records which hosts answer the runner and which do not; the footer
+shows when each lane was last refreshed, so a stale one is visible rather than silent.
 
 ## Try it
 
@@ -104,14 +109,38 @@ date makes you miss content. Given the choice, this ships nothing rather than a 
 
 ## Games
 
-| Game | Source | Events |
-|---|---|---|
-| Genshin Impact | Game8 | 9 |
-| Honkai: Star Rail | Game8 | 6 |
-| Wuthering Waves | Game8 | 10 |
-| Zenless Zone Zero | Game8 | 12 |
-| Neverness to Everness | Game8 | 13 |
-| Arknights: Endfield | Game8 + wiki.gg | 6 |
+| Game | Source |
+|---|---|
+| Genshin Impact | Game8 |
+| Honkai: Star Rail | Game8 |
+| Wuthering Waves | Game8 |
+| Zenless Zone Zero | Game8 |
+| Neverness to Everness | Game8 |
+| Persona 5: The Phantom X | Game8 |
+| Chaos Zero Nightmare | Game8 |
+| Umamusume: Pretty Derby | Game8 |
+| Arknights: Endfield | Game8 + wiki.gg |
+| Arknights | arknights.wiki.gg |
+| Blue Archive | bluearchive.wiki |
+| Reverse: 1999 | Fandom |
+| Fate/Grand Order | Fandom |
+| Goddess of Victory: Nikke | Fandom |
+| Infinity Nikki | Fandom |
+| Girls' Frontline 2 | IOP Wiki |
+| hololive Dreams | holodori.wiki |
+| Stella Sora | stellasora.miraheze.org |
+| Honkai Impact 3rd | arustats.com |
+
+No event counts here on purpose: they change every refresh, and a number in
+this file that nobody updates is a number that lies. The app's header counts
+what is live right now. Infinity Nikki currently yields nothing — its source
+page has not moved in over a year — which is why the header says eighteen
+games rather than nineteen.
+
+Honkai Impact 3rd is the one estimated lane. arustats.com publishes a version
+grid rather than dated events, so its events carry a much lower confidence than
+a date-stating source, and any real HI3 source outranks it the moment one is
+added.
 
 Game8 uses a different page template for almost every game — label/value detail tables, column
 tables, rowspan Start/End pairs — and four different date formats between them. One parser handles
@@ -127,7 +156,7 @@ row reads "Permanently Available" and its version grid shows `07/16` with no yea
 events hide in a combined cell (`Period: 08/09/26 - 08/30/26 During the event...`), which is where
 the `MM/DD/YY` parser earns its place.
 
-Arknights is defined in the schema and awaiting a source.
+Endfield is still the only game with two sources; the rest have one each.
 
 ## Adding a source
 
@@ -170,6 +199,53 @@ by mistake. If you would rather it never guessed, **Spot daily events automatica
 settings turns detection off and leaves only what you marked yourself; it discards nothing, so your
 ticks and streaks are still there if you turn it back on. Anything you mark joins today's dailies at the top of the page, so ticking it off is one
 tap rather than a trip back into the event.
+
+## Your own games and events
+
+No calendar covers everything, and a source misses things. So you can add a
+game the app does not track, and events under it or under any game it does.
+
+Your dates are yours: they are never presented as coming from a wiki, they
+carry no source link because there is no page to send a sceptic to, and they
+travel in your export. Like everything else here, your browser holds the only
+copy.
+
+### How often it comes round
+
+An event you add states its **cadence** — asked before any date, because the
+answer decides which dates are even worth asking for:
+
+| | What it asks for |
+|---|---|
+| **one-off** | a start, and an end you are allowed not to know |
+| **daily / weekly / monthly** | a start, and nothing else |
+| **custom** | a start, an end, and how it repeats |
+
+A preset carries no window. Weekly means the week *is* the window — each one
+runs until the next opens — so there is no end date to type and no ignorance to
+admit. That is the whole reason the presets exist: a weekly reset has no end
+date, and a form that asks anyway is asking something with no honest answer.
+
+Under **custom** you say whether it starts again the moment it ends, or after a
+wait, and the cycle length is measured from the dates you already gave rather
+than asked for a second time. State it yourself if the first window does not
+describe the rest.
+
+One rule is stored; the occurrences are worked out as they are needed. Each one
+is an ordinary event everywhere in the app — its own countdown, its own tick,
+its own checklist and streak — so clearing this fortnight's Abyss does not mark
+next fortnight's. The lists show the one running and the one after it; the
+timeline draws the whole rhythm.
+
+**An occurrence does not have to state its end.** With none, it runs until the
+next one opens — a boundary entailed by the interval you typed, not a date the
+app invented to fill a field. That distinction is what lets a repeating event
+count down at all instead of sitting there permanently live.
+
+Changing a schedule you have already ticked against strands those ticks: the
+occurrences are keyed by their own dates, and moving the dates moves the keys.
+Nothing is rewritten behind you, and nothing is deleted — the form counts what
+would be stranded and says so before you save. Renaming costs nothing.
 
 ## Sorting
 
