@@ -220,8 +220,9 @@ Namespaced, versioned, and small. Nothing here ever goes to the server.
 "gacha-tracker:v1:prefs"        // { region, hiddenGames[], knownGames[]?, gameOrder[]?,
                                 //   focusGame, sort, view,
                                 //   timelineDayWidth, timelineGroup, showUpcoming,
-                                //   timelineSplitUpcoming, detectDaily, showCompleted,
-                                //   showIgnored, theme, regionConfirmed, onboarded }
+                                //   timelineSplitUpcoming, detectDaily, showChores,
+                                //   showCompleted, showIgnored, theme, regionConfirmed,
+                                //   onboarded }
                                 // timelineDayWidth is px per day on the board, stored as the
                                 // measurement rather than a step number and read through
                                 // snapDayWidth — so a value from an older ladder still opens

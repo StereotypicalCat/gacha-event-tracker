@@ -230,6 +230,18 @@ export function Controls({
               hint="Guessed from what the source wrote, so it misses some and invents others. Off, only events you mark yourself get a checklist. Your ticks and streaks are kept either way."
             />
 
+            {/* The chores are the app's own invention — no source publishes
+                "Commissions, resin" — and they were the one part of the strip
+                with no way out. Named for what it removes rather than for
+                "dailies", which would read as broken while the strip stayed on
+                screen showing the reader's own events. */}
+            <Check
+              checked={prefs.showChores}
+              onChange={(showChores) => onUpdate({ showChores })}
+              label="Show each game's own daily chores"
+              hint="Commissions, resin, daily training and the rest. Nobody publishes these, so the app keeps a fixed list per game. Off, the strip shows only events with a checklist. Your ticks and streaks are kept either way."
+            />
+
             {ignoredCount > 0 && (
               <Check
                 checked={prefs.showIgnored}

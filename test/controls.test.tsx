@@ -30,6 +30,7 @@ const PREFS: Prefs = {
   showUpcoming: false,
   timelineSplitUpcoming: true,
   detectDaily: false,
+  showChores: true,
   showCompleted: true,
   showIgnored: false,
   theme: "dark",
@@ -99,11 +100,13 @@ describe("Controls: what am I allowed to look at", () => {
 
   test("it reads its own preference and not a neighbour's", () => {
     // Both neighbours are on and this one is off, so a checkbox bound to the
-    // wrong key shows up as the wrong count of ticks.
+    // wrong key shows up as the wrong count of ticks. The chores toggle is a
+    // third box that is on in both renders — it defaults on — so it raises
+    // each count by one without changing what the delta proves.
     const off = checkboxes(render(PREFS));
     const on = checkboxes(render({ ...PREFS, showUpcoming: true }));
-    expect(off.filter(Boolean)).toHaveLength(1);
-    expect(on.filter(Boolean)).toHaveLength(2);
+    expect(off.filter(Boolean)).toHaveLength(2);
+    expect(on.filter(Boolean)).toHaveLength(3);
   });
 
   test("how unstarted events sit on the board is offered only when they are", () => {
@@ -270,5 +273,17 @@ describe("Controls: the game order editor", () => {
     expect(render({ ...PREFS, gameOrder: ["hsr", "genshin"] })).toContain(
       "Reset to A–Z",
     );
+  });
+});
+
+describe("the chores checkbox reports its own pref", () => {
+  test("off, one fewer box is ticked", () => {
+    // Counting alone can no longer separate the two always-on boxes from each
+    // other — with `showCompleted` also true, a checkbox bound to the wrong one
+    // of them keeps the same total. Flipping this pref specifically is what
+    // distinguishes them.
+    const on = checkboxes(render(PREFS)).filter(Boolean).length;
+    const off = checkboxes(render({ ...PREFS, showChores: false })).filter(Boolean).length;
+    expect(off).toBe(on - 1);
   });
 });

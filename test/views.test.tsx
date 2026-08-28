@@ -8,7 +8,7 @@ import {
   startMarkers,
   Timeline,
 } from "../src/client/components/Timeline.tsx";
-import { CatchUpPanel, dailyGroups } from "../src/client/components/Dailies.tsx";
+import { CatchUpPanel, Dailies, dailyGroups } from "../src/client/components/Dailies.tsx";
 import { Welcome } from "../src/client/components/Welcome.tsx";
 import { timelineLanes } from "../src/client/state/lanes.ts";
 import { GameMetaProvider } from "../src/client/state/gameMeta.tsx";
@@ -1012,5 +1012,130 @@ describe("boardWindow is not widened by expansion", () => {
     );
 
     expect(chartWidthOf(withExpand)).toBe(chartWidthOf(withoutExpand));
+  });
+});
+
+describe("dailyGroups with the chores switched off", () => {
+  const NOW = Date.parse("2026-08-17T12:00:00.000Z");
+  const meta = (id: string) => metaFor(id, {});
+  const startOf = (e: { startsAt: string }) => Date.parse(e.startsAt);
+  const repeating = (id: string, game: string, title: string) =>
+    ({
+      id,
+      game,
+      title,
+      type: "login",
+      summary: null,
+      startsAt: "2026-08-10T00:00:00.000Z",
+      startPrecision: "day",
+      endsAt: null,
+      endPrecision: "unknown",
+      regionScoped: false,
+      regionEnds: null,
+      sourceUrl: "https://example.test",
+    }) as never;
+
+  test("the invented chore goes and the events stay", () => {
+    // Only the fixed per-game list the app makes up goes. Anything with a
+    // checklist is something the reader engaged with, and stays.
+    const groups = dailyGroups(
+      ["genshin"],
+      [repeating("e1", "genshin", "Login Bonus")],
+      NOW,
+      "europe",
+      meta,
+      startOf,
+      false,
+    );
+    expect(groups.map((g) => g.items.map((i) => i.key))).toEqual([["e1"]]);
+  });
+
+  test("an event the reader added themselves is untouched", () => {
+    // Stated explicitly because it is the requirement most at risk of being
+    // filtered away by a switch aimed at something else.
+    const groups = dailyGroups(
+      ["genshin"],
+      [repeating("myevent:k3f9qa2m01", "genshin", "My own grind")],
+      NOW,
+      "europe",
+      meta,
+      startOf,
+      false,
+    );
+    expect(groups[0]?.items.map((i) => i.key)).toEqual(["myevent:k3f9qa2m01"]);
+  });
+
+  test("with nothing else to show, a game contributes no group at all", () => {
+    // Not an empty group with a heading and no rows — the strip's own
+    // `total === 0` guard then drops it entirely, which is what a reader who
+    // turned this off is asking for.
+    const groups = dailyGroups(["genshin", "hsr"], [], NOW, "europe", meta, startOf, false);
+    expect(groups).toEqual([]);
+  });
+
+  test("left on, nothing about the strip moves", () => {
+    const groups = dailyGroups(
+      ["genshin"],
+      [repeating("e1", "genshin", "Login Bonus")],
+      NOW,
+      "europe",
+      meta,
+      startOf,
+      true,
+    );
+    expect(groups.map((g) => g.items.map((i) => i.key))).toEqual([
+      ["dailies:genshin", "e1"],
+    ]);
+  });
+});
+
+describe("the chores toggle reaches the screen", () => {
+  // `dailyGroups` is pure and well covered, but nothing tied `prefs.showChores`
+  // to what renders. Review proved four plausible breaks shipped green —
+  // including App passing the wrong pref, and Dailies hardcoding `true` — so
+  // these assert the rendered strip rather than the function behind it.
+  const NOW = Date.parse("2026-08-17T12:00:00.000Z");
+  const repeating = {
+    id: "e1",
+    game: "genshin",
+    title: "Lantern Rite login",
+    type: "login",
+    summary: null,
+    startsAt: "2026-08-10T00:00:00.000Z",
+    startPrecision: "day",
+    endsAt: null,
+    endPrecision: "unknown",
+    regionScoped: false,
+    regionEnds: null,
+    sourceUrl: "https://example.test",
+  } as never;
+
+  const strip = (showChores: boolean) =>
+    render(
+      <Dailies
+        games={["genshin"]}
+        events={[repeating]}
+        region="europe"
+        now={NOW}
+        showChores={showChores}
+        daysFor={() => []}
+        onToggleDay={() => {}}
+      />,
+    );
+
+  test("on, the invented chore is on screen", () => {
+    const html = strip(true);
+    expect(html).toContain("Commissions, resin");
+    expect(html).toContain("Lantern Rite login");
+  });
+
+  test("off, the chore is gone and the event and its count are not", () => {
+    // The count is asserted too: it derives from the items, so a chore hidden
+    // from view but still counted would leave the reader chasing a tick that
+    // is not there.
+    const html = strip(false);
+    expect(html).not.toContain("Commissions, resin");
+    expect(html).toContain("Lantern Rite login");
+    expect(html).toContain("0/1");
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { adoptNewLanes, adoptRenamed } from "../src/client/state/usePrefs.ts";
+import { adoptNewLanes, adoptRenamed, defaults } from "../src/client/state/usePrefs.ts";
 import type { LaneId } from "../src/shared/custom.ts";
 
 /**
@@ -104,5 +104,22 @@ describe("adoptRenamed", () => {
   test("a reader with neither is left alone", () => {
     expect(adoptRenamed({ sort: "doing" })).toEqual({ sort: "doing" });
     expect(adoptRenamed({})).toEqual({});
+  });
+});
+
+describe("defaults that a reader would notice losing", () => {
+  test("the chores are on until someone says otherwise", () => {
+    // Flipping this one line silently empties Today's dailies for every
+    // existing reader — it is the whole argument of the comment above it, and
+    // nothing else in the suite was watching it.
+    expect(defaults().showChores).toBe(true);
+  });
+
+  test("a stored blob without the key keeps the default", () => {
+    // The upgrade path. Prefs saved before this key existed must not read as
+    // "off" — `{...defaults(), ...stored}` is what guarantees that, and JSON
+    // cannot carry an `undefined` that would override it.
+    const stored = { region: "europe", detectDaily: false } as const;
+    expect({ ...defaults(), ...stored }.showChores).toBe(true);
   });
 });

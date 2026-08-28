@@ -538,6 +538,7 @@ export function App() {
               the lanes out here would also cost a reader's own game its place in
               the order their repeating events are grouped under. */}
           <Dailies
+            showChores={prefs.showChores}
             games={focus === null ? enabled : [focus]}
             events={todo.filter(repeatsDaily).map((r) => r.event)}
             region={prefs.region}

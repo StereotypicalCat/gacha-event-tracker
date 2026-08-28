@@ -85,6 +85,7 @@ export function dailyGroups(
   region: Region,
   meta: (id: LaneId) => GameMeta,
   startOf: (event: DisplayEvent) => number,
+  showChores = true,
 ): DailyGroup[] {
   // A lane can arrive through an event without being in `games` — an event on a
   // game the reader has since switched off, say — and dropping it here would
@@ -102,7 +103,13 @@ export function dailyGroups(
     const today = dayKey(now, region, lane);
     const resetsIn = msUntilReset(now, region, lane);
 
-    if (!isCustomGameId(lane)) {
+    // The standing chore is the app's own invention — no source publishes
+    // "Commissions, resin" — so it is the one part of this strip a reader can
+    // reasonably want gone. Switched off it is simply not built; nothing reads
+    // or writes its ticks here, so `dailies:<game>` keeps every day the reader
+    // ever logged and switching back on restores the lot. A game the reader
+    // invented never had one to begin with.
+    if (showChores && !isCustomGameId(lane)) {
       items.push({
         key: dailiesId(lane as GameId),
         game: lane,
@@ -141,6 +148,7 @@ export function Dailies({
   now,
   daysFor,
   onToggleDay,
+  showChores,
 }: {
   /** Every lane the reader is looking at, in their own order. */
   games: LaneId[];
@@ -151,6 +159,8 @@ export function Dailies({
    */
   events: DisplayEvent[];
   region: Region;
+  /** Whether to carry each game's standing chore — `prefs.showChores`. */
+  showChores: boolean;
   now: number;
   daysFor: (id: string) => string[];
   onToggleDay: (id: string, day: string) => void;
@@ -176,6 +186,7 @@ export function Dailies({
     region,
     gameMeta,
     (event) => Date.parse(event.startsAt),
+    showChores,
   );
   const items = groups.flatMap((group) => group.items);
   const total = items.length;

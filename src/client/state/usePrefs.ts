@@ -155,6 +155,18 @@ export interface Prefs {
    * who already switched it on keep it — stored prefs win over this default.
    */
   detectDaily: boolean;
+  /**
+   * Whether Today's dailies carries each game's standing chore — commissions,
+   * sanity, daily training.
+   *
+   * On by default, because every reader has these today and a setting that
+   * silently removes something on upgrade is worse than one nobody notices.
+   * Off hides only the chores: an event with a checklist is something the
+   * reader engaged with and stays either way. Like `detectDaily` it discards
+   * nothing — the ticks live under `dailies:<game>` and are never written from
+   * here, so switching back on restores every one of them.
+   */
+  showChores: boolean;
   showCompleted: boolean;
   /** Reveal events the reader has ignored, so they can be restored. */
   showIgnored: boolean;
@@ -174,7 +186,7 @@ export interface Prefs {
   onboarded: boolean;
 }
 
-function defaults(): Prefs {
+export function defaults(): Prefs {
   return {
     region: guessRegion(),
     hiddenGames: [],
@@ -186,6 +198,7 @@ function defaults(): Prefs {
     showUpcoming: false,
     timelineSplitUpcoming: true,
     detectDaily: false,
+    showChores: true,
     showCompleted: true,
     showIgnored: false,
     theme: DEFAULT_THEME_CHOICE,
