@@ -317,6 +317,11 @@ Four constraints, each protecting something that already exists:
 - **Their events never touch the ingest pipeline.** `sanitize.ts` and `merge.ts` exist for pages we
   do not control; a reader's own typing is neither untrusted markup nor a second opinion to
   reconcile. Nothing they enter is fetched, parsed, merged, scored or quarantined.
+- **They are always reachable.** Settings lists every event the reader has made, whatever state it
+  is in, and opens the same detail sheet a row does. Every other surface drops an event once it has
+  ended, so without this list a one-off of their own became unreachable the day it finished —
+  impossible to edit, and impossible to delete out of a store nothing else can see. Events filed
+  under a game we track are listed too; the form allows that, so the index has to.
 - **Their IDs live in their own key space.** Never `${game}:${slug}:${date}` — see
   `docs/DATA-MODEL.md` § Reader-authored key spaces.
 - **They are in the backup.** An export that omitted hand-entered events would be a lossy backup,

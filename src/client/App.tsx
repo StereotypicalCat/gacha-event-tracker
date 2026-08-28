@@ -30,7 +30,7 @@ import {
 } from "./state/lens.ts";
 import { clockFor, formatRemaining } from "../shared/time.ts";
 import { dailySummary, isDaily, resolveDaily } from "../shared/daily.ts";
-import { occurrenceForId, strandedOccurrences } from "../shared/recurrence.ts";
+import { nearestOccurrence, occurrenceForId, strandedOccurrences } from "../shared/recurrence.ts";
 import { orderGames } from "./state/gameOrder.ts";
 import { GameMetaProvider, type MetaResolver } from "./state/gameMeta.tsx";
 import { metaOnTheme, useTheme } from "./state/theme.ts";
@@ -650,6 +650,16 @@ export function App() {
           onEditGame: custom.editGame,
           onRemoveGame: custom.removeGame,
           onAddEvent: custom.addEvent,
+          now,
+          // The index lists rules; the sheet opens rows. A repeating rule's
+          // own id is never a row — the lists hold its occurrences — so it is
+          // resolved to whichever occurrence is nearest before opening.
+          onOpen: (id) => {
+            const record = custom.events[id];
+            const occurrence =
+              record === undefined ? null : nearestOccurrence(record, now);
+            setOpenId(occurrence === null ? id : occurrence.id);
+          },
         }}
         onExport={() =>
           exportProgress(prog.progress, daily.logs, ignored.marks, prefs, {

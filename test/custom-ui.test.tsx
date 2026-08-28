@@ -9,7 +9,7 @@ import {
   repeatFrom,
   strandedNotice,
 } from "../src/client/components/CustomForms.tsx";
-import { YourOwn } from "../src/client/components/YourOwn.tsx";
+import { eventCaption, YourOwn } from "../src/client/components/YourOwn.tsx";
 import { EventRow } from "../src/client/components/EventRow.tsx";
 import { EventDetail } from "../src/client/components/EventDetail.tsx";
 import { AUTHOR, Colophon, REPO_URL } from "../src/client/components/Colophon.tsx";
@@ -75,6 +75,8 @@ describe("YourOwn", () => {
     onEditGame: noop,
     onRemoveGame: () => ({ removed: true, blockedBy: 0 }),
     onAddEvent: noop,
+    now: Date.parse("2026-10-01T12:00:00.000Z"),
+    onOpen: noop,
   };
 
   test("lists a reader's game with the events it holds", () => {
@@ -881,5 +883,128 @@ describe("repeatOf", () => {
         contiguousMs: Date.parse("2026-09-08T00:00:00.000Z"),
       }),
     ).toBe(null);
+  });
+});
+
+describe("eventCaption", () => {
+  // What each row in the settings index says about itself. The point is to
+  // explain why an event is not on the front page — a list of bare titles
+  // leaves the reader guessing which of two entries is the dead one.
+  const NOW = Date.parse("2026-10-01T12:00:00.000Z");
+  const at = (over: Record<string, unknown>) =>
+    CustomEvent.parse({
+      id: "myevent:k3f9qa2m01",
+      game: "mygame:limbus-company",
+      title: "Season 7",
+      type: "story",
+      summary: null,
+      startsAt: "2026-09-01T00:00:00.000Z",
+      startPrecision: "day",
+      endsAt: "2026-09-08T00:00:00.000Z",
+      endPrecision: "day",
+      repeat: null,
+      at: AT,
+      updatedAt: AT,
+      ...over,
+    });
+
+  test("a repeating event says how often, not when", () => {
+    // Its dates roll forward, so a date would be out of step with the row the
+    // reader would find if they went looking on the front page.
+    expect(
+      eventCaption(at({ repeat: { unit: "weeks", interval: 1, until: null } }), NOW),
+    ).toBe("on a weekly cycle");
+  });
+
+  test("an event whose end has passed says so", () => {
+    // The whole reason this index exists: this one is on no other surface.
+    expect(eventCaption(at({}), NOW)).toContain("ended");
+  });
+
+  test("an event still to come is not reported as ended", () => {
+    const caption = eventCaption(
+      at({ startsAt: "2026-11-01T00:00:00.000Z", endsAt: "2026-11-08T00:00:00.000Z" }),
+      NOW,
+    );
+    expect(caption).not.toContain("ended");
+  });
+
+  test("an unannounced end is not mistaken for a passed one", () => {
+    const caption = eventCaption(
+      at({ endsAt: null, endPrecision: "unknown" }),
+      NOW,
+    );
+    expect(caption).not.toContain("ended");
+  });
+});
+
+describe("the settings index of your own events", () => {
+  test("lists an ended event that no other surface shows", () => {
+    const ended = CustomEvent.parse({
+      id: "myevent:seasonseven",
+      game: "mygame:limbus-company",
+      title: "Season 7",
+      type: "story",
+      summary: null,
+      startsAt: "2026-09-01T00:00:00.000Z",
+      startPrecision: "day",
+      endsAt: "2026-09-08T00:00:00.000Z",
+      endPrecision: "day",
+      repeat: null,
+      at: AT,
+      updatedAt: AT,
+    });
+    const html = render(
+      <YourOwn
+        games={GAMES}
+        events={{ [ended.id]: ended }}
+        lanes={["mygame:limbus-company"]}
+        now={Date.parse("2026-10-01T12:00:00.000Z")}
+        onAddGame={() => {}}
+        onEditGame={() => {}}
+        onRemoveGame={() => ({ removed: true, blockedBy: 0 })}
+        onAddEvent={() => {}}
+        onOpen={() => {}}
+      />,
+    );
+    expect(html).toContain("Season 7");
+    expect(html).toContain("ended");
+  });
+});
+
+describe("the index covers events filed under a tracked game", () => {
+  test("an event under Genshin is listed too", () => {
+    // The form deliberately allows this — a source can miss an event — so an
+    // index that only walked the reader's own games would leave exactly the
+    // same hole it exists to close.
+    const own = CustomEvent.parse({
+      id: "myevent:undergenshin",
+      game: "genshin",
+      title: "Something the wiki missed",
+      type: "other",
+      summary: null,
+      startsAt: "2026-09-01T00:00:00.000Z",
+      startPrecision: "day",
+      endsAt: "2026-09-08T00:00:00.000Z",
+      endPrecision: "day",
+      repeat: null,
+      at: AT,
+      updatedAt: AT,
+    });
+    const html = render(
+      <YourOwn
+        games={GAMES}
+        events={{ [own.id]: own }}
+        lanes={["genshin", "mygame:limbus-company"]}
+        now={Date.parse("2026-10-01T12:00:00.000Z")}
+        onAddGame={() => {}}
+        onEditGame={() => {}}
+        onRemoveGame={() => ({ removed: true, blockedBy: 0 })}
+        onAddEvent={() => {}}
+        onOpen={() => {}}
+      />,
+    );
+    expect(html).toContain("Something the wiki missed");
+    expect(html).toContain("ended");
   });
 });

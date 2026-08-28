@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { addUnits, comesRoundEarly, Repeat, repeatSpanning, repeatModeOf, cadenceOf, isOccurrenceId, occurrenceId, occurrenceForId, ruleIdOf, movesOccurrences, nextOccurrences, occurrencesOf, strandedOccurrences, type RepeatingEvent } from "../src/shared/recurrence.ts";
+import { addUnits, comesRoundEarly, Repeat, repeatSpanning, repeatModeOf, cadenceOf, nearestOccurrence, isOccurrenceId, occurrenceId, occurrenceForId, ruleIdOf, movesOccurrences, nextOccurrences, occurrencesOf, strandedOccurrences, type RepeatingEvent } from "../src/shared/recurrence.ts";
 import { CustomEventId, isCustomEventId } from "../src/shared/custom.ts";
 
 // Pinned so the DST cases mean something. Copenhagen is UTC+1 in winter and
@@ -588,5 +588,48 @@ describe("cadenceOf", () => {
     expect(
       cadenceOf(null, { unit: "weeks", interval: 1, until: "2027-01-01T00:00:00.000Z" }),
     ).toBe("custom");
+  });
+});
+
+describe("nearestOccurrence", () => {
+  // The settings index lists rules, but the detail sheet opens rows, and a
+  // rule's own id is never a row — `allRows` holds its occurrences. This is
+  // the bridge, and it has to answer for a dead series too: a rule whose
+  // `until` has passed has no future occurrence at all, and without an answer
+  // it would be exactly as unreachable as the ended one-off this fixes.
+  const rule = (over: Partial<RepeatingEvent> = {}): RepeatingEvent => ({
+    id: "myevent:k3f9qa2m01",
+    startsAt: new Date("2026-09-01T09:00:00").toISOString(),
+    startPrecision: "exact",
+    endsAt: new Date("2026-09-08T09:00:00").toISOString(),
+    endPrecision: "exact",
+    repeat: { unit: "weeks", interval: 2, until: null },
+    ...over,
+  });
+
+  test("a running occurrence is the nearest one", () => {
+    const got = nearestOccurrence(rule(), new Date("2026-09-03T12:00:00").getTime());
+    expect(got?.id).toBe("myevent:k3f9qa2m01#2026-09-01");
+  });
+
+  test("between cycles it is the one about to open", () => {
+    const got = nearestOccurrence(rule(), new Date("2026-09-10T12:00:00").getTime());
+    expect(got?.id).toBe("myevent:k3f9qa2m01#2026-09-15");
+  });
+
+  test("a finished series still resolves, so it can still be reached", () => {
+    // Any occurrence will do here: the reader has come to edit or delete the
+    // rule, not to inspect a particular time round. The first always exists,
+    // which is what makes this total.
+    const dead = rule({
+      repeat: { unit: "weeks", interval: 2, until: new Date("2026-09-02T00:00:00").toISOString() },
+    });
+    const got = nearestOccurrence(dead, new Date("2027-06-01T12:00:00").getTime());
+    expect(got?.id).toBe("myevent:k3f9qa2m01#2026-09-01");
+  });
+
+  test("an event that does not repeat has no occurrence to find", () => {
+    // Its own id is already a row, so the caller opens it directly.
+    expect(nearestOccurrence(rule({ repeat: null }), Date.now())).toBe(null);
   });
 });

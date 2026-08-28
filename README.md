@@ -210,6 +210,11 @@ carry no source link because there is no page to send a sceptic to, and they
 travel in your export. Like everything else here, your browser holds the only
 copy.
 
+Settings lists everything you have added, whatever state it is in, and opens
+the same panel a row does. Every other surface drops an event once it has
+ended, so that list is the only way back to a one-off of yours after its end
+date passes — to edit it, or to get rid of it.
+
 ### How often it comes round
 
 An event you add states its **cadence** — asked before any date, because the

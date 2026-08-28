@@ -475,6 +475,38 @@ export function nextOccurrences(
 }
 
 /**
+ * The occurrence to open when the reader asks for the rule itself.
+ *
+ * The settings index lists rules, but the detail sheet opens rows, and a
+ * rule's own id is never a row — the lists hold its occurrences, keyed
+ * `myevent:<token>#<date>`. This is the bridge between the two.
+ *
+ * Running or next where there is one. Where there is not — a series whose
+ * `until` has passed — it falls back to the first occurrence rather than
+ * giving up, and that fallback is the point rather than a nicety: a finished
+ * rule with no future occurrence would otherwise be exactly as unreachable as
+ * the ended one-off this index exists to rescue, and just as impossible to
+ * delete. Which time round it lands on does not matter, because the reader
+ * has come to edit or delete the rule, not to inspect an occurrence.
+ *
+ * Null only when nothing repeats, and the caller has a row already: a
+ * non-repeating event's own id is in the lists unchanged.
+ */
+export function nearestOccurrence(
+  event: RepeatingEvent,
+  nowMs: number,
+): Occurrence | null {
+  if (event.repeat === null) return null;
+
+  const upcoming = nextOccurrences(event, nowMs, 1);
+  if (upcoming.length > 0) return upcoming[0]!;
+
+  const anchor = Date.parse(event.startsAt);
+  if (Number.isNaN(anchor)) return null;
+  return occurrencesOf(event, anchor, anchor, 1)[0] ?? null;
+}
+
+/**
  * How many of a rule's ids the reader has actually recorded something
  * against — what a schedule edit that re-keys ids would strand.
  *
