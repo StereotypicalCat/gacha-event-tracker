@@ -29,7 +29,16 @@ import { cadenceLabel, EventForm, GameForm } from "./CustomForms.tsx";
  */
 export function eventCaption(event: CustomEvent, nowMs: number): string {
   const cadence = cadenceLabel(event.repeat);
-  if (cadence !== null) return cadence;
+  if (cadence !== null) {
+    // A series that has stopped is exactly what this list exists to explain,
+    // and a healthy-looking cadence explains nothing: the reader would see
+    // "on a weekly cycle" and no reason it is missing from the board.
+    const until = event.repeat?.until ?? null;
+    if (until !== null && Date.parse(until) < nowMs) {
+      return `stopped ${formatAbsolute(Date.parse(until), false)}`;
+    }
+    return cadence;
+  }
 
   if (event.endsAt !== null && Date.parse(event.endsAt) < nowMs) {
     return `ended ${formatAbsolute(Date.parse(event.endsAt), false)}`;
@@ -78,7 +87,10 @@ export function YourOwn({
   // An event may be filed under a game we track — a source can miss one — and
   // those have no row above to nest under. Listing them separately is what
   // keeps this index complete: an ended event under Genshin is on no other
-  // surface either, and would be just as stuck.
+  // surface either, and would be just as stuck. It also catches an event whose
+  // own lane has since gone, which `removeGame` refuses to cause but an import
+  // can still deliver — hence "another game" rather than "a game we track",
+  // which would be false for exactly that row.
   const underTracked = Object.values(events).filter(
     (e) => games[e.game] === undefined,
   );
@@ -186,7 +198,7 @@ export function YourOwn({
       {/* Its own heading rather than trailing the list above, which read as
           though these belonged to whichever game happened to be last. */}
       {underTracked.length > 0 && (
-        <p className="mt-4 text-xs text-faint">Filed under a game we track</p>
+        <p className="mt-4 text-xs text-faint">Filed under another game</p>
       )}
       {underTracked.length > 0 && (
         <ul className="mt-1.5 flex flex-col gap-1">

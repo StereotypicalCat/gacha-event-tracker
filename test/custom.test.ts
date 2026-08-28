@@ -10,6 +10,7 @@ import {
   mintCustomEventId,
   mintCustomGameId,
   precisionOf,
+  displayEventFor,
   recordFor,
   RESERVED_ID_SEGMENTS,
   type CustomGames,
@@ -638,5 +639,62 @@ describe("recordFor", () => {
 
   test("an occurrence of a rule the reader has since deleted finds nothing", () => {
     expect(recordFor({}, "myevent:k3f9qa2m01#2026-09-15")).toBeUndefined();
+  });
+});
+
+describe("displayEventFor", () => {
+  // The resolution chain the detail sheet depends on, pulled out of App so it
+  // can be tested without a DOM. Nothing in this project can click, and no
+  // test renders App at all, so a row that sets an id the sheet cannot resolve
+  // was invisible to the whole suite — which is exactly how a settings row
+  // that opens nothing got shipped.
+  const plain = ownEvent({ id: "myevent:plain00001", repeat: null });
+  const repeating = ownEvent({
+    id: "myevent:k3f9qa2m01",
+    startsAt: new Date("2026-09-01T09:00:00").toISOString(),
+    startPrecision: "exact",
+    endsAt: new Date("2026-09-08T09:00:00").toISOString(),
+    endPrecision: "exact",
+    repeat: { unit: "weeks", interval: 2, until: null },
+  });
+  // Reachable only by import: nothing in the form can set `until` at all, and
+  // `CustomEvent` does not tie it to `startsAt`. It yields no occurrences, so
+  // it is on no list, no board and no timeline.
+  const stillborn = ownEvent({
+    id: "myevent:stillborn1",
+    startsAt: new Date("2026-09-01T09:00:00").toISOString(),
+    startPrecision: "exact",
+    endsAt: null,
+    endPrecision: "unknown",
+    repeat: { unit: "weeks", interval: 2, until: "2020-01-01T00:00:00.000Z" },
+  });
+  const store = {
+    [plain.id]: plain,
+    [repeating.id]: repeating,
+    [stillborn.id]: stillborn,
+  };
+  const NOW = new Date("2026-09-03T12:00:00").getTime();
+
+  test("a plain event resolves to itself", () => {
+    expect(displayEventFor(store, "myevent:plain00001", NOW)?.id).toBe("myevent:plain00001");
+  });
+
+  test("an occurrence id resolves to that occurrence", () => {
+    const row = displayEventFor(store, "myevent:k3f9qa2m01#2026-09-15", NOW);
+    expect(row?.id).toBe("myevent:k3f9qa2m01#2026-09-15");
+  });
+
+  test("a rule id resolves even when the rule produces no occurrence", () => {
+    // The finding. Its series ended before it began, so `nearestOccurrence`
+    // has nothing to offer — and without a floor here the settings row that
+    // exists to rescue this record opens nothing at all, which is worse than
+    // no button.
+    const row = displayEventFor(store, "myevent:stillborn1", NOW);
+    expect(row?.id).toBe("myevent:stillborn1");
+  });
+
+  test("an id belonging to nobody resolves to nothing", () => {
+    expect(displayEventFor(store, "genshin:some-event:2026-09-01", NOW)).toBe(null);
+    expect(displayEventFor({}, "myevent:plain00001", NOW)).toBe(null);
   });
 });

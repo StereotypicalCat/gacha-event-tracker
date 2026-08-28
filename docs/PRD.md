@@ -317,8 +317,10 @@ Four constraints, each protecting something that already exists:
 - **Their events never touch the ingest pipeline.** `sanitize.ts` and `merge.ts` exist for pages we
   do not control; a reader's own typing is neither untrusted markup nor a second opinion to
   reconcile. Nothing they enter is fetched, parsed, merged, scored or quarantined.
-- **They are always reachable.** Settings lists every event the reader has made, whatever state it
-  is in, and opens the same detail sheet a row does. Every other surface drops an event once it has
+- **They are reachable whenever the app is.** Settings lists every event the reader has made,
+  whatever state it is in, and opens the same detail sheet a row does. "Whenever the app is" is
+  literal: settings renders on the ready path, so a feed that fails to load takes the whole panel
+  with it — a pre-existing limit worth naming rather than implying otherwise. Every other surface drops an event once it has
   ended, so without this list a one-off of their own became unreachable the day it finished —
   impossible to edit, and impossible to delete out of a store nothing else can see. Events filed
   under a game we track are listed too; the form allows that, so the index has to.

@@ -921,20 +921,38 @@ describe("eventCaption", () => {
     expect(eventCaption(at({}), NOW)).toContain("ended");
   });
 
-  test("an event still to come is not reported as ended", () => {
-    const caption = eventCaption(
-      at({ startsAt: "2026-11-01T00:00:00.000Z", endsAt: "2026-11-08T00:00:00.000Z" }),
-      NOW,
-    );
-    expect(caption).not.toContain("ended");
+  test("an event still to come says when it starts", () => {
+    // Asserted on what it says, not on what it avoids saying: `not.toContain`
+    // passed even with this whole branch deleted, because the ended branch was
+    // never the thing at risk.
+    expect(
+      eventCaption(
+        at({ startsAt: "2026-11-01T00:00:00.000Z", endsAt: "2026-11-08T00:00:00.000Z" }),
+        NOW,
+      ),
+    ).toContain("starts");
   });
 
-  test("an unannounced end is not mistaken for a passed one", () => {
+  test("an unannounced end says so rather than reading as passed", () => {
+    // Date.parse(null) is NaN and NaN < now is false, so the null guard was
+    // unobservable through a `not.toContain("ended")` assertion.
+    expect(eventCaption(at({ endsAt: null, endPrecision: "unknown" }), NOW)).toBe(
+      "no end date",
+    );
+  });
+
+  test("a repeating series that has stopped says so, not just how often", () => {
+    // This list's whole job is explaining why an event is on no other surface.
+    // A finished series that reports a healthy cadence explains nothing.
     const caption = eventCaption(
-      at({ endsAt: null, endPrecision: "unknown" }),
+      at({
+        endsAt: null,
+        endPrecision: "unknown",
+        repeat: { unit: "weeks", interval: 1, until: "2026-09-20T00:00:00.000Z" },
+      }),
       NOW,
     );
-    expect(caption).not.toContain("ended");
+    expect(caption).toContain("stopped");
   });
 });
 
