@@ -1047,12 +1047,16 @@ describe("the workflows that drive the refresh", () => {
     expect(refresh.slice(health)).toContain("exit 1");
   });
 
-  test("ci.yml fails when any one source yields no events", async () => {
+  test("ci.yml fails a source that parsed nothing, not one whose events ended", async () => {
     // The total-event floor is blind to one source going to zero while nine
     // others hold the number up, which shows the reader an empty calendar for
-    // that game.
+    // that game. But the old rule was `eventCount === 0`, counted after
+    // expiry, so a page whose events had all merely finished failed the build
+    // too. Grepping this file can only say which rule is wired up; whether it
+    // is the right one is exercised in test/feed.test.ts.
     const ci = await read("ci.yml");
-    expect(ci).toContain("eventCount === 0");
+    expect(ci).toContain("brokenSources");
+    expect(ci).not.toContain("eventCount === 0");
   });
 });
 

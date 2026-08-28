@@ -72,14 +72,25 @@ jobs:
             }
             // Per source, not just in total: nine healthy sources hide a tenth
             // that has gone to zero, and the total stays comfortably over the
-            // floor while one game shows an empty calendar. A live snapshot
-            // that parsed to nothing is refused upstream and never stored, so
-            // zero here means the fixture stopped parsing — a regression in our
-            // code, not a quiet week for that game.
-            const empty = feed.sources.filter((s) => s.eventCount === 0);
-            if (empty.length > 0) {
+            // floor while one game shows an empty calendar.
+            //
+            // Which zero it is decides whether this build should fail, and
+            // the rule lives in shared/feed.ts rather than here. It was
+            // inline, and a test did pin it — by grepping this file for the
+            // string. That proved the check existed, never that it was right,
+            // and it was not: it read eventCount, which is counted after
+            // expiry, so a page whose events had all simply ended reddened the
+            // build. Behaviour belongs where behaviour can be exercised.
+            const { brokenSources, staleSources } = await import("./src/shared/feed.ts");
+            for (const s of staleSources(feed.sources)) {
+              console.log(
+                `  note: ${s.sourceId} parsed ${s.parsedCount} events, all of them ended — stale page, not a fault`,
+              );
+            }
+            const broken = brokenSources(feed.sources);
+            if (broken.length > 0) {
               throw new Error(
-                `sources yielding no events: ${empty.map((s) => s.sourceId).join(", ")}`,
+                `sources parsing to nothing: ${broken.map((s) => s.sourceId).join(", ")}`,
               );
             }
           '

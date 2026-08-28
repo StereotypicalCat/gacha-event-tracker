@@ -341,10 +341,16 @@ Until then the `pages` job is skipped and the pipeline stays green. Pages is una
 repositories on the free plan. Both steps are done here, and the deploy lands at
 <https://stereotypicalcat.github.io/gacha-event-tracker/>.
 
-The feed job fails if the event count collapses. A source that quietly stops yielding events is the
-failure mode a parser-only pipeline is most prone to, and nothing else would surface it. Tests run
-offline against checked-in fixtures, so a red pipeline always means the code changed rather than a
-wiki being down.
+The feed job fails if the event count collapses, or if any single source parses to nothing — nine
+healthy sources hide a tenth that has gone quiet, and the total stays comfortably over the floor
+while one game shows an empty calendar. That is the failure mode a parser-only pipeline is most
+prone to, and nothing else would surface it.
+
+It distinguishes that from a source whose events have all simply *ended*, which is a stale page
+rather than a broken parser and is reported instead of thrown. The two used to be the same zero,
+because the count was taken after expired events were dropped — so Infinity Nikki reddened the
+build the morning its last event finished. Tests run offline against checked-in fixtures, so a red
+pipeline always means the code changed rather than a wiki being down.
 
 ### Refreshing the data
 

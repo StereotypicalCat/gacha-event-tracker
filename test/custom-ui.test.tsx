@@ -238,6 +238,8 @@ describe("Colophon freshness notice (PRD F7)", () => {
     url: "https://game8.co/games/Genshin-Impact/archives/301601",
     lastSuccessAt: new Date(NOW - 3 * HOUR).toISOString(),
     eventCount: 9,
+
+    parsedCount: 9,
   };
 
   test("states when the data was refreshed, unprompted", () => {

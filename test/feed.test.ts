@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
+  brokenSources,
   freshness,
+  staleSources,
   STALE_AFTER_MS,
   type SourceHealth,
 } from "../src/shared/feed.ts";
@@ -30,6 +32,8 @@ function source(
     url: "https://example.test/events",
     lastSuccessAt,
     eventCount: 3,
+
+    parsedCount: 3,
   };
 }
 
@@ -112,5 +116,59 @@ describe("freshness", () => {
 
   test("an empty feed reports nothing rather than throwing", () => {
     expect(freshness([], NOW)).toEqual({ refreshedAt: null, stale: [] });
+  });
+});
+
+describe("telling a broken source from a stale one", () => {
+  // CI failed on Infinity Nikki yielding nothing, and the check was wrong to.
+  // Its snapshot parses to seven events; every one of them had simply ended by
+  // the day the build ran. `eventCount` is measured after expiry, so "our
+  // parser broke" and "this source has nothing current left" arrived as the
+  // same zero — and only the first is a reason to redden a build.
+  const health = (over: Partial<SourceHealth>): SourceHealth => ({
+    sourceId: "nikki-fandom-events",
+    game: "nikki" as GameId,
+    url: "https://example.test/nikki",
+    lastSuccessAt: "2026-08-19T00:00:00.000Z",
+    eventCount: 0,
+    parsedCount: 7,
+    ...over,
+  });
+
+  test("a source that parsed nothing is broken", () => {
+    // The failure this check exists for: a page changed shape and the parser
+    // now reads it as empty. Nothing to publish and nothing to expire.
+    expect(brokenSources([health({ parsedCount: 0 })]).map((s) => s.sourceId)).toEqual([
+      "nikki-fandom-events",
+    ]);
+  });
+
+  test("a source whose events have all ended is not broken", () => {
+    // The Nikki case exactly. The parser did its job; the calendar moved past
+    // everything the page still lists.
+    expect(brokenSources([health({})])).toEqual([]);
+  });
+
+  test("a healthy source is neither", () => {
+    const ok = health({ eventCount: 5, parsedCount: 5 });
+    expect(brokenSources([ok])).toEqual([]);
+    expect(staleSources([ok])).toEqual([]);
+  });
+
+  test("a source with nothing current left is reported as stale", () => {
+    // Worth saying out loud — a lane showing an empty calendar is a real
+    // problem — but it is a refresh problem, not a code one, so it is
+    // reported rather than thrown.
+    expect(staleSources([health({})]).map((s) => s.sourceId)).toEqual([
+      "nikki-fandom-events",
+    ]);
+  });
+
+  test("a feed that never recorded the count is not called broken", () => {
+    // An older feed — one the service worker cached before this field existed
+    // — says nothing either way, and absence of information is not evidence of
+    // a fault.
+    expect(brokenSources([health({ parsedCount: null })])).toEqual([]);
+    expect(staleSources([health({ parsedCount: null })])).toEqual([]);
   });
 });

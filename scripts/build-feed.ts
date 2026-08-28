@@ -69,6 +69,25 @@ for (const adapter of ADAPTERS) {
     game: adapter.game,
   });
 
+  // Parsed a second time as of the document's own capture date, when nothing
+  // in it had expired yet. That figure is what separates "this parser has
+  // stopped reading the page" from "this page's events have all finished
+  // since it was captured" — the two are the same zero once expiry has been
+  // applied, and only the first means our code is wrong.
+  // Null when we do not know when these bytes were current: there is no date
+  // to parse "as of", and inventing one would manufacture a figure the check
+  // then trusts. Unknown is a real answer here, and `brokenSources` declines
+  // to fail a build on it.
+  const parsedCount =
+    at === null
+      ? null
+      : adapter.parse(html, {
+          now: at,
+          sourceUrl: adapter.url,
+          sourceId: adapter.id,
+          game: adapter.game,
+        }).length;
+
   const groups = byGame.get(adapter.game) ?? [];
   groups.push(events);
   byGame.set(adapter.game, groups);
@@ -81,9 +100,18 @@ for (const adapter of ADAPTERS) {
     // this source has never been refreshed.
     lastSuccessAt: at,
     eventCount: events.length,
+    parsedCount,
   });
 
-  console.log(`  ${adapter.id.padEnd(24)} ${String(events.length).padStart(3)} events  ← ${file}`);
+  // A source that parsed events and then lost them all to the calendar says
+  // so on the build log, because a bare "0 events" reads as a fault.
+  const note =
+    events.length === 0 && parsedCount !== null && parsedCount > 0
+      ? `  (all ${parsedCount} have ended — stale page)`
+      : "";
+  console.log(
+    `  ${adapter.id.padEnd(24)} ${String(events.length).padStart(3)} events  ← ${file}${note}`,
+  );
 }
 
 const events: GachaEvent[] = [];

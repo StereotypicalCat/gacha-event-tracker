@@ -15,7 +15,25 @@ export const SourceHealth = z.object({
   game: GameId,
   url: z.string().url(),
   lastSuccessAt: z.string().datetime().nullable(),
+  /** Events this source contributed to the feed — after expired ones are dropped. */
   eventCount: z.number().int().nonnegative(),
+  /**
+   * Events the document yields when parsed as of its own capture date, before
+   * anything is dropped for having ended.
+   *
+   * The pair is what separates a broken source from a stale one. `eventCount`
+   * alone cannot: a parser that has stopped reading a redesigned page and a
+   * page whose every event has since finished both report zero, and only the
+   * first means our code is wrong.
+   *
+   * **Nullable and defaulted, never required.** The client validates the whole
+   * feed with `EventFeed.safeParse`, and the service worker serves the last
+   * feed it downloaded — so a required field here would make every cached feed
+   * fail validation and take the offline promise with it. Null means an older
+   * feed that never recorded this, which is an absence of information rather
+   * than evidence of a fault.
+   */
+  parsedCount: z.number().int().nonnegative().nullable().default(null),
 });
 
 export const EventFeed = z.object({
@@ -87,4 +105,37 @@ export function freshness(
     .sort((a, b) => (a.lastSuccessAt ?? "").localeCompare(b.lastSuccessAt ?? ""));
 
   return { refreshedAt, stale };
+}
+
+/**
+ * Sources whose document yielded nothing at all.
+ *
+ * This is the failure a parser-only pipeline is most prone to and that nothing
+ * else would surface: a page is redesigned, the parser reads it as empty, and
+ * one game's calendar goes blank while the total stays comfortably healthy.
+ * Worth failing a build over.
+ *
+ * A source whose events have merely all ended is not this, and CI said it was
+ * — the check read `eventCount`, which is measured after expiry, so a stale
+ * page and a broken parser arrived as the same zero. Only an explicit zero
+ * counts here; a null is an older feed that never recorded the figure, and
+ * failing on missing information would be the same mistake in a new place.
+ */
+export function brokenSources(sources: readonly SourceHealth[]): SourceHealth[] {
+  return sources.filter((s) => s.parsedCount === 0);
+}
+
+/**
+ * Sources that parsed fine but have nothing current left to show.
+ *
+ * A real problem — that lane renders an empty calendar — but a refresh
+ * problem rather than a code one, and some of these cannot be refreshed from
+ * CI at all (`docs/SOURCES.md` records which hosts refuse the runner). So it
+ * is reported and left visible rather than thrown, the same way the app shows
+ * a stale timestamp rather than pretending the calendar is current.
+ */
+export function staleSources(sources: readonly SourceHealth[]): SourceHealth[] {
+  return sources.filter(
+    (s) => s.parsedCount !== null && s.parsedCount > 0 && s.eventCount === 0,
+  );
 }
