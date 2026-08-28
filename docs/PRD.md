@@ -331,7 +331,7 @@ decides which dates are even questions:
 |---|---|---|
 | one-off | start, end, or "I don't know when it ends" | no rule |
 | daily / weekly / monthly | a start, and nothing else | no end, a one-unit cycle |
-| custom | start, end, and how it repeats | whatever the reader states |
+| custom | start, an end it still allows to be unknown, and how it repeats | whatever the reader states |
 
 **A preset carries no window.** Choosing weekly says the week *is* the window —
 each occurrence runs until the next opens — so there is no end date to type and

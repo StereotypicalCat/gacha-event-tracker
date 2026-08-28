@@ -184,20 +184,64 @@ function openingControls(
 }
 
 /**
- * The rule the three-way control currently describes.
+ * Whether the end-date question has been answered.
  *
- * Pulled out of the component because it is the one place the three answers
- * become the single `{unit, interval}` the schema stores, and that translation
- * is worth reading in one piece rather than spread through the render.
+ * A cadence that renders no end field is asking nothing, so there is nothing
+ * to withhold. Missing that gate is not a cosmetic slip: a fresh form starts
+ * with `endKnown` true and `endDate` empty, so a preset — which hides both the
+ * field and the "I don't know" checkbox — would leave Save disabled with
+ * nothing on screen a reader could do about it.
  *
- * A delay is expressed by where it lands: the next opening is the wait added
- * to the close, and the interval is whatever spans the anchor to there. That
- * is why a delay can never produce a rule that comes round before it ends —
- * the next opening is at or after the close by construction. Only a
- * hand-stated cadence can, which is why `comesRoundEarly` still guards the
- * form.
+ * Exported because that state needs a click to reach, and nothing in this
+ * project can click. Every static render drives the form through `initial`,
+ * and `cadenceOf` never returns a preset for an event that has an end, so the
+ * broken case was invisible to the whole suite.
  */
-function repeatOf(input: {
+export function endStated(
+  datedWindow: boolean,
+  endKnown: boolean,
+  endDate: string,
+): boolean {
+  return !datedWindow || !endKnown || endDate !== "";
+}
+
+/**
+ * What an unstated end means, given whether anything repeats.
+ *
+ * Keyed off the rule rather than off the cadence. `custom` with the repeat set
+ * to never is a real state and it has no interval to bound anything, so
+ * choosing the sentence by cadence promised a countdown that would not arrive.
+ */
+export function unknownEndNote(repeat: Repeat | null): string {
+  if (repeat === null) {
+    return "It'll show with no countdown and no daily checklist, the same as an event whose source hasn't announced an end.";
+  }
+  return "Each one runs until the next one opens, so it still counts down.";
+}
+
+/**
+ * The rule the form's controls currently describe, across all five cadences.
+ *
+ * The one place five answers become the single `{unit, interval}` the schema
+ * stores, which is worth reading in one piece rather than spread through the
+ * render — and exported so that `until` surviving every one of those paths is
+ * provable without a submit nothing in this suite can click.
+ *
+ * A preset is one unit with no window. A delay is expressed by where it lands:
+ * the next opening is the wait added to the close, and the interval is
+ * whatever spans the anchor to there. That is why a delay can never produce a
+ * rule that comes round before it ends — the next opening is at or after the
+ * close by construction. Only a hand-stated cycle length can, which is why
+ * `comesRoundEarly` still guards the form.
+ *
+ * A delay returns null when no whole unit spans the anchor to that opening,
+ * which happens whenever the start and the end disagree about having a
+ * time-of-day: nothing steps from 10:00 to a midnight. The schema anchors
+ * every occurrence to `startsAt`, so that rule is not merely unstated but
+ * unstatable, and the form says so rather than disabling Save in silence.
+ */
+export function repeatOf(input: {
+  cadence: Cadence;
   mode: RepeatMode;
   measuring: boolean;
   measured: Repeat | null;
@@ -207,8 +251,11 @@ function repeatOf(input: {
   amount: number;
   until: string | null;
 }): Repeat | null {
-  const { mode, measuring, measured, startMs, contiguousMs, unit, amount, until } =
+  const { cadence, mode, measuring, measured, startMs, contiguousMs, unit, amount, until } =
     input;
+
+  if (cadence === "one-off") return null;
+  if (cadence !== "custom") return repeatFrom(PRESET_UNIT[cadence], 1, until);
 
   if (mode === "never") return null;
   if (mode === "forever") {
@@ -449,11 +496,8 @@ export function EventForm({
   // occurrence runs until the next opens.
   const delayNeedsEnd = repeatMode === "delay" && endMs === null;
 
-  const repeat = preset
-    ? repeatFrom(PRESET_UNIT[cadence], 1, existingUntil)
-    : cadence === "one-off"
-      ? null
-      : repeatOf({
+  const repeat = repeatOf({
+          cadence,
           mode: repeatMode,
           measuring,
           measured,
@@ -487,7 +531,7 @@ export function EventForm({
     startsAt !== null &&
     !backwards &&
     !endMissing &&
-    (!endKnown || endDate !== "") &&
+    endStated(datedWindow, endKnown, endDate) &&
     !earlyReturn &&
     !repeatIncomplete;
 
@@ -730,6 +774,24 @@ export function EventForm({
           </div>
         )}
 
+        {/* The way back. Taking the cadence over is meant to be a decision the
+            reader can undo, and without this it was a one-way door: nothing
+            else ever cleared `ownCadence`, so the measured reading could not
+            be recovered without abandoning the form. Only offered when there
+            is something to go back to. */}
+        {repeatMode === "forever" && ownCadence && measured !== null && (
+          <p className="mt-1.5 text-xs leading-relaxed text-faint">
+            <button
+              type="button"
+              onClick={() => setOwnCadence(false)}
+              className="underline transition-colors hover:text-ink"
+            >
+              use my dates instead
+            </button>{" "}
+            · {cadenceLabel(measured)}
+          </p>
+        )}
+
         {repeatMode === "delay" && (
           <>
             <div className="mt-2 grid grid-cols-2 gap-2">
@@ -766,6 +828,19 @@ export function EventForm({
               after it ends
               {repeat !== null ? ` · ${cadenceLabel(repeat)}` : ""}
             </p>
+            {/* Every occurrence is anchored to the start, so the wait has to
+                land a whole number of units from it. It never can when one
+                boundary has a time of day and the other does not — nothing
+                steps from 10:00 to a midnight — and that is unstatable rather
+                than merely unstated, so it says so instead of leaving Save
+                disabled with no reason given. */}
+            {repeat === null && !delayNeedsEnd && (
+              <p className="mt-2 text-xs text-critical">
+                Give the start and the end both a time, or neither — a wait has
+                to land a whole number of days from the start, and these don't
+                line up.
+              </p>
+            )}
           </>
         )}
         </>
@@ -788,16 +863,9 @@ export function EventForm({
         />
       </label>
 
-      {datedWindow && !endKnown && cadence === "one-off" && (
+      {datedWindow && !endKnown && (
         <p className="mt-2 text-xs leading-relaxed text-faint">
-          It'll show with no countdown and no daily checklist, the same as an
-          event whose source hasn't announced an end.
-        </p>
-      )}
-      {datedWindow && !endKnown && cadence === "custom" && (
-        /* Not a degraded answer here — the interval bounds it. */
-        <p className="mt-2 text-xs leading-relaxed text-faint">
-          Each one runs until the next one opens, so it still counts down.
+          {unknownEndNote(repeat)}
         </p>
       )}
       {backwards && (

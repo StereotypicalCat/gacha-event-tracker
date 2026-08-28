@@ -2,6 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
   cadenceLabel,
+  endStated,
+  repeatOf,
+  unknownEndNote,
   EventForm,
   repeatFrom,
   strandedNotice,
@@ -454,7 +457,7 @@ describe("stating a repeat", () => {
     expect(html).toContain("Cycle length");
   });
 
-  test("a delay needs an end date to be measured from", () => {
+  test("with no end date, the delay option is closed off", () => {
     const html = renderToStaticMarkup(
       <EventForm
         lanes={["mygame:limbus-company"]}
@@ -798,5 +801,85 @@ describe("a preset says its piece exactly once", () => {
     expect(html).toContain("no end date to give");
     expect(html).not.toContain("still counts down");
     expect(html).not.toContain("no countdown");
+  });
+});
+
+describe("endStated", () => {
+  // Extracted because the bug it now pins was unreachable from any test in
+  // this project: every static render drives the form through `initial`, and
+  // `cadenceOf` never returns a preset for an event that has an end. The
+  // broken state — a *fresh* form switched to a preset — needs a click.
+  test("a cadence with no end field has nothing to answer", () => {
+    // The Critical case. A fresh form has endKnown true and endDate empty;
+    // picking weekly hides both the field and the checkbox, so requiring an
+    // end here disables Save with nothing on screen that could satisfy it.
+    expect(endStated(false, true, "")).toBe(true);
+    expect(endStated(false, false, "")).toBe(true);
+  });
+
+  test("a cadence that asks still has to be answered", () => {
+    expect(endStated(true, true, "")).toBe(false);
+    expect(endStated(true, true, "2026-09-08")).toBe(true);
+    expect(endStated(true, false, "")).toBe(true);
+  });
+});
+
+describe("unknownEndNote", () => {
+  // Keyed off the rule, not the cadence: `custom` with Repeat set to never is
+  // a real state, and it has no interval to bound anything.
+  test("no rule means no countdown, whatever the cadence", () => {
+    expect(unknownEndNote(null)).toContain("no countdown");
+  });
+
+  test("a rule bounds it, so it still counts down", () => {
+    const note = unknownEndNote({ unit: "weeks", interval: 1, until: null });
+    expect(note).toContain("until the next one opens");
+    expect(note).not.toContain("no countdown");
+  });
+});
+
+describe("repeatOf", () => {
+  const base = {
+    mode: "forever" as const,
+    measuring: false,
+    measured: null,
+    startMs: Date.parse("2026-09-01T00:00:00.000Z"),
+    contiguousMs: Date.parse("2026-09-08T00:00:00.000Z"),
+    unit: "weeks" as const,
+    amount: 1,
+    until: null as string | null,
+  };
+
+  test("a one-off states no rule", () => {
+    expect(repeatOf({ ...base, cadence: "one-off" })).toBe(null);
+  });
+
+  test("each preset is its own unit, once", () => {
+    expect(repeatOf({ ...base, cadence: "daily" })).toEqual({ unit: "days", interval: 1, until: null });
+    expect(repeatOf({ ...base, cadence: "weekly" })).toEqual({ unit: "weeks", interval: 1, until: null });
+    expect(repeatOf({ ...base, cadence: "monthly" })).toEqual({ unit: "months", interval: 1, until: null });
+  });
+
+  test("a preset carries an existing `until` through", () => {
+    // The form has no control for `until`, so the only way it survives an
+    // edit is by being threaded through every path that builds a rule — and
+    // the preset path is the newest of them.
+    const until = "2027-01-01T00:00:00.000Z";
+    expect(repeatOf({ ...base, cadence: "weekly", until })?.until).toBe(until);
+    expect(repeatOf({ ...base, cadence: "custom", until })?.until).toBe(until);
+  });
+
+  test("a delay that cannot land on a whole unit states no rule", () => {
+    // Start at 10:00, end at midnight: no whole number of any unit steps from
+    // one to the other, so there is nothing the schema could store.
+    expect(
+      repeatOf({
+        ...base,
+        cadence: "custom",
+        mode: "delay",
+        startMs: Date.parse("2026-09-01T10:00:00.000Z"),
+        contiguousMs: Date.parse("2026-09-08T00:00:00.000Z"),
+      }),
+    ).toBe(null);
   });
 });
