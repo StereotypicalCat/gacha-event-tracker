@@ -1,5 +1,12 @@
 import { z } from "zod";
-import { comesRoundEarly, Repeat, ruleIdOf } from "./recurrence.ts";
+import {
+  comesRoundEarly,
+  isOccurrenceId,
+  nearestOccurrence,
+  occurrenceForId,
+  Repeat,
+  ruleIdOf,
+} from "./recurrence.ts";
 import type { Occurrence } from "./recurrence.ts";
 import { EventType, GachaEvent, Precision, slugify } from "./schema.ts";
 
@@ -288,4 +295,41 @@ export function recordFor(
   rowId: string,
 ): CustomEvent | undefined {
   return events[ruleIdOf(rowId)];
+}
+
+/**
+ * The row an id names, for anything the reader entered themselves.
+ *
+ * The detail sheet opens rows, and an id reaches it from three places that do
+ * not agree about shape: a list row carries an occurrence id, the settings
+ * index carries a stored rule id, and a plain event's id is both at once.
+ * This is the one place that reconciles them, and it is exported rather than
+ * inlined because nothing in this project can click: no test renders the app,
+ * so an id the sheet cannot resolve was invisible to the whole suite until it
+ * had already shipped as a button that does nothing.
+ *
+ * **The last branch is a floor, not a nicety.** A rule can legitimately
+ * produce no occurrence at all — `until` earlier than `startsAt` parses fine
+ * and is reachable by import — which puts it on no list, no board and no
+ * timeline. Returning null for it would leave the settings index opening
+ * nothing for exactly the record that index exists to rescue. Falling back to
+ * the rule itself means a stored id always names something the reader can
+ * edit and delete.
+ */
+export function displayEventFor(
+  events: CustomEvents,
+  rowId: string,
+  nowMs: number,
+): DisplayEvent | null {
+  const record = recordFor(events, rowId);
+  if (record === undefined) return null;
+
+  if (record.repeat === null) return asDisplayEvent(record);
+
+  const occurrence = isOccurrenceId(rowId)
+    ? occurrenceForId(record, rowId)
+    : nearestOccurrence(record, nowMs);
+  return occurrence === null
+    ? asDisplayEvent(record)
+    : asOccurrenceEvent(record, occurrence);
 }

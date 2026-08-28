@@ -30,12 +30,12 @@ import {
 } from "./state/lens.ts";
 import { clockFor, formatRemaining } from "../shared/time.ts";
 import { dailySummary, isDaily, resolveDaily } from "../shared/daily.ts";
-import { occurrenceForId, strandedOccurrences } from "../shared/recurrence.ts";
+import { strandedOccurrences } from "../shared/recurrence.ts";
 import { orderGames } from "./state/gameOrder.ts";
 import { GameMetaProvider, type MetaResolver } from "./state/gameMeta.tsx";
 import { metaOnTheme, useTheme } from "./state/theme.ts";
 import {
-  asOccurrenceEvent,
+  displayEventFor,
   recordFor,
   type CustomEvents,
   type CustomGames,
@@ -369,11 +369,8 @@ export function App() {
   const openRow = (() => {
     const hit = allRows.find((r) => r.event.id === openId) ?? null;
     if (hit !== null || openId === null) return hit;
-    const record = recordFor(custom.events, openId);
-    if (record === undefined) return null;
-    const occurrence = occurrenceForId(record, openId);
-    if (occurrence === null) return null;
-    const event = asOccurrenceEvent(record, occurrence);
+    const event = displayEventFor(custom.events, openId, now);
+    if (event === null) return null;
     return { event, clock: clockFor(event, prefs.region, now) };
   })();
 
@@ -650,6 +647,14 @@ export function App() {
           onEditGame: custom.editGame,
           onRemoveGame: custom.removeGame,
           onAddEvent: custom.addEvent,
+          now,
+          // The index lists rules; the sheet opens rows. A repeating rule's
+          // own id is never a row — the lists hold its occurrences — so it is
+          // resolved to whichever occurrence is nearest before opening.
+          // The stored id is enough: `displayEventFor` resolves a rule to
+          // whichever occurrence the sheet can show, and to the rule itself
+          // when it has none.
+          onOpen: setOpenId,
         }}
         onExport={() =>
           exportProgress(prog.progress, daily.logs, ignored.marks, prefs, {

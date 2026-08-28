@@ -52,6 +52,8 @@ function render(prefs: Prefs, ignoredCount = 0): string {
           games: {},
           events: {},
           lanes: ["genshin", "hsr"],
+          now: 0,
+          onOpen: () => {},
           onAddGame: () => {},
           onEditGame: () => {},
           onRemoveGame: () => ({ removed: true, blockedBy: 0 }),
