@@ -219,7 +219,7 @@ answer decides which dates are even worth asking for:
 |---|---|
 | **one-off** | a start, and an end you are allowed not to know |
 | **daily / weekly / monthly** | a start, and nothing else |
-| **custom** | a start, an end, and how it repeats |
+| **custom** | a start, an end you are still allowed not to know, and how it repeats |
 
 A preset carries no window. Weekly means the week *is* the window — each one
 runs until the next opens — so there is no end date to type and no ignorance to
