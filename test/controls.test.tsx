@@ -275,3 +275,15 @@ describe("Controls: the game order editor", () => {
     );
   });
 });
+
+describe("the chores checkbox reports its own pref", () => {
+  test("off, one fewer box is ticked", () => {
+    // Counting alone can no longer separate the two always-on boxes from each
+    // other — with `showCompleted` also true, a checkbox bound to the wrong one
+    // of them keeps the same total. Flipping this pref specifically is what
+    // distinguishes them.
+    const on = checkboxes(render(PREFS)).filter(Boolean).length;
+    const off = checkboxes(render({ ...PREFS, showChores: false })).filter(Boolean).length;
+    expect(off).toBe(on - 1);
+  });
+});

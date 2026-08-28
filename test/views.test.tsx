@@ -8,7 +8,7 @@ import {
   startMarkers,
   Timeline,
 } from "../src/client/components/Timeline.tsx";
-import { CatchUpPanel, dailyGroups } from "../src/client/components/Dailies.tsx";
+import { CatchUpPanel, Dailies, dailyGroups } from "../src/client/components/Dailies.tsx";
 import { Welcome } from "../src/client/components/Welcome.tsx";
 import { timelineLanes } from "../src/client/state/lanes.ts";
 import { GameMetaProvider } from "../src/client/state/gameMeta.tsx";
@@ -1086,5 +1086,56 @@ describe("dailyGroups with the chores switched off", () => {
     expect(groups.map((g) => g.items.map((i) => i.key))).toEqual([
       ["dailies:genshin", "e1"],
     ]);
+  });
+});
+
+describe("the chores toggle reaches the screen", () => {
+  // `dailyGroups` is pure and well covered, but nothing tied `prefs.showChores`
+  // to what renders. Review proved four plausible breaks shipped green —
+  // including App passing the wrong pref, and Dailies hardcoding `true` — so
+  // these assert the rendered strip rather than the function behind it.
+  const NOW = Date.parse("2026-08-17T12:00:00.000Z");
+  const repeating = {
+    id: "e1",
+    game: "genshin",
+    title: "Lantern Rite login",
+    type: "login",
+    summary: null,
+    startsAt: "2026-08-10T00:00:00.000Z",
+    startPrecision: "day",
+    endsAt: null,
+    endPrecision: "unknown",
+    regionScoped: false,
+    regionEnds: null,
+    sourceUrl: "https://example.test",
+  } as never;
+
+  const strip = (showChores: boolean) =>
+    render(
+      <Dailies
+        games={["genshin"]}
+        events={[repeating]}
+        region="europe"
+        now={NOW}
+        showChores={showChores}
+        daysFor={() => []}
+        onToggleDay={() => {}}
+      />,
+    );
+
+  test("on, the invented chore is on screen", () => {
+    const html = strip(true);
+    expect(html).toContain("Commissions, resin");
+    expect(html).toContain("Lantern Rite login");
+  });
+
+  test("off, the chore is gone and the event and its count are not", () => {
+    // The count is asserted too: it derives from the items, so a chore hidden
+    // from view but still counted would leave the reader chasing a tick that
+    // is not there.
+    const html = strip(false);
+    expect(html).not.toContain("Commissions, resin");
+    expect(html).toContain("Lantern Rite login");
+    expect(html).toContain("0/1");
   });
 });

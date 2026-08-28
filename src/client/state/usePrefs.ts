@@ -186,7 +186,7 @@ export interface Prefs {
   onboarded: boolean;
 }
 
-function defaults(): Prefs {
+export function defaults(): Prefs {
   return {
     region: guessRegion(),
     hiddenGames: [],
