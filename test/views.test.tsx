@@ -1014,3 +1014,77 @@ describe("boardWindow is not widened by expansion", () => {
     expect(chartWidthOf(withExpand)).toBe(chartWidthOf(withoutExpand));
   });
 });
+
+describe("dailyGroups with the chores switched off", () => {
+  const NOW = Date.parse("2026-08-17T12:00:00.000Z");
+  const meta = (id: string) => metaFor(id, {});
+  const startOf = (e: { startsAt: string }) => Date.parse(e.startsAt);
+  const repeating = (id: string, game: string, title: string) =>
+    ({
+      id,
+      game,
+      title,
+      type: "login",
+      summary: null,
+      startsAt: "2026-08-10T00:00:00.000Z",
+      startPrecision: "day",
+      endsAt: null,
+      endPrecision: "unknown",
+      regionScoped: false,
+      regionEnds: null,
+      sourceUrl: "https://example.test",
+    }) as never;
+
+  test("the invented chore goes and the events stay", () => {
+    // Only the fixed per-game list the app makes up goes. Anything with a
+    // checklist is something the reader engaged with, and stays.
+    const groups = dailyGroups(
+      ["genshin"],
+      [repeating("e1", "genshin", "Login Bonus")],
+      NOW,
+      "europe",
+      meta,
+      startOf,
+      false,
+    );
+    expect(groups.map((g) => g.items.map((i) => i.key))).toEqual([["e1"]]);
+  });
+
+  test("an event the reader added themselves is untouched", () => {
+    // Stated explicitly because it is the requirement most at risk of being
+    // filtered away by a switch aimed at something else.
+    const groups = dailyGroups(
+      ["genshin"],
+      [repeating("myevent:k3f9qa2m01", "genshin", "My own grind")],
+      NOW,
+      "europe",
+      meta,
+      startOf,
+      false,
+    );
+    expect(groups[0]?.items.map((i) => i.key)).toEqual(["myevent:k3f9qa2m01"]);
+  });
+
+  test("with nothing else to show, a game contributes no group at all", () => {
+    // Not an empty group with a heading and no rows — the strip's own
+    // `total === 0` guard then drops it entirely, which is what a reader who
+    // turned this off is asking for.
+    const groups = dailyGroups(["genshin", "hsr"], [], NOW, "europe", meta, startOf, false);
+    expect(groups).toEqual([]);
+  });
+
+  test("left on, nothing about the strip moves", () => {
+    const groups = dailyGroups(
+      ["genshin"],
+      [repeating("e1", "genshin", "Login Bonus")],
+      NOW,
+      "europe",
+      meta,
+      startOf,
+      true,
+    );
+    expect(groups.map((g) => g.items.map((i) => i.key))).toEqual([
+      ["dailies:genshin", "e1"],
+    ]);
+  });
+});

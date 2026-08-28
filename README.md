@@ -186,6 +186,12 @@ Alongside them sits **today's dailies** — commissions, sanity, daily training 
 No wiki publishes those, so they are a fixed list in the app rather than scraped data, and they are
 the only thing on the page that expires tonight rather than next patch.
 
+Because nobody publishes them, they are the app's guess at your routine rather than anything you
+asked for — so **Show each game's own daily chores** in the settings turns them off. Only the
+invented chores go: anything with a checklist is something you engaged with, including events you
+added yourself and marked daily, and those stay where they are. Nothing is discarded, so every tick
+and streak is waiting if you turn it back on.
+
 Both roll over at **04:00 server time** in your region, not midnight, because that is when the games
 roll over. Finishing at 02:00 still counts as yesterday.
 
