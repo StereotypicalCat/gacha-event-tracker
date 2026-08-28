@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { addUnits, comesRoundEarly, Repeat, repeatSpanning, repeatModeOf, isOccurrenceId, occurrenceId, occurrenceForId, ruleIdOf, movesOccurrences, nextOccurrences, occurrencesOf, strandedOccurrences, type RepeatingEvent } from "../src/shared/recurrence.ts";
+import { addUnits, comesRoundEarly, Repeat, repeatSpanning, repeatModeOf, cadenceOf, isOccurrenceId, occurrenceId, occurrenceForId, ruleIdOf, movesOccurrences, nextOccurrences, occurrencesOf, strandedOccurrences, type RepeatingEvent } from "../src/shared/recurrence.ts";
 import { CustomEventId, isCustomEventId } from "../src/shared/custom.ts";
 
 // Pinned so the DST cases mean something. Copenhagen is UTC+1 in winter and
@@ -549,5 +549,44 @@ describe("repeatModeOf", () => {
     // and a delay would have nothing to be measured from.
     expect(repeatModeOf(start, null, { unit: "weeks", interval: 1, until: null }))
       .toBe("forever");
+  });
+});
+
+describe("cadenceOf", () => {
+  // Which of the form's five answers describes a saved event. Derived rather
+  // than stored, like `repeatModeOf`, so a rule made before the control
+  // existed — or one that arrived by import — opens in whichever answer
+  // actually fits it rather than in whichever happens to be the default.
+  const weekly = { unit: "weeks", interval: 1, until: null } as const;
+
+  test("no rule at all is a one-off", () => {
+    expect(cadenceOf(null, null)).toBe("one-off");
+    expect(cadenceOf("2026-09-08T00:00:00.000Z", null)).toBe("one-off");
+  });
+
+  test("a single unit with no end is the matching preset", () => {
+    expect(cadenceOf(null, { unit: "days", interval: 1, until: null })).toBe("daily");
+    expect(cadenceOf(null, weekly)).toBe("weekly");
+    expect(cadenceOf(null, { unit: "months", interval: 1, until: null })).toBe("monthly");
+  });
+
+  test("a longer cycle is a custom", () => {
+    expect(cadenceOf(null, { unit: "days", interval: 26, until: null })).toBe("custom");
+    expect(cadenceOf(null, { unit: "weeks", interval: 2, until: null })).toBe("custom");
+  });
+
+  test("a stated end is a custom, whatever the cycle", () => {
+    // The presets carry no window — picking one means the period *is* the
+    // window. An event that states its own end is saying something the preset
+    // cannot, so it belongs where that is sayable.
+    expect(cadenceOf("2026-09-08T00:00:00.000Z", weekly)).toBe("custom");
+  });
+
+  test("a series that stops is a custom", () => {
+    // There is no control for `until` in a preset, so opening one there would
+    // offer to save a rule quietly stripped of the date it stops on.
+    expect(
+      cadenceOf(null, { unit: "weeks", interval: 1, until: "2027-01-01T00:00:00.000Z" }),
+    ).toBe("custom");
   });
 });

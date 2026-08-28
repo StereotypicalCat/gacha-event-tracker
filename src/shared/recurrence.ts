@@ -151,6 +151,52 @@ export function repeatSpanning(fromMs: number, toMs: number): Repeat | null {
 /** The three answers the form offers for "does this come round again?". */
 export type RepeatMode = "never" | "forever" | "delay";
 
+/** The five answers the form offers for "how often is this?". */
+export type Cadence = "one-off" | "daily" | "weekly" | "monthly" | "custom";
+
+const PRESET_OF: Record<RepeatUnit, Cadence> = {
+  days: "daily",
+  weeks: "weekly",
+  months: "monthly",
+};
+
+/**
+ * The unit each preset stands for — the inverse of the map above, kept beside
+ * it so the two cannot drift apart. A preset is always an interval of one:
+ * that is what makes it a preset rather than a cycle length.
+ */
+export const PRESET_UNIT: Record<"daily" | "weekly" | "monthly", RepeatUnit> = {
+  daily: "days",
+  weekly: "weeks",
+  monthly: "months",
+};
+
+/**
+ * Which of the form's five answers describes a saved event.
+ *
+ * Derived rather than stored, for the reason `repeatModeOf` is: a rule made
+ * before this control existed, or one that arrived by import, has to open in
+ * whichever answer actually fits it rather than in whichever happens to be the
+ * default.
+ *
+ * **A preset carries no window.** Choosing daily, weekly or monthly says the
+ * period *is* the window — each occurrence runs until the next opens — so an
+ * event that states its own end is saying something no preset can, and belongs
+ * under `custom` where that is sayable. The same goes for a series that stops:
+ * there is no control for `until` in a preset, and opening one there would
+ * offer to save a rule quietly stripped of the date it ends on.
+ */
+export function cadenceOf(
+  endsAt: string | null,
+  repeat: Repeat | null,
+): Cadence {
+  if (repeat === null) return "one-off";
+  if (endsAt !== null || repeat.until !== null || repeat.interval !== 1) {
+    return "custom";
+  }
+  return PRESET_OF[repeat.unit];
+}
+
 /**
  * Which of the three states a saved rule belongs to.
  *

@@ -375,16 +375,21 @@ describe("stating a repeat", () => {
   // case; `forever()` narrows the interval to exactly that eight-day step.
   const forever = () => repeating({ repeat: { unit: "days", interval: 8, until: null } });
 
-  test("a fresh form offers the three answers, set to never", () => {
+  test("a custom cadence offers the three answers", () => {
+    // The three-way control lives under `custom` now: a preset answers the
+    // question by construction and a one-off has nothing to answer, so this
+    // is the only cadence that has to ask.
     const html = renderToStaticMarkup(
-      <EventForm lanes={["mygame:limbus-company"]} customGames={GAMES} onSave={() => {}} onCancel={() => {}} />,
+      <EventForm
+        lanes={["mygame:limbus-company"]}
+        customGames={GAMES}
+        initial={repeating()}
+        onSave={() => {}}
+        onCancel={() => {}}
+      />,
     );
     expect(html).toContain("Repeat");
     expect(html).toContain("with a delay");
-    // Nothing to configure until they pick one, so the form a reader already
-    // knows is unchanged until they reach for this.
-    expect(html).not.toContain("Every");
-    expect(html).not.toContain("Wait");
   });
 
   test("a rule that reopens as it closes shows its cadence rather than a control", () => {
@@ -441,7 +446,7 @@ describe("stating a repeat", () => {
       <EventForm
         lanes={["mygame:limbus-company"]}
         customGames={GAMES}
-        initial={repeating({ endsAt: null, endPrecision: "unknown", repeat: { unit: "weeks", interval: 1, until: null } })}
+        initial={repeating({ endsAt: null, endPrecision: "unknown", repeat: { unit: "weeks", interval: 2, until: null } })}
         onSave={() => {}}
         onCancel={() => {}}
       />,
@@ -454,7 +459,7 @@ describe("stating a repeat", () => {
       <EventForm
         lanes={["mygame:limbus-company"]}
         customGames={GAMES}
-        initial={repeating({ endsAt: null, endPrecision: "unknown", repeat: { unit: "weeks", interval: 1, until: null } })}
+        initial={repeating({ endsAt: null, endPrecision: "unknown", repeat: { unit: "weeks", interval: 2, until: null } })}
         onSave={() => {}}
         onCancel={() => {}}
       />,
@@ -673,5 +678,125 @@ describe("the derived-boundary note", () => {
       </GameMetaProvider>,
     );
     expect(html).not.toContain("server reset");
+  });
+});
+
+describe("the cadence control", () => {
+  const event = (over: Record<string, unknown> = {}) =>
+    CustomEvent.parse({
+      id: "myevent:k3f9qa2m01",
+      game: "mygame:limbus-company",
+      title: "Mirror Dungeon",
+      type: "challenge",
+      summary: null,
+      startsAt: "2026-09-01T00:00:00.000Z",
+      startPrecision: "day",
+      endsAt: "2026-09-08T00:00:00.000Z",
+      endPrecision: "day",
+      repeat: null,
+      at: AT,
+      updatedAt: AT,
+      ...over,
+    });
+
+  const render = (initial?: ReturnType<typeof event>) =>
+    renderToStaticMarkup(
+      <EventForm
+        lanes={["mygame:limbus-company"]}
+        customGames={GAMES}
+        initial={initial}
+        onSave={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+
+  test("a fresh form offers all five answers and opens on one-off", () => {
+    const html = render();
+    expect(html).toContain("Cadence");
+    for (const answer of ["one-off", "daily", "weekly", "monthly", "custom"]) {
+      expect(html).toContain(answer);
+    }
+    // A one-off is what the form was before any of this, so it still asks for
+    // an end and still lets the reader say they do not know it.
+    expect(html).toContain("Ends");
+    expect(html).toContain("I don&#x27;t know when it ends");
+  });
+
+  test("a preset asks for a start and nothing else", () => {
+    // The period is the window, so there is no end to type and no ignorance
+    // to admit. This is the whole reason the presets exist.
+    const html = render(
+      event({
+        endsAt: null,
+        endPrecision: "unknown",
+        repeat: { unit: "weeks", interval: 1, until: null },
+      }),
+    );
+    expect(html).toContain("Starts");
+    expect(html).not.toContain("Ends");
+    expect(html).not.toContain("I don&#x27;t know when it ends");
+    expect(html).not.toContain("Cycle length");
+    expect(html).not.toContain("Wait");
+  });
+
+  test("each preset reopens as itself", () => {
+    const daily = render(
+      event({ endsAt: null, endPrecision: "unknown", repeat: { unit: "days", interval: 1, until: null } }),
+    );
+    expect(daily).toContain('value="daily" selected=""');
+    const monthly = render(
+      event({ endsAt: null, endPrecision: "unknown", repeat: { unit: "months", interval: 1, until: null } }),
+    );
+    expect(monthly).toContain('value="monthly" selected=""');
+  });
+
+  test("a dated recurring event reopens as a custom, with its window intact", () => {
+    // Presets carry no window, so anything that states one has to land here —
+    // and the end date it stated has to still be on screen.
+    const html = render(event({ repeat: { unit: "days", interval: 26, until: null } }));
+    expect(html).toContain('value="custom" selected=""');
+    expect(html).toContain("Ends");
+    expect(html).toContain("Repeat");
+  });
+
+  test("a one-off shows no repeat machinery at all", () => {
+    const html = render(event());
+    expect(html).toContain('value="one-off" selected=""');
+    expect(html).not.toContain("Cycle length");
+    expect(html).not.toContain("Wait");
+    expect(html).not.toContain("worked out from your dates");
+  });
+});
+
+describe("a preset says its piece exactly once", () => {
+  test("no end-date note tags along when there is no end-date field", () => {
+    // Both of the older notes explain the end-date field. A preset has no such
+    // field, so rendering them there left two sentences saying almost the same
+    // thing — caught by looking at the form, not by any assertion on content.
+    const html = renderToStaticMarkup(
+      <EventForm
+        lanes={["mygame:limbus-company"]}
+        customGames={GAMES}
+        initial={CustomEvent.parse({
+          id: "myevent:k3f9qa2m01",
+          game: "mygame:limbus-company",
+          title: "Weekly missions",
+          type: "challenge",
+          summary: null,
+          startsAt: "2026-09-01T00:00:00.000Z",
+          startPrecision: "day",
+          endsAt: null,
+          endPrecision: "unknown",
+          repeat: { unit: "weeks", interval: 1, until: null },
+          at: AT,
+          updatedAt: AT,
+        })}
+        onSave={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    expect(html).toContain("no end date to give");
+    expect(html).not.toContain("still counts down");
+    expect(html).not.toContain("no countdown");
   });
 });

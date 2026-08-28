@@ -323,10 +323,34 @@ Four constraints, each protecting something that already exists:
   which is the same argument the code already makes for streaks. This is the *only* copy — there is
   no server to restore from.
 
-A reader's event may also state how it comes round again — every N days, weeks
-or months. The rule is stored; its occurrences are derived, and each one is an
-ordinary event everywhere in the app: its own countdown, its own completion,
-its own daily checklist.
+A reader's event may also state how it comes round again. The form asks that
+directly after **Kind**, before it asks for any date, because the answer
+decides which dates are even questions:
+
+| Cadence | What it asks for | What it stores |
+|---|---|---|
+| one-off | start, end, or "I don't know when it ends" | no rule |
+| daily / weekly / monthly | a start, and nothing else | no end, a one-unit cycle |
+| custom | start, end, and how it repeats | whatever the reader states |
+
+**A preset carries no window.** Choosing weekly says the week *is* the window —
+each occurrence runs until the next opens — so there is no end date to type and
+no ignorance to admit. A dated recurring event ("1–16 September, and again
+every month") is therefore a `custom`, not a preset.
+
+Under `custom` the reader says whether it repeats **forever** — reopening the
+moment it closes — or **after a delay**, and the cadence is measured from the
+dates they already gave rather than asked for again. A delay is stated as the
+wait between closing and reopening, so it cannot describe a rule that comes
+round before it ends; a hand-stated cycle length can, and is refused.
+
+Which of the five a saved event opens in is derived from the rule itself, so an
+event made before this control existed, or one that arrived by import, opens in
+whichever answer actually describes it.
+
+The rule is stored; its occurrences are derived, and each one is an ordinary
+event everywhere in the app: its own countdown, its own completion, its own
+daily checklist.
 
 **The schedule can stop on a date (`until`), but the form has no control for
 setting one.** The field exists in the schema — descoped from the form during

@@ -7,11 +7,14 @@ import {
 } from "../../shared/custom.ts";
 import {
   addUnits,
+  cadenceOf,
   comesRoundEarly,
   movesOccurrences,
+  PRESET_UNIT,
   repeatModeOf,
   repeatSpanning,
   RepeatUnit,
+  type Cadence,
   type Repeat,
   type RepeatMode,
 } from "../../shared/recurrence.ts";
@@ -375,6 +378,11 @@ export function EventForm({
   // Separate from an empty end date so "I don't know" is a thing the reader
   // states, not a field they leave blank and hope about.
   const [endKnown, setEndKnown] = useState(initial ? initial.endsAt !== null : true);
+  // Asked before the dates, because it decides which of them are even
+  // questions: a preset's period is its window, so there is no end to type.
+  const [cadence, setCadence] = useState<Cadence>(() =>
+    cadenceOf(initial?.endsAt ?? null, initial?.repeat ?? null),
+  );
   const [endDate, setEndDate] = useState(end.date);
   const [endTime, setEndTime] = useState(
     initialEndTime,
@@ -401,11 +409,20 @@ export function EventForm({
   const [cadenceUnit, setCadenceUnit] = useState<RepeatUnit>(opening.unit);
   const [cadenceAmount, setCadenceAmount] = useState(String(opening.amount));
 
+  // A preset's period is its window, so it has no end to state. The end the
+  // reader may have typed under a different cadence is kept in state rather
+  // than cleared — hiding a field and quietly discarding what is in it is how
+  // a form loses somebody's work when they change their mind back.
+  const preset = cadence === "daily" || cadence === "weekly" || cadence === "monthly";
+  const datedWindow = cadence === "one-off" || cadence === "custom";
+
   const startsAt = startDate === "" ? null : readerInstant(startDate, startTime, "start");
   const endsAt =
-    !endKnown || endDate === "" ? null : readerInstant(endDate, endTime, "end");
+    !datedWindow || !endKnown || endDate === ""
+      ? null
+      : readerInstant(endDate, endTime, "end");
 
-  const endMissing = endKnown && endDate !== "" && endsAt === null;
+  const endMissing = datedWindow && endKnown && endDate !== "" && endsAt === null;
   const backwards = startsAt !== null && endsAt !== null && endsAt <= startsAt;
 
   const startMs = startsAt === null ? null : Date.parse(startsAt);
@@ -432,20 +449,27 @@ export function EventForm({
   // occurrence runs until the next opens.
   const delayNeedsEnd = repeatMode === "delay" && endMs === null;
 
-  const repeat = repeatOf({
-    mode: repeatMode,
-    measuring,
-    measured,
-    startMs,
-    contiguousMs,
-    unit: cadenceUnit,
-    amount,
-    until: existingUntil,
-  });
+  const repeat = preset
+    ? repeatFrom(PRESET_UNIT[cadence], 1, existingUntil)
+    : cadence === "one-off"
+      ? null
+      : repeatOf({
+          mode: repeatMode,
+          measuring,
+          measured,
+          startMs,
+          contiguousMs,
+          unit: cadenceUnit,
+          amount,
+          until: existingUntil,
+        });
 
+  // Only `custom` can be incomplete. A preset is one unit with no window and
+  // is therefore always sayable, and a one-off has no repeat to get wrong.
   const repeatIncomplete =
-    (repeatMode === "forever" && !measuring && !amountValid) ||
-    (repeatMode === "delay" && (delayNeedsEnd || repeat === null));
+    cadence === "custom" &&
+    ((repeatMode === "forever" && !measuring && !amountValid) ||
+      (repeatMode === "delay" && (delayNeedsEnd || repeat === null)));
 
   // The same predicate the schema refines on, so the form cannot start
   // refusing saves the schema would accept or promising ones it will reject.
@@ -547,6 +571,31 @@ export function EventForm({
         </select>
       </label>
 
+      {/* Asked before the dates because it decides which of them are even
+          questions. A weekly chore has no end date worth typing — the week is
+          the window — and a form that asks anyway is asking something with no
+          honest answer. */}
+      <label className={`${labelClass()} mt-3`}>
+        Cadence
+        <select
+          value={cadence}
+          onChange={(e) => setCadence(e.target.value as Cadence)}
+          className={inputClass()}
+        >
+          <option value="one-off">one-off</option>
+          <option value="daily">daily</option>
+          <option value="weekly">weekly</option>
+          <option value="monthly">monthly</option>
+          <option value="custom">custom</option>
+        </select>
+      </label>
+
+      {preset && (
+        <p className="mt-1.5 text-xs leading-relaxed text-faint">
+          Each one runs until the next opens, so there is no end date to give.
+        </p>
+      )}
+
       <div className="mt-3 grid grid-cols-2 gap-2">
         <label className={labelClass()}>
           Starts
@@ -568,115 +617,93 @@ export function EventForm({
         </label>
       </div>
 
-      {/* The end is allowed to be unknown, and says so out loud. Making it
+      {/* Only a cadence that carries its own window asks about an end. The end
+          is allowed to be unknown there, and says so out loud: making it
           mandatory would push the reader into inventing a date, which is
           exactly the failure the parsers are forbidden from committing. */}
-      <label className="mt-3 flex cursor-pointer select-none items-center gap-2 text-xs text-muted">
-        <input
-          type="checkbox"
-          checked={!endKnown}
-          onChange={(e) => setEndKnown(!e.target.checked)}
-          className="size-4 accent-[var(--color-near)]"
-        />
-        I don't know when it ends
-      </label>
-
-      {endKnown && (
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          <label className={labelClass()}>
-            Ends
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className={inputClass()}
-            />
-          </label>
-          <label className={labelClass()}>
-            Time (optional)
-            <input
-              type="time"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              className={inputClass()}
-            />
-          </label>
-        </div>
-      )}
-
-      <label className={`${labelClass()} mt-3`}>
-        Repeat
-        <select
-          value={repeatMode}
-          onChange={(e) => setRepeatMode(e.target.value as RepeatMode)}
-          className={inputClass()}
-        >
-          <option value="never">never</option>
-          <option value="forever">forever</option>
-          <option value="delay" disabled={endMs === null}>
-            with a delay
-          </option>
-        </select>
-      </label>
-
-      {repeatMode !== "never" && endMs === null && (
-        <p className="mt-1.5 text-xs leading-relaxed text-faint">
-          A delay needs an end date to be measured from. With none, each one
-          just runs until the next opens.
-        </p>
-      )}
-
-      {/* Measured, and said out loud — a cadence the form worked out silently
-          would be a date the reader never agreed to, which is the one thing
-          this product does not do. */}
-      {measuring && measured !== null && (
-        <p className="mt-2 text-xs leading-relaxed text-faint">
-          {cadenceLabel(measured)} · worked out from your dates.{" "}
-          <button
-            type="button"
-            onClick={() => setOwnCadence(true)}
-            className="underline transition-colors hover:text-ink"
-          >
-            state it myself
-          </button>
-        </p>
-      )}
-
-      {repeatMode === "forever" && !measuring && (
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          <label className={labelClass()}>
-            Cycle length
-            <input
-              type="number"
-              min={1}
-              max={365}
-              value={cadenceAmount}
-              onChange={(e) => setCadenceAmount(e.target.value)}
-              className={inputClass()}
-            />
-          </label>
-          <label className={labelClass()}>
-            <span className="invisible">Unit</span>
-            <select
-              value={cadenceUnit}
-              onChange={(e) => setCadenceUnit(e.target.value as RepeatUnit)}
-              className={inputClass()}
-            >
-              {RepeatUnit.options.map((u) => (
-                <option key={u} value={u}>
-                  {u}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      )}
-
-      {repeatMode === "delay" && (
+      {datedWindow && (
         <>
+          <label className="mt-3 flex cursor-pointer select-none items-center gap-2 text-xs text-muted">
+            <input
+              type="checkbox"
+              checked={!endKnown}
+              onChange={(e) => setEndKnown(!e.target.checked)}
+              className="size-4 accent-[var(--color-near)]"
+            />
+            I don't know when it ends
+          </label>
+
+          {endKnown && (
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <label className={labelClass()}>
+                Ends
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className={inputClass()}
+                />
+              </label>
+              <label className={labelClass()}>
+                Time (optional)
+                <input
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className={inputClass()}
+                />
+              </label>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Only a custom cadence needs any of this: a preset answers it by
+          construction, and a one-off has nothing to answer. */}
+      {cadence === "custom" && (
+        <>
+        <label className={`${labelClass()} mt-3`}>
+          Repeat
+          <select
+            value={repeatMode}
+            onChange={(e) => setRepeatMode(e.target.value as RepeatMode)}
+            className={inputClass()}
+          >
+            <option value="never">never</option>
+            <option value="forever">forever</option>
+            <option value="delay" disabled={endMs === null}>
+              with a delay
+            </option>
+          </select>
+        </label>
+
+        {repeatMode !== "never" && endMs === null && (
+          <p className="mt-1.5 text-xs leading-relaxed text-faint">
+            A delay needs an end date to be measured from. With none, each one
+            just runs until the next opens.
+          </p>
+        )}
+
+        {/* Measured, and said out loud — a cadence the form worked out silently
+            would be a date the reader never agreed to, which is the one thing
+            this product does not do. */}
+        {measuring && measured !== null && (
+          <p className="mt-2 text-xs leading-relaxed text-faint">
+            {cadenceLabel(measured)} · worked out from your dates.{" "}
+            <button
+              type="button"
+              onClick={() => setOwnCadence(true)}
+              className="underline transition-colors hover:text-ink"
+            >
+              state it myself
+            </button>
+          </p>
+        )}
+
+        {repeatMode === "forever" && !measuring && (
           <div className="mt-2 grid grid-cols-2 gap-2">
             <label className={labelClass()}>
-              Wait
+              Cycle length
               <input
                 type="number"
                 min={1}
@@ -701,13 +728,46 @@ export function EventForm({
               </select>
             </label>
           </div>
-          {/* Both readings, so the reader can check one against the other: a
-              week's wait after a week's window is a fortnightly rule, and
-              seeing that spelled out is how they catch a wrong number. */}
-          <p className="mt-1.5 text-xs leading-relaxed text-faint">
-            after it ends
-            {repeat !== null ? ` · ${cadenceLabel(repeat)}` : ""}
-          </p>
+        )}
+
+        {repeatMode === "delay" && (
+          <>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <label className={labelClass()}>
+                Wait
+                <input
+                  type="number"
+                  min={1}
+                  max={365}
+                  value={cadenceAmount}
+                  onChange={(e) => setCadenceAmount(e.target.value)}
+                  className={inputClass()}
+                />
+              </label>
+              <label className={labelClass()}>
+                <span className="invisible">Unit</span>
+                <select
+                  value={cadenceUnit}
+                  onChange={(e) => setCadenceUnit(e.target.value as RepeatUnit)}
+                  className={inputClass()}
+                >
+                  {RepeatUnit.options.map((u) => (
+                    <option key={u} value={u}>
+                      {u}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            {/* Both readings, so the reader can check one against the other: a
+                week's wait after a week's window is a fortnightly rule, and
+                seeing that spelled out is how they catch a wrong number. */}
+            <p className="mt-1.5 text-xs leading-relaxed text-faint">
+              after it ends
+              {repeat !== null ? ` · ${cadenceLabel(repeat)}` : ""}
+            </p>
+          </>
+        )}
         </>
       )}
 
@@ -728,13 +788,13 @@ export function EventForm({
         />
       </label>
 
-      {!endKnown && repeatMode === "never" && (
+      {datedWindow && !endKnown && cadence === "one-off" && (
         <p className="mt-2 text-xs leading-relaxed text-faint">
           It'll show with no countdown and no daily checklist, the same as an
           event whose source hasn't announced an end.
         </p>
       )}
-      {!endKnown && repeatMode !== "never" && (
+      {datedWindow && !endKnown && cadence === "custom" && (
         /* Not a degraded answer here — the interval bounds it. */
         <p className="mt-2 text-xs leading-relaxed text-faint">
           Each one runs until the next one opens, so it still counts down.
