@@ -447,6 +447,21 @@ The footer shows when the feed was last updated, per game. If a game's data is m
 stale, its lane carries a warning badge. Never present stale data as current — the whole value
 proposition is trust in the dates.
 
+**The staleness notice names only the games the reader has switched on, and says that it does.**
+The headline age is about the feed and stays whole; the notice under it is an *instruction*, and the
+only remedy it offers is "go and check that game's source page" — which a reader cannot act on for a
+game they turned off and cannot see a single row of. With nineteen lanes and two switched on, naming
+eleven they do not play buries the one they do, and a warning about games nobody reads is a warning
+nobody reads (F8: a game we add is a game they never asked for, and arrives switched off, so an
+untouched install would be warned about the whole catalogue).
+
+Both halves of that are load-bearing. Scoping it silently would be the worse half: "nothing has
+refreshed" is a claim about the whole calendar, so a reader with fourteen of eighteen lanes off would
+read a sentence about four as one about all of them. The notice therefore states whose games it
+counted, in the same words the empty list uses — *the games you have switched on*. Credit in the
+column beside it is owed to every source we read and is not scoped; nor is the "last refreshed" line,
+which reports the feed and feeds the bug form.
+
 **F15 — Light mode, with dark still the default.**
 The app is a lit instrument panel and that is what it should be on first sight, but it is also read
 on a train in daylight and by people who find a dark UI harder rather than moodier. A public fork

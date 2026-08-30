@@ -1,4 +1,5 @@
 import { useGameMeta } from "../state/gameMeta.tsx";
+import type { LaneId } from "../../shared/custom.ts";
 import { freshness, type SourceHealth } from "../../shared/feed.ts";
 import { formatAbsolute, formatRemaining } from "../../shared/time.ts";
 
@@ -134,9 +135,16 @@ function siteFor(url: string): { name: string; url: string } {
 export function Colophon({
   sources,
   now,
+  hiddenGames = [],
 }: {
   sources: SourceHealth[];
   now: number;
+  /**
+   * Lanes the reader has switched off, so the staleness notice can leave them
+   * out. Optional and empty by default: a caller that does not know the
+   * reader's preferences gets the whole list rather than none of it.
+   */
+  hiddenGames?: readonly LaneId[];
 }) {
   // The tree's resolver rather than the module lookup: it is the one that
   // answers for a reader's own games, and the one that reads a hue for the
@@ -147,6 +155,26 @@ export function Colophon({
   );
   const studios = [...new Set(games.map((g) => g.studio))];
   const { refreshedAt, stale } = freshness(sources, now);
+
+  /**
+   * The staleness notice covers the reader's own lanes and nothing else.
+   *
+   * Credit is owed to every source we read, so `games` above stays whole. This
+   * paragraph is the opposite kind of sentence: it is an *instruction*, and the
+   * only remedy it offers is "go and check that game's source page" — which is
+   * not something a reader can act on for a game they switched off and cannot
+   * see a single row of. Naming eleven lanes they do not play also buries the
+   * one they do, and a warning about games nobody reads is a warning nobody
+   * reads (§ Telling the reader to do something is not the same as showing it
+   * to them).
+   *
+   * `shownGames` is narrowed alongside it because the summarising branch below
+   * turns on "every game is behind" — measured against the same set the notice
+   * is allowed to name, or it would never fire for a reader with most of the
+   * calendar switched off.
+   */
+  const shownGames = games.filter((g) => !hiddenGames.includes(g.id));
+  const shownStale = stale.filter((s) => !hiddenGames.includes(s.game));
 
   // Built once so the sentence a reader reads and the value the bug form is
   // prefilled with cannot drift apart.
@@ -196,7 +224,7 @@ export function Colophon({
             )}
           </p>
 
-          {stale.length > 0 && (
+          {shownStale.length > 0 && (
             // Named per game rather than counted, because a count is not something a
             // reader can act on: knowing *which* lane is behind tells them which
             // source page to go and check, which is the whole remedy on offer.
@@ -205,26 +233,34 @@ export function Colophon({
             // stopped running looks like. Ten names each repeating the same age is
             // less readable than the count this replaced, and the headline above
             // already gives the date — so that case gets a sentence, not a list.
+            //
+            // Both branches say whose games they are counting, in the words
+            // `NextUp` already uses for the same set. Scoping this silently would
+            // be the worse half of the change: "nothing has refreshed" is a claim
+            // about the whole calendar, and a reader who has fourteen of eighteen
+            // lanes off would read a sentence about four as one about all of them
+            // — a footer whose one job is being trusted about age must not narrow
+            // what it measured without saying so.
             <p className="mt-2 text-soon">
-              {stale.length === games.length ? (
-                `Nothing has refreshed in over two days, so any end date here may have moved.`
+              {shownStale.length === shownGames.length ? (
+                `None of the games you have switched on have refreshed in over two days, so any end date here may have moved.`
               ) : (
                 <>
-                  {stale.length === 1 ? "This game has" : "These games have"} not
-                  refreshed in over two days, so some of their end dates may have
-                  moved:{" "}
-                  {stale.slice(0, STALE_NAMES).map((s, i, shown) => (
+                  Of the games you have switched on,{" "}
+                  {shownStale.length === 1 ? "this one has" : "these have"} not
+                  refreshed in over two days, so some end dates may have moved:{" "}
+                  {shownStale.slice(0, STALE_NAMES).map((s, i, shown) => (
                     <span key={s.game}>
-                      {i > 0 && (i === shown.length - 1 && stale.length <= STALE_NAMES ? " and " : ", ")}
+                      {i > 0 && (i === shown.length - 1 && shownStale.length <= STALE_NAMES ? " and " : ", ")}
                       {gameMeta(s.game).name}
                       {s.lastSuccessAt === null
                         ? " (never)"
                         : ` (${formatRemaining(now - Date.parse(s.lastSuccessAt))} ago)`}
                     </span>
                   ))}
-                  {stale.length > STALE_NAMES &&
-                    ` and ${stale.length - STALE_NAMES} other game${
-                      stale.length - STALE_NAMES > 1 ? "s" : ""
+                  {shownStale.length > STALE_NAMES &&
+                    ` and ${shownStale.length - STALE_NAMES} other game${
+                      shownStale.length - STALE_NAMES > 1 ? "s" : ""
                     }`}
                   {"."}
                 </>

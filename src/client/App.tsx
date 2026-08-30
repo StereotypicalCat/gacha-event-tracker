@@ -684,7 +684,14 @@ export function App() {
         </p>
       )}
 
-      <Colophon sources={state.feed.sources} now={now} />
+      {/* `hiddenGames` rather than `enabled`: the footer needs to know what the
+          reader turned *off*, and a lane absent from both is one the feed has
+          and this reader has never been offered — still not theirs to chase. */}
+      <Colophon
+        sources={state.feed.sources}
+        now={now}
+        hiddenGames={prefs.hiddenGames}
+      />
 
       {lastIgnored !== null && (
         <Toast

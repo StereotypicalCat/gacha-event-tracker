@@ -1055,3 +1055,13 @@ to an open page). Four things hold it up:
   so one live wiki cannot vouch for a stalled sibling. Given that thirteen sources cannot be fetched
   from CI at all (§ Scraping conduct), this disclosure is the only thing standing between a reader and
   a confidently stale calendar — do not let a future change source it from the build clock.
+  **The notice under it is scoped to the reader's lanes; the line itself is not.** The age is a fact
+  about the feed, but the list beneath it is an instruction whose only remedy is "check that game's
+  source page" — unactionable for a game they switched off, and with nineteen lanes and two on it
+  buries the one they can do something about. So `Colophon` takes `prefs.hiddenGames` and filters
+  both the named list *and* the count the summarising branch measures against, or that branch would
+  never fire for a reader with most of the calendar off. Two things must not follow from it: the
+  credits are attribution and stay whole, and the notice **says** it is scoped — narrowing what the
+  footer measured while still printing "nothing has refreshed" would turn a claim about four games
+  into one about eighteen, in the one paragraph on the page whose whole job is being trusted about
+  age.

@@ -286,7 +286,7 @@ describe("Colophon freshness notice (PRD F7)", () => {
       lastSuccessAt: new Date(NOW - (80 + i) * HOUR).toISOString(),
     }));
     const html = renderToStaticMarkup(<Colophon sources={behind} now={NOW} />);
-    expect(html).toContain("Nothing has refreshed in over two days");
+    expect(html).toContain("None of the games you have switched on have refreshed in over two days");
     expect(html).not.toContain("Genshin Impact (");
   });
 
@@ -319,7 +319,7 @@ describe("Colophon freshness notice (PRD F7)", () => {
       <Colophon sources={[{ ...fresh, lastSuccessAt: null }]} now={NOW} />,
     );
     expect(html).toContain("no source has been fetched yet");
-    expect(html).toContain("Nothing has refreshed in over two days");
+    expect(html).toContain("None of the games you have switched on have refreshed in over two days");
   });
 
   test("marks a never-fetched source as never, beside games that have", () => {
@@ -330,6 +330,87 @@ describe("Colophon freshness notice (PRD F7)", () => {
       />,
     );
     expect(html).toContain("Reverse: 1999 (never)");
+  });
+
+  test("says nothing about a game the reader has switched off", () => {
+    // The notice is an instruction, and its only remedy is "go and check that
+    // game's source page". A reader who turned Infinity Nikki off cannot see a
+    // row of it, so being told its dates may have moved is a chore with no
+    // point — and naming lanes they do not play buries the one they do.
+    const html = renderToStaticMarkup(
+      <Colophon
+        sources={[
+          fresh,
+          { ...fresh, sourceId: "nikki-game8-events", game: "nikki", lastSuccessAt: new Date(NOW - 80 * HOUR).toISOString() },
+        ]}
+        now={NOW}
+        hiddenGames={["nikki"]}
+      />,
+    );
+    expect(html).not.toContain("not refreshed in over two days");
+    expect(html).not.toContain("Infinity Nikki (");
+    // Credit is owed to every source we read regardless of what is on screen,
+    // so the game keeps its line in the thanks.
+    expect(html).toContain("Infinity Nikki");
+    // And the headline age is unchanged: it reports the feed, not the lane.
+    expect(html).toContain("3h 0m ago");
+  });
+
+  test("still names the lagging games the reader does play", () => {
+    const html = renderToStaticMarkup(
+      <Colophon
+        sources={[
+          fresh,
+          { ...fresh, sourceId: "nikki-src", game: "nikki", lastSuccessAt: new Date(NOW - 80 * HOUR).toISOString() },
+          { ...fresh, sourceId: "hsr-src", game: "hsr", lastSuccessAt: new Date(NOW - 90 * HOUR).toISOString() },
+        ]}
+        now={NOW}
+        hiddenGames={["hsr"]}
+      />,
+    );
+    expect(html).toContain("this one has");
+    expect(html).toContain("Infinity Nikki (");
+    expect(html).not.toContain("Honkai: Star Rail (");
+    // And it says whose games it counted. Narrowing what the footer measures
+    // without saying so would leave a reader with most lanes off reading a
+    // sentence about two games as one about the whole calendar.
+    expect(html).toContain("Of the games you have switched on");
+  });
+
+  test("summarises against the games the reader can see, not the feed", () => {
+    // Both of this reader's two lanes are behind, so "nothing has refreshed" is
+    // the true sentence for them — even though a third, hidden game is current.
+    // Measuring against the whole feed instead would list them one by one and
+    // never reach this branch for anyone with most of the calendar switched off.
+    const html = renderToStaticMarkup(
+      <Colophon
+        sources={[
+          fresh,
+          { ...fresh, sourceId: "nikki-src", game: "nikki", lastSuccessAt: new Date(NOW - 80 * HOUR).toISOString() },
+          { ...fresh, sourceId: "hsr-src", game: "hsr", lastSuccessAt: new Date(NOW - 90 * HOUR).toISOString() },
+        ]}
+        now={NOW}
+        hiddenGames={["genshin"]}
+      />,
+    );
+    expect(html).toContain("None of the games you have switched on have refreshed in over two days");
+    expect(html).not.toContain("Infinity Nikki (");
+  });
+
+  test("a reader with every lagging lane switched off sees no notice at all", () => {
+    const html = renderToStaticMarkup(
+      <Colophon
+        sources={[
+          { ...fresh, sourceId: "nikki-src", game: "nikki", lastSuccessAt: new Date(NOW - 80 * HOUR).toISOString() },
+        ]}
+        now={NOW}
+        hiddenGames={["nikki"]}
+      />,
+    );
+    // Not the summarising branch either: zero of zero shown games is not
+    // "nothing has refreshed", it is nothing to say.
+    expect(html).not.toContain("not refreshed in over two days");
+    expect(html).not.toContain("None of the games you have switched on have refreshed in over two days");
   });
 
   test("the author's links sit together, above the ideas credit", () => {
