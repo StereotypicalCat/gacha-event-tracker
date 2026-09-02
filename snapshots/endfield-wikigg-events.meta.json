@@ -1,11 +1,11 @@
 {
   "sourceId": "endfield-wikigg-events",
   "url": "https://endfield.wiki.gg/wiki/Event",
-  "contentHash": "d9dfa81138efe9037c46b523055c60bc5614e0f27c2881275be2b685df22b859",
-  "bytes": 163620,
+  "contentHash": "a391c3e3aa8aa773fd0815b6cd3583de784be07f1f299cfd8bce70edd203099c",
+  "bytes": 160825,
   "etag": null,
-  "lastModified": "Sun, 30 Aug 2026 21:55:25 GMT",
-  "contentChangedAt": "2026-08-31T11:40:55.558Z",
-  "eventCount": 7,
+  "lastModified": "Wed, 02 Sep 2026 07:14:58 GMT",
+  "contentChangedAt": "2026-09-02T09:44:10.069Z",
+  "eventCount": 4,
   "charset": "utf-8"
 }
