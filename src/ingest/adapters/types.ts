@@ -33,6 +33,14 @@ export interface Adapter {
   priority: number;
 
   parse(html: string, ctx: ParseContext): GachaEvent[];
+
+  /**
+   * True when the page itself states that it currently lists no events, so an
+   * empty parse is this source's real answer rather than a source that broke.
+   * Absent unless the underlying parser implements it — see
+   * `SourceParser.statesNoEvents`.
+   */
+  statesNoEvents?(html: string): boolean;
 }
 
 export const SIX_HOURS_MS = 6 * 60 * 60 * 1000;

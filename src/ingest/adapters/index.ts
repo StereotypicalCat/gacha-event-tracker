@@ -227,6 +227,9 @@ function toAdapter(spec: SourceSpec): Adapter {
     parserId: spec.parserId,
     minIntervalMs: spec.minIntervalMs ?? SIX_HOURS_MS,
     priority: spec.priority ?? 0,
+    statesNoEvents(html: string): boolean {
+      return parser.statesNoEvents?.(html) ?? false;
+    },
     parse(html: string, ctx: ParseContext): GachaEvent[] {
       // A site redesign should fail the run loudly rather than publish an empty
       // calendar, which would read as "no events" to a user.
