@@ -516,6 +516,44 @@ describe("a source being down never blanks the feed", () => {
     expect(await store.read("genshin-game8-events")).toBeNull();
   });
 
+  test("a page that states it lists no events is stored, not rejected", async () => {
+    // Infinity Nikki, 2026-09-03: 2.7's events had ended, 2.8 was not listed
+    // yet, and the wiki replaced both tables with "There are no Events in this
+    // category." Rejecting that costs the source its snapshot every cycle until
+    // the next version ships, and three cycles of it reach the `broken` tier —
+    // a build failing over a game that is merely between patches.
+    await seed("<html><event></event></html>", "2026-08-01T00:00:00.000Z", 1);
+    const { opts } = options({
+      adapters: [
+        adapter({ statesNoEvents: (html: string) => html.includes("<nothing-on>") }),
+      ],
+      responder: () => new Response("<html><nothing-on></nothing-on></html>"),
+    });
+    const summary = await runRefresh(opts);
+
+    expect(summary.outcomes[0]?.result).toBe("fetched");
+    expect(summary.outcomes[0]?.eventCount).toBe(0);
+    expect((await store.read("genshin-game8-events"))?.meta.eventCount).toBe(0);
+    expect(summary.broken).toEqual([]);
+  });
+
+  test("an empty parse the page does not vouch for is still rejected", async () => {
+    // The gate turns on the page's statement, never on the adapter merely being
+    // able to make one — otherwise implementing `statesNoEvents` would quietly
+    // switch off the zero-events gate for that source.
+    await seed("<html><event></event></html>", "2026-08-01T00:00:00.000Z", 1);
+    const { opts } = options({
+      adapters: [
+        adapter({ statesNoEvents: (html: string) => html.includes("<nothing-on>") }),
+      ],
+      responder: () => new Response("<html>redesigned</html>"),
+    });
+    const summary = await runRefresh(opts);
+
+    expect(summary.outcomes[0]?.result).toBe("rejected");
+    expect((await store.read("genshin-game8-events"))?.meta.eventCount).toBe(1);
+  });
+
   test("a steep drop is stored but flagged", async () => {
     await seed("<html>" + "<event></event>".repeat(10) + "</html>", "2026-08-01T00:00:00.000Z", 10);
     const { opts } = options({

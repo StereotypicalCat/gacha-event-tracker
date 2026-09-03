@@ -496,12 +496,27 @@ async function refreshOne(
     };
   }
 
-  // Zero events is never a useful snapshot: every source in the registry
-  // yields events by construction, so an empty parse means the page changed
-  // shape. Refusing it keeps the previous snapshot — or, on a first run, the
-  // checked-in fixture — as the thing the feed is built from.
+  // Zero events is almost never a useful snapshot: a source in the registry
+  // yields events by construction, so an empty parse normally means the page
+  // changed shape. Refusing it keeps the previous snapshot — or, on a first
+  // run, the checked-in fixture — as the thing the feed is built from.
+  //
+  // The exception is a page that says so itself. A gacha calendar goes quiet
+  // between versions, and Infinity Nikki's wiki spent the week after 2.7 ended
+  // stating "There are no Events in this category" under both headings
+  // (2026-09-03). Read strictly, that is a source failing every cycle until the
+  // next version ships, reaching the `broken` tier in a day and a half and
+  // failing the workflow over a game that is merely between patches — while the
+  // held snapshot goes on ageing. So `statesNoEvents` lets a parser distinguish
+  // "we read the page and there is nothing on" from "we read nothing", and only
+  // the first is stored.
+  //
+  // The distinction has to come from the page's own words rather than a row
+  // count, because a redesign that broke every selector also yields zero rows —
+  // and storing *that* is the silently emptied calendar this gate exists for.
   const previousCount = meta?.eventCount ?? null;
-  if (events === 0) {
+  const statesNoEvents = events === 0 && adapter.statesNoEvents?.(html) === true;
+  if (events === 0 && !statesNoEvents) {
     await store.recordCheck(adapter.id, {
       at: nowIso,
       status: response.status,
@@ -545,6 +560,7 @@ async function refreshOne(
   }
 
   const dropped =
+    !statesNoEvents &&
     previousCount !== null &&
     previousCount > 0 &&
     events < previousCount * DROP_WARNING_RATIO;
@@ -552,9 +568,14 @@ async function refreshOne(
   return {
     sourceId: adapter.id,
     result: "fetched",
-    note: dropped
-      ? `${events} events — down from ${previousCount}, check the page shape`
-      : `${events} events`,
+    // Say which of the two empties this is. "0 events — down from 6" reads as
+    // the shape change it is not, and this note is what a reader checking on a
+    // quiet lane actually sees.
+    note: statesNoEvents
+      ? "0 events — the page states it currently lists none"
+      : dropped
+        ? `${events} events — down from ${previousCount}, check the page shape`
+        : `${events} events`,
     status: response.status,
     eventCount: events,
   };
