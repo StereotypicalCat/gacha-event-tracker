@@ -440,13 +440,61 @@ function nikkeTitle(cell: string): string | null {
 /** Headings whose tables are a schedule our readers can act on. */
 const IN_INCLUDED_SECTION = /^(current|upcoming) events$/i;
 
+/** The page's own words when a section is currently listing nothing. */
+const IN_STATES_EMPTY = /There are no Events in this category/i;
+
+/** Every `<h2>` on the page, flattened to lower-case text. */
+function h2Headings(rendered: string): Set<string> {
+  const flat = rendered.replace(EDIT_SECTION, "").replace(/\s+/g, " ");
+  const out = new Set<string>();
+  for (const node of flat.matchAll(/<h2\b[^>]*>([\s\S]*?)<\/h2>/gi)) {
+    out.add(text(node[1] ?? "").trim().toLowerCase());
+  }
+  return out;
+}
+
 /**
  * True for the Infinity Nikki wiki's `Event` page, and the gate on the branch
- * below. Asserts the heading *and* the table shape, because the page's
- * `Permanent Events` table shares neither.
+ * below.
+ *
+ * **Identity only — never the presence of a row.** This asserted a populated
+ * `Current`/`Upcoming` table until 2026-09-03, which conflated the two things a
+ * tripwire has to keep apart: a page that was rewritten, and a game that has
+ * nothing on. Infinity Nikki emptied both tables the week 2.7's events ended
+ * and 2.8 was not yet listed, and the source spent four cycles reporting
+ * `the source has likely been redesigned` at a page whose markup had not moved
+ * — long enough to reach the `broken` tier and fail the workflow. `canParse` is
+ * documented as a *structural* check for exactly this reason
+ * (docs/INGESTION.md § The adapter registry), so it reads the section headings,
+ * which an empty table does not take with it.
+ *
+ * *Either* heading, not both — the same doc's warning against over-fitting. The
+ * live page carries both, but requiring the pair would fail the source over a
+ * renamed heading it does not even read, and one is already unique: the other
+ * three Fandom templates carry neither. `Past Events` is deliberately not in
+ * the set, or an archive with nothing current would identify as this page.
  */
 function isInfinityNikkiEventPage(rendered: string): boolean {
-  return infinityNikkiTables(rendered).length > 0;
+  const headings = h2Headings(rendered);
+  return headings.has("current events") || headings.has("upcoming events");
+}
+
+/**
+ * True when this page tells us, in its own words, that it currently lists no
+ * events — the state Infinity Nikki sits in between versions.
+ *
+ * This is what lets the refresh gate tell "we read the page and there is
+ * nothing on" from "we read nothing", and it is deliberately the page's
+ * statement rather than a row count: a redesign that broke every selector would
+ * also yield zero rows, and storing *that* as an empty snapshot is the silent
+ * emptying of a calendar the zero-events gate exists to prevent.
+ */
+function infinityNikkiStatesNoEvents(rendered: string): boolean {
+  if (!isInfinityNikkiEventPage(rendered)) return false;
+  // A table we can still read means the page is listing something, whatever
+  // else it says further down.
+  if (infinityNikkiTables(rendered).length > 0) return false;
+  return IN_STATES_EMPTY.test(rendered);
 }
 
 interface InTable {
@@ -764,6 +812,13 @@ export const fandomParser: SourceParser = {
       isNikkeEventPage(rendered) ||
       isInfinityNikkiEventPage(rendered)
     );
+  },
+  statesNoEvents(body: string): boolean {
+    const rendered = renderedHtml(body);
+    if (rendered === null) return false;
+    // Only the Infinity Nikki template states this. The other three say nothing
+    // either way when they are empty, so they keep the strict gate.
+    return infinityNikkiStatesNoEvents(rendered);
   },
   parse: parseFandomEventsPage,
 };

@@ -51,6 +51,11 @@ const CASES: Array<{ adapter: Adapter; fixture: string }> = [
   { adapter: adapter("uma-game8-events"), fixture: "fixtures/uma/game8-events-2026-08-19" },
   { adapter: adapter("nikke-fandom-events"), fixture: "fixtures/nikke/fandom-events-2026-08-19" },
   { adapter: adapter("nikki-fandom-events"), fixture: "fixtures/nikki/fandom-events-2026-08-19" },
+  // The same page a week later, listing nothing: 2.7's events had ended and 2.8
+  // was not up yet, so both tables read "There are no Events in this category."
+  // Pinned because an empty answer is a shape too — it is what the detector
+  // used to read as a redesign.
+  { adapter: adapter("nikki-fandom-events"), fixture: "fixtures/nikki/fandom-events-2026-09-03" },
   // Honkai Impact 3rd. Every boundary in this expected file is a week-bucket
   // edge the source labels `ESTIMATED WEEK`, not an announced date — see
   // src/ingest/parsers/arustats.ts and docs/SOURCES.md § 14.
@@ -1765,5 +1770,56 @@ describe("Infinity Nikki wiki (the fourth Fandom template)", () => {
     // Type column says "Store".
     expect(shop?.type).toBe("shop");
     expect(shop?.summary).toBeTruthy();
+  });
+});
+
+describe("Infinity Nikki wiki between versions (the page states it is empty)", () => {
+  const nikki = adapter("nikki-fandom-events");
+  const emptied = "fixtures/nikki/fandom-events-2026-09-03";
+  const populated = "fixtures/nikki/fandom-events-2026-08-19";
+
+  function parse(html: string) {
+    return nikki.parse(html, {
+      now: NOW,
+      sourceUrl: nikki.url,
+      sourceId: nikki.id,
+      game: nikki.game,
+    });
+  }
+
+  test("still recognises the template when both tables have been emptied", async () => {
+    // 2.7's events ended on 27 August and 2.8 was not listed yet, so the wiki
+    // replaced both tables with "There are no Events in this category." The
+    // page is otherwise untouched — `Past Events` still carries twenty tables
+    // of the same shape. A detector that needs a populated row reads that as a
+    // redesign and the runner reports a broken source that is merely quiet.
+    const html = await Bun.file(`${emptied}.html`).text();
+    expect(fandomParser.canParse(html)).toBe(true);
+    expect(() => parse(html)).not.toThrow();
+    expect(parse(html)).toEqual([]);
+  });
+
+  test("says the page states no events, and says it only when the page does", async () => {
+    // The distinction the refresh gate turns on: a page that tells us it lists
+    // nothing is a source we read correctly, not one that broke. Anything
+    // weaker than the page's own words would let a real redesign through as an
+    // empty calendar, which is the failure the zero-events gate exists for.
+    const empty = await Bun.file(`${emptied}.html`).text();
+    const full = await Bun.file(`${populated}.html`).text();
+    expect(fandomParser.statesNoEvents?.(empty)).toBe(true);
+    expect(fandomParser.statesNoEvents?.(full)).toBe(false);
+  });
+
+  test("does not claim emptiness for the other three Fandom templates", async () => {
+    // `statesNoEvents` is asked of every Fandom source, so a loose check would
+    // let a redesigned FGO or Nikke page store an empty snapshot.
+    for (const fixture of [
+      "fixtures/fgo/fandom-events-2026-08-18",
+      "fixtures/nikke/fandom-events-2026-08-19",
+      "fixtures/r1999/fandom-events-2026-08-17",
+    ]) {
+      const html = await Bun.file(`${fixture}.html`).text();
+      expect(fandomParser.statesNoEvents?.(html)).toBe(false);
+    }
   });
 });
