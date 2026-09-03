@@ -202,6 +202,7 @@ export interface SourceParser {
   id: string;                                   // "game8"
   label: string;                                // "Game8"
   canParse(html: string): boolean;              // structural sanity check
+  statesNoEvents?(html: string): boolean;       // the page says it lists none
   parse(html: string, ctx: ParseContext): GachaEvent[];
 }
 ```
@@ -215,6 +216,24 @@ Keep `canParse` structural, not content-based, and **do not over-fit it**. Game8
 in attribute quote style (`class="a-table"` on Genshin, `class='a-table'` on NTE), which is exactly
 the kind of variation a naive check gets wrong. Every regex in `html.ts` is attribute-agnostic for
 the same reason.
+
+**"Structural" means identity, never the presence of a row** — and that half was learned the
+expensive way. `isInfinityNikkiEventPage` recognised its page by finding a *populated*
+`Current`/`Upcoming` table, so when the wiki emptied both between versions (2026-09-03, § below) the
+tripwire fired on a page whose markup had not changed by a byte, reported
+`the source has likely been redesigned`, and reached the `broken` tier in a day and a half. A check
+that reads data cannot tell a rewrite from a quiet week; a check that reads headings, ids or column
+names can, because those survive an empty table. Ask what identifies the page, not what is on it.
+
+`statesNoEvents` is the other half of that lesson, and it is optional because most pages say nothing
+either way. It answers a question `canParse` and a row count together cannot: **is this source
+broken, or is this game simply between patches?** Both look identical from a count of zero, so the
+signal has to be the page's own words — Infinity Nikki's wiki prints "There are no Events in this
+category" under both headings when it is listing nothing. A parser that implements it lets the
+refresh runner store an empty snapshot as a real answer (§ Stage 1); one that does not keeps the
+strict gate, which is the right default. Never infer it from an empty table: a redesign that broke
+every selector yields an empty table too, and storing *that* is the silently emptied calendar the
+gate exists to prevent.
 
 ### The adapter registry
 
@@ -376,7 +395,15 @@ conduct for why that ordering is load-bearing.
 injection, so the whole runner is tested offline against a fake fetch. A fetched body is *rejected*
 — the previous snapshot survives — when it fails `canParse`, throws, or yields zero events; storing
 an empty parse would make the feed build prefer it over the fixture and silently empty a game's
-calendar. One source down is a warning and exit 0; every source failing is exit 1, so CI never
+calendar.
+
+The one exception is a page that states its own emptiness: when a parser's `statesNoEvents` says the
+document itself reports listing nothing, the empty parse is stored as that source's real answer and
+the cycle counts as confirmed rather than failed. Without it a game between versions fails every
+cycle until its next patch ships — three of them reach the `broken` tier and fail the workflow, over
+a lane that is correctly empty, while the snapshot it is holding goes on ageing. The distinction is
+the page's statement and never a row count, so a redesign still rejects, and the run says which of
+the two it saw: `0 events — the page states it currently lists none`. One source down is a warning and exit 0; every source failing is exit 1, so CI never
 commits a cycle that learned nothing.
 
 ## Stage 2 — parse

@@ -254,6 +254,12 @@ These come from how gacha games actually schedule things, and they cause most bu
   refresh reported a shape change. Neither number was ever a count of the page. When a source's
   count is far below what the page shows, find out which shape is being skipped before the count
   reaches zero and the gate has to guess for you.
+- **A count of zero has two causes, and only the page can tell them apart.** A source that broke and
+  a game that is between patches both read `0`, so nothing downstream can separate them — which is
+  why `canParse` must identify a page by its *structure* (headings, ids, column names) and never by
+  finding a row, and why a page that prints something like `There are no Events in this category`
+  gets to say so through `statesNoEvents` rather than being counted as a failure. Infinity Nikki hit
+  both halves of this at once; see § Fandom.
 
 ## Event IDs are localStorage keys
 
@@ -617,6 +623,29 @@ heading, and titles come from a link's `title` attribute — which means they mu
 by hand**, because an attribute never passes through `text()` and `Alison&#39;s Travel Shop` would
 otherwise become a slug, and a slug is a localStorage key. The sanitiser catches exactly that, and a
 parser needing repair on its own fixture is a parser with a bug.
+
+**This page goes empty between versions, and that is a third thing a source can be.** On 2026-09-03,
+with 2.7's events ended and 2.8 not yet listed, the wiki replaced both tables with `There are no
+Events in this category` — the markup otherwise untouched, `Past Events` still carrying twenty
+tables of the same shape. `isInfinityNikkiEventPage` identified the page by finding a *populated*
+table, so it read that as a redesign, and the source spent four cycles reporting
+`the source has likely been redesigned` at a page nobody had redesigned. Two rules came out of it,
+and both generalise past this wiki:
+
+- **A `canParse` that reads data cannot tell a rewrite from a quiet week.** It now reads the section
+  headings, which an empty table does not take with it — *either* `Current Events` or
+  `Upcoming Events`, not both, because requiring the pair would fail the source over a renamed
+  heading it does not even read. `docs/INGESTION.md` already said to keep these checks structural;
+  this one had drifted into content and nothing caught it until a game went quiet.
+- **A page that states its own emptiness is answering, not failing.** `statesNoEvents` (optional on
+  `SourceParser`) lets the runner store that as a real answer, so the snapshot advances and the
+  streak stays clean instead of reaching the `broken` tier over a correctly empty lane. It must rest
+  on the page's own words — a redesign yields zero rows too, and storing *that* is the silent
+  emptying the zero-events gate exists to prevent. Only this template implements it; the other three
+  say nothing either way when empty and keep the strict gate.
+
+An empty Nikki lane is therefore now the truth rather than a gap, exactly as GFL2's thin weeks are.
+The lane refills on its own when 2.8 is listed, with no parser change.
 
 **The second Fandom source's page is chosen, not obvious.**
 `fategrandorder.fandom.com` publishes two schedules: `Event_List` opens "This page lists all Events

@@ -430,6 +430,22 @@ Two shapes the parser handles, both of which would otherwise lose or corrupt a r
 Asking the wiki's editors to state the zone on the Duration column would upgrade this source to
 exact instants, and remains the cheapest improvement available to it.
 
+**Update, 2026-09-03: this page goes empty between versions, and the source was reading that as a
+redesign.** With 2.7's events ended and 2.8 not yet listed, the wiki replaced both the `Current
+Events` and `Upcoming Events` tables with `There are no Events in this category`, leaving everything
+else — including twenty `Past Events` tables of identical shape — untouched. `canParse` identified
+the page by finding a *populated* table, so it threw `the source has likely been redesigned` at a
+page nobody had touched; four cycles of that reached the `broken` tier and the calendar went on
+holding a snapshot whose every row had expired on 27 August.
+
+The fix was in the pipeline, not in this assessment: `canParse` now identifies the page by its
+section headings, and `statesNoEvents` lets a parser report the page's own declaration of emptiness
+so the runner stores it as an answer instead of a failure (`docs/INGESTION.md` § The parser interface
+and § Stage 1). **So an empty Infinity Nikki lane is now the expected state between patches, not a
+symptom** — the thing to check before suspecting this source is whether the wiki is listing anything
+at all. It refills on its own when the next version is posted. The verdict on the source is
+unchanged and it stays built.
+
 ## 12. Thirteen Game8 hubs, swept on 2026-08-19 — two are worth building, eleven are not
 
 Not a P1 game between them: this section answers a direct request to check a list of Game8 game
