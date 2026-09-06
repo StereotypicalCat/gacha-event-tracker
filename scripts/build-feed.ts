@@ -10,6 +10,7 @@
  *   bun run build:feed
  */
 import { ADAPTERS } from "../src/ingest/adapters/index.ts";
+import { sourceHealth } from "../src/ingest/health.ts";
 import { mergeEvents } from "../src/ingest/merge.ts";
 import { SnapshotStore, freshnessAt } from "../src/ingest/snapshots.ts";
 import { EventFeed, SCHEMA_VERSION, type SourceHealth } from "../src/shared/feed.ts";
@@ -69,44 +70,22 @@ for (const adapter of ADAPTERS) {
     game: adapter.game,
   });
 
-  // Parsed a second time as of the document's own capture date, when nothing
-  // in it had expired yet. That figure is what separates "this parser has
-  // stopped reading the page" from "this page's events have all finished
-  // since it was captured" — the two are the same zero once expiry has been
-  // applied, and only the first means our code is wrong.
-  // Null when we do not know when these bytes were current: there is no date
-  // to parse "as of", and inventing one would manufacture a figure the check
-  // then trusts. Unknown is a real answer here, and `brokenSources` declines
-  // to fail a build on it.
-  const parsedCount =
-    at === null
-      ? null
-      : adapter.parse(html, {
-          now: at,
-          sourceUrl: adapter.url,
-          sourceId: adapter.id,
-          game: adapter.game,
-        }).length;
+  // Which of the three empties this is, decided in a module a test can reach
+  // rather than here — see `src/ingest/health.ts` for why that matters.
+  const health = sourceHealth(adapter, html, at, events.length);
+  const { parsedCount } = health;
 
   const groups = byGame.get(adapter.game) ?? [];
   groups.push(events);
   byGame.set(adapter.game, groups);
 
-  sources.push({
-    sourceId: adapter.id,
-    game: adapter.game,
-    url: adapter.url,
-    // When the bytes were last confirmed live; a fixture's capture date when
-    // this source has never been refreshed.
-    lastSuccessAt: at,
-    eventCount: events.length,
-    parsedCount,
-  });
+  sources.push(health);
 
-  // A source that parsed events and then lost them all to the calendar says
-  // so on the build log, because a bare "0 events" reads as a fault.
-  const note =
-    events.length === 0 && parsedCount !== null && parsedCount > 0
+  // A source that came back with nothing says which nothing it was, because a
+  // bare "0 events" reads as a fault and two of the three are not one.
+  const note = health.statesNoEvents
+    ? "  (the page states it currently lists none)"
+    : events.length === 0 && parsedCount !== null && parsedCount > 0
       ? `  (all ${parsedCount} have ended — stale page)`
       : "";
   console.log(

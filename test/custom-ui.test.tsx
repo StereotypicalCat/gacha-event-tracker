@@ -240,6 +240,7 @@ describe("Colophon freshness notice (PRD F7)", () => {
     eventCount: 9,
 
     parsedCount: 9,
+    statesNoEvents: false,
   };
 
   test("states when the data was refreshed, unprompted", () => {

@@ -608,7 +608,22 @@ partly applied.
 
 ## Schema versioning
 
-`/api/events` responses carry `{ schemaVersion: 1, generatedAt, events: [...] }`. The client
-refuses to render a `schemaVersion` it does not know and shows a "refresh the page" prompt instead
-of guessing at unfamiliar fields. Additive fields do not bump the version; removing or retyping a
-field does.
+`/api/events` responses carry `{ schemaVersion: 1, generatedAt, events: [...], sources: [...] }`.
+The client refuses to render a `schemaVersion` it does not know and shows a "refresh the page"
+prompt instead of guessing at unfamiliar fields. Additive fields do not bump the version; removing
+or retyping a field does.
+
+`sources` is a `SourceHealth` per registered source (`src/shared/feed.ts`), and it is what the
+footer's freshness line and CI's build gate both read. Three of its fields describe one source's
+last document and only make sense together: `eventCount` is what it contributed after expired events
+were dropped, `parsedCount` is what the same bytes yield when parsed as of their own capture date,
+and `statesNoEvents` says the page itself declared it currently lists none. That triple is what
+separates a parser that has stopped reading a redesigned page (a fault) from one whose events have
+all since ended, and from a game between versions (neither) — see `docs/INGESTION.md` § Stage 1.
+
+**Every field added here is defaulted, and that is a rule rather than a habit.** The service worker
+serves the last feed it downloaded, so a required field fails validation on every cached feed and
+takes the offline promise down with it. A default must also be the *strict* reading of silence:
+`parsedCount` defaults to `null` — an older feed never recorded the figure, which is an absence of
+information and not evidence of health — and `statesNoEvents` to `false`, because a feed built
+before the field existed never asked the page and cannot be read as having got an answer.

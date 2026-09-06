@@ -168,6 +168,7 @@ describe("the app's links into them", () => {
             eventCount: 9,
 
             parsedCount: 9,
+            statesNoEvents: false,
           },
         ]}
         now={NOW}

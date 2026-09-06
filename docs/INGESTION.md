@@ -406,6 +406,28 @@ the page's statement and never a row count, so a redesign still rejects, and the
 the two it saw: `0 events — the page states it currently lists none`. One source down is a warning and exit 0; every source failing is exit 1, so CI never
 commits a cycle that learned nothing.
 
+**The fact has to reach the feed, because the runner is not the only thing that judges a zero.**
+`scripts/build-feed.ts` parses the same snapshot again and records a `SourceHealth` per source, and
+CI fails the build on `brokenSources` — `parsedCount === 0`. For four days from 2026-09-03 the
+runner excused Infinity Nikki's quiet page and the feed build did not, so every green refresh was
+followed by a red CI run on a lane that was correctly empty. The runner's verdict could not travel:
+only a parser has seen the page, and by the time `brokenSources` runs there is nothing left but the
+feed. So `SourceHealth.statesNoEvents` carries it, `src/ingest/health.ts` sets it, and the same rule
+applies at both ends — asked only of an empty parse, taken only from the page's own words.
+
+Two properties of that field are load-bearing rather than incidental. It is **defaulted, never
+required**, for the reason `parsedCount` is: the service worker serves the last feed it downloaded,
+and a required field would fail every cached feed's validation and take the offline promise with it.
+And an absent value reads as `false` — the strict answer — because a feed built before the field
+existed never asked the question and must not be read as having answered it.
+
+**The rule lives in a module rather than in the script, and that is the point.**
+`scripts/build-feed.ts` writes `public/`, so importing it from a test runs a build; the rule sat
+where no test could reach it, which is exactly how the two ends drifted apart. `src/ingest/health.ts`
+is a pure function over an adapter and a document, and `test/feed.test.ts` exercises it. Same lesson
+as `brokenSources` itself, which was inline in `ci.yml` and pinned by grepping that file for a
+string — proof the check existed, never that it was right.
+
 ## Stage 2 — parse
 
 Hash the raw body (sha256) → `content_hash`. **If it matches `sources.content_hash`, end as

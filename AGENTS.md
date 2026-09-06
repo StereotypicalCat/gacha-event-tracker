@@ -131,6 +131,7 @@ re-verify a sample against the live page afterward.
 src/shared/       schema.ts (the contract), time.ts, daily.ts, effort.ts, games.ts, feed.ts
                   custom.ts — reader-authored games and events, and their key spaces
 src/ingest/       html.ts, dates.ts (sixteen formats), merge.ts, sanitize.ts, robots.ts, snapshots.ts
+                  health.ts — which of the three empties a source's zero was; pure
   parsers/        game8.ts, wikigg.ts, akwiki.ts, fandom.ts, bawiki.ts, holodori.ts, iopwiki.ts,
                   stellasora.ts — keyed by SITE, not game
   adapters/       index.ts — SOURCES registry binding url+game+parser, and the sanitize seam
@@ -643,6 +644,18 @@ and both generalise past this wiki:
   on the page's own words — a redesign yields zero rows too, and storing *that* is the silent
   emptying the zero-events gate exists to prevent. Only this template implements it; the other three
   say nothing either way when empty and keep the strict gate.
+- **Two things judge a zero, and telling only one of them is half a fix.** The runner learned this on
+  2026-09-03; `scripts/build-feed.ts` did not, and CI fails the build on `brokenSources`
+  (`parsedCount === 0`). So for four days every green refresh was followed by a red CI run over a lane
+  that was correctly empty — the same rule, contradicting itself across two scripts. The runner's
+  verdict cannot travel on its own: only a parser has seen the page, and by the time `brokenSources`
+  runs there is nothing left but the feed. `SourceHealth.statesNoEvents` carries it,
+  `src/ingest/health.ts` sets it, and both ends now ask it the same way — of an empty parse only, from
+  the page's own words only.
+  It lives in a module because `build-feed.ts` writes `public/`, so importing it from a test runs a
+  build and the rule sat where no test could reach it. That is how the two ends drifted, and it is
+  the lesson `brokenSources` itself already carried: it was inline in `ci.yml` and pinned by grepping
+  that file for a string, which proved the check existed and never that it was right.
 
 An empty Nikki lane is therefore now the truth rather than a gap, exactly as GFL2's thin weeks are.
 The lane refills on its own when 2.8 is listed, with no parser change.

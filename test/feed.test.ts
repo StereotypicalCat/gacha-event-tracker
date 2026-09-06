@@ -4,9 +4,10 @@ import {
   freshness,
   staleSources,
   STALE_AFTER_MS,
-  type SourceHealth,
+  SourceHealth,
 } from "../src/shared/feed.ts";
-import type { GameId } from "../src/shared/schema.ts";
+import { sourceHealth } from "../src/ingest/health.ts";
+import type { GachaEvent, GameId } from "../src/shared/schema.ts";
 
 /**
  * Freshness disclosure (PRD F7).
@@ -34,6 +35,7 @@ function source(
     eventCount: 3,
 
     parsedCount: 3,
+    statesNoEvents: false,
   };
 }
 
@@ -132,6 +134,7 @@ describe("telling a broken source from a stale one", () => {
     lastSuccessAt: "2026-08-19T00:00:00.000Z",
     eventCount: 0,
     parsedCount: 7,
+    statesNoEvents: false,
     ...over,
   });
 
@@ -141,6 +144,29 @@ describe("telling a broken source from a stale one", () => {
     expect(brokenSources([health({ parsedCount: 0 })]).map((s) => s.sourceId)).toEqual([
       "nikki-fandom-events",
     ]);
+  });
+
+  test("a source whose page states it lists none is not broken", () => {
+    // The third empty, and the one the refresh runner already knew about while
+    // the feed did not. Infinity Nikki's wiki replaced both event tables with
+    // "There are no Events in this category" between 2.7 and 2.8, so the page
+    // parses to zero and is *answering*. A redesign yields zero too, which is
+    // why only the page's own words may say which — never the row count.
+    expect(
+      brokenSources([health({ parsedCount: 0, statesNoEvents: true })]),
+    ).toEqual([]);
+  });
+
+  test("a page that states its emptiness still fails once it parses nothing at all", () => {
+    // Guard on the guard. `statesNoEvents` excuses an empty parse, so a parser
+    // whose selectors all broke must not be able to reach it: the flag is only
+    // ever set from the page's own declaration, and a source claiming both a
+    // declaration and rows is a contradiction we do not have to honour.
+    expect(
+      brokenSources([health({ parsedCount: 0, statesNoEvents: false })]).map(
+        (s) => s.sourceId,
+      ),
+    ).toEqual(["nikki-fandom-events"]);
   });
 
   test("a source whose events have all ended is not broken", () => {
@@ -164,11 +190,104 @@ describe("telling a broken source from a stale one", () => {
     ]);
   });
 
+  test("a feed cached before the field existed is not called broken", () => {
+    // The service worker serves the last feed it downloaded, so a feed built
+    // before `statesNoEvents` shipped still has to validate and still has to
+    // mean what it meant. Absent parses to `false`, which is the strict
+    // reading — an old feed cannot vouch for a page it never asked.
+    const cached = SourceHealth.parse({
+      sourceId: "nikki-fandom-events",
+      game: "nikki",
+      url: "https://example.test/nikki",
+      lastSuccessAt: "2026-08-19T00:00:00.000Z",
+      eventCount: 0,
+      parsedCount: 7,
+    });
+    expect(cached.statesNoEvents).toBe(false);
+    expect(brokenSources([cached])).toEqual([]);
+  });
+
   test("a feed that never recorded the count is not called broken", () => {
     // An older feed — one the service worker cached before this field existed
     // — says nothing either way, and absence of information is not evidence of
     // a fault.
     expect(brokenSources([health({ parsedCount: null })])).toEqual([]);
     expect(staleSources([health({ parsedCount: null })])).toEqual([]);
+  });
+});
+
+/**
+ * What the feed builder records about a source it just parsed.
+ *
+ * The distinction above is only worth having if something sets it, and this is
+ * the seam where it was missing: `scripts/refresh-sources.ts` had asked
+ * `statesNoEvents` since 2026-09-03 while `scripts/build-feed.ts` never did, so
+ * a page declaring itself empty reached CI as a bare zero and failed the build.
+ * The rule was in a script nothing could import, which is why it now lives in a
+ * module and is exercised here rather than grepped for.
+ */
+describe("recording a source's health at build time", () => {
+  const EMPTY = "<p>There are no Events in this category</p>";
+  const FULL = "<p>Song of the Wandering Sky</p>";
+
+  const adapter = (over: Partial<Parameters<typeof sourceHealth>[0]> = {}) => ({
+    id: "nikki-fandom-events",
+    game: "nikki" as GameId,
+    url: "https://example.test/nikki",
+    parse: (html: string) => (html === FULL ? ([{}] as unknown as GachaEvent[]) : []),
+    statesNoEvents: (html: string) => html.includes("There are no Events"),
+    ...over,
+  });
+
+  test("a page that declares itself empty is recorded as having answered", () => {
+    const health = sourceHealth(adapter(), EMPTY, "2026-09-06T15:39:19.376Z", 0);
+
+    expect(health.parsedCount).toBe(0);
+    expect(health.statesNoEvents).toBe(true);
+    expect(brokenSources([health])).toEqual([]);
+  });
+
+  test("a page that reads empty without saying so is left to fail", () => {
+    // The redesign case, and the whole reason the flag may not be inferred
+    // from the row count: this parse is zero too.
+    const health = sourceHealth(
+      adapter({ statesNoEvents: () => false }),
+      EMPTY,
+      "2026-09-06T15:39:19.376Z",
+      0,
+    );
+
+    expect(health.statesNoEvents).toBe(false);
+    expect(brokenSources([health]).map((s) => s.sourceId)).toEqual([
+      "nikki-fandom-events",
+    ]);
+  });
+
+  test("a source with rows is never marked as declaring itself empty", () => {
+    // A loose `statesNoEvents` — one matching prose that survives a redesign —
+    // must not be able to excuse a source that is working. The flag qualifies
+    // an empty parse and states nothing on its own, so it is asked only of a
+    // zero, exactly as the refresh runner asks it.
+    const health = sourceHealth(
+      adapter({ statesNoEvents: () => true }),
+      FULL,
+      "2026-09-06T15:39:19.376Z",
+      1,
+    );
+
+    expect(health.parsedCount).toBe(1);
+    expect(health.statesNoEvents).toBe(false);
+  });
+
+  test("a document of unknown age records neither count nor declaration", () => {
+    // No capture date means no "as of" to parse against, and inventing one
+    // manufactures a figure the check then trusts. `parsedCount` is null for
+    // that reason and the declaration goes with it: both answer a question
+    // about bytes we cannot date.
+    const health = sourceHealth(adapter(), EMPTY, null, 0);
+
+    expect(health.parsedCount).toBeNull();
+    expect(health.statesNoEvents).toBe(false);
+    expect(brokenSources([health])).toEqual([]);
   });
 });

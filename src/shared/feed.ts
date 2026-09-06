@@ -34,6 +34,26 @@ export const SourceHealth = z.object({
    * than evidence of a fault.
    */
   parsedCount: z.number().int().nonnegative().nullable().default(null),
+  /**
+   * The page itself says it currently lists no events.
+   *
+   * The third of the three ways a source can read zero, and the only one the
+   * feed could not previously express. A redesigned page the parser can no
+   * longer read, a page whose events have all ended, and a page printing
+   * "There are no Events in this category" all arrive as `parsedCount: 0` —
+   * and the last one is a source *answering*, not failing.
+   *
+   * `scripts/refresh-sources.ts` has drawn this distinction since 2026-09-03
+   * and the feed did not, so a correctly quiet lane reddened CI every build.
+   * Carried here because `brokenSources` runs against the feed and has nothing
+   * else to go on: only the parser has seen the page.
+   *
+   * **Set from the page's own words, never from a row count** — a redesign
+   * yields zero rows too, and excusing *that* is the silently emptied calendar
+   * the check exists for. Defaulted rather than required, for the reason
+   * `parsedCount` is: an older cached feed must keep validating.
+   */
+  statesNoEvents: z.boolean().default(false),
 });
 
 export const EventFeed = z.object({
@@ -120,9 +140,15 @@ export function freshness(
  * page and a broken parser arrived as the same zero. Only an explicit zero
  * counts here; a null is an older feed that never recorded the figure, and
  * failing on missing information would be the same mistake in a new place.
+ *
+ * Nor is a page that states its own emptiness, which is that same mistake a
+ * third time: a gacha calendar goes quiet between versions, and Infinity
+ * Nikki's wiki says so in words. `statesNoEvents` is the page answering, so it
+ * is excused here exactly as the refresh runner already excuses it — see that
+ * field, and `scripts/refresh-sources.ts`.
  */
 export function brokenSources(sources: readonly SourceHealth[]): SourceHealth[] {
-  return sources.filter((s) => s.parsedCount === 0);
+  return sources.filter((s) => s.parsedCount === 0 && !s.statesNoEvents);
 }
 
 /**
