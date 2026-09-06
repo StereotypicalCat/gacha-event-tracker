@@ -1096,6 +1096,17 @@ describe("the workflows that drive the refresh", () => {
     expect(ci).toContain("brokenSources");
     expect(ci).not.toContain("eventCount === 0");
   });
+
+  test("ci.yml says which empty a source's zero was", async () => {
+    // Three sources can read zero and only one is a fault, so the two that are
+    // not have to say so where the count is printed — an unexplained 0 in the
+    // log reads as the failure the check just declined to call it. Whether the
+    // rules are right is exercised in test/feed.test.ts; this only pins that
+    // both are wired up.
+    const ci = await read("ci.yml");
+    expect(ci).toContain("staleSources");
+    expect(ci).toContain("quietSources");
+  });
 });
 
 describe("flags", () => {

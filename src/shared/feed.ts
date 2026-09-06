@@ -165,3 +165,22 @@ export function staleSources(sources: readonly SourceHealth[]): SourceHealth[] {
     (s) => s.parsedCount !== null && s.parsedCount > 0 && s.eventCount === 0,
   );
 }
+
+/**
+ * Sources whose page says it currently lists no events.
+ *
+ * The third empty, and the only one that is neither a fault nor a gap: a gacha
+ * calendar goes quiet between versions and this page said so in words. Not
+ * thrown, for the reason `statesNoEvents` exists at all.
+ *
+ * Reported, though, and that is the half worth defending. Excusing this zero
+ * from the build is not the same as saying nothing about it — the build log
+ * prints a count per source, and an unexplained `0` reads as exactly the fault
+ * this distinction denies. It is also the only thing that would ever prompt
+ * somebody to check whether a lane has been quiet for a month because the game
+ * is between patches or because the page's wording changed under a
+ * `statesNoEvents` that still matches.
+ */
+export function quietSources(sources: readonly SourceHealth[]): SourceHealth[] {
+  return sources.filter((s) => s.statesNoEvents);
+}

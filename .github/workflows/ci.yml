@@ -81,10 +81,15 @@ jobs:
             // and it was not: it read eventCount, which is counted after
             // expiry, so a page whose events had all simply ended reddened the
             // build. Behaviour belongs where behaviour can be exercised.
-            const { brokenSources, staleSources } = await import("./src/shared/feed.ts");
+            const { brokenSources, quietSources, staleSources } = await import("./src/shared/feed.ts");
             for (const s of staleSources(feed.sources)) {
               console.log(
                 `  note: ${s.sourceId} parsed ${s.parsedCount} events, all of them ended — stale page, not a fault`,
+              );
+            }
+            for (const s of quietSources(feed.sources)) {
+              console.log(
+                `  note: ${s.sourceId} parsed nothing and the page says so itself — between versions, not a fault`,
               );
             }
             const broken = brokenSources(feed.sources);

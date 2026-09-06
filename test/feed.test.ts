@@ -3,6 +3,7 @@ import {
   brokenSources,
   freshness,
   staleSources,
+  quietSources,
   STALE_AFTER_MS,
   SourceHealth,
 } from "../src/shared/feed.ts";
@@ -175,10 +176,26 @@ describe("telling a broken source from a stale one", () => {
     expect(brokenSources([health({})])).toEqual([]);
   });
 
-  test("a healthy source is neither", () => {
+  test("a healthy source is none of the three", () => {
     const ok = health({ eventCount: 5, parsedCount: 5 });
     expect(brokenSources([ok])).toEqual([]);
     expect(staleSources([ok])).toEqual([]);
+    expect(quietSources([ok])).toEqual([]);
+  });
+
+  test("a source whose page states it lists none is reported as quiet", () => {
+    // Excusing it from the build is not the same as saying nothing about it.
+    // The build log prints a count per source, and an unexplained 0 reads as
+    // the fault this whole distinction exists to deny — so the one empty we
+    // are content with is the one that has to say why.
+    expect(
+      quietSources([health({ parsedCount: 0, statesNoEvents: true })]).map(
+        (s) => s.sourceId,
+      ),
+    ).toEqual(["nikki-fandom-events"]);
+    expect(staleSources([health({ parsedCount: 0, statesNoEvents: true })])).toEqual(
+      [],
+    );
   });
 
   test("a source with nothing current left is reported as stale", () => {

@@ -145,7 +145,7 @@ src/client/       React app, service worker, manifest
                   theme.ts — dark or light, and what a game hue reads as on each
 scripts/          build-feed.ts, build-static.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             898 tests
+test/             1,071 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
@@ -658,7 +658,11 @@ and both generalise past this wiki:
   that file for a string, which proved the check existed and never that it was right.
 
 An empty Nikki lane is therefore now the truth rather than a gap, exactly as GFL2's thin weeks are.
-The lane refills on its own when 2.8 is listed, with no parser change.
+The lane refills on its own when 2.8 is listed, with no parser change. CI says so out loud rather
+than silently — `quietSources` prints a note beside the count, because an unexplained `0` in the log
+reads as exactly the fault the gate just declined to call it, and it is the only line that would ever
+prompt somebody to ask whether a month-long quiet lane is a quiet game or a wording change under a
+`statesNoEvents` that still matches.
 
 **The second Fandom source's page is chosen, not obvious.**
 `fategrandorder.fandom.com` publishes two schedules: `Event_List` opens "This page lists all Events
