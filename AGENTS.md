@@ -186,8 +186,21 @@ These come from how gacha games actually schedule things, and they cause most bu
   deadline they were counting down to vanish on its last day. So `latestBoundaryMs` answers the same
   question for the *last* region, and `bawiki.ts` and two branches of `fandom.ts` ask it. Nothing
   stored changes: it is one comparison, not a resolved boundary written to the feed.
-- **Patch cycles are ~6 weeks.** Any event over 180 days is a parse error, not a long event. The
-  validator and the tests both reject it.
+- **Patch cycles are ~6 weeks, and a span over a year is a parse error rather than a long event.**
+  `test/adapters/game8.test.ts` rejects one across every fixture. Two corrections to what this rule
+  used to say, both load-bearing:
+  - **The ceiling is 365 days, not 180** (raised 2026-09-12, repository owner). A real event finally
+    exceeded 180: Genshin's anniversary 5-star selection runs 336 days, correctly dated on its wiki,
+    and 180 would have dropped a deadline readers want. 365 keeps the guard aimed at what it was
+    built for, because a misread year puts the *end* twelve months out and so reads as span + ~365 —
+    405 days for a six-week event, still caught. What it newly admits is only the genuinely
+    year-long event, a shape this domain does have; the same widening clears Fire Emblem Heroes'
+    seven-month new-player banner (`docs/SOURCES.md` § 12b), which had been parked on this question.
+  - **There is no validator.** This file claimed "the validator and the tests both reject it" and
+    only the second half was ever true — the validator belongs to the quarantine gate described in
+    `docs/INGESTION.md`, which is specified and **not built**. So the rule is enforced per adapter,
+    by a test, against a pinned fixture: a source added without a fixture in that table is a source
+    the rule does not cover.
 
 ## Working on parsers
 

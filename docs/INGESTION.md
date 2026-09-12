@@ -516,7 +516,7 @@ quarantine with `reason: 'sanity_failed'` — never to the feed.
 | Rule | Rationale |
 |---|---|
 | `endsAt` after `startsAt` when both present | A backwards interval is always a parse error |
-| Duration under 180 days | Patch cycles are ~6 weeks; longer means a misread year |
+| Duration under 365 days | Patch cycles are ~6 weeks; a year-plus span means a misread year. Raised from 180 on 2026-09-12, when a real 336-day event arrived — see AGENTS.md § Domain rules. Until this stage is built, the rule lives only in `test/adapters/game8.test.ts` |
 | `startsAt` within [now − 2y, now + 1y] | Catches century typos and relative-date misreads |
 | `endsAt` null exactly when `endPrecision` is `"unknown"` | The two fields must agree |
 | `regionEnds` non-null exactly when `regionScoped` | Same |

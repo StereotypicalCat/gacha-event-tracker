@@ -97,14 +97,26 @@ describe.each(CASES)("$adapter.id $fixture", ({ adapter, fixture }) => {
     }
   });
 
-  test("no event runs longer than 180 days", async () => {
-    // Patch cycles are ~6 weeks. A longer span means a misread year, which is
+  test("no event runs longer than 365 days", async () => {
+    // Patch cycles are ~6 weeks, so a long span is usually a misread year —
     // the failure mode most likely to reach a user as a confident wrong date.
+    //
+    // The ceiling is 365 and not 180 because a real event finally exceeded 180:
+    // Genshin's anniversary 5-star selection runs 336 days
+    // (2025-10-22 → 2026-09-23), correctly dated on its wiki, and its end is
+    // the kind of deadline this app exists to show. 180 would have dropped it.
+    //
+    // 365 keeps the guard pointed at what it was built for. A misread year
+    // lands the *end* twelve months out, so it shows up as span + ~365 — 405
+    // days for a six-week event, still caught. What 365 newly admits is only
+    // the genuinely year-long event, a shape this domain does have:
+    // the same widening clears Fire Emblem Heroes' real seven-month
+    // new-player banner (docs/SOURCES.md § 12b).
     for (const e of await runAdapter(adapter, fixture)) {
       if (e.endsAt === null) continue;
       const days =
         (Date.parse(e.endsAt) - Date.parse(e.startsAt)) / 86_400_000;
-      expect(days).toBeLessThanOrEqual(180);
+      expect(days).toBeLessThanOrEqual(365);
     }
   });
 
