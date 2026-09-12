@@ -670,6 +670,242 @@ function infinityNikkiTitle(cell: string): string | null {
   return title.length === 0 ? null : title;
 }
 
+/**
+ * Genshin's `Event` page — the fifth template, and the only one whose sections
+ * are fenced by an `<h3>`.
+ *
+ *   <h2>List of Events</h2>
+ *   <h3><span class="mw-headline" id="Current">Current</span></h3>
+ *   <table class="wikitable sortable">
+ *     <tr><th>Event</th><th>Duration</th><th>Type(s)</th></tr>
+ *     <tr><td><span typeof="mw:File"><a title="Miliastra Pass/2026-08-12">
+ *               <img alt="Phantasmagoric Chronicle" …></a></span><br />
+ *             <a href="/wiki/Miliastra_Pass/2026-08-12">Phantasmagoric Chronicle</a></td>
+ *         <td>August 12, 2026 &#8211; September 21, 2026</td>
+ *         <td>In-Game, Miliastra Pass</td>
+ *
+ * `Current` and `Upcoming` are the schedule; `Permanent` states a
+ * `Release Date` and no end, and is fenced off.
+ *
+ * **Every boundary is day precision, and that is the page's whole claim** — it
+ * prints a date and no time of day on either side, so unlike Infinity Nikki
+ * there is not even a clock to discard. The duration cell does carry a
+ * `data-sort-value="2026-09-14 04:00:002026-09-21 03:59:59"`, and it is
+ * deliberately ignored: it names no zone, and picking one moves the *day*,
+ * which is half of every event ID this game will ever have. It costs nothing
+ * either, because 04:00 is the reset hour `clockFor` already resolves a
+ * day-precision boundary to on the reader's own server — reading the sort key
+ * would replace a correct per-region answer with one fixed guess.
+ */
+const GI_SECTION =
+  /<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>|<table\b[^>]*>([\s\S]*?)<\/table>/gi;
+
+/** The two sub-headings whose tables are a schedule, not a back catalogue. */
+const GI_INCLUDED_SECTION = /^(current|upcoming)$/i;
+
+/** The `h2` this page's schedule lives under, and half of its identity. */
+const GI_PAGE_HEADING = /^list of events$/i;
+
+/**
+ * True for the Genshin wiki's `Event` page, and the gate on the branch below.
+ *
+ * **Structural, and it survives an empty table** — the Infinity Nikki lesson
+ * above, applied before it could be learned twice: `Current` and `Upcoming`
+ * are headings, and a game between versions empties the tables under them
+ * without taking them with it. Both halves are required because each is weak
+ * alone: `List of Events` also heads pages that are glossaries, and a bare
+ * `Current` is a word any wiki might use.
+ */
+function isGenshinEventPage(rendered: string): boolean {
+  const flat = rendered.replace(EDIT_SECTION, "").replace(/\s+/g, " ");
+  let onEventsPage = false;
+  let hasSchedule = false;
+
+  for (const node of flat.matchAll(GI_SECTION)) {
+    const heading = node[2];
+    if (heading === undefined) continue;
+    const name = text(heading).trim();
+    if (GI_PAGE_HEADING.test(name)) onEventsPage = true;
+    if (GI_INCLUDED_SECTION.test(name)) hasSchedule = true;
+  }
+
+  return onEventsPage && hasSchedule;
+}
+
+interface GiTable {
+  body: string;
+  title: number;
+  duration: number;
+  type: number | undefined;
+}
+
+/** Every `Current`/`Upcoming` table, with its columns resolved. */
+function genshinTables(rendered: string): GiTable[] {
+  const flat = rendered.replace(EDIT_SECTION, "").replace(/\s+/g, " ");
+  const out: GiTable[] = [];
+  let included = false;
+
+  for (const node of flat.matchAll(GI_SECTION)) {
+    const heading = node[2];
+    if (heading !== undefined) {
+      // **Every heading closes the section, whatever its level.** The three
+      // schedules are `h3`s and the page's other tables sit under `h2`s, so a
+      // reader watching only `h2`s would carry `Upcoming` past the end of the
+      // schedule and read `List of Event Types` — a glossary of every event
+      // type this game has ever run — as though it were dated.
+      included = GI_INCLUDED_SECTION.test(text(heading).trim());
+      continue;
+    }
+    if (!included) continue;
+
+    const body = node[3] ?? "";
+    const headers = [...body.matchAll(/<th\b[^>]*>([\s\S]*?)<\/th>/gi)].map((h) =>
+      text(h[1] ?? "")
+        .toLowerCase()
+        .trim(),
+    );
+    const at = (name: string) => {
+      const i = headers.indexOf(name);
+      return i < 0 ? undefined : i;
+    };
+
+    const title = at("event");
+    const duration = at("duration");
+    // Resolved from the header row rather than counted, as in `bawiki.ts`.
+    // `Permanent` heads a `Release Date` column and fails this lookup too, so
+    // two independent things keep an undated permanent fixture off a calendar
+    // of deadlines.
+    if (title === undefined || duration === undefined) continue;
+
+    out.push({ body, title, duration, type: at("type(s)") });
+  }
+
+  return out;
+}
+
+/**
+ * The Genshin wiki's current and upcoming events.
+ *
+ * A second source for a game whose Game8 page cannot be fetched from CI at all
+ * (AGENTS.md § Scraping conduct), so this is the only Genshin surface a
+ * scheduled refresh can actually move.
+ */
+function parseGenshinEvents(
+  rendered: string,
+  ctx: ParseContext,
+): GachaEvent[] {
+  const nowMs = Date.parse(ctx.now);
+  const out: GachaEvent[] = [];
+  const seen = new Set<string>();
+
+  for (const table of genshinTables(rendered)) {
+    for (const row of table.body.matchAll(ROW)) {
+      const cells = [...(row[1] ?? "").matchAll(CELL)].map((c) => ({
+        tag: c[1] ?? "",
+        html: c[2] ?? "",
+      }));
+      if (cells.length === 0 || cells.some((c) => c.tag === "h")) continue;
+
+      const titleCell = cells[table.title]?.html ?? "";
+      const title = genshinTitle(titleCell);
+      if (title === null) continue;
+
+      const range = parseFullRange(text(cells[table.duration]?.html ?? ""));
+      // A row this reader cannot date yields nothing rather than a guess.
+      if (range === null) continue;
+      if (range.end.iso <= range.start.iso) continue;
+
+      // `Current` is maintained by hand and goes stale before anyone moves a
+      // row, so currency is checked rather than taken on trust — on the clock
+      // the countdown reads a day-precision end on, not on the UTC midnight
+      // placeholder stored for it.
+      if (
+        latestBoundaryMs(range.end.iso, range.end.precision, ctx.game) < nowMs
+      ) {
+        continue;
+      }
+
+      const id = eventId(ctx.game, title, range.start.iso);
+      if (seen.has(id)) continue;
+      seen.add(id);
+
+      const stated =
+        table.type === undefined ? "" : text(cells[table.type]?.html ?? "");
+      const href = ARTICLE_LINK.exec(titleCell)?.[1];
+
+      out.push({
+        id,
+        game: ctx.game,
+        title,
+        // The page's own `Type(s)` column — "Battle Pass", "Archon Quest",
+        // "Login" — is a far better signal than a Genshin event title, which
+        // is usually a piece of poetry.
+        type: inferType(`${title} ${stated}`),
+        // No description column, and the prose lives on each event's own
+        // article rather than further down this page — so there is nothing to
+        // summarise, and `Type(s)` is a classification rather than a blurb.
+        summary: null,
+        startsAt: range.start.iso,
+        startPrecision: range.start.precision,
+        endsAt: range.end.iso,
+        endPrecision: range.end.precision,
+        // One worldwide service on this page's telling: it draws no regional
+        // distinction and states no per-region end, so `regionScoped` would be
+        // claiming a split the source never made.
+        regionScoped: false,
+        regionEnds: null,
+        sourceUrl:
+          href === undefined
+            ? ctx.sourceUrl
+            : new URL(href, ctx.sourceUrl).toString(),
+        sourceId: ctx.sourceId,
+        status: "published",
+        // Day precision on both sides, which is everything the page states.
+        confidence: 0.85,
+        extractionMethod: "parser",
+        version: 1,
+        firstSeenAt: ctx.now,
+        updatedAt: ctx.now,
+      });
+    }
+  }
+
+  return out;
+}
+
+/**
+ * An event's name, from the caption link under its banner.
+ *
+ * **The cell's text, and neither attribute** — the reverse of the Nikke and
+ * Infinity Nikki rule above, which is exactly why it is written down: those two
+ * are the nearest precedent and following them here would be wrong. This wiki
+ * renders a banner linked to the event's article and repeats the name as a
+ * caption beneath it, so the visible text is the curated display name while
+ * both attributes name something else. The link `title` is the *parent*
+ * article — `Miliastra Pass/2026-08-12` for an event called
+ * `Phantasmagoric Chronicle` — and the `img alt` is whatever the uploaded file
+ * was called, which is `Stygian Onslaught 2025-10-29` on an event that starts
+ * 2026-08-19. Either one publishes a wrong name, and a title is half a
+ * localStorage key.
+ *
+ * A row with no caption is therefore **skipped rather than named from an
+ * attribute that demonstrably means something else** — an omitted event is a
+ * recoverable disappointment, a wrong key is not recoverable at all. Every row
+ * on the live page carries one.
+ */
+function genshinTitle(cell: string): string | null {
+  const raw = text(cell).trim();
+  if (raw.length === 0) return null;
+
+  // `Overflowing Abundance 2026-09-14` — this wiki gives each run of a
+  // recurring event its own dated page and sometimes captions the row with it.
+  // The same call as Infinity Nikki's, for the same reason: that date names the
+  // *run*, the start date is already half the event ID, and keeping it would
+  // print the date twice in one row.
+  const title = raw.replace(DATED_SUBPAGE, "").trim();
+  return title.length === 0 ? null : title;
+}
+
 export function parseFandomEventsPage(
   body: string,
   ctx: ParseContext,
@@ -684,6 +920,14 @@ export function parseFandomEventsPage(
   // emptying the lane.
   if (isInfinityNikkiEventPage(rendered)) {
     return parseInfinityNikkiEvents(rendered, ctx).sort((a, b) =>
+      a.startsAt === b.startsAt
+        ? a.id.localeCompare(b.id)
+        : a.startsAt.localeCompare(b.startsAt),
+    );
+  }
+
+  if (isGenshinEventPage(rendered)) {
+    return parseGenshinEvents(rendered, ctx).sort((a, b) =>
       a.startsAt === b.startsAt
         ? a.id.localeCompare(b.id)
         : a.startsAt.localeCompare(b.startsAt),
@@ -810,7 +1054,8 @@ export const fandomParser: SourceParser = {
       isTimePeriodTable ||
       isFgoEventList(rendered) ||
       isNikkeEventPage(rendered) ||
-      isInfinityNikkiEventPage(rendered)
+      isInfinityNikkiEventPage(rendered) ||
+      isGenshinEventPage(rendered)
     );
   },
   statesNoEvents(body: string): boolean {

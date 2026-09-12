@@ -20,7 +20,7 @@ review queue are specified but not built.
 | Piece | State |
 |---|---|
 | Event schema, date parsing, Game8 parser | Built, tested |
-| Twenty sources across nineteen games | Built, tested |
+| Twenty-one sources across nineteen games | Built, tested |
 | Your own games and events, one-off or repeating | Built, tested |
 | Cross-source merge and conflict detection | Built, tested |
 | Input sanitization at the ingest boundary | Built, tested |
@@ -111,7 +111,7 @@ date makes you miss content. Given the choice, this ships nothing rather than a 
 
 | Game | Source |
 |---|---|
-| Genshin Impact | Game8 |
+| Genshin Impact | Game8 + Fandom |
 | Honkai: Star Rail | Game8 |
 | Wuthering Waves | Game8 |
 | Zenless Zone Zero | Game8 |

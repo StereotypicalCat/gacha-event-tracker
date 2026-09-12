@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { adapterById } from "../../src/ingest/adapters/index.ts";
+import { adapterById, parseGame } from "../../src/ingest/adapters/index.ts";
 import type { Adapter } from "../../src/ingest/adapters/types.ts";
 import { parseOrdinalDateTimeRange } from "../../src/ingest/dates.ts";
 import { arknightsWikiParser } from "../../src/ingest/parsers/akwiki.ts";
@@ -50,6 +50,10 @@ const CASES: Array<{ adapter: Adapter; fixture: string }> = [
   { adapter: adapter("czn-game8-events"), fixture: "fixtures/czn/game8-events-2026-08-19" },
   { adapter: adapter("uma-game8-events"), fixture: "fixtures/uma/game8-events-2026-08-19" },
   { adapter: adapter("nikke-fandom-events"), fixture: "fixtures/nikke/fandom-events-2026-08-19" },
+  // Genshin's Fandom wiki — the fifth Fandom template, and the first Genshin
+  // source a scheduled refresh can actually fetch. Its one 336-day row is the
+  // reason the duration guard below reads 365 rather than 180.
+  { adapter: adapter("genshin-fandom-events"), fixture: "fixtures/genshin/fandom-events-2026-09-12" },
   { adapter: adapter("nikki-fandom-events"), fixture: "fixtures/nikki/fandom-events-2026-08-19" },
   // The same page a week later, listing nothing: 2.7's events had ended and 2.8
   // was not up yet, so both tables read "There are no Events in this category."
@@ -109,7 +113,7 @@ describe.each(CASES)("$adapter.id $fixture", ({ adapter, fixture }) => {
     // 365 keeps the guard pointed at what it was built for. A misread year
     // lands the *end* twelve months out, so it shows up as span + ~365 — 405
     // days for a six-week event, still caught. What 365 newly admits is only
-    // the genuinely year-long event, a shape this domain does have:
+    // the genuinely year-long event, which is a shape this domain does have:
     // the same widening clears Fire Emblem Heroes' real seven-month
     // new-player banner (docs/SOURCES.md § 12b).
     for (const e of await runAdapter(adapter, fixture)) {
@@ -1822,16 +1826,87 @@ describe("Infinity Nikki wiki between versions (the page states it is empty)", (
     expect(fandomParser.statesNoEvents?.(full)).toBe(false);
   });
 
-  test("does not claim emptiness for the other three Fandom templates", async () => {
+  test("does not claim emptiness for the other four Fandom templates", async () => {
     // `statesNoEvents` is asked of every Fandom source, so a loose check would
     // let a redesigned FGO or Nikke page store an empty snapshot.
     for (const fixture of [
       "fixtures/fgo/fandom-events-2026-08-18",
+      "fixtures/genshin/fandom-events-2026-09-12",
       "fixtures/nikke/fandom-events-2026-08-19",
       "fixtures/r1999/fandom-events-2026-08-17",
     ]) {
       const html = await Bun.file(`${fixture}.html`).text();
       expect(fandomParser.statesNoEvents?.(html)).toBe(false);
     }
+  });
+});
+
+describe("Genshin Impact wiki (the fifth Fandom template)", () => {
+  const fixture = "fixtures/genshin/fandom-events-2026-09-12";
+  const genshin = adapter("genshin-fandom-events");
+
+  test("takes the title from caption display text, ignoring link title and img alt", async () => {
+    const events = await runAdapter(genshin, fixture);
+    // Display name: "Phantasmagoric Chronicle", link title: "Miliastra Pass/2026-08-12"
+    expect(events.map((e) => e.title)).toContain("Phantasmagoric Chronicle");
+    expect(events.map((e) => e.title)).not.toContain("Miliastra Pass");
+
+    // Display name: "Stygian Onslaught: Battle of the Starburst", img alt: "Stygian Onslaught 2025-10-29"
+    expect(events.map((e) => e.title)).toContain(
+      "Stygian Onslaught: Battle of the Starburst",
+    );
+  });
+
+  test("strips the dated subpage suffix from recurring event titles", async () => {
+    const events = await runAdapter(genshin, fixture);
+    // The raw cell text is "Overflowing Abundance 2026-09-14", which strips to "Overflowing Abundance"
+    expect(events.map((e) => e.title)).toContain("Overflowing Abundance");
+    for (const e of events) {
+      expect(e.title).not.toMatch(/\s\d{4}-\d{2}-\d{2}$/);
+    }
+  });
+
+  test("fences out past events and unparsed glossary tables", async () => {
+    const events = await runAdapter(genshin, fixture);
+    // Only current and upcoming events are parsed (16 events in fixture)
+    expect(events.length).toBe(16);
+    for (const e of events) {
+      expect(e.status).toBe("published");
+      expect(e.endsAt).not.toBeNull();
+    }
+  });
+
+  test("parseGame preserves existing Game8 event IDs while adding Fandom events", async () => {
+    const g8Html = await Bun.file(
+      "fixtures/genshin/game8-events-2026-08-14.html",
+    ).text();
+    const fandomHtml = await Bun.file(
+      "fixtures/genshin/fandom-events-2026-09-12.html",
+    ).text();
+    const g8Expected = JSON.parse(
+      await Bun.file(
+        "fixtures/genshin/game8-events-2026-08-14.expected.json",
+      ).text(),
+    ) as Array<{ id: string }>;
+
+    const docs = new Map([
+      ["genshin-game8-events", g8Html],
+      ["genshin-fandom-events", fandomHtml],
+    ]);
+
+    const result = parseGame("genshin", docs, NOW);
+
+    // All 9 Game8 IDs are preserved exactly (preventing localStorage key orphan)
+    for (const expected of g8Expected) {
+      expect(result.events.map((e) => e.id)).toContain(expected.id);
+    }
+
+    // Fandom contributes net-new events Game8 did not list (total 20 merged events)
+    expect(result.events.length).toBe(20);
+    expect(result.conflicts).toHaveLength(0);
+
+    // Corroboration bonus applies to overlapping events (0.85 -> 0.95)
+    const corroborated = result.events.filter((e) => e.confidence > 0.85);
+    expect(corroborated.length).toBe(5);
   });
 });

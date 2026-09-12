@@ -37,7 +37,7 @@ A web app that aggregates live and upcoming events across popular gacha games, p
 calendar, sorts them by end date or by what the reader is partway through, tracks day-by-day
 progress on events that repeat daily, and lets a user mark events completed.
 
-**Status: working app, refreshing itself on a schedule.** Schema, nine parsers, twenty sources across
+**Status: working app, refreshing itself on a schedule.** Schema, nine parsers, twenty-one sources across
 nineteen games, the full interface, offline support, a static server, a Docker image and CI all exist and
 are tested. The refresh runner (`bun run refresh`) fetches, caches raw snapshots and rebuilds the
 feed; `.github/workflows/refresh.yml` runs it twice a day and commits only when a page actually
@@ -184,7 +184,7 @@ These come from how gacha games actually schedule things, and they cause most bu
   "ongoing" heading decides currency against `ctx.now` itself, and comparing the 00:00Z placeholder
   to `now` retires a row hours before `clockFor` calls it over for anybody — the reader watches a
   deadline they were counting down to vanish on its last day. So `latestBoundaryMs` answers the same
-  question for the *last* region, and `bawiki.ts` and two branches of `fandom.ts` ask it. Nothing
+  question for the *last* region, and `bawiki.ts` and three branches of `fandom.ts` ask it. Nothing
   stored changes: it is one comparison, not a resolved boundary written to the feed.
 - **Patch cycles are ~6 weeks, and a span over a year is a parse error rather than a long event.**
   `test/adapters/game8.test.ts` rejects one across every fixture. Two corrections to what this rule
@@ -209,7 +209,7 @@ These come from how gacha games actually schedule things, and they cause most bu
 - **Skip, never guess.** Every function in `dates.ts` returns `null` rather than inferring a missing
   year, month, or end. `readColumnTable` drops a row it cannot date. An omitted event is a
   recoverable disappointment; a confidently wrong date is the failure this product exists to prevent.
-- **Parsers are keyed by site, not game.** One `game8` parser serves nine sources and `fandom` four;
+- **Parsers are keyed by site, not game.** One `game8` parser serves nine sources and `fandom` five;
   `wikigg`, `akwiki`, `bawiki`, `holodoriwiki`, `iopwiki`, `stellasorawiki` and `arustats` serve one
   each — `wikigg` and `akwiki` share a host family and have entirely different templates, and
   `bawiki`, `holodoriwiki` and `stellasorawiki` are all Miraheze wikis whose page templates have
@@ -382,6 +382,7 @@ re-litigated each pass:
 | `game8.co/games/Umamusume-Pretty-Derby` | **Built** (2026-08-19), off the stable `List of All Banners` page, not the monthly release-schedule pages whose URL changes every month. Cost a widening of `game8.ts`'s section and column vocabulary — see § Working on parsers |
 | `nikke-…-international.fandom.com` | **Built** (2026-08-19), via `api.php` like Reverse: 1999 and FGO. Its `robots.txt` was read in a browser and is the standard Fandom file — see § Fandom below. Richest schedule of anything added in this pass: story events *and* dated pickup banners, with the reset clock evidenced on the page |
 | `infinity-nikki.fandom.com` | **Built** (2026-08-19), replacing the Game8 page for Infinity Nikki, which had been stale since August 2025. Same standard Fandom `robots.txt`. Published at **day precision**: the page states a wall clock and no zone for it — see § Fandom |
+| `genshin-impact.fandom.com` | **Built** (2026-09-12), via `api.php` like the other Fandom sources — see § Fandom below. Fifth Fandom template. Adds 11 events Game8 never listed; priority kept lower than Game8 to protect existing localStorage event IDs |
 | `infinitynikki.miraheze.org` | **Declined.** Exists and serves `robots.txt`, but the wiki is abandoned — front page last edited 11 February 2025 and `/wiki/Events` returns a permission error. Checked as a replacement for the stale Infinity Nikki Game8 page |
 | `prydwen.gg/infinity-nikki` | **Declined.** 404 — prydwen does not cover Infinity Nikki |
 | `grayravens.com` (Punishing: Gray Raven) | **Declined.** Conduct is fine; the data is not. The whole 626 KB `/wiki/Events` page contains exactly one date range, written as prose, one event per six-week patch |
@@ -599,7 +600,7 @@ broken build — `skipped_robots` does not touch the failure streak, and the run
 falls back to the checked-in fixture. Refreshing it means running `bun run refresh` from an address
 Fandom serves, which is how its first snapshot was taken.
 
-**Four Fandom templates now, and the third states its zone in a column header.** The Nikke wiki's
+**Five Fandom templates now, and the third states its zone in a column header.** The Nikke wiki's
 `Event` page is `Event | Start(UTC+9) | End(UTC+9) | Archived(?)` for story events and
 `Nikke | Start(UTC+9) | End(UTC+9)` for pickup banners. That header is the safety property, not a
 convenience: no date in any cell carries an offset, so a table whose Start/End columns stop naming a
@@ -676,6 +677,38 @@ than silently — `quietSources` prints a note beside the count, because an unex
 reads as exactly the fault the gate just declined to call it, and it is the only line that would ever
 prompt somebody to ask whether a month-long quiet lane is a quiet game or a wording change under a
 `statesNoEvents` that still matches.
+
+**The fifth is Genshin Impact, adding a second source for a lane CI could not fetch.**
+`genshin-impact.fandom.com` publishes `Current Events` and `Upcoming Events` wikitables under `h3`
+headings with columns `Event | Duration | Type(s)`. Genshin's Game8 page has never been fetchable from
+CI (CloudFront returns a `202` on all runners), so until this source existed the game's lane was built
+from a checked-in fixture and could only age. Fandom answers via `api.php` and gives Genshin a live
+source CI can refresh. Four things to know about it:
+
+- **The title is the caption link's display text, and neither attribute.** The banner cell contains an
+  image link and a text caption below it. The link `title` names the parent article
+  (`Miliastra Pass/2026-08-12` for `Phantasmagoric Chronicle`), and the `img alt` carries whatever file
+  name was uploaded (`Stygian Onslaught 2025-10-29` on an event starting 2026-08-19). Reading attributes
+  here would corrupt event titles — the opposite of the Nikke rule, where cell text was missing and
+  attributes were required. A row with no caption is skipped rather than guessing from misleading
+  attributes.
+- **Run-date suffixes are stripped.** Recurring events often carry their run date in the subpage title
+  (`Overflowing Abundance 2026-09-14`). The date names the run, the start date is already half the
+  event ID, and keeping it would duplicate the date on the calendar.
+- **`latestBoundaryMs` gates currency.** Like FGO and Infinity Nikki, this source prints day-precision
+  dates (`Aug. 14, 2026 – Aug. 24, 2026`), so `parseFullRange` stores UTC midnight as a placeholder.
+  Currency is checked against `latestBoundaryMs` so an event is not retired prematurely on its final day
+  before the last region has rolled.
+- **Game8 priority protects localStorage keys.** The incumbent `genshin-game8-events` has
+  `priority: 10` while Fandom takes default priority. Two live events are titled slightly differently
+  (`To Temper Thyself and Journey Far` vs `… Cycle 5`, and `Stygian Onslaught` vs
+  `…: Battle of the Starburst`). In `merge.ts`, higher priority breaks ties when confidence is equal
+  (0.85). If Fandom won those near-matches, the event IDs would change and readers' localStorage
+  completion marks would silently orphan. With Game8 prioritized: 0 IDs lost, 11 net-new events added,
+  0 conflicts, and 5 corroborated events earning confidence bonuses.
+- **The 336-day event raised the duration ceiling to 365 days.** Genshin's anniversary 5-star selection
+  runs 336 days (`2025-10-22` → `2026-09-23`), correctly dated on this wiki. This motivated raising the
+  sanity ceiling in `test/adapters/game8.test.ts` and `docs/INGESTION.md` from 180 to 365 days.
 
 **The second Fandom source's page is chosen, not obvious.**
 `fategrandorder.fandom.com` publishes two schedules: `Event_List` opens "This page lists all Events

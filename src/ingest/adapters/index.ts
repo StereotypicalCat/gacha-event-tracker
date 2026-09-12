@@ -26,6 +26,22 @@ const SOURCES: SourceSpec[] = [
     game: "genshin",
     url: "https://game8.co/games/Genshin-Impact/archives/301601",
     parserId: "game8",
+    // **This priority protects event IDs, not data quality.** The Fandom source
+    // below is the fresher page by a wide margin — it is the only Genshin
+    // surface CI can fetch at all — but `priority` here decides which copy
+    // *survives* a near-match, and the survivor's title is its ID, which is a
+    // localStorage key (AGENTS.md § Event IDs are localStorage keys). The two
+    // pages title two live events differently: `To Temper Thyself and Journey
+    // Far` vs `… Cycle 5`, and `Stygian Onslaught` vs `…: Battle of the
+    // Starburst`. Letting Fandom win those re-mints both IDs and silently
+    // orphans every completion mark on them, with no server-side recovery — so
+    // the incumbent keeps identity and Fandom contributes the events Game8
+    // never listed. Measured: 0 IDs lost this way, 2 lost the other way.
+    //
+    // It costs nothing on dates today, because the two sources agree exactly
+    // wherever they overlap (0 conflicts). Should they ever diverge, `merge.ts`
+    // flags it rather than resolving it, which is the gate working.
+    priority: 10,
   },
   {
     id: "hsr-game8-events",
@@ -77,6 +93,27 @@ const SOURCES: SourceSpec[] = [
     game: "p5x",
     url: "https://game8.co/games/Persona-5-Phantom-X/archives/532244",
     parserId: "game8",
+  },
+  {
+    id: "genshin-fandom-events",
+    game: "genshin",
+    // The API, not `/wiki/Event` — the whole § Fandom argument in AGENTS.md.
+    // This wiki's robots.txt is the standard Fandom file, read with the
+    // runner's own client on 2026-09-12: `Allow: /api.php?action=` for
+    // `User-agent: *`, no `Disallow: /`, no `Content-Signal`, and the AI
+    // crawlers it names (GPTBot, CCBot, OAI-SearchBot, ImagesiftBot,
+    // ClaudeBot) are not us.
+    //
+    // Genshin's Game8 page has never been fetchable from CI (CloudFront answers
+    // every runner with a 202), so until this source existed the game's lane was
+    // built from a checked-in fixture and could only age. This page is a fifth
+    // template — `Event | Duration | Type(s)` under `h3` fences — and publishes
+    // at day precision, which is everything it states.
+    //
+    // Lower priority than the Game8 source above on purpose, and the comment
+    // there says why: it is an identity question, not a quality one.
+    url: "https://genshin-impact.fandom.com/api.php?action=parse&page=Event&prop=text&formatversion=2&format=json",
+    parserId: "fandom",
   },
   {
     id: "r1999-fandom-events",

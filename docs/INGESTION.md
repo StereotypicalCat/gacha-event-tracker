@@ -51,7 +51,7 @@ Consequences worth internalising:
 | `game8` | game8.co article calendars | Genshin, Star Rail, Wuthering Waves, ZZZ, Endfield, NTE, Persona 5: The Phantom X, Chaos Zero Nightmare, Umamusume |
 | `wikigg` | wiki.gg MediaWiki `mp-event` templates | Endfield |
 | `akwiki` | arknights.wiki.gg's `mrfz-wtable` "Ongoing/upcoming" table | Arknights |
-| `fandom` | Fandom wikis via the MediaWiki `action=parse` API — four page templates: `Event \| Time Period \| Version` wikitables, FGO's picture-fenced `ONGOING EVENTS` blocks, Nikke's `Event \| Start(UTC+9) \| End(UTC+9)` tables, and Infinity Nikki's `Event \| Duration \| Description \| Type` article-tables | Reverse: 1999, Fate/Grand Order, Nikke, Infinity Nikki |
+| `fandom` | Fandom wikis via the MediaWiki `action=parse` API — five page templates: `Event \| Time Period \| Version` wikitables, FGO's picture-fenced `ONGOING EVENTS` blocks, Nikke's `Event \| Start(UTC+9) \| End(UTC+9)` tables, Infinity Nikki's `Event \| Duration \| Description \| Type` article-tables, and Genshin Impact's `Event \| Duration \| Type(s)` tables | Reverse: 1999, Fate/Grand Order, Nikke, Infinity Nikki, Genshin Impact |
 | `bawiki` | bluearchive.wiki's rendered `/wiki/Events` — a JP/Global tabber over `Name (EN) \| Start date \| End date \| Notes` wikitables | Blue Archive |
 | `holodoriwiki` | holodori.wiki's rendered `/wiki/Events` — `Current Events` and `Past Events` wikitables over `Event \| Type \| Start Date \| End Date` | hololive Dreams |
 | `iopwiki` | iopwiki.com's `gf-table event-period` tables — `Title \| Period (start/end) \| Server \| Type \| Comment`, one table per event and one row per server | Girls' Frontline 2 |
@@ -140,7 +140,7 @@ All live in `src/ingest/dates.ts`, each returning null rather than inferring any
 |---|---|---|
 | `parseMonthDayYear` | `August 12, 2026` | Genshin detail rows |
 | `parseMonthDayRange` | `August 12 - September 21, 2026` (year on the end only) | Genshin, NTE |
-| `parseFullRange` | `Aug. 14, 2026 - Aug. 24, 2026` (a year each side) | Star Rail, Wuthering Waves, Fate/Grand Order |
+| `parseFullRange` | `Aug. 14, 2026 - Aug. 24, 2026` (a year each side) | Star Rail, Wuthering Waves, Fate/Grand Order, Genshin Impact (Fandom) |
 | `parseShortSlashRange` | `08/09/26 - 08/30/26` | Endfield |
 | `parseSlashDateTimeRange` | `2021/01/16 04:00 - 2021/01/31 03:59` | Genshin past events |
 | `parseLabelledStartEnd` | `Start: January 24, 2025 End: Permanent` | Infinity Nikki |
@@ -161,15 +161,15 @@ midnight because it has to store *something*. It is not a statement that the eve
 then, and nothing may count down to it literally: `clockFor` resolves a day-precision boundary to
 that game-day's server reset for the reader's region (`docs/DATA-MODEL.md` § Field notes).
 
-**No parser may store a resolved boundary, and three of them must read one to decide inclusion.**
+**No parser may store a resolved boundary, and four of them must read one to decide inclusion.**
 The stored value stays the printed day at 00:00Z: resolving it here would need a region the parser
 does not have, and would bake one reader's server into the feed everybody downloads. But a parser
 whose page carries no "ongoing" heading it can trust decides currency against `ctx.now` itself —
-`bawiki.ts`, and the Fate/Grand Order and Infinity Nikki branches of `fandom.ts` — and comparing the
-placeholder to `now` retires a row at UTC midnight, hours before `clockFor` calls it over for
-anybody. The reader does not see a stale row; they watch the deadline they were counting down to
-disappear on its last day, which is the silent drop AGENTS.md § Working on parsers calls the
-dangerous failure. So those three ask `latestBoundaryMs` (`src/shared/time.ts`) when the boundary is
+`bawiki.ts`, and the Fate/Grand Order, Infinity Nikki and Genshin Impact branches of `fandom.ts` —
+and comparing the placeholder to `now` retires a row at UTC midnight, hours before `clockFor` calls
+it over for anybody. The reader does not see a stale row; they watch the deadline they were counting
+down to disappear on its last day, which is the silent drop AGENTS.md § Working on parsers calls the
+dangerous failure. So those four ask `latestBoundaryMs` (`src/shared/time.ts`) when the boundary is
 day-precision: the last region's reset, and therefore the instant the row is history for every
 reader rather than for the earliest of them. Being generous by nine hours costs one expired row at
 the bottom of a list; being strict costs a live one.

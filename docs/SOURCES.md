@@ -59,6 +59,7 @@ Two things this method cannot tell you, and both matter:
 | Infinity Nikki | **Rebuilt** (2026-08-19) on `infinity-nikki.fandom.com` at day precision, replacing a Game8 page stale since August 2025 — see § 11 |
 | Silver Palace | Unreleased |
 | Honkai Impact 3rd | **Built** (2026-08-27) on `arustats.com`, and the only lane here whose dates are **estimates** — see § 14 |
+| Genshin Impact (Fandom) | **Built** (2026-09-12) on `genshin-impact.fandom.com`, second source for a blind lane — see § 15 |
 
 ## Summary of findings
 
@@ -74,6 +75,7 @@ Two things this method cannot tell you, and both matter:
 | Azur Lane | none | — | — | **Still declined** — the Fandom alternatives are 2021 archives |
 | Aether Gazer | — | — | — | **Do not build. The game is shutting down.** |
 | Silver Palace | — | — | — | Unreleased; beta only |
+| Genshin Impact (Fandom) | `genshin-impact.fandom.com/api.php?…page=Event` | `fandom`, fifth template | yes (via `api.php`) | **BUILT** 2026-09-12 — adds 11 events Game8 missed; Game8 priority preserves localStorage IDs |
 
 ---
 
@@ -484,7 +486,7 @@ table.
 
 **One cost applies to both builds and should be in the commit message, not discovered later.** Both
 candidates are game8.co, which does not answer the Actions runner (`AGENTS.md` § Scraping conduct).
-Nine of the twenty sources are game8 pages today, now that Infinity Nikki has moved to Fandom
+Nine of the twenty-one sources are game8 pages today, now that Infinity Nikki has moved to Fandom
 (§ 11); these would make ten and eleven. Each is a lane fixture-backed in CI from day one and only
 ever as fresh as someone's last manual `bun run refresh`, and one more request to a single host every
 cycle — the per-host arithmetic § Scraping conduct already calls uncomfortable.
@@ -766,6 +768,21 @@ Phase B's first target in
 `docs/superpowers/specs/2026-08-27-recurring-events-design.md`. Nothing has been
 changed on the ingest side yet — `GachaEvent` does not carry a rule, and this
 note is what stops the next person re-deriving the reason it does not.
+
+## 15. Genshin Impact (Fandom) — BUILT 2026-09-12, adding a second source for a blind lane
+
+**Source:** `https://genshin-impact.fandom.com/api.php?action=parse&page=Event&prop=text&formatversion=2&format=json` (page at `https://genshin-impact.fandom.com/wiki/Event`).
+
+**Conduct:** Standard Fandom `robots.txt` (`Allow: /api.php?action=`, no `Disallow: /` for `*`, no `Content-Signal`). Read with the runner's client; CI can fetch it.
+
+**Why built:** Genshin's Game8 page has never been fetchable from CI (CloudFront returns a `202` on all runners), so until now Genshin was fixture-backed in CI and could only age. Fandom provides a second, active source that scheduled refreshes can update.
+
+**The template:** Fifth Fandom template. `Current Events` and `Upcoming Events` wikitables under `h3` headings with columns `Event | Duration | Type(s)`.
+- **Title extraction:** Display text of the caption link beneath the banner image is taken. Link `title` (parent subpage) and `img alt` (uploaded image file name) are rejected to prevent corrupting event titles and IDs.
+- **Run-date suffixes:** Recurring event run dates (`2026-09-14`) in subpage names are stripped so dates aren't duplicated.
+- **Currency:** `latestBoundaryMs` is checked for day-precision boundaries so events aren't retired before all server regions roll.
+- **Priority & IDs:** Game8 is assigned `priority: 10` while Fandom is default/0. Two live events differ slightly in naming (`To Temper Thyself and Journey Far` vs `… Cycle 5`, and `Stygian Onslaught` vs `…: Battle of the Starburst`). Game8's higher priority breaks near-match ties in `merge.ts`, ensuring existing localStorage event IDs survive and reader completion marks remain intact. Fandom contributes 11 net-new events Game8 missed, 0 date conflicts occur, and overlapping events gain corroboration bonuses.
+- **336-day event:** Genshin's anniversary 5-star selection runs 336 days (`2025-10-22` → `2026-09-23`), prompting the test duration ceiling to be raised from 180 to 365 days across the test suite and ingestion specs.
 
 ## What every one of these costs, beyond the source
 

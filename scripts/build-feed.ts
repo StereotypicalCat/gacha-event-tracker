@@ -58,7 +58,7 @@ async function documentFor(adapterId: string, game: GameId) {
 }
 
 const now = new Date().toISOString();
-const byGame = new Map<GameId, GachaEvent[][]>();
+const byGame = new Map<GameId, Array<{ priority: number; events: GachaEvent[] }>>();
 const sources: SourceHealth[] = [];
 
 for (const adapter of ADAPTERS) {
@@ -76,7 +76,7 @@ for (const adapter of ADAPTERS) {
   const { parsedCount } = health;
 
   const groups = byGame.get(adapter.game) ?? [];
-  groups.push(events);
+  groups.push({ priority: adapter.priority, events });
   byGame.set(adapter.game, groups);
 
   sources.push(health);
@@ -96,7 +96,10 @@ for (const adapter of ADAPTERS) {
 const events: GachaEvent[] = [];
 let conflictCount = 0;
 for (const [, groups] of byGame) {
-  const merged = mergeEvents(groups);
+  const sorted = groups
+    .sort((a, b) => b.priority - a.priority)
+    .map((g) => g.events);
+  const merged = mergeEvents(sorted);
   events.push(...merged.events);
   conflictCount += merged.conflicts.length;
   for (const c of merged.conflicts) {
