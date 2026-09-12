@@ -37,8 +37,8 @@ A web app that aggregates live and upcoming events across popular gacha games, p
 calendar, sorts them by end date or by what the reader is partway through, tracks day-by-day
 progress on events that repeat daily, and lets a user mark events completed.
 
-**Status: working app, refreshing itself on a schedule.** Schema, nine parsers, twenty-one sources across
-nineteen games, the full interface, offline support, a static server, a Docker image and CI all exist and
+**Status: working app, refreshing itself on a schedule.** Schema, ten parsers, twenty-two sources across
+twenty games, the full interface, offline support, a static server, a Docker image and CI all exist and
 are tested. The refresh runner (`bun run refresh`) fetches, caches raw snapshots and rebuilds the
 feed; `.github/workflows/refresh.yml` runs it twice a day and commits only when a page actually
 changed. The SQLite layer and the review queue are still specified in `docs/` but not built, so the
@@ -133,7 +133,7 @@ src/shared/       schema.ts (the contract), time.ts, daily.ts, effort.ts, games.
 src/ingest/       html.ts, dates.ts (sixteen formats), merge.ts, sanitize.ts, robots.ts, snapshots.ts
                   health.ts — which of the three empties a source's zero was; pure
   parsers/        game8.ts, wikigg.ts, akwiki.ts, fandom.ts, bawiki.ts, holodori.ts, iopwiki.ts,
-                  stellasora.ts — keyed by SITE, not game
+                  stellasora.ts, arustats.ts, karendar.ts — keyed by SITE, not game
   adapters/       index.ts — SOURCES registry binding url+game+parser, and the sanitize seam
 src/client/       React app, service worker, manifest
   state/          progress, daily log, ignores, prefs, sort — all localStorage
@@ -145,7 +145,7 @@ src/client/       React app, service worker, manifest
                   theme.ts — dark or light, and what a game hue reads as on each
 scripts/          build-feed.ts, build-static.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             1,071 tests
+test/             1,099 tests
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```
@@ -386,6 +386,7 @@ re-litigated each pass:
 | `infinitynikki.miraheze.org` | **Declined.** Exists and serves `robots.txt`, but the wiki is abandoned — front page last edited 11 February 2025 and `/wiki/Events` returns a permission error. Checked as a replacement for the stale Infinity Nikki Game8 page |
 | `prydwen.gg/infinity-nikki` | **Declined.** 404 — prydwen does not cover Infinity Nikki |
 | `grayravens.com` (Punishing: Gray Raven) | **Declined.** Conduct is fine; the data is not. The whole 626 KB `/wiki/Events` page contains exactly one date range, written as prose, one event per six-week patch |
+| `karendar.com` (Punishing: Gray Raven) | **Built** (2026-09-12). Fan-made PGR event calendar for Global. Full SSR HTML with 57 active events across week/ongoing/upcoming. Exact UTC timestamps, `robots.txt` allows `/`, no auth or API required |
 | `guardian-tales.fandom.com` | **Declined.** Parses fine and contains no 2026 date at all — newest dated entry is 2025. The `bluearchive.fandom.com` failure again: parses cleanly to nothing live |
 | `blhx.fandom.com`, `azurlane-archive.fandom.com` | **Declined.** The two Fandom alternatives to the declined koumakan wiki are dead archives — `Event_Calendar` stops in **2021**, and the archive wiki's headings have nothing under them. Azur Lane still has no source |
 | Aether Gazer | **Do not build.** The developer confirmed no further content updates after 23 July 2026, with store listings removed 17 October 2026. The wiki dates nothing anyway — `Event_Guide_List` is an image gallery. A lane that will be empty by winter |

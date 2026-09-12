@@ -692,3 +692,30 @@ export function parseZonelessClockRange(
     end: { iso: endIso, precision: "day" },
   };
 }
+
+/**
+ * "Mon, 7 Sept 2026, 07:00 UTC" → 2026-09-07T07:00:00.000Z, exact precision.
+ *
+ * Sourced from Karendar (Punishing: Gray Raven). The weekday and UTC zone are explicit.
+ * "Unknown", "Permanent", or non-date input returns null.
+ */
+export function parseWeekdayDayMonthYearUtc(
+  input: string,
+): ParsedInstant | null {
+  const re =
+    /^\s*(?:[A-Za-z]+,\s+)?(\d{1,2})\s+([A-Za-z]+)\.?\s+(\d{4}),?\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*UTC\s*$/i;
+  const m = re.exec(input);
+  if (!m) return null;
+
+  const month = monthNumber(m[2] ?? "");
+  if (month === null) return null;
+
+  const day = Number(m[1]);
+  const year = Number(m[3]);
+  const hh = Number(m[4]);
+  const mm = Number(m[5]);
+  const ss = Number(m[6] ?? 0);
+
+  const value = iso(year, month, day, hh, mm, ss);
+  return value === null ? null : { iso: value, precision: "exact" };
+}

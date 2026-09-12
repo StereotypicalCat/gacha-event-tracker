@@ -5,6 +5,7 @@ import { fandomParser } from "./fandom.ts";
 import { game8Parser } from "./game8.ts";
 import { holodoriWikiParser } from "./holodori.ts";
 import { iopWikiParser } from "./iopwiki.ts";
+import { karendarParser } from "./karendar.ts";
 import { stellaSoraWikiParser } from "./stellasora.ts";
 import { wikiGgParser } from "./wikigg.ts";
 import type { SourceParser } from "./types.ts";
@@ -24,6 +25,7 @@ export const PARSERS: SourceParser[] = [
   iopWikiParser,
   stellaSoraWikiParser,
   aruStatsParser,
+  karendarParser,
 ];
 
 export function parserById(id: string): SourceParser | undefined {
@@ -38,5 +40,6 @@ export { fandomParser } from "./fandom.ts";
 export { game8Parser } from "./game8.ts";
 export { holodoriWikiParser } from "./holodori.ts";
 export { iopWikiParser } from "./iopwiki.ts";
+export { karendarParser } from "./karendar.ts";
 export { stellaSoraWikiParser } from "./stellasora.ts";
 export { wikiGgParser } from "./wikigg.ts";

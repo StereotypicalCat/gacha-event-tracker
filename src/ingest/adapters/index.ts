@@ -247,6 +247,16 @@ const SOURCES: SourceSpec[] = [
     url: "https://www.arustats.com/en-us/hi3/timeline",
     parserId: "arustats",
   },
+  {
+    id: "pgr-karendar-events",
+    game: "pgr",
+    // Karendar is a fan-made PGR event calendar for the Global server.
+    // The home page server-renders all active, ongoing, and upcoming
+    // events in clean semantic HTML with exact UTC timestamps. robots.txt
+    // permits / while disallowing /login, /this-week, and /api/.
+    url: "https://karendar.com/",
+    parserId: "karendar",
+  },
 ];
 
 function toAdapter(spec: SourceSpec): Adapter {

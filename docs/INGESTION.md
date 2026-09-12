@@ -57,6 +57,7 @@ Consequences worth internalising:
 | `iopwiki` | iopwiki.com's `gf-table event-period` tables — `Title \| Period (start/end) \| Server \| Type \| Comment`, one table per event and one row per server | Girls' Frontline 2 |
 | `stellasorawiki` | stellasora.miraheze.org's front-page `Current Banners` module — `<time datetime>` pairs inside `stellasora-home-banner` blocks | Stella Sora |
 | `arustats` | arustats.com's Next.js `__NEXT_DATA__` blob — a per-version week grid, with events carrying `startWeek`/`endWeek` **integers** rather than dates. **Estimated boundaries** — see AGENTS.md § Honkai Impact 3rd | Honkai Impact 3rd |
+| `karendar` | karendar.com's server-rendered `<article>` cards under `week`, `ongoing`, and `upcoming` sections — exact UTC timestamps | Punishing: Gray Raven |
 
 `wikigg` is the better shape by a distance: it emits ISO timestamps with one timer per server
 region, so its events carry exact precision and real `regionEnds`. Prefer a source like that over a

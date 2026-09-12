@@ -20,7 +20,7 @@ review queue are specified but not built.
 | Piece | State |
 |---|---|
 | Event schema, date parsing, Game8 parser | Built, tested |
-| Twenty-one sources across nineteen games | Built, tested |
+| Twenty-two sources across twenty games | Built, tested |
 | Your own games and events, one-off or repeating | Built, tested |
 | Cross-source merge and conflict detection | Built, tested |
 | Input sanitization at the ingest boundary | Built, tested |

@@ -55,7 +55,8 @@ Two things this method cannot tell you, and both matter:
 | **Girls' Frontline 2, Stella Sora, Chaos Zero Nightmare, Umamusume** | **Built** (2026-08-19) |
 | Nikke | **Built** (2026-08-19), once the `robots.txt` was read in a browser — see § 3 |
 | Azur Lane | Declined on conduct (`azurlane.koumakan.jp` `ai-input=no`), and both Fandom alternatives are dead archives |
-| Punishing: Gray Raven, Guardian Tales, Aether Gazer | Declined — see §§ 6, 7, 9 |
+| Punishing: Gray Raven | **Built** (2026-09-12) on `karendar.com` — see § 6 |
+| Guardian Tales, Aether Gazer | Declined — see §§ 7, 9 |
 | Infinity Nikki | **Rebuilt** (2026-08-19) on `infinity-nikki.fandom.com` at day precision, replacing a Game8 page stale since August 2025 — see § 11 |
 | Silver Palace | Unreleased |
 | Honkai Impact 3rd | **Built** (2026-08-27) on `arustats.com`, and the only lane here whose dates are **estimates** — see § 14 |
@@ -70,7 +71,7 @@ Two things this method cannot tell you, and both matter:
 | Nikke | `nikke-…-international.fandom.com/api.php?…page=Event` | `fandom`, third template | **no** — Fandom robots fails closed | **BUILT** 2026-08-19 — story events *and* dated pickup banners, with an evidenced reset clock |
 | Chaos Zero Nightmare | `game8.co/games/Chaos-Zero-Nightmare/archives/559899` | **existing** `game8` | **no** — game8 202s the runner | **BUILT** 2026-08-19 — no parser work, fixture-only lane |
 | Umamusume | `game8.co/games/Umamusume-Pretty-Derby/archives/536311` | `game8` + section and column vocabulary | **no** | **BUILT** 2026-08-19 — cost more than "two header words"; see § 5 |
-| Punishing: Gray Raven | `grayravens.com/wiki/Events` | — | — | **Decline for now** — one dated string on the whole page |
+| Punishing: Gray Raven | `karendar.com` | new (`karendar`) | yes (Cloudflare / open robots) | **BUILT** 2026-09-12 — 57 active events across week/ongoing/upcoming, exact UTC timestamps |
 | Guardian Tales | `guardian-tales.fandom.com/wiki/Events` | — | — | **Decline** — wiki stopped dating events in 2025 |
 | Azur Lane | none | — | — | **Still declined** — the Fandom alternatives are 2021 archives |
 | Aether Gazer | — | — | — | **Do not build. The game is shutting down.** |
@@ -298,26 +299,41 @@ Stella Sora, and worth doing as two commits (parser vocabulary, then the source)
 
 ---
 
-## 6. Punishing: Gray Raven — decline for now
+## 6. Punishing: Gray Raven — BUILT 2026-09-12
 
-`grayravens.com` is a Miraheze wiki and the community's officially supported fansite; conduct is fine
-(`/wiki/` allowed, `/w/` and `?action=` disallowed, `Crawl-delay` only for named bots). The data is
-the problem.
+**Source:** `https://karendar.com/` (Karendar, community PGR event calendar)
 
-`/wiki/Events` is a single patch guide — "Ongoing Events" is one version's content, written as prose.
-Stripped of markup, the **entire 626 KB page contains exactly one date range**:
+Previously declined on `grayravens.com` (a single date range in 626 KB of prose) and Fandom (abandoned).
+`karendar.com` is a dedicated, active Punishing: Gray Raven event tracker for the Global server.
 
-```
-Duration: July 17th to August 18th 2026.
-```
+### Conduct and robots
 
-Ordinal day, year on the second boundary only, one event per six-week patch. `/wiki/PGR_Roadmap` adds
-a `Patch | Est. Release | …` table — an estimate, and a start with no end. The Fandom wiki is worse:
-`Events` does not exist, `Upcoming Content` is 2025-era and says its dates are "ESTIMATED", and the
-search API returns nothing for `intitle:Event`.
+- `robots.txt` has:
+  ```
+  User-agent: *
+  Allow: /
 
-An adapter here would publish one guessed-ish event per patch. Decline, and recheck if grayravens
-ever puts the schedule in a table.
+  Disallow: /login
+  Disallow: /this-week
+  Disallow: /api/
+  ```
+- Target path is `/`, which is explicitly allowed. `/api/`, `/this-week`, and `/login` are not touched.
+- No automated access prohibition or scraping restrictions in `/about` or `/privacy`.
+- Serves server-rendered HTML with no client JavaScript required to read event data.
+
+### Structure and dates
+
+The page server-renders `<article>` elements grouped under section headers:
+- `week` ("Ends this week"): ongoing events ending in the current week (moved out of `ongoing` rather than duplicated).
+- `ongoing` ("On-going"): live ongoing events.
+- `upcoming` ("Upcoming"): announced upcoming banners, events, and maintenance.
+- `archive` ("Archive"): past concluded events; skipped.
+- `tbc` ("TBC"): unannounced dates (both start and end marked "Unknown"); skipped because start is undated.
+- `codes` ("Active codes"): in-game redemption codes; skipped.
+
+Every event specifies an explicit minute-precision UTC instant (`Mon, 7 Sept 2026, 07:00 UTC`).
+Indefinite or permanent events (`Permanent` or `Unknown` ends) map cleanly to `endsAt: null` with `endPrecision: "unknown"`.
+Yields 57 events on initial ingestion with zero conflicts.
 
 ---
 

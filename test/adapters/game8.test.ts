@@ -64,6 +64,8 @@ const CASES: Array<{ adapter: Adapter; fixture: string }> = [
   // edge the source labels `ESTIMATED WEEK`, not an announced date — see
   // src/ingest/parsers/arustats.ts and docs/SOURCES.md § 14.
   { adapter: adapter("hi3-arustats-events"), fixture: "fixtures/hi3/arustats-events-2026-08-27" },
+  // Punishing: Gray Raven (karendar.com). Exact UTC timestamps for the Global server.
+  { adapter: adapter("pgr-karendar-events"), fixture: "fixtures/pgr/karendar-events-2026-09-12" },
 ];
 
 async function runAdapter(adapter: Adapter, fixture: string) {

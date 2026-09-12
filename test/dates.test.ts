@@ -13,6 +13,7 @@ import {
   parseYearFirstSlashRange,
   parseIsoClockRangeUtc,
   parseIsoOffsetInstant,
+  parseWeekdayDayMonthYearUtc,
 } from "../src/ingest/dates.ts";
 
 describe("parseMonthDayYear", () => {
@@ -537,5 +538,46 @@ describe("parseIsoOffsetInstant", () => {
 
   test("is anchored, so it cannot read an instant out of prose", () => {
     expect(parseIsoOffsetInstant("Starts 2026-08-03T21:00-07:00")).toBeNull();
+  });
+});
+
+describe("parseWeekdayDayMonthYearUtc", () => {
+  test("parses full weekday date with exact UTC time", () => {
+    expect(
+      parseWeekdayDayMonthYearUtc("Mon, 7 Sept 2026, 07:00 UTC"),
+    ).toEqual({
+      iso: "2026-09-07T07:00:00.000Z",
+      precision: "exact",
+    });
+    expect(
+      parseWeekdayDayMonthYearUtc("Thu, 20 Aug 2026, 05:00 UTC"),
+    ).toEqual({
+      iso: "2026-08-20T05:00:00.000Z",
+      precision: "exact",
+    });
+  });
+
+  test("accepts input without weekday or comma", () => {
+    expect(parseWeekdayDayMonthYearUtc("7 Sept 2026 07:00 UTC")?.iso).toBe(
+      "2026-09-07T07:00:00.000Z",
+    );
+  });
+
+  test("accepts optional seconds", () => {
+    expect(
+      parseWeekdayDayMonthYearUtc("Wed, 23 Sept 2026, 23:00:00 UTC")?.iso,
+    ).toBe("2026-09-23T23:00:00.000Z");
+  });
+
+  test("returns null for non-date strings like Permanent or Unknown", () => {
+    expect(parseWeekdayDayMonthYearUtc("Permanent")).toBeNull();
+    expect(parseWeekdayDayMonthYearUtc("Unknown")).toBeNull();
+  });
+
+  test("rejects missing year or invalid dates", () => {
+    expect(parseWeekdayDayMonthYearUtc("Mon, 7 Sept, 07:00 UTC")).toBeNull();
+    expect(
+      parseWeekdayDayMonthYearUtc("Mon, 30 Feb 2026, 07:00 UTC"),
+    ).toBeNull();
   });
 });

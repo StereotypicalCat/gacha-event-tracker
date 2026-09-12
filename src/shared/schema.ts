@@ -22,6 +22,7 @@ export const GameId = z.enum([
   // first segment of every completion key their game will ever have.
   "nikke", // Goddess of Victory: Nikke
   "hi3", // Honkai Impact 3rd
+  "pgr", // Punishing: Gray Raven
 ]);
 export type GameId = z.infer<typeof GameId>;
 
