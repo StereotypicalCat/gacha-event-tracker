@@ -358,6 +358,22 @@ The image lands at `gitea.lucaswinther.info/lucasw89/gacha-event-tracker`, tagge
 the commit SHA. The registry host is derived from `github.server_url` rather than hardcoded, so a
 fork on another instance pushes to its own registry.
 
+**Pushing the image needs one one-time step CI cannot do for itself.** A Gitea package belongs to a
+*user or org owner*, not to a repository, so the ephemeral Actions token has no authority over it and
+the registry refuses it — `secrets.GITHUB_TOKEN` does not work here, unlike on GHCR and unlike
+GitLab's `$CI_REGISTRY_PASSWORD`. So:
+
+1. Create an access token at **Settings → Applications** with the **package** read + write scope.
+2. Add it to the repository under **Settings → Actions → Secrets** as **`REGISTRY_TOKEN`**.
+
+The `image` job checks for that secret before it tries to log in, and fails with those instructions
+rather than a bare `unauthorized` from the Docker daemon. The username it logs in with is
+`github.repository_owner`, not `github.actor` — the image goes to the owner's namespace, and the
+actor is merely whoever triggered the run.
+
+One consequence of packages being owner-scoped: the pushed image is **not** automatically associated
+with this repository. Linking it is a manual step on the package's own settings page.
+
 The feed job fails if the event count collapses, or if any single source parses to nothing — nine
 healthy sources hide a tenth that has gone quiet, and the total stays comfortably over the floor
 while one game shows an empty calendar. That is the failure mode a parser-only pipeline is most
