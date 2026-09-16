@@ -55,7 +55,7 @@ import { RobotsCache, type FetchLike } from "../src/ingest/robots.ts";
 import { decodeBody, SnapshotStore } from "../src/ingest/snapshots.ts";
 
 const DEFAULT_CONTACT =
-  "https://github.com/StereotypicalCat/gacha-event-tracker";
+  "https://gitea.lucaswinther.info/lucasw89/gacha-event-tracker";
 
 export const DEFAULT_USER_AGENT = `gacha-event-tracker/1.0 (+${process.env["REFRESH_CONTACT_URL"] ?? DEFAULT_CONTACT})`;
 

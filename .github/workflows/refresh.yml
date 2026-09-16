@@ -22,9 +22,9 @@ on:
         type: string
         default: ""
       # `force` is refused on the scheduled run and only works here, on a
-      # dispatch, because a dispatch is a person and GitHub records which one —
-      # a schedule that forces every cycle is just a shorter interval with extra
-      # steps. Prefer pairing it with `only`.
+      # dispatch, because a dispatch is a person and the forge records which one
+      # — a schedule that forces every cycle is just a shorter interval with
+      # extra steps. Prefer pairing it with `only`.
       force:
         description: "Ask sources before their 6h floor is up (one run only)"
         type: boolean
@@ -51,23 +51,22 @@ jobs:
   refresh:
     name: Fetch sources and rebuild the feed
     runs-on: ubuntu-latest
-    # A fork must not point this at the wikis on a schedule. Same shape as the
-    # DEPLOY_PAGES gate in ci.yml: off by default for anyone but this repo,
-    # while a fork owner can still dispatch it by hand and take responsibility.
+    # A fork must not point this at the wikis on a schedule: off by default for
+    # anyone but this repo, while a fork owner can still dispatch it by hand and
+    # take responsibility.
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      github.repository == 'StereotypicalCat/gacha-event-tracker'
+      github.repository == 'lucasw89/gacha-event-tracker'
     permissions:
       # Commit the refreshed snapshots.
       contents: write
-      # Dispatch ci.yml afterwards: a push made with GITHUB_TOKEN deliberately
-      # does not trigger other workflows, so without this the fresh data would
-      # sit in the repo undeployed until someone pushed by hand.
+      # Dispatch ci.yml afterwards; see that step for why it is still here on a
+      # forge that does not suppress triggers on a token-made push.
       actions: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: https://github.com/actions/checkout@v4
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: https://github.com/oven-sh/setup-bun@v2
         with:
           bun-version: "1.3"
 
@@ -79,7 +78,7 @@ jobs:
       # record of the last check — the twelve-hour schedule still keeps us well
       # inside the etiquette floor.
       - name: Restore refresh bookkeeping
-        uses: actions/cache/restore@v4
+        uses: https://github.com/actions/cache/restore@v4
         with:
           path: snapshots/*.state.json
           key: refresh-state-
@@ -123,7 +122,7 @@ jobs:
       # requests we did make, lost. `run_attempt` increments per attempt.
       - name: Save refresh bookkeeping
         if: always()
-        uses: actions/cache/save@v4
+        uses: https://github.com/actions/cache/save@v4
         with:
           path: snapshots/*.state.json
           key: refresh-state-${{ github.run_id }}-${{ github.run_attempt }}
@@ -154,8 +153,8 @@ jobs:
           BRANCH: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "gitea-actions[bot]"
+          git config user.email "gitea-actions[bot]@noreply.lucaswinther.info"
           git add -- snapshots
           git commit -m "chore(data): refresh source snapshots" \
             -m "Automated fetch from ${{ github.workflow }} run ${{ github.run_id }}."
@@ -176,14 +175,32 @@ jobs:
           echo "::error::could not push refreshed snapshots after 3 attempts"
           exit 1
 
-      # ci.yml owns typecheck, tests, the feed sanity check, the image and the
-      # Pages deploy. Dispatching it is how the refreshed data reaches the site
+      # ci.yml owns typecheck, tests, the feed sanity check and the image.
+      # Dispatching it is how the refreshed data reaches the deployed container
       # without any of that logic being copied here.
+      #
+      # There is no `gh` on a Gitea runner, so this is the REST dispatch the CLI
+      # would have made. Note the difference from GitHub that makes this step
+      # look redundant: Gitea does *not* suppress workflow triggers on a push
+      # made with the Actions token, so the commit above will usually have
+      # started ci.yml already. Dispatching anyway is deliberate — it is the only
+      # thing that guarantees publication if that behaviour is ever configured
+      # off, and a duplicate run is harmless because ci.yml's concurrency group
+      # is per-ref with cancel-in-progress, so the second supersedes the first.
       - name: Publish the refreshed feed
         if: steps.diff.outputs.changed == 'true' && inputs.dry_run != true
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh workflow run ci.yml --ref "${{ github.ref_name }}"
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          API: ${{ github.server_url }}/api/v1
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          curl -sS --fail-with-body -X POST \
+            -H "Authorization: token $TOKEN" \
+            -H "Content-Type: application/json" \
+            "$API/repos/$REPO/actions/workflows/ci.yml/dispatches" \
+            -d "{\"ref\":\"$BRANCH\"}"
 
       # A source that has failed three cycles running is broken, not down: that
       # game's calendar has been built from a checked-in fixture for a day and a
