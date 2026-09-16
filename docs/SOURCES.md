@@ -27,23 +27,33 @@ the ruling.
 ## Method
 
 Every page below was fetched from this machine with the refresh runner's own `User-Agent`
-(`gacha-event-tracker/1.0 (+https://github.com/StereotypicalCat/gacha-event-tracker)`), one or two
-requests per host, `robots.txt` first. No browser-shaped headers, no proxy, no JS execution —
+(`gacha-event-tracker/1.0 (+https://github.com/StereotypicalCat/gacha-event-tracker)` — the contact
+URL at the time; the repo has since moved to Gitea and the runner now sends that address instead),
+one or two requests per host, `robots.txt` first. No browser-shaped headers, no proxy, no JS execution —
 anything that only answers a browser is treated as closed, per the `uma.moe` precedent. Where an
 existing parser could plausibly read a page, it was run against the fetched bytes offline
 (`src/ingest/parsers/index.ts`) rather than guessed at.
 
 Two things this method cannot tell you, and both matter:
 
-- **Whether a host answers the GitHub Actions runner.** game8.co does not (`AGENTS.md` § Scraping
-  conduct). The only hard evidence we hold is what CI has actually committed: `git log` on
-  `snapshots/` shows `github-actions[bot]` landing **arknights.wiki.gg**, **endfield.wiki.gg** and
-  **bluearchive.wiki** (Miraheze). Fandom sources have never refreshed in CI, because `robots.txt`
-  itself is challenged from a datacentre address and the gate fails closed — and as of 2026-08-19
-  that challenge covers every Fandom wiki from *any* address tried here, not just CI's.
-  Of the 2026-08-19 additions, **Stella Sora** is Miraheze and so is the one likely to refresh in CI;
-  **IOP Wiki** is permissive but unproven; **Chaos Zero Nightmare** and **Umamusume** are game8 and
-  therefore blind in CI by construction.
+- **Whether a host answers the CI runner.** This is a property of the runner's address, not of the
+  page, so it has to be re-established whenever that address changes — and it just did: CI moved from
+  GitHub Actions to a Gitea runner (`AGENTS.md` § Scraping conduct). **Everything in this bullet
+  below is evidence about the old GitHub address.** Treat it as the prior, not the current state,
+  until a cycle has run on Gitea.
+
+  game8.co did not answer the GitHub runner. The only hard evidence we held was what CI had actually
+  committed: `git log` on `snapshots/` shows `github-actions[bot]` landing **arknights.wiki.gg**,
+  **endfield.wiki.gg** and **bluearchive.wiki** (Miraheze). Fandom sources never refreshed in CI,
+  because `robots.txt` itself is challenged from a datacentre address and the gate fails closed — and
+  as of 2026-08-19 that challenge covered every Fandom wiki from *any* address tried here, not just
+  CI's. Of the 2026-08-19 additions, **Stella Sora** is Miraheze and so was the one likely to refresh
+  in CI; **IOP Wiki** is permissive but unproven; **Chaos Zero Nightmare** and **Umamusume** are
+  game8 and were therefore blind in CI by construction.
+
+  The Gitea runner may well be served where GitHub's was not — that is one of the two remedies
+  `AGENTS.md` allows — but "may well be" is not evidence. The check is the same one that produced the
+  list above: run a cycle, then read `git log` on `snapshots/` for what actually landed.
 - **Whether a page will still look like this in six weeks.** Each recommendation below names the
   assertion `canParse` should make, so a redesign fails the source loudly instead of emptying a lane.
 
@@ -836,7 +846,7 @@ if it ever prints a year (§ 13). None is worth a pass until something changes u
 ## Appendix — reproducing the checks
 
 ```bash
-UA='gacha-event-tracker/1.0 (+https://github.com/StereotypicalCat/gacha-event-tracker)'
+UA='gacha-event-tracker/1.0 (+https://gitea.lucaswinther.info/lucasw89/gacha-event-tracker)'
 
 # conduct
 curl -sS -A "$UA" https://iopwiki.com/robots.txt

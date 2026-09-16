@@ -78,7 +78,7 @@ body:
     id: where
     attributes:
       label: Where are you running it, and in what browser?
-      placeholder: stereotypicalcat.github.io/gacha-event-tracker — Firefox 141 on Android
+      placeholder: localhost:3000 (container image) — Firefox 141 on Android
     validations:
       required: false
 

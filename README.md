@@ -26,23 +26,33 @@ review queue are specified but not built.
 | Input sanitization at the ingest boundary | Built, tested |
 | Scheduled refresh — robots, snapshots, commit-on-change | Built, tested offline |
 | Web interface, daily checklists, offline support | Built |
-| Static server, Docker image, GitHub + GitLab CI | Built |
+| Static server, Docker image, Gitea + GitLab CI | Built |
 | SQLite, review queue | Specified in `docs/`, not built |
 
 The feed is still a static JSON file rather than a database read: the refresh job commits the raw
 pages it fetched, CI rebuilds the feed from them, and a clean checkout with no snapshots falls back
 to the checked-in fixtures — so the build stays offline and reproducible either way.
 
-**The scheduled refresh does not reach every source.** game8.co answers the GitHub Actions runner
-with a bot-management `202` instead of the page, so the nine Game8 sources only move when someone
-runs `bun run refresh` by hand from an address it will talk to. The wiki sources refresh on schedule
+**The scheduled refresh does not reach every source.** game8.co answered the GitHub Actions runner
+with a bot-management `202` instead of the page, so the nine Game8 sources only moved when someone
+ran `bun run refresh` by hand from an address it will talk to. The wiki sources refresh on schedule
 as intended. `docs/SOURCES.md` records which hosts answer the runner and which do not; the footer
 shows when each lane was last refreshed, so a stale one is visible rather than silent.
 
+Since the move to Gitea the refresh runs from a **different address**, which is one of the two
+remedies `AGENTS.md` § Scraping conduct allows for this. Whether game8.co serves that address is
+**not yet established** — it needs one real single-source run on the runner, and until that has
+happened the paragraph above still describes what we know.
+
 ## Try it
 
-Live at **<https://stereotypicalcat.github.io/gacha-event-tracker/>**, deployed from `main` by the
-Pages job below.
+Deployed from `main` as a container image, published to
+`gitea.lucaswinther.info/lucasw89/gacha-event-tracker:latest` by the CI job below. Run it with
+`docker run -p 3000:3000 gitea.lucaswinther.info/lucasw89/gacha-event-tracker:latest` and open
+<http://localhost:3000>.
+
+> The previous GitHub Pages deploy at <https://stereotypicalcat.github.io/gacha-event-tracker/> is no
+> longer updated by this pipeline; it holds whatever `main` looked like when the repo moved.
 
 Or run it yourself:
 
@@ -298,9 +308,9 @@ page is sanitized at the ingest boundary before it reaches the feed, the browser
 
 ## Found a problem, or want something?
 
-- **[Report a problem](https://github.com/StereotypicalCat/gacha-event-tracker/issues/new?template=bug_report.yml)**
+- **[Report a problem](https://gitea.lucaswinther.info/lucasw89/gacha-event-tracker/issues/new?template=bug_report.yml)**
   — a wrong date, a missing event, a lost tick, anything the app got wrong.
-- **[Request a feature](https://github.com/StereotypicalCat/gacha-event-tracker/issues/new?template=feature_request.yml)**
+- **[Request a feature](https://gitea.lucaswinther.info/lucasw89/gacha-event-tracker/issues/new?template=feature_request.yml)**
   — including a game it does not cover yet, which is the most common ask by a distance.
 
 Both are forms rather than a blank box, for one reason: nothing you mark, type or tick ever leaves
@@ -331,15 +341,22 @@ Blank issues are still open for anything that fits neither form. The templates t
 
 Both `.github/workflows/ci.yml` and `.gitlab-ci.yml` run the same gates on every push — typecheck,
 tests, and a feed sanity check — then build and publish a container image from the default branch.
-GitHub Actions can also deploy to Pages, but that needs two one-time steps it cannot do for itself —
-the default `GITHUB_TOKEN` is not allowed to create a Pages site:
 
-1. **Settings → Pages → Source: GitHub Actions.**
-2. **Settings → Secrets and variables → Actions → Variables:** add `DEPLOY_PAGES` = `true`.
+The workflows run on **Gitea Actions**, not GitHub's. They stay under `.github/workflows/` because
+Gitea reads that directory natively, and because `test/refresh.test.ts` asserts on those two files by
+path — three defects that live in YAML and fail silently otherwise. Two consequences worth knowing
+before editing them:
 
-Until then the `pages` job is skipped and the pipeline stays green. Pages is unavailable for private
-repositories on the free plan. Both steps are done here, and the deploy lands at
-<https://stereotypicalcat.github.io/gacha-event-tracker/>.
+- **`uses:` steps are written as full URLs** (`https://github.com/actions/checkout@v4`). A bare
+  `actions/checkout@v4` resolves against the instance's `DEFAULT_ACTIONS_URL`, which is configuration
+  we do not control from here. The runner needs outbound access to github.com to fetch them.
+- **The image is the deploy artefact.** There is no `pages` job: Gitea has no Pages equivalent, so
+  the container image published to Gitea's registry is what gets deployed. `bun run build` therefore
+  runs without `BASE_PATH` — the image serves from `/`.
+
+The image lands at `gitea.lucaswinther.info/lucasw89/gacha-event-tracker`, tagged `latest` and with
+the commit SHA. The registry host is derived from `github.server_url` rather than hardcoded, so a
+fork on another instance pushes to its own registry.
 
 The feed job fails if the event count collapses, or if any single source parses to nothing — nine
 healthy sources hide a tenth that has gone quiet, and the total stays comfortably over the floor
@@ -354,13 +371,19 @@ pipeline always means the code changed rather than a wiki being down.
 
 ### Refreshing the data
 
-GitHub Actions only — the GitLab pipeline still runs the gates, but nothing there fetches.
+Gitea Actions only — the GitLab pipeline still runs the gates, but nothing there fetches.
 `.github/workflows/refresh.yml` runs `bun run refresh` twice a day (and on demand, with a dry-run
 input). It fetches each source at most once per cycle, and **commits only when a page's bytes
 actually changed** — a `304`, an identical body, or a fetch that fails to parse all leave the
 working tree clean and produce no commit. When something did change it commits the raw snapshots and
-dispatches `ci.yml`, which typechecks, tests, rebuilds the feed and deploys through the path that
-already existed; none of that logic is duplicated.
+dispatches `ci.yml`, which typechecks, tests, rebuilds the feed and republishes the image through the
+path that already existed; none of that logic is duplicated.
+
+That dispatch is a REST call rather than `gh workflow run`, there being no `gh` on a Gitea runner.
+It is also, strictly, belt and braces: unlike GitHub, Gitea does **not** suppress workflow triggers
+on a push made with the Actions token, so the snapshot commit will usually have started `ci.yml`
+already. A duplicate run is harmless — `ci.yml`'s concurrency group is per-ref with
+`cancel-in-progress`, so the second supersedes the first.
 
 A body that yields zero events is rejected and the previous snapshot kept, so a wiki redesign shows
 up as a stale timestamp rather than an empty calendar. One source being down is a warning; every

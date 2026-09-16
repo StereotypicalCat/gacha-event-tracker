@@ -142,12 +142,15 @@ export function agentToken(userAgent: string): string {
  *
  * RFC 9309 § 2.2.1 matches the *product token* — the header up to the first
  * `/` — not the header text. Matching anywhere in the header is actively
- * dangerous here: our contact URL contains the string `StereotypicalCat`, so a
- * `User-agent: cat` group elsewhere in the file would be treated as naming us,
- * and because a named group replaces the `*` group outright, that unrelated
- * group's rules would *discard* every rule the site actually wrote for us.
- * Erring towards obeying more rules means never letting a coincidence take a
- * `*` group away.
+ * dangerous here, because our header carries a contact URL and a URL is a long
+ * string of arbitrary substrings. The case that caught it: the contact URL was
+ * once `…/StereotypicalCat/…`, so a `User-agent: cat` group elsewhere in the
+ * file was treated as naming us, and because a named group replaces the `*`
+ * group outright, that unrelated group's rules *discarded* every rule the site
+ * actually wrote for us. The URL has since changed and that particular
+ * coincidence is gone; the hazard is not, since the next contact URL is just as
+ * arbitrary. Erring towards obeying more rules means never letting a
+ * coincidence take a `*` group away.
  *
  * A robots.txt that names us with a version (`gacha-event-tracker/1.0`) is
  * still honoured: the group's own product token is compared too.

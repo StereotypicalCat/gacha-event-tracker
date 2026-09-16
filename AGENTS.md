@@ -97,7 +97,7 @@ bun run parse endfield-wikigg-events fixtures/endfield/wikigg-events-2026-08-15.
 bun test test/dates.test.ts
 bun test --test-name-pattern "year-less"
 
-# Hosting under a subpath (GitHub Pages)
+# Hosting under a subpath (CI does not set this — the image serves from /)
 BASE_PATH=/gacha-event-tracker/ bun run build
 ```
 
@@ -348,11 +348,11 @@ AI-training crawlers. Our use is a low-rate personal aggregator with attribution
 training, and no `User-agent: *` rule applies to our paths. Keep it that way: do not raise the fetch
 rate, and do not add an LLM that consumes page content.
 
-**game8.co does not answer a GitHub Actions runner** (confirmed 2026-08-17). Its edge returns
+**game8.co did not answer a GitHub Actions runner** (confirmed 2026-08-17). Its edge returned
 `202 Accepted` with a bot-management body to every one of the nine game8 sources, from the first
 scheduled cycle onward — `last confirmed: never` — while the same URLs return `200` and parse
-cleanly from a normal address. So `robots.txt` permits us and the network does not, and those nine
-games have only ever been built from checked-in fixtures in CI.
+cleanly from a normal address. So `robots.txt` permitted us and the network did not, and those nine
+games had only ever been built from checked-in fixtures in CI.
 
 The per-host spacing above does not fix this and was not meant to: a 202 on the very first request
 of a cycle is address reputation, not rate. **Do not work around it.** Browser-shaped headers, a
@@ -360,6 +360,16 @@ proxy, or a residential egress would each be defeating a deliberate access contr
 same reason `uma.moe` was declined below — and unlike `uma.moe` we would be doing it to a host whose
 `robots.txt` was welcoming, which makes it worse, not better. The legitimate options are to run the
 refresh from an address game8 will serve, or to find those games another source.
+
+**CI moved to a Gitea runner on 2026-09-16, which is the first of those two options — and its result
+is not yet known.** A different address is exactly the variable this failure turns on, so the nine
+game8 sources may now refresh on schedule, or may not. Nothing here should be rewritten on the
+strength of that hope: the tense above stays past because the GitHub evidence is real and the Gitea
+evidence does not exist yet. Establish it the same way it was established before — let a cycle run,
+then read `git log` on `snapshots/` for which hosts actually landed — and only then update this
+section, `README.md` § Status, `docs/SOURCES.md` § Method and `docs/FEEDBACK.md`'s P0 row together.
+A single manual `--only` dispatch is enough to answer it for one source; note that `--dry-run`
+cannot, because it makes no requests at all by design.
 
 A source whose ToS forbids automated access does not get an adapter. Flag it and ask.
 

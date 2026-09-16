@@ -299,7 +299,7 @@ diagnosis in each item still holds — what changed is whether it has been acted
 
 | Item | Status |
 |---|---|
-| P0 refresh pipeline | **Diagnosed, half acted on.** game8.co answers a GitHub Actions runner with `202` and a bot-management body, so those eight sources have only ever built from fixtures in CI — see `AGENTS.md` § Scraping conduct, including why it is not to be worked around. The `broken` tier now makes a source failing three cycles fail the run. Step 5 (a build assertion on snapshot age) is **not built** |
+| P0 refresh pipeline | **Diagnosed, half acted on.** game8.co answered a GitHub Actions runner with `202` and a bot-management body, so those eight sources had only ever built from fixtures in CI — see `AGENTS.md` § Scraping conduct, including why it is not to be worked around. CI moved to a Gitea runner on 2026-09-16, which changes the address this failure turns on; whether game8 serves it is **unverified**, and the row stays as-is until a cycle has run. The `broken` tier now makes a source failing three cycles fail the run. Step 5 (a build assertion on snapshot age) is **not built** |
 | P1a Arknights | **Done.** `arknights-akwiki-events`, via the new `akwiki` parser |
 | P1b `NextUp` → three | **Done** (2026-08-18). One headline and two behind it, off `nextToExpire` |
 | P1b cap the long list | **Done** (2026-08-18). Both sections cap at six with "show all N" — truncation of the view, not a re-sort |

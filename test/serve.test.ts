@@ -117,12 +117,13 @@ describe("static server", () => {
 });
 
 /**
- * Compression, which is the whole difference between the Docker image and the
- * deployed site.
+ * Compression, which used to be the whole difference between the Docker image
+ * and the deployed site.
  *
- * GitHub Pages gzips on our behalf, so the bundle crosses the wire at a third of
- * its size there and did not here — and this file is what the image runs. Three
- * times the bytes is the only thing a self-hoster would ever have seen.
+ * GitHub Pages gzipped on our behalf, so the bundle crossed the wire at a third
+ * of its size there and did not here — and serve.ts is what the image runs.
+ * Since the move to Gitea the image is the deploy, so these assertions cover
+ * every reader rather than only a self-hoster: nothing else compresses now.
  */
 describe("static server: compression", () => {
   test("gzips a text asset for a client that asks", async () => {

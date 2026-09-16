@@ -318,7 +318,7 @@ on the section and leave every `h4` beneath it unable to take it back — publis
 
 - Send `If-None-Match` / `If-Modified-Since` from `sources.etag` / `last_modified`. A `304` ends
   the run as `skipped_unchanged`.
-- `User-Agent: gacha-event-tracker/1.0 (+https://github.com/<owner>/gacha-event-tracker)`.
+- `User-Agent: gacha-event-tracker/1.0 (+https://gitea.lucaswinther.info/<owner>/gacha-event-tracker)`.
 - Honor `robots.txt`; cache parsed robots per host for 24h. **Fail closed** — a `robots.txt` that
   5xxs or times out means "do not fetch", because a permission we could not read is not a
   permission we have. A 404 means no restrictions.

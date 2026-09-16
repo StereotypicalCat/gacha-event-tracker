@@ -23,10 +23,12 @@ const ROOT_DIR = resolve(ROOT);
  * times the bytes and, on anything slower than a laptop on wifi, three times the
  * download.
  *
- * GitHub Pages compresses for us, so the deployed site never had this problem;
- * the Docker image serves through this file and did. An image whose payload is
- * 3x the site's is not a placeholder detail — it is the only thing a self-hoster
- * ever sees.
+ * This used to be the self-hoster's problem only: GitHub Pages compressed for
+ * us, so the deployed site never had it, while the Docker image serves through
+ * this file and did. Since the move to Gitea the image *is* the deploy, so this
+ * is now the only compression the deployed site gets — there is no host behind
+ * it doing the job silently. Serving 3x the bytes is not a placeholder detail
+ * when it is what every reader gets.
  */
 const COMPRESSIBLE = new Set([
   ".html",

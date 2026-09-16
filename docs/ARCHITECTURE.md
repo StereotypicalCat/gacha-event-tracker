@@ -37,7 +37,7 @@ are no users.
 ```
 
 **That is the design, and the scheduler half of it is not built yet.** What runs today is
-`scripts/refresh-sources.ts` on a GitHub Actions cron, writing snapshots to disk, and a feed built
+`scripts/refresh-sources.ts` on a Gitea Actions cron, writing snapshots to disk, and a feed built
 from those files rather than from SQLite — see § Today. The stages, the layering and the review gate
 are unchanged by that; only what wakes them up and where they land is.
 
@@ -230,8 +230,10 @@ gates and publish it.
 
 Assets resolve against a `<base href>` substituted at build time, the feed URL resolves against
 `document.baseURI` so deep links work, and the service worker derives its paths from its own
-registration scope. `BASE_PATH=/gacha-event-tracker/ bun run build` for GitHub Pages; without it a
-subpath deploy 404s on every asset.
+registration scope. `BASE_PATH=/gacha-event-tracker/ bun run build` for any host that serves the app
+from a subpath; without it a subpath deploy 404s on every asset. CI no longer sets it — the container
+image is what gets deployed and `serve.ts` serves from `/` — but the mechanism stays, because a
+subpath deploy is a hosting decision rather than a build one.
 
 ### Offline
 
@@ -263,9 +265,11 @@ mode of the `fetch()` that follows it, and a mismatch is not a no-op — the bro
 preload and fetches the feed a second time, which is worse than not preloading. If that link is ever
 edited, count the feed requests in a real browser; nothing in the test suite can see this.
 
-Compression is the server's job and both hosts do it: GitHub Pages transparently, and `serve.ts` —
-which is what the Docker image runs — by negotiating `accept-encoding` per request. It matters more
-than it sounds: the bundle is 344 KB raw and 100 KB gzipped.
+Compression is the server's job, and `serve.ts` — which is what the Docker image runs, and so what
+serves the deployed site — does it by negotiating `accept-encoding` per request. It matters more
+than it sounds: the bundle is 344 KB raw and 100 KB gzipped. A static host put in front of the built
+`public/` instead must do its own; GitHub Pages did this transparently while it was the deploy
+target, which is why nothing here ever had to.
 
 ### The theme, before the bundle arrives
 
