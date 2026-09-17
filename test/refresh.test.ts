@@ -993,7 +993,7 @@ describe("the workflows that drive the refresh", () => {
   // the site just quietly carries wrong or stale data. Asserting on the file
   // is the only offline way to keep them fixed.
   const read = (name: string) =>
-    Bun.file(new URL(`../.github/workflows/${name}`, import.meta.url)).text();
+    Bun.file(new URL(`../.gitea/workflows/${name}`, import.meta.url)).text();
 
   test("ci.yml restores the refresh bookkeeping before it builds the feed", async () => {
     // lastConfirmedAt lives only in the gitignored snapshots/*.state.json. If
@@ -1106,6 +1106,15 @@ describe("the workflows that drive the refresh", () => {
     const ci = await read("ci.yml");
     expect(ci).toContain("staleSources");
     expect(ci).toContain("quietSources");
+  });
+
+  test("GitHub ci.yml builds with BASE_PATH and deploys to Pages", async () => {
+    const githubCi = await Bun.file(
+      new URL("../.github/workflows/ci.yml", import.meta.url),
+    ).text();
+    expect(githubCi).toContain("BASE_PATH");
+    expect(githubCi).toContain("deploy-pages");
+    expect(githubCi).toContain("pages:");
   });
 });
 

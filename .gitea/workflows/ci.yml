@@ -1,0 +1,219 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A new push supersedes the one before it on the same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege by default; jobs opt into more where they need it.
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Typecheck, test, feed
+    runs-on: ubuntu-latest
+    steps:
+      - uses: https://github.com/actions/checkout@v4
+
+      - uses: https://github.com/oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3"
+
+      - run: bun install --frozen-lockfile
+
+      # `lastConfirmedAt` — the "we asked the wiki and it said this is still
+      # current" half of the freshness badge — lives in the gitignored
+      # snapshots/*.state.json, so without this the feed built here has only
+      # `contentChangedAt` to go on and every source reads as stale two days
+      # after its bytes last moved, which for a wiki page is most of the time.
+      # Restore-only: refresh.yml owns writing this cache, and a miss just
+      # returns the pre-existing fallback behaviour.
+      - name: Restore refresh bookkeeping
+        uses: https://github.com/actions/cache/restore@v4
+        with:
+          path: snapshots/*.state.json
+          key: refresh-state-
+          restore-keys: refresh-state-
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Test
+        # Offline by design: no fixture is re-fetched, so a red run always means
+        # the code changed, never that a source was unreachable.
+        run: bun test
+
+      - name: Build feed
+        run: bun run build:feed
+
+      - name: Feed sanity
+        # A source that quietly stops yielding events is the failure mode a
+        # parser-only pipeline is most prone to, and nothing else surfaces it.
+        run: |
+          bun -e '
+            const feed = await Bun.file("public/data/events.v1.json").json();
+            const games = new Set(feed.events.map((e) => e.game));
+            console.log(`${feed.events.length} events across ${games.size} games`);
+            for (const s of feed.sources) {
+              console.log(`  ${s.sourceId.padEnd(24)} ${String(s.eventCount).padStart(3)}`);
+            }
+            if (feed.events.length < 20) {
+              throw new Error(`feed collapsed to ${feed.events.length} events`);
+            }
+            if (feed.events.some((e) => !e.startsAt)) {
+              throw new Error("events without a start date");
+            }
+            // Per source, not just in total: nine healthy sources hide a tenth
+            // that has gone to zero, and the total stays comfortably over the
+            // floor while one game shows an empty calendar.
+            //
+            // Which zero it is decides whether this build should fail, and
+            // the rule lives in shared/feed.ts rather than here. It was
+            // inline, and a test did pin it — by grepping this file for the
+            // string. That proved the check existed, never that it was right,
+            // and it was not: it read eventCount, which is counted after
+            // expiry, so a page whose events had all simply ended reddened the
+            // build. Behaviour belongs where behaviour can be exercised.
+            const { brokenSources, quietSources, staleSources } = await import("./src/shared/feed.ts");
+            for (const s of staleSources(feed.sources)) {
+              console.log(
+                `  note: ${s.sourceId} parsed ${s.parsedCount} events, all of them ended — stale page, not a fault`,
+              );
+            }
+            for (const s of quietSources(feed.sources)) {
+              console.log(
+                `  note: ${s.sourceId} parsed nothing and the page says so itself — between versions, not a fault`,
+              );
+            }
+            const broken = brokenSources(feed.sources);
+            if (broken.length > 0) {
+              throw new Error(
+                `sources parsing to nothing: ${broken.map((s) => s.sourceId).join(", ")}`,
+              );
+            }
+          '
+
+  build:
+    name: Build site
+    runs-on: ubuntu-latest
+    needs: check
+    steps:
+      - uses: https://github.com/actions/checkout@v4
+      - uses: https://github.com/oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3"
+      - run: bun install --frozen-lockfile
+
+      # This is the job whose output is deployed, so this is the one that must
+      # see the refresh bookkeeping; see the same step in `check`.
+      - name: Restore refresh bookkeeping
+        uses: https://github.com/actions/cache/restore@v4
+        with:
+          path: snapshots/*.state.json
+          key: refresh-state-
+          restore-keys: refresh-state-
+
+      - name: Build
+        # Built at the domain root, because the container image is what gets
+        # deployed and `serve.ts` serves from `/`. A BASE_PATH belongs here only
+        # if this artefact is ever hosted under a subpath again — it was set to
+        # /<repo>/ for GitHub Pages, which this pipeline no longer deploys to.
+        run: bun run build
+      - uses: https://github.com/actions/upload-artifact@v4
+        with:
+          name: site
+          path: public/
+          retention-days: 7
+
+  image:
+    name: Container image
+    runs-on: ubuntu-latest
+    needs: check
+    # Pushing an image for every pull request fills the registry; do it where
+    # the artefact could actually be deployed.
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      # Kept as a statement of intent, but it does not grant what this job
+      # needs: on Gitea the registry does not accept the Actions token at all,
+      # so `packages: write` on it authorises nothing. See the login step.
+      packages: write
+    steps:
+      - uses: https://github.com/actions/checkout@v4
+
+      - uses: https://github.com/docker/setup-buildx-action@v3
+
+      - name: Lowercase image name
+        id: img
+        # Gitea's container registry, like GHCR before it, rejects any uppercase
+        # in a repository name, and github.repository preserves the owner's
+        # casing verbatim. The host is read from github.server_url rather than
+        # hardcoded, so a fork on another Gitea instance pushes to its own
+        # registry instead of this one.
+        env:
+          SERVER_URL: ${{ github.server_url }}
+        run: |
+          host="${SERVER_URL#https://}"
+          host="${host#http://}"
+          host="${host%%/*}"
+          # Two outputs on purpose: login wants the bare host, the tags want the
+          # full path. Passing the full path as the registry authenticates
+          # against a host that does not exist.
+          echo "host=${host}" >> "$GITHUB_OUTPUT"
+          echo "name=${host}/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      # Why not `secrets.GITHUB_TOKEN`, which is what this was and what the
+      # GHCR version used: a Gitea package belongs to a **user or org owner,
+      # not to a repository**, so the ephemeral repo-scoped Actions token
+      # carries no authority over it and the registry refuses it. GitLab hands
+      # out working per-job registry credentials ($CI_REGISTRY_PASSWORD, which
+      # .gitlab-ci.yml uses) and Gitea deliberately does not, so this needs a
+      # real access token with package write scope, stored as REGISTRY_TOKEN.
+      #
+      # The username must be the token's owner, hence repository_owner rather
+      # than github.actor: the image is pushed into the owner's namespace, and
+      # actor is whoever happened to trigger the run — a different person on a
+      # dispatch, and the wrong account entirely on a fork.
+      - name: Check the registry credential exists
+        # Without this the failure is a bare `unauthorized` from the daemon,
+        # which says nothing about what to do. It also tells us something we do
+        # not currently know: whether the old token was rejected or was simply
+        # never set.
+        env:
+          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+        run: |
+          if [ -z "${REGISTRY_TOKEN:-}" ]; then
+            echo "::error::REGISTRY_TOKEN is not set. Create an access token at" \
+                 "${{ github.server_url }}/user/settings/applications with the" \
+                 "package read+write scope, then add it to this repository under" \
+                 "Settings → Actions → Secrets as REGISTRY_TOKEN."
+            exit 1
+          fi
+          echo "REGISTRY_TOKEN is set (${#REGISTRY_TOKEN} chars)"
+
+      - uses: https://github.com/docker/login-action@v3
+        with:
+          registry: ${{ steps.img.outputs.host }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.REGISTRY_TOKEN }}
+
+      - uses: https://github.com/docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.img.outputs.name }}:latest
+            ${{ steps.img.outputs.name }}:${{ github.sha }}
+          # Registry cache rather than `type=gha`. Gitea does expose the Actions
+          # cache API, but buildx's gha backend is the least reliable corner of
+          # that compatibility surface, and we are already authenticated to a
+          # registry that can hold the layers.
+          cache-from: type=registry,ref=${{ steps.img.outputs.name }}:buildcache
+          cache-to: type=registry,ref=${{ steps.img.outputs.name }}:buildcache,mode=max

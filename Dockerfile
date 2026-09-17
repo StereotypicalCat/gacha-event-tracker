@@ -28,6 +28,7 @@ COPY test ./test
 # and fail silently — so the files have to be here for `bun test` below to mean
 # the same thing it means in CI.
 COPY .github ./.github
+COPY .gitea ./.gitea
 
 # Fail the image on a type error or a failing test rather than shipping it.
 RUN bun run typecheck && bun test
