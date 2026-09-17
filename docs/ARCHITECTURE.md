@@ -215,7 +215,7 @@ changing. Reads are confined to `public/` by resolving the path and checking it 
 string looks like.
 
 `scripts/refresh-sources.ts` (`bun run refresh`) is what fills `snapshots/`, and it is the only code
-here that touches the network. `.github/workflows/refresh.yml` runs it at 05:27 and 17:27 UTC and
+here that touches the network. `.gitea/workflows/refresh.yml` runs it at 05:27 and 17:27 UTC and
 commits only when a page actually changed. It stands in for the unbuilt scheduler and enforces the
 same conduct in code — the 6h floor, one request, no retries, conditional headers, per-host spacing,
 robots failing closed. A source that has failed `BROKEN_AFTER_FAILURES` (3) cycles running is
@@ -223,17 +223,17 @@ reported as `broken` and fails the run *after* the commit; see `AGENTS.md` § Sc
 that ordering is load-bearing.
 
 `Dockerfile` builds and serves this; the image runs typecheck and tests during build, ships no source
-or toolchain, and runs unprivileged. `.github/workflows/ci.yml` and `.gitlab-ci.yml` run the same
-gates and publish it.
+or toolchain, and runs unprivileged. `.gitea/workflows/ci.yml` and `.gitlab-ci.yml` run the same
+gates and publish it, while `.github/workflows/ci.yml` builds and deploys to GitHub Pages.
 
 ### Hosting under a subpath
 
 Assets resolve against a `<base href>` substituted at build time, the feed URL resolves against
 `document.baseURI` so deep links work, and the service worker derives its paths from its own
 registration scope. `BASE_PATH=/gacha-event-tracker/ bun run build` for any host that serves the app
-from a subpath; without it a subpath deploy 404s on every asset. CI no longer sets it — the container
-image is what gets deployed and `serve.ts` serves from `/` — but the mechanism stays, because a
-subpath deploy is a hosting decision rather than a build one.
+from a subpath (such as GitHub Pages); without it a subpath deploy 404s on every asset. GitHub's
+`.github/workflows/ci.yml` sets it automatically for Pages deployments, while Gitea's container
+image serves from `/`.
 
 ### Offline
 

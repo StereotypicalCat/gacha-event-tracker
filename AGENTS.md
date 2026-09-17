@@ -40,7 +40,7 @@ progress on events that repeat daily, and lets a user mark events completed.
 **Status: working app, refreshing itself on a schedule.** Schema, ten parsers, twenty-two sources across
 twenty games, the full interface, offline support, a static server, a Docker image and CI all exist and
 are tested. The refresh runner (`bun run refresh`) fetches, caches raw snapshots and rebuilds the
-feed; `.github/workflows/refresh.yml` runs it twice a day and commits only when a page actually
+feed; `.gitea/workflows/refresh.yml` runs it twice a day and commits only when a page actually
 changed. The SQLite layer and the review queue are still specified in `docs/` but not built, so the
 feed is a static JSON file built from snapshots, falling back to checked-in fixtures.
 

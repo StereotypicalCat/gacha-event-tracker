@@ -339,20 +339,21 @@ Blank issues are still open for anything that fits neither form. The templates t
 
 ## CI
 
-Both `.github/workflows/ci.yml` and `.gitlab-ci.yml` run the same gates on every push — typecheck,
-tests, and a feed sanity check — then build and publish a container image from the default branch.
+Both `.gitea/workflows/ci.yml`, `.github/workflows/ci.yml`, and `.gitlab-ci.yml` run the same gates on every push — typecheck,
+tests, and a feed sanity check.
 
-The workflows run on **Gitea Actions**, not GitHub's. They stay under `.github/workflows/` because
-Gitea reads that directory natively, and because `test/refresh.test.ts` asserts on those two files by
-path — three defects that live in YAML and fail silently otherwise. Two consequences worth knowing
-before editing them:
+- **On Gitea Actions** (`.gitea/workflows/ci.yml`): The default branch builds and publishes a container image to Gitea's package registry.
+- **On GitHub Actions** (`.github/workflows/ci.yml`): Pushes to `main` (such as commits mirrored from Gitea) build the static site with `BASE_PATH` and deploy it to GitHub Pages.
+
+Two consequences worth knowing for Gitea Actions:
 
 - **`uses:` steps are written as full URLs** (`https://github.com/actions/checkout@v4`). A bare
   `actions/checkout@v4` resolves against the instance's `DEFAULT_ACTIONS_URL`, which is configuration
   we do not control from here. The runner needs outbound access to github.com to fetch them.
-- **The image is the deploy artefact.** There is no `pages` job: Gitea has no Pages equivalent, so
-  the container image published to Gitea's registry is what gets deployed. `bun run build` therefore
-  runs without `BASE_PATH` — the image serves from `/`.
+- **The image is Gitea's deploy artefact.** There is no Pages equivalent on Gitea, so the container
+  image published to Gitea's registry is what gets deployed. `bun run build` in `.gitea/workflows/ci.yml`
+  and Dockerfile therefore runs without `BASE_PATH` — the image serves from `/`. On GitHub, `.github/workflows/ci.yml`
+  builds with `BASE_PATH` and deploys to GitHub Pages.
 
 The image lands at `gitea.lucaswinther.info/lucasw89/gacha-event-tracker`, tagged `latest` and with
 the commit SHA. The registry host is derived from `github.server_url` rather than hardcoded, so a
@@ -387,8 +388,8 @@ pipeline always means the code changed rather than a wiki being down.
 
 ### Refreshing the data
 
-Gitea Actions only — the GitLab pipeline still runs the gates, but nothing there fetches.
-`.github/workflows/refresh.yml` runs `bun run refresh` twice a day (and on demand, with a dry-run
+Gitea Actions only — the GitLab and GitHub pipelines run the gates / builds, but do not fetch wikis.
+`.gitea/workflows/refresh.yml` runs `bun run refresh` twice a day (and on demand, with a dry-run
 input). It fetches each source at most once per cycle, and **commits only when a page's bytes
 actually changed** — a `304`, an identical body, or a fetch that fails to parse all leave the
 working tree clean and produce no commit. When something did change it commits the raw snapshots and

@@ -392,7 +392,7 @@ annotated on the run page, listed in the job summary with its status code, and c
 conduct for why that ordering is load-bearing.
 
 **Built: `scripts/refresh-sources.ts`** (`bun run refresh`), scheduled by
-`.github/workflows/refresh.yml`. It takes its adapters, store, robots gate, fetch and clock by
+`.gitea/workflows/refresh.yml`. It takes its adapters, store, robots gate, fetch and clock by
 injection, so the whole runner is tested offline against a fake fetch. A fetched body is *rejected*
 — the previous snapshot survives — when it fails `canParse`, throws, or yields zero events; storing
 an empty parse would make the feed build prefer it over the fixture and silently empty a game's
