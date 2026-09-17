@@ -49,6 +49,8 @@ function render(prefs: Prefs, ignoredCount = 0): string {
         ignoredCount={ignoredCount}
         onExport={() => {}}
         onImport={() => {}}
+        onExportAll={() => {}}
+        onImportAll={() => {}}
         own={{
           games: {},
           events: {},
@@ -287,3 +289,15 @@ describe("the chores checkbox reports its own pref", () => {
     expect(off).toBe(on - 1);
   });
 });
+
+describe("Controls: backup and export actions", () => {
+  test("renders all four export and import buttons", () => {
+    const markup = render(PREFS);
+    expect(markup).toContain("Export</button>");
+    expect(markup).toContain("Import<input");
+    expect(markup).toContain("Export all</button>");
+    expect(markup).toContain("Import all<input");
+    expect(markup).toContain("when moving hosts");
+  });
+});
+

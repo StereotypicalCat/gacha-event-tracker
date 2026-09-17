@@ -606,6 +606,14 @@ simply has no `daily` key, which is not an error. Losing a user's marks to a bad
 deliberately one-directional. A file whose `format` is unrecognised is refused outright rather than
 partly applied.
 
+A standard **Export** produces a progress backup containing progress, daily checklists, ignored
+events, and custom games/events without `prefs`, so that importing progress onto another device
+leaves that device's region, theme, and game order intact. **Export all** includes `prefs` alongside
+progress in the export JSON. Standard **Import** merges progress and custom content while ignoring
+`prefs`. **Import all** merges progress and custom content and also restores all preferences
+(`region`, `hiddenGames`, `gameOrder`, `theme`, `view`, etc.) via `restorePrefsValue`, falling back
+to defaults for any fields omitted by older exports — designed specifically for moving hosts.
+
 ## Schema versioning
 
 `/api/events` responses carry `{ schemaVersion: 1, generatedAt, events: [...], sources: [...] }`.

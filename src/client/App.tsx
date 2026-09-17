@@ -17,7 +17,8 @@ import { useAppUpdate } from "./state/useAppUpdate.ts";
 import { useMarkSet } from "./state/useMarkSet.ts";
 import { useProgress } from "./state/useProgress.ts";
 import { useDailyLog, type DailyLogMap } from "./state/useDailyLog.ts";
-import { adoptNewLanes, usePrefs } from "./state/usePrefs.ts";
+import { adoptNewLanes, usePrefs, type Prefs } from "./state/usePrefs.ts";
+import { buildExportData, parseImportData, triggerDownload } from "./state/export.ts";
 import { snapDayWidth } from "./state/zoom.ts";
 import { useCustom, type EventDraft } from "./state/useCustom.ts";
 import { compareRows, SORT_MODES, type Activity, type SortMode } from "./state/sort.ts";
@@ -103,7 +104,7 @@ export function App() {
   const [lastIgnored, setLastIgnored] = useState<{ id: string; title: string } | null>(null);
   const now = useNow();
   const online = useOnline();
-  const { prefs, update, toggleGame } = usePrefs();
+  const { prefs, update, toggleGame, restorePrefs } = usePrefs();
   // Their answer from the first run, or their last tap on the tabs. Reading it
   // from `prefs` is what stops a reload putting a timeline reader back on the
   // list they did not choose.
@@ -658,7 +659,7 @@ export function App() {
           onOpen: setOpenId,
         }}
         onExport={() =>
-          exportProgress(prog.progress, daily.logs, ignored.marks, prefs, {
+          exportProgress(prog.progress, daily.logs, ignored.marks, {
             games: custom.games,
             events: custom.events,
           })
@@ -670,6 +671,22 @@ export function App() {
             daily.merge,
             ignored.merge,
             custom.merge,
+          )
+        }
+        onExportAll={() =>
+          exportAll(prog.progress, daily.logs, ignored.marks, prefs, {
+            games: custom.games,
+            events: custom.events,
+          })
+        }
+        onImportAll={(file) =>
+          void importProgress(
+            file,
+            prog.merge,
+            daily.merge,
+            ignored.merge,
+            custom.merge,
+            restorePrefs,
           )
         }
       />
@@ -897,49 +914,27 @@ function exportProgress(
   progress: Record<string, unknown>,
   daily: DailyLogMap,
   ignored: Record<string, { at: string }>,
-  prefs: unknown,
   own: { games: CustomGames; events: CustomEvents },
 ) {
-  const blob = new Blob(
-    [
-      JSON.stringify(
-        {
-          format: "gacha-tracker-export",
-          version: 1,
-          exportedAt: new Date().toISOString(),
-          progress,
-          // Streaks live nowhere else — not on a server, not in the feed — so
-          // an export that omitted them would quietly be a lossy backup.
-          daily,
-          ignored,
-          // The reader's own games and events exist nowhere else at all — not
-          // in the feed, not on a server. An export without them is a backup
-          // that quietly loses the half they typed themselves.
-          customGames: own.games,
-          customEvents: own.events,
-          prefs,
-        },
-        null,
-        2,
-      ),
-    ],
-    { type: "application/json" },
+  const data = buildExportData(progress, daily, ignored, own);
+  triggerDownload(
+    data,
+    `event-clock-progress-${new Date().toISOString().slice(0, 10)}.json`,
   );
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `event-clock-progress-${new Date().toISOString().slice(0, 10)}.json`;
-  // In the document, and revoked on a later task. This is the only copy of
-  // everything the reader typed, ticked and marked — there is no account and no
-  // server that has ever seen it — so a download that quietly does not happen is
-  // the lossy backup this function exists to prevent. A detached anchor is not
-  // reliably clickable, and revoking the URL in the same task can pull the blob
-  // out from under a download that had not started reading it yet.
-  a.style.display = "none";
-  document.body.append(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function exportAll(
+  progress: Record<string, unknown>,
+  daily: DailyLogMap,
+  ignored: Record<string, { at: string }>,
+  prefs: Prefs,
+  own: { games: CustomGames; events: CustomEvents },
+) {
+  const data = buildExportData(progress, daily, ignored, own, prefs);
+  triggerDownload(
+    data,
+    `event-clock-backup-${new Date().toISOString().slice(0, 10)}.json`,
+  );
 }
 
 async function importProgress(
@@ -948,50 +943,29 @@ async function importProgress(
   mergeDaily: (c: DailyLogMap) => void,
   mergeIgnored: (c: Record<string, { at: string }>) => void,
   mergeCustom: (games: unknown, events: unknown) => void,
+  restorePrefs?: ((prefs: unknown) => void) | undefined,
 ) {
   try {
-    const parsed: unknown = JSON.parse(await file.text());
-    const data = parsed as {
-      format?: string;
-      progress?: unknown;
-      completions?: unknown;
-      daily?: unknown;
-      ignored?: unknown;
-      customGames?: unknown;
-      customEvents?: unknown;
-    };
-    if (data.format !== "gacha-tracker-export") {
+    const text = await file.text();
+    const data = parseImportData(JSON.parse(text));
+    if (data === null) {
       alert("That file isn't an Event Clock export.");
       return;
     }
-    const asMarks = (v: unknown) =>
-      typeof v === "object" && v !== null
-        ? (v as Record<string, { at: string }>)
-        : null;
-    // Accept exports from before progress replaced completions: membership
-    // there meant "done", so map it forward rather than dropping it.
-    const p = asMarks(data.progress);
-    const legacy = asMarks(data.completions);
-    const i = asMarks(data.ignored);
-    if (p !== null) mergeProgress(p);
-    else if (legacy !== null) {
-      mergeProgress(
-        Object.fromEntries(
-          Object.entries(legacy).map(([id, m]) => [id, { ...m, status: "done" }]),
-        ),
-      );
-    }
-    // An export written before daily checklists existed simply has no `daily`
-    // key; that is not an error, it just leaves the streaks it never held.
-    const d = data.daily;
-    if (typeof d === "object" && d !== null) mergeDaily(d as DailyLogMap);
-    if (i !== null) mergeIgnored(i);
-    // Additive keys: an export written before F13 has neither, which is a file
-    // from a device that had none rather than an error. An event and the game
-    // it belongs to always travel together, so this can never land a lane with
-    // nothing to name it.
+    if (data.progress !== null) mergeProgress(data.progress);
+    if (data.daily !== null) mergeDaily(data.daily);
+    if (data.ignored !== null) mergeIgnored(data.ignored);
     mergeCustom(data.customGames, data.customEvents);
+
+    if (restorePrefs !== undefined) {
+      if (data.prefs !== null) {
+        restorePrefs(data.prefs);
+      } else {
+        alert("Progress was imported, but this file did not include settings.");
+      }
+    }
   } catch {
     alert("That file couldn't be read. Export a fresh copy and try again.");
   }
 }
+

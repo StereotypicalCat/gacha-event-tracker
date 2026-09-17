@@ -75,6 +75,8 @@ export function Controls({
   ignoredCount,
   onExport,
   onImport,
+  onExportAll,
+  onImportAll,
   own,
 }: {
   games: LaneId[];
@@ -84,6 +86,8 @@ export function Controls({
   ignoredCount: number;
   onExport: () => void;
   onImport: (file: File) => void;
+  onExportAll: () => void;
+  onImportAll: (file: File) => void;
   /** Everything the reader entered themselves, and the ways to change it. */
   own: React.ComponentProps<typeof YourOwn>;
 }) {
@@ -262,12 +266,13 @@ export function Controls({
           <p className="max-w-md text-xs leading-relaxed text-faint">
             What you've finished, and every daily you've ticked off, are saved in
             this browser only — there is no account. Anything you added yourself is
-            in there too. Move it all to another device with a file.
+            in there too.
           </p>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
               onClick={onExport}
+              title="Export progress, dailies, ignored events, and custom entries"
               className="rounded-lg border border-hairline px-3 py-1.5 text-xs text-muted transition-colors hover:text-ink"
             >
               Export
@@ -285,7 +290,35 @@ export function Controls({
                 }}
               />
             </label>
+            <button
+              type="button"
+              onClick={onExportAll}
+              title="Export everything including settings (active games, game order, region, theme) for moving hosts"
+              className="rounded-lg border border-hairline px-3 py-1.5 text-xs text-muted transition-colors hover:text-ink"
+            >
+              Export all
+            </button>
+            <label className="cursor-pointer rounded-lg border border-hairline px-3 py-1.5 text-xs text-muted transition-colors hover:text-ink">
+              Import all
+              <input
+                type="file"
+                accept="application/json,.json"
+                className="sr-only"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) onImportAll(file);
+                  e.target.value = "";
+                }}
+              />
+            </label>
           </div>
+          <p className="mt-2.5 max-w-md text-xs leading-relaxed text-faint">
+            Use <span className="font-medium text-muted">Export</span> and{" "}
+            <span className="font-medium text-muted">Import</span> for progress only. Use{" "}
+            <span className="font-medium text-muted">Export all</span> and{" "}
+            <span className="font-medium text-muted">Import all</span> when moving hosts to carry
+            your active games, custom order, region, and appearance settings along.
+          </p>
         </Group>
       </div>
     </section>
