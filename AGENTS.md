@@ -752,26 +752,25 @@ surface `*` is allowed — it answers our own `User-Agent` with a `200`, no `Con
 `Crawl-delay` for us. `Special:` is disallowed too, which is why `parsers/bawiki.ts` skips those links
 exactly as the Fandom one does.
 
-Three things about that page are worth knowing before touching it, all of them ways to publish a
-confidently wrong date:
+The page was redesigned in September 2026 from a per-version tabber into a unified `#eventtable`
+schedule (`Preview | Event | JP Period | GL Period | Notes`). The parser supports both shapes. Key rules:
 
-- **It states JP and Global in separate tabs, and the Japanese one runs four to nine months ahead.**
-  Same hazard as the CN column on `akwiki`, same answer: publish Global only. The tab's *nav button*
-  carries the id `tabber-Global_version-label` and sits above **both** panels, so a reader that slices
-  from the first id match reads the Japanese schedule while believing it read ours.
-- **There are three Global tabs, not one** — the schedule, plus Mini-Event and Joint Firing Drill
-  further down, whose ids are the same name with `_2` and `_3`. The parser finds the schedule by its
-  `Name (EN)` header rather than by position, and `canParse` asserts that lookup, so a renamed tab or
-  column fails the run instead of quietly emptying the lane.
+- **Global is ours, Japanese runs four to nine months ahead.** In `#eventtable`, JP and GL periods
+  sit side-by-side; the parser resolves `GL Period`, and draws titles and links from `.event-region-gl`
+  (falling back to `.event-region-jp` if unlocalized). In the legacy tabber format, JP and Global sat in
+  separate panels, and the Global tab's nav button (`tabber-Global_version-label`) preceded both panels.
+- **Identify tables by their headers, not by position.** In `#eventtable`, column names (`Event`,
+  `GL Period`) identify the schedule. In the legacy tabber, `Name (EN)` distinguished the main schedule
+  from Mini-Event and Joint Firing Drill tabbers below. Both are asserted in `canParse`.
 - **The page states no time of day and no timezone anywhere.** The schedule's dates are bare
-  `YYYY-MM-DD`, which is honest day precision. Its five other tables (Mini-Event, Reward campaigns,
-  Attendance bonuses, Guide missions, Joint Firing Drill) *do* carry a wall clock — `08/12/2026 11:00`
-  — but name no zone for it, and **three of the five do not say which server they describe**. Those
-  are deliberately unparsed, and that second clause is the whole reason: a clock whose server is
-  unknown cannot even be labelled with a day, because you do not know whose day it is. Attendance
-  bonuses would be a real dailies source if a zone is ever stated. For the same reason `ba` has no
-  `resetOffsets`: Blue Archive Global does run one worldwide server, but nothing in this source says
-  on what clock.
+  `YYYY-MM-DD` (or `YYYY/MM/DD` in `datetime` elements), which is honest day precision. Its subsidiary
+  tables (Mini-Event, Reward campaigns, Attendance bonuses, Guide missions, Joint Firing Drill) *do*
+  carry a wall clock — `08/12/2026 11:00` — but name no zone for it, and **three of the five do not say
+  which server they describe**. Those are deliberately unparsed, and that second clause is the whole
+  reason: a clock whose server is unknown cannot even be labelled with a day, because you do not know
+  whose day it is. Attendance bonuses would be a real dailies source if a zone is ever stated. For the
+  same reason `ba` has no `resetOffsets`: Blue Archive Global does run one worldwide server, but nothing
+  in this source says on what clock.
 
   **This rule governs a clock with no known server, not a clock with no stated zone** — a
   distinction worth drawing precisely, because it was drawn the wrong way once. As first written it

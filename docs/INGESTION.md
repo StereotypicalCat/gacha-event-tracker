@@ -52,7 +52,7 @@ Consequences worth internalising:
 | `wikigg` | wiki.gg MediaWiki `mp-event` templates | Endfield |
 | `akwiki` | arknights.wiki.gg's `mrfz-wtable` "Ongoing/upcoming" table | Arknights |
 | `fandom` | Fandom wikis via the MediaWiki `action=parse` API — five page templates: `Event \| Time Period \| Version` wikitables, FGO's picture-fenced `ONGOING EVENTS` blocks, Nikke's `Event \| Start(UTC+9) \| End(UTC+9)` tables, Infinity Nikki's `Event \| Duration \| Description \| Type` article-tables, and Genshin Impact's `Event \| Duration \| Type(s)` tables | Reverse: 1999, Fate/Grand Order, Nikke, Infinity Nikki, Genshin Impact |
-| `bawiki` | bluearchive.wiki's rendered `/wiki/Events` — a JP/Global tabber over `Name (EN) \| Start date \| End date \| Notes` wikitables | Blue Archive |
+| `bawiki` | bluearchive.wiki's rendered `/wiki/Events` — redesigned `#eventtable` unified schedule (and legacy JP/Global tabber) | Blue Archive |
 | `holodoriwiki` | holodori.wiki's rendered `/wiki/Events` — `Current Events` and `Past Events` wikitables over `Event \| Type \| Start Date \| End Date` | hololive Dreams |
 | `iopwiki` | iopwiki.com's `gf-table event-period` tables — `Title \| Period (start/end) \| Server \| Type \| Comment`, one table per event and one row per server | Girls' Frontline 2 |
 | `stellasorawiki` | stellasora.miraheze.org's front-page `Current Banners` module — `<time datetime>` pairs inside `stellasora-home-banner` blocks | Stella Sora |
@@ -108,17 +108,19 @@ route on the same check, and the differences are worth knowing before touching e
 `bawiki` is the mirror image of `fandom`: same MediaWiki software, opposite conclusion about which
 surface to read. bluearchive.wiki is Miraheze, whose `robots.txt` disallows `/w/` and `/*?action=`,
 so the API is closed and the rendered `/wiki/Events` page is what `*` is allowed — and it serves our
-own `User-Agent` a `200`. Three page facts drive the parser (all three in AGENTS.md § Blue Archive):
+own `User-Agent` a `200`. The parser handles both the redesigned schedule table (`#eventtable`,
+shipped in September 2026) and the legacy version tabber format:
 
-- **JP and Global are separate tabs, months apart**, so only Global is published — the `akwiki`
-  hazard. The Global tab's nav *button* precedes both panels, so slicing from the first matching id
-  reads the Japanese schedule.
-- **Three tabs are named Global**, the schedule plus Mini-Event and Joint Firing Drill. The schedule
-  is identified by its `Name (EN)` header rather than by position, and `canParse` runs the same
-  lookup so a rename fails the run rather than emptying the lane.
-- **Nothing on the page states a time of day or a timezone.** The schedule's bare ISO dates are day
-  precision; the five tables that do carry a wall clock name no zone for it and are left unparsed
-  rather than read as UTC.
+- **Redesigned schedule (`#eventtable`)**: A unified table (`Preview | Event | JP Period | GL Period | Notes`)
+  plots both releases side-by-side. The parser resolves columns by name, reads English titles and links
+  from `.event-region-gl` (falling back to JP if unlocalized), extracts day-precision dates from `GL Period`
+  spans, and maps release badges (`data-release="rerun"`) and Notes to event types.
+- **Legacy tabber format**: Identifies the schedule panel inside `<article id="tabber-Global_version">`
+  by its `Name (EN)` column header rather than by position, fencing out the Japanese panel and the
+  undated Mini-Event / Joint Firing Drill tabbers further down.
+- **Nothing on the page states a time of day or a timezone.** Boundaries are bare `YYYY-MM-DD` (or formatted
+  `YYYY/MM/DD`), so all boundaries are parsed at day precision. The subsidiary tables that carry wall
+  clocks state no timezone and are left unparsed rather than read as UTC.
 
 `akwiki` shares a host family with `wikigg` and nothing else — arknights.wiki.gg has no `mp-event`
 cards, so the two are separate modules rather than one parser with a branch. Two things about that

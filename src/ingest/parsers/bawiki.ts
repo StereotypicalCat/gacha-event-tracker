@@ -77,6 +77,8 @@ const CELL = /<t([dh])\b[^>]*>([\s\S]*?)<\/t\1>/gi;
  */
 const ARTICLE_LINK = /<a\b[^>]*href="(\/wiki\/(?!Special:)[^"#?]+)"/i;
 
+const EVENT_TABLE = /<table\b[^>]*\bid="eventtable"[^>]*>([\s\S]*?)<\/table>/i;
+
 interface Columns {
   title: number;
   start: number;
@@ -84,8 +86,48 @@ interface Columns {
   notes: number | undefined;
 }
 
+interface EventTableColumns {
+  event: number;
+  glPeriod: number;
+  notes: number | undefined;
+}
+
 /**
- * Where each column sits, read off the header row.
+ * Where each column sits in the redesigned unified schedule table (#eventtable).
+ */
+function eventTableColumns(headers: string[]): EventTableColumns | null {
+  const at = (match: (h: string) => boolean) => {
+    const i = headers.findIndex((h) => match(h));
+    return i < 0 ? undefined : i;
+  };
+
+  const event = at((h) => h === "event" || h === "name (en)");
+  const glPeriod = at((h) => h === "gl period" || h === "global period");
+  if (event === undefined || glPeriod === undefined) {
+    return null;
+  }
+  return { event, glPeriod, notes: at((h) => h === "notes") };
+}
+
+/**
+ * The redesigned unified schedule table, located by its ID (#eventtable).
+ */
+function globalEventTable(
+  html: string,
+): { cols: EventTableColumns; body: string } | null {
+  const body = EVENT_TABLE.exec(html)?.[1];
+  if (body === undefined) return null;
+
+  const headers = [...body.matchAll(/<th\b[^>]*>([\s\S]*?)<\/th>/gi)].map(
+    (h) => text(h[1] ?? "").toLowerCase(),
+  );
+  const cols = eventTableColumns(headers);
+  if (cols === null) return null;
+  return { cols, body };
+}
+
+/**
+ * Where each column sits, read off the header row of the legacy tabber.
  *
  * Returns null when the table is not a schedule at all, which is what keeps the
  * per-event infoboxes elsewhere on the page from being read as one.
@@ -109,7 +151,7 @@ function columns(headers: string[]): Columns | null {
 }
 
 /**
- * The Global version panel's schedule table, and where its columns sit.
+ * The Global version panel's schedule table, and where its columns sit (legacy format).
  *
  * There are three Global panels on this page, not one: the schedule, plus the
  * Mini-Event and Joint Firing Drill tabbers further down, whose ids are the same
@@ -154,13 +196,132 @@ function globalSchedule(
   return null;
 }
 
-export function parseBlueArchiveWikiEventsPage(
-  html: string,
+function parseNewEventTable(
+  schedule: { cols: EventTableColumns; body: string },
   ctx: ParseContext,
 ): GachaEvent[] {
-  const schedule = globalSchedule(html.replace(/\s+/g, " "));
-  if (schedule === null) return [];
+  const { cols } = schedule;
+  const nowMs = Date.parse(ctx.now);
+  const out: GachaEvent[] = [];
 
+  for (const row of schedule.body.matchAll(ROW)) {
+    const rowAttrs = row[0] ?? "";
+    const cells = [...(row[1] ?? "").matchAll(CELL)].map((c) => ({
+      tag: c[1] ?? "",
+      html: c[2] ?? "",
+    }));
+    if (cells.length === 0 || cells.some((c) => c.tag === "h")) continue;
+
+    const eventCell = cells[cols.event]?.html ?? "";
+    // Prefer the Global title if present; fallback to the JP title or the whole cell
+    const glBlock =
+      /<div\b[^>]*class="[^"]*event-region-gl[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/i.exec(
+        eventCell,
+      );
+    const targetBlock = glBlock?.[1] ?? eventCell;
+    const titleSpan =
+      /<span\b[^>]*class="[^"]*event-title[^"]*"[^>]*>([\s\S]*?)<\/span>/i.exec(
+        targetBlock,
+      );
+    const titleInner = titleSpan?.[1] ?? targetBlock;
+    const title = text(titleInner);
+    if (title.length === 0) continue;
+
+    const glCell = cells[cols.glPeriod]?.html ?? "";
+    if (glCell.includes("event-unannounced") || /\bTBD\b/i.test(glCell)) continue;
+
+    const isoDates = [
+      ...glCell.matchAll(/data-datetime="(\d{4}-\d{2}-\d{2})/g),
+    ].map((m) => m[1]);
+
+    let start: ParsedInstant | null = null;
+    let end: ParsedInstant | null = null;
+
+    if (isoDates.length > 0) {
+      start = parseIsoDay(isoDates[0]!);
+      if (isoDates.length > 1 && isoDates[1]) {
+        end = parseIsoDay(isoDates[1]);
+      }
+    } else {
+      const textDates = [
+        ...glCell.matchAll(/(\d{4})[/-](\d{1,2})[/-](\d{1,2})/g),
+      ]
+        .map((m) =>
+          parseIsoDay(
+            `${m[1]}-${m[2]?.padStart(2, "0")}-${m[3]?.padStart(2, "0")}`,
+          ),
+        )
+        .filter((d): d is ParsedInstant => d !== null);
+      if (textDates.length > 0) {
+        start = textDates[0]!;
+        if (textDates.length > 1 && textDates[1]) {
+          end = textDates[1];
+        }
+      }
+    }
+
+    if (start === null) continue;
+
+    if (end === null) {
+      if (latestBoundaryMs(start.iso, start.precision, ctx.game) < nowMs) {
+        continue;
+      }
+    } else {
+      if (end.iso <= start.iso) continue;
+      if (latestBoundaryMs(end.iso, end.precision, ctx.game) < nowMs) continue;
+    }
+
+    const release = /data-release="([^"]*)"/i.exec(rowAttrs)?.[1]?.toLowerCase();
+    const notes =
+      cols.notes === undefined ? "" : text(cells[cols.notes]?.html ?? "");
+    const summary =
+      notes.length > 0 ? notes : release === "rerun" ? "Rerun" : null;
+    const type = release === "rerun" ? "rerun" : inferType(`${title} ${notes}`);
+
+    const href =
+      ARTICLE_LINK.exec(titleInner)?.[1] ??
+      ARTICLE_LINK.exec(eventCell)?.[1];
+
+    let confidence = 0.95 - 0.05;
+    confidence -= end === null ? 0.15 : 0.05;
+
+    out.push({
+      id: eventId(ctx.game, title, start.iso),
+      game: ctx.game,
+      title,
+      type,
+      summary,
+      startsAt: start.iso,
+      startPrecision: start.precision,
+      endsAt: end === null ? null : end.iso,
+      endPrecision: end === null ? "unknown" : end.precision,
+      regionScoped: false,
+      regionEnds: null,
+      sourceUrl:
+        href === undefined
+          ? ctx.sourceUrl
+          : new URL(href, ctx.sourceUrl).toString(),
+      sourceId: ctx.sourceId,
+      status: "published",
+      confidence: Math.round(confidence * 100) / 100,
+      extractionMethod: "parser",
+      version: 1,
+      firstSeenAt: ctx.now,
+      updatedAt: ctx.now,
+    });
+  }
+
+  return out.sort((a, b) =>
+    a.startsAt === b.startsAt
+      ? a.id.localeCompare(b.id)
+      : a.startsAt.localeCompare(b.startsAt),
+  );
+}
+
+function parseLegacySchedule(
+  schedule: { cols: Columns; body: string },
+  ctx: ParseContext,
+): GachaEvent[] {
   const { cols } = schedule;
   const nowMs = Date.parse(ctx.now);
   const out: GachaEvent[] = [];
@@ -255,17 +416,30 @@ export function parseBlueArchiveWikiEventsPage(
   );
 }
 
+export function parseBlueArchiveWikiEventsPage(
+  html: string,
+  ctx: ParseContext,
+): GachaEvent[] {
+  const norm = html.replace(/\s+/g, " ");
+  const newSchedule = globalEventTable(norm);
+  if (newSchedule !== null) {
+    return parseNewEventTable(newSchedule, ctx);
+  }
+
+  const legacySchedule = globalSchedule(norm);
+  if (legacySchedule !== null) {
+    return parseLegacySchedule(legacySchedule, ctx);
+  }
+
+  return [];
+}
+
 export const blueArchiveWikiParser: SourceParser = {
   id: "bawiki",
   label: "Blue Archive Wiki",
   canParse(html: string): boolean {
-    // The same lookup `parse` does, which is the point: this page has sixty-odd
-    // wikitables and three Global panels, so "a table exists" proves nothing
-    // about the one that matters. Asserting the schedule is *findable* is what
-    // makes a renamed tab or a renamed column fail the run loudly instead of
-    // emptying the lane, which reads downstream as "Blue Archive has nothing
-    // on" rather than as a failure.
-    return globalSchedule(html.replace(/\s+/g, " ")) !== null;
+    const norm = html.replace(/\s+/g, " ");
+    return globalEventTable(norm) !== null || globalSchedule(norm) !== null;
   },
   parse: parseBlueArchiveWikiEventsPage,
 };

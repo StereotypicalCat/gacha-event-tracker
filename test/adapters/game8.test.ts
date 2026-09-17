@@ -43,6 +43,9 @@ const CASES: Array<{ adapter: Adapter; fixture: string }> = [
   // its content type. The fixture is the bytes the fetcher would store.
   { adapter: adapter("r1999-fandom-events"), fixture: "fixtures/r1999/fandom-events-2026-08-17" },
   { adapter: adapter("ba-bawiki-events"), fixture: "fixtures/ba/bawiki-events-2026-08-17" },
+  // The redesigned page (September 2026): replacing the per-version tabber
+  // with a unified schedule table (#eventtable) showing JP and GL side-by-side.
+  { adapter: adapter("ba-bawiki-events"), fixture: "fixtures/ba/bawiki-events-2026-09-17" },
   { adapter: adapter("fgo-fandom-events"), fixture: "fixtures/fgo/fandom-events-2026-08-18" },
   { adapter: adapter("holodori-holodoriwiki-events"), fixture: "fixtures/holodori/holodoriwiki-events-2026-08-18" },
   { adapter: adapter("gfl2-iopwiki-events"), fixture: "fixtures/gfl2/iopwiki-events-2026-08-19" },
@@ -819,6 +822,46 @@ describe("blue archive wiki", () => {
     // without this it costs no error at all, just an empty Blue Archive lane.
     expect(
       blueArchiveWikiParser.canParse(html.replace(/Name \(EN\)/g, "Event")),
+    ).toBe(false);
+  });
+
+  test("parses the redesigned unified schedule table (#eventtable)", async () => {
+    const newFixture = "fixtures/ba/bawiki-events-2026-09-17";
+    const html = await Bun.file(`${newFixture}.html`).text();
+    expect(blueArchiveWikiParser.canParse(html)).toBe(true);
+
+    const events = await runAdapter(ba, newFixture);
+    // At NOW (2026-08-14), 5 events are live/upcoming on Global:
+    // 1. Code: BOX - The Shadow Approaching Millennium (2026-08-04 to 2026-08-18)
+    // 2. Special Mission: Lore Pursuit (2026-08-18 to 2026-09-01)
+    // 3. Pray-Ball! Swing for the Grand Slam! (2026-09-01 to 2026-09-15)
+    // 4. From Opera 0068 with Love! (starts 2026-09-15, endsAt null)
+    // 5. Special Mission: Lore Pursuit (2026-09-15 to 2026-09-29)
+    expect(events).toHaveLength(5);
+    expect(events[0]?.title).toBe(
+      "Code: BOX - The Shadow Approaching Millennium",
+    );
+    expect(events[0]?.type).toBe("rerun");
+    expect(events[0]?.summary).toBe("Rerun");
+
+    // Spot-check upcoming event without end date
+    const permanent = events.find(
+      (e) => e.title === "From Opera 0068 with Love!",
+    );
+    expect(permanent).toBeDefined();
+    expect(permanent?.endsAt).toBeNull();
+    expect(permanent?.endPrecision).toBe("unknown");
+
+    // Fails loudly if #eventtable or its columns are missing
+    expect(
+      blueArchiveWikiParser.canParse(
+        html.replace(/id="eventtable"/g, 'id="othertable"'),
+      ),
+    ).toBe(false);
+    expect(
+      blueArchiveWikiParser.canParse(
+        html.replace(/GL Period/gi, "Global Schedule"),
+      ),
     ).toBe(false);
   });
 });
