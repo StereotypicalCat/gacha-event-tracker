@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { adoptNewLanes, adoptRenamed, defaults } from "../src/client/state/usePrefs.ts";
+import { adoptNewLanes, adoptRenamed, defaults, restorePrefsValue } from "../src/client/state/usePrefs.ts";
 import type { LaneId } from "../src/shared/custom.ts";
 
 /**
@@ -121,5 +121,79 @@ describe("defaults that a reader would notice losing", () => {
     // cannot carry an `undefined` that would override it.
     const stored = { region: "europe", detectDaily: false } as const;
     expect({ ...defaults(), ...stored }.showChores).toBe(true);
+  });
+});
+
+describe("restorePrefsValue", () => {
+  test("returns defaults when passed null or non-object", () => {
+    expect(restorePrefsValue(null)).toEqual(defaults());
+    expect(restorePrefsValue(undefined)).toEqual(defaults());
+    expect(restorePrefsValue("invalid")).toEqual(defaults());
+  });
+
+  test("restores full valid preferences from an export", () => {
+    const exported = {
+      region: "asia" as const,
+      hiddenGames: ["genshin", "hsr"],
+      knownGames: ["genshin", "hsr", "zzz"],
+      gameOrder: ["zzz", "genshin"],
+      focusGame: "zzz",
+      sort: "doing" as const,
+      view: "timeline" as const,
+      timelineDayWidth: 48,
+      timelineGroup: "ending" as const,
+      showUpcoming: true,
+      timelineSplitUpcoming: false,
+      detectDaily: true,
+      showChores: false,
+      showCompleted: false,
+      showIgnored: true,
+      theme: "light" as const,
+      regionConfirmed: true,
+      onboarded: true,
+    };
+    expect(restorePrefsValue(exported)).toEqual(exported);
+  });
+
+  test("falls back to defaults for missing fields from older exports", () => {
+    const older = {
+      region: "europe" as const,
+      hiddenGames: ["zzz"],
+      theme: "dark" as const,
+    };
+    const restored = restorePrefsValue(older);
+    expect(restored.region).toBe("europe");
+    expect(restored.hiddenGames).toEqual(["zzz"]);
+    expect(restored.theme).toBe("dark");
+    // missing fields use defaults
+    expect(restored.showChores).toBe(defaults().showChores);
+    expect(restored.timelineGroup).toBe(defaults().timelineGroup);
+    expect(restored.sort).toBe(defaults().sort);
+  });
+
+  test("adopts renamed fields like timelineUpcoming to showUpcoming", () => {
+    const legacy = {
+      timelineUpcoming: true,
+    };
+    const restored = restorePrefsValue(legacy);
+    expect(restored.showUpcoming).toBe(true);
+  });
+
+  test("sanitizes corrupt or invalid fields", () => {
+    const corrupt = {
+      region: "mars",
+      hiddenGames: "not-an-array",
+      gameOrder: 123,
+      timelineDayWidth: -99,
+      theme: "neon",
+      view: "grid",
+    };
+    const restored = restorePrefsValue(corrupt);
+    expect(restored.region).toBe(defaults().region);
+    expect(restored.hiddenGames).toEqual([]);
+    expect(restored.gameOrder).toBeUndefined();
+    expect(restored.timelineDayWidth).toBe(defaults().timelineDayWidth);
+    expect(restored.theme).toBe(defaults().theme);
+    expect(restored.view).toBe(defaults().view);
   });
 });

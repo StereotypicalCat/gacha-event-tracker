@@ -6,7 +6,7 @@ import type { SortMode } from "./sort.ts";
 import { KEYS, readJson, writeJson } from "./storage.ts";
 import type { TimelineGroup } from "./lanes.ts";
 import { DEFAULT_THEME_CHOICE, type ThemeChoice } from "./theme.ts";
-import { DEFAULT_DAY_WIDTH } from "./zoom.ts";
+import { DEFAULT_DAY_WIDTH, snapDayWidth } from "./zoom.ts";
 
 /**
  * Which of the two views the reader is looking at.
@@ -62,11 +62,11 @@ export interface Prefs {
    * `JSON.stringify` drops it on the way to storage.
    *
    * Not a key space and not a migration: one more field in the single `prefs`
-   * blob, like `timelineGroup`. It rides the export for free, though note that
-   * `importProgress` restores progress, dailies, ignores and the reader's own
-   * games — never prefs — so an imported file does not bring an order back.
-   * That asymmetry predates this field and applies to region, theme and view
-   * alike.
+   * blob, like `timelineGroup`. It rides the export for free. Standard
+   * progress import restores progress, dailies, ignores and the reader's own
+   * games — leaving local prefs intact — while "Import all" restores preferences
+   * alongside them, bringing game order, region, theme and active games back
+   * when migrating hosts.
    */
   gameOrder?: LaneId[] | undefined;
   /**
@@ -269,6 +269,95 @@ export function adoptRenamed(
   return { ...rest, showUpcoming: timelineUpcoming };
 }
 
+/**
+ * Takes incoming preferences (e.g. from an imported backup file) and restores a
+ * clean, type-safe Prefs object, falling back to defaults for any missing or
+ * invalid values.
+ */
+export function restorePrefsValue(incoming: unknown): Prefs {
+  const base = defaults();
+  if (typeof incoming !== "object" || incoming === null) {
+    return base;
+  }
+  const raw = adoptRenamed(incoming as Partial<Prefs> & { timelineUpcoming?: boolean });
+  const result: Prefs = {
+    ...base,
+    ...raw,
+  };
+
+  // Region
+  if (result.region !== "america" && result.region !== "europe" && result.region !== "asia") {
+    result.region = base.region;
+  }
+
+  // Games arrays
+  if (!Array.isArray(result.hiddenGames)) {
+    result.hiddenGames = base.hiddenGames;
+  } else {
+    result.hiddenGames = result.hiddenGames.filter((g): g is LaneId => typeof g === "string");
+  }
+
+  if (result.knownGames !== undefined) {
+    if (!Array.isArray(result.knownGames)) {
+      delete result.knownGames;
+    } else {
+      result.knownGames = result.knownGames.filter((g): g is LaneId => typeof g === "string");
+    }
+  }
+
+  if (result.gameOrder !== undefined) {
+    if (!Array.isArray(result.gameOrder)) {
+      result.gameOrder = undefined;
+    } else {
+      result.gameOrder = result.gameOrder.filter((g): g is LaneId => typeof g === "string");
+    }
+  }
+
+  // focusGame
+  if (result.focusGame !== null && typeof result.focusGame !== "string") {
+    result.focusGame = null;
+  }
+
+  // Sort
+  if (result.sort !== "ending" && result.sort !== "doing") {
+    result.sort = base.sort;
+  }
+
+  // View
+  if (result.view !== "soon" && result.view !== "timeline") {
+    result.view = base.view;
+  }
+
+  // Zoom
+  if (typeof result.timelineDayWidth === "number") {
+    result.timelineDayWidth = snapDayWidth(result.timelineDayWidth);
+  } else {
+    result.timelineDayWidth = base.timelineDayWidth;
+  }
+
+  // Timeline grouping
+  if (result.timelineGroup !== "game" && result.timelineGroup !== "ending") {
+    result.timelineGroup = base.timelineGroup;
+  }
+
+  // Theme
+  if (result.theme !== "dark" && result.theme !== "light" && result.theme !== "system") {
+    result.theme = base.theme;
+  }
+
+  // Booleans
+  result.showUpcoming = typeof result.showUpcoming === "boolean" ? result.showUpcoming : base.showUpcoming;
+  result.timelineSplitUpcoming = typeof result.timelineSplitUpcoming === "boolean" ? result.timelineSplitUpcoming : base.timelineSplitUpcoming;
+  result.detectDaily = typeof result.detectDaily === "boolean" ? result.detectDaily : base.detectDaily;
+  result.showChores = typeof result.showChores === "boolean" ? result.showChores : base.showChores;
+  result.showCompleted = typeof result.showCompleted === "boolean" ? result.showCompleted : base.showCompleted;
+  result.showIgnored = typeof result.showIgnored === "boolean" ? result.showIgnored : base.showIgnored;
+  result.regionConfirmed = typeof result.regionConfirmed === "boolean" ? result.regionConfirmed : base.regionConfirmed;
+  result.onboarded = typeof result.onboarded === "boolean" ? result.onboarded : base.onboarded;
+
+  return result;
+}
+
 export function usePrefs() {
   const [prefs, setPrefs] = useState<Prefs>(() => ({
     ...defaults(),
@@ -283,6 +372,10 @@ export function usePrefs() {
     setPrefs((prev) => ({ ...prev, ...patch }));
   }, []);
 
+  const restorePrefs = useCallback((incoming: unknown) => {
+    setPrefs(restorePrefsValue(incoming));
+  }, []);
+
   const toggleGame = useCallback((game: LaneId) => {
     setPrefs((prev) => ({
       ...prev,
@@ -292,5 +385,6 @@ export function usePrefs() {
     }));
   }, []);
 
-  return { prefs, update, toggleGame };
+  return { prefs, update, toggleGame, restorePrefs };
 }
+

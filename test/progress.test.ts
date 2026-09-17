@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { buildExportData, parseImportData } from "../src/client/state/export.ts";
+import { restorePrefsValue } from "../src/client/state/usePrefs.ts";
 import { mergeProgress } from "../src/client/state/useProgress.ts";
 import type { ProgressMap } from "../src/client/state/useProgress.ts";
 
@@ -70,3 +72,106 @@ describe("mergeProgress", () => {
     expect(Object.keys(mergeProgress(device, {})).sort()).toEqual(["a", "b"]);
   });
 });
+
+describe("buildExportData", () => {
+  const dummyOwn = { games: {}, events: {} };
+
+  test("progress export omits prefs", () => {
+    const data = buildExportData({ a: { status: "done" } }, {}, {}, dummyOwn);
+    expect(data.format).toBe("gacha-tracker-export");
+    expect(data.version).toBe(1);
+    expect(data.prefs).toBeUndefined();
+    expect(data.progress).toEqual({ a: { status: "done" } });
+  });
+
+  test("export all includes prefs", () => {
+    const prefs = { region: "asia" } as any;
+    const data = buildExportData({ a: { status: "done" } }, {}, {}, dummyOwn, prefs);
+    expect(data.format).toBe("gacha-tracker-export");
+    expect(data.version).toBe(1);
+    expect(data.prefs).toEqual(prefs);
+  });
+});
+
+describe("parseImportData", () => {
+  test("returns null for non-objects or invalid format", () => {
+    expect(parseImportData(null)).toBeNull();
+    expect(parseImportData("string")).toBeNull();
+    expect(parseImportData({ format: "unknown" })).toBeNull();
+  });
+
+  test("parses export with progress, daily, ignored, and prefs", () => {
+    const file = {
+      format: "gacha-tracker-export",
+      version: 1,
+      progress: { "event:1": { status: "done" as const, at: "2026-08-10T12:00:00.000Z" } },
+      daily: { "dailies:genshin": { days: ["2026-08-10"], at: "2026-08-10T12:00:00.000Z" } },
+      ignored: { "event:2": { at: "2026-08-10T12:00:00.000Z" } },
+      customGames: { "mygame:test": { id: "mygame:test" } },
+      customEvents: { "myevent:test": { id: "myevent:test" } },
+      prefs: { region: "europe", hiddenGames: ["zzz"] },
+    };
+    const parsed = parseImportData(file);
+    expect(parsed).not.toBeNull();
+    expect(parsed?.progress).toEqual(file.progress);
+    expect(parsed?.daily).toEqual(file.daily as any);
+    expect(parsed?.ignored).toEqual(file.ignored);
+    expect(parsed?.customGames).toEqual(file.customGames);
+    expect(parsed?.customEvents).toEqual(file.customEvents);
+    expect(parsed?.prefs).toEqual(file.prefs);
+  });
+
+  test("maps legacy completions to progress with status done", () => {
+    const file = {
+      format: "gacha-tracker-export",
+      version: 1,
+      completions: { "legacy:1": { at: "2026-08-10T12:00:00.000Z" } },
+    };
+    const parsed = parseImportData(file);
+    expect(parsed?.progress).toEqual({
+      "legacy:1": { at: "2026-08-10T12:00:00.000Z", status: "done" as const },
+    });
+    expect(parsed?.prefs).toBeNull();
+  });
+
+  test("full migration round-trip preserves active games, order, and region", () => {
+    const originalPrefs = {
+      region: "asia" as const,
+      hiddenGames: ["genshin"],
+      gameOrder: ["zzz", "hsr", "genshin"],
+      theme: "light" as const,
+      sort: "doing" as const,
+    };
+    const progress = {
+      "event:1": { status: "doing" as const, at: "2026-08-10T12:00:00.000Z" },
+    };
+    const own = {
+      games: { "mygame:custom": { id: "mygame:custom", name: "Custom", hue: "#ff0000", at: "..." } },
+      events: {},
+    };
+
+    // 1. Export all creates payload with prefs
+    const exportedAll = buildExportData(progress, {}, {}, own, originalPrefs as any);
+    const jsonString = JSON.stringify(exportedAll);
+
+    // 2. Import parses the file
+    const imported = parseImportData(JSON.parse(jsonString));
+    expect(imported).not.toBeNull();
+    expect(imported?.prefs).not.toBeNull();
+
+    // 3. restorePrefsValue restores the exact preferences
+    const restored = restorePrefsValue(imported!.prefs);
+    expect(restored.region).toBe("asia");
+    expect(restored.hiddenGames).toEqual(["genshin"]);
+    expect(restored.gameOrder).toEqual(["zzz", "hsr", "genshin"]);
+    expect(restored.theme).toBe("light");
+    expect(restored.sort).toBe("doing");
+
+    // 4. In contrast, standard progress export has null prefs on import
+    const exportedProgressOnly = buildExportData(progress, {}, {}, own);
+    const importedProgressOnly = parseImportData(JSON.parse(JSON.stringify(exportedProgressOnly)));
+    expect(importedProgressOnly?.prefs).toBeNull();
+  });
+});
+
+
