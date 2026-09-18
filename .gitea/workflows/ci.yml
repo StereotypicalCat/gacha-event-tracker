@@ -145,8 +145,16 @@ jobs:
       # needs: on Gitea the registry does not accept the Actions token at all,
       # so `packages: write` on it authorises nothing. See the login step.
       packages: write
-    steps:
       - uses: https://github.com/actions/checkout@v4
+
+      # Restore refresh bookkeeping before docker build so snapshots/*.state.json
+      # is copied into the build context and lastConfirmedAt is preserved.
+      - name: Restore refresh bookkeeping
+        uses: https://github.com/actions/cache/restore@v4
+        with:
+          path: snapshots/*.state.json
+          key: refresh-state-
+          restore-keys: refresh-state-
 
       - uses: https://github.com/docker/setup-buildx-action@v3
 
