@@ -165,6 +165,8 @@ describe("the app's links into them", () => {
             game: "genshin",
             url: "https://game8.co/games/Genshin-Impact/archives/301601",
             lastSuccessAt: new Date(NOW - 3 * 60 * 60 * 1000).toISOString(),
+            lastConfirmedAt: null,
+            contentChangedAt: new Date(NOW - 3 * 60 * 60 * 1000).toISOString(),
             eventCount: 9,
 
             parsedCount: 9,

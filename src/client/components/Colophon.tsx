@@ -1,6 +1,6 @@
 import { useGameMeta } from "../state/gameMeta.tsx";
 import type { LaneId } from "../../shared/custom.ts";
-import { freshness, type SourceHealth } from "../../shared/feed.ts";
+import { freshness, STALE_AFTER_MS, type SourceHealth, type StaleGame } from "../../shared/feed.ts";
 import { formatAbsolute, formatRemaining } from "../../shared/time.ts";
 
 export const REPO_URL = "https://github.com/StereotypicalCat/gacha-event-tracker";
@@ -122,6 +122,29 @@ function siteFor(url: string): { name: string; url: string } {
   } catch {
     return { name: url, url };
   }
+}
+
+function formatStaleAge(s: StaleGame, now: number): string {
+  if (s.lastSuccessAt === null && s.contentChangedAt === null) {
+    return " (never)";
+  }
+
+  const contentDate = s.contentChangedAt ?? s.lastSuccessAt;
+  const contentAgo = contentDate
+    ? `${formatRemaining(now - Date.parse(contentDate))} ago`
+    : null;
+
+  // Differentiate blame when crawler confirmed the source recently (<= STALE_AFTER_MS)
+  // but the site content has not changed in over 2 days.
+  if (s.lastConfirmedAt !== null) {
+    const confirmedAge = now - Date.parse(s.lastConfirmedAt);
+    if (confirmedAge <= STALE_AFTER_MS) {
+      const confirmedAgo = `${formatRemaining(confirmedAge)} ago`;
+      return ` (data pulled ${confirmedAgo}, site updated ${contentAgo ?? "unknown"})`;
+    }
+  }
+
+  return contentAgo ? ` (${contentAgo})` : " (never)";
 }
 
 /**
@@ -253,9 +276,7 @@ export function Colophon({
                     <span key={s.game}>
                       {i > 0 && (i === shown.length - 1 && shownStale.length <= STALE_NAMES ? " and " : ", ")}
                       {gameMeta(s.game).name}
-                      {s.lastSuccessAt === null
-                        ? " (never)"
-                        : ` (${formatRemaining(now - Date.parse(s.lastSuccessAt))} ago)`}
+                      {formatStaleAge(s, now)}
                     </span>
                   ))}
                   {shownStale.length > STALE_NAMES &&
@@ -266,6 +287,57 @@ export function Colophon({
                 </>
               )}
             </p>
+          )}
+
+          {shownStale.some((s) => s.sources && s.sources.length > 0) && (
+            <details className="mt-2 text-faint">
+              <summary className="cursor-pointer hover:text-muted focus-visible:outline-none">
+                Source breakdown
+              </summary>
+              <ul className="mt-1.5 space-y-1 border-l border-hairline pl-3">
+                {shownStale.flatMap((g) =>
+                  g.sources.map((src) => {
+                    const site = siteFor(src.url);
+                    const confirmed = src.lastConfirmedAt
+                      ? `${formatRemaining(now - Date.parse(src.lastConfirmedAt))} ago`
+                      : "never";
+                    const updated = src.contentChangedAt
+                      ? `${formatRemaining(now - Date.parse(src.contentChangedAt))} ago`
+                      : src.lastSuccessAt
+                        ? `${formatRemaining(now - Date.parse(src.lastSuccessAt))} ago`
+                        : "never";
+                    const isPullRecent =
+                      src.lastConfirmedAt !== null &&
+                      now - Date.parse(src.lastConfirmedAt) <= STALE_AFTER_MS;
+                    const isContentStale =
+                      src.contentChangedAt === null ||
+                      now - Date.parse(src.contentChangedAt) > STALE_AFTER_MS;
+                    const diagnosis =
+                      isPullRecent && isContentStale
+                        ? "site has no new updates"
+                        : !isPullRecent
+                          ? "pull overdue"
+                          : "up to date";
+
+                    return (
+                      <li key={src.sourceId}>
+                        <span className="text-muted">{gameMeta(g.game).name}</span>
+                        {" — "}
+                        <a
+                          href={src.url}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className={LINK}
+                        >
+                          {site.name}
+                        </a>
+                        {`: pulled ${confirmed}, site updated ${updated} (${diagnosis})`}
+                      </li>
+                    );
+                  }),
+                )}
+              </ul>
+            </details>
           )}
         </div>
 

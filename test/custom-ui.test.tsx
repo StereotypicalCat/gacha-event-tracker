@@ -237,6 +237,8 @@ describe("Colophon freshness notice (PRD F7)", () => {
     game: "genshin" as const,
     url: "https://game8.co/games/Genshin-Impact/archives/301601",
     lastSuccessAt: new Date(NOW - 3 * HOUR).toISOString(),
+    lastConfirmedAt: null,
+    contentChangedAt: null,
     eventCount: 9,
 
     parsedCount: 9,
@@ -275,6 +277,31 @@ describe("Colophon freshness notice (PRD F7)", () => {
     expect(html).toContain("3d 8h ago");
     // The headline still reports the freshest confirmation.
     expect(html).toContain("3h 0m ago");
+  });
+
+  test("differentiates blame when data was pulled recently but site has not changed", () => {
+    const html = renderToStaticMarkup(
+      <Colophon
+        sources={[
+          fresh,
+          {
+            ...fresh,
+            sourceId: "endfield-wikigg-events",
+            game: "endfield",
+            url: "https://endfield.wiki.gg/wiki/Event",
+            lastSuccessAt: new Date(NOW - 57 * HOUR).toISOString(),
+            lastConfirmedAt: new Date(NOW - 11 * HOUR).toISOString(),
+            contentChangedAt: new Date(NOW - 57 * HOUR).toISOString(),
+          },
+        ]}
+        now={NOW}
+      />,
+    );
+    expect(html).toContain("Arknights: Endfield");
+    expect(html).toContain("data pulled 11h 0m ago, site updated 2d 9h ago");
+    expect(html).toContain("Source breakdown");
+    expect(html).toContain("wiki.gg");
+    expect(html).toContain("site has no new updates");
   });
 
   test("summarises instead of listing when every game is behind", () => {

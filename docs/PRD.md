@@ -462,6 +462,11 @@ counted, in the same words the empty list uses — *the games you have switched 
 column beside it is owed to every source we read and is not scoped; nor is the "last refreshed" line,
 which reports the feed and feeds the bug form.
 
+**The staleness notice differentiates crawler checks from site updates.** If our crawler successfully
+checked the wiki recently (e.g. confirming HTTP 304) but the site's content has not changed in over
+two days, the notice explicitly distinguishes the two: "data pulled X ago, site updated Y ago", with
+an expandable breakdown detailing each source's check and content update times.
+
 **F15 — Light mode, with dark still the default.**
 The app is a lit instrument panel and that is what it should be on first sight, but it is also read
 on a train in daylight and by people who find a dark UI harder rather than moodier. A public fork
