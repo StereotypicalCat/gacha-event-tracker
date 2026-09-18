@@ -1085,6 +1085,20 @@ describe("the workflows that drive the refresh", () => {
     expect(refresh.slice(health)).toContain("exit 1");
   });
 
+  test("refresh.yml publishes even when no snapshot bytes changed", async () => {
+    // A 304 updates lastConfirmedAt in the bookkeeping cache without touching
+    // git-tracked files. If publishing is gated on `changed == 'true'`, a cycle
+    // where no wiki moved leaves the deployed feed unbuilt — and two days of
+    // quiet wikis turns the live calendar stale despite green runs.
+    const refresh = await read("refresh.yml");
+    const publish = refresh.slice(
+      refresh.indexOf("Publish the refreshed feed"),
+      refresh.indexOf("Report source health"),
+    );
+    expect(publish).not.toContain("steps.diff.outputs.changed");
+    expect(publish).toContain("inputs.dry_run != true");
+  });
+
   test("ci.yml fails a source that parsed nothing, not one whose events ended", async () => {
     // The total-event floor is blind to one source going to zero while nine
     // others hold the number up, which shows the reader an empty calendar for

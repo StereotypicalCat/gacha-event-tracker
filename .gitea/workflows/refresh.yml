@@ -183,12 +183,13 @@ jobs:
       # would have made. Note the difference from GitHub that makes this step
       # look redundant: Gitea does *not* suppress workflow triggers on a push
       # made with the Actions token, so the commit above will usually have
-      # started ci.yml already. Dispatching anyway is deliberate — it is the only
-      # thing that guarantees publication if that behaviour is ever configured
-      # off, and a duplicate run is harmless because ci.yml's concurrency group
-      # is per-ref with cancel-in-progress, so the second supersedes the first.
+      # Dispatching anyway is deliberate — it guarantees publication even when
+      # every source returned 304 (so no git commit was made, but the cache holds
+      # updated confirmation timestamps), and protects against push-triggered
+      # workflow runs ever being disabled. A duplicate run is harmless because
+      # ci.yml's concurrency group is per-ref with cancel-in-progress.
       - name: Publish the refreshed feed
-        if: steps.diff.outputs.changed == 'true' && inputs.dry_run != true
+        if: inputs.dry_run != true
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
           API: ${{ github.server_url }}/api/v1
