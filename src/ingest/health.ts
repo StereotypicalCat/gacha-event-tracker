@@ -86,7 +86,12 @@ export function sourceHealth(
     // When the bytes were last confirmed live; a fixture's capture date when
     // this source has never been refreshed.
     lastSuccessAt: at,
-    lastConfirmedAt: timestamps?.lastConfirmedAt ?? null,
+    lastConfirmedAt:
+      timestamps?.lastConfirmedAt != null &&
+      (timestamps.contentChangedAt ?? at) != null &&
+      Date.parse(timestamps.lastConfirmedAt) < Date.parse(timestamps.contentChangedAt ?? at!)
+        ? (timestamps.contentChangedAt ?? at)
+        : (timestamps?.lastConfirmedAt ?? null),
     contentChangedAt: timestamps?.contentChangedAt ?? at,
     eventCount,
     parsedCount,

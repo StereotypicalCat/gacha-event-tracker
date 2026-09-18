@@ -167,11 +167,21 @@ export function freshness(
       let lastConfirmedAt: string | null = null;
       let hasConfirmed = false;
       for (const s of sourcesInfo) {
+        const pullAt =
+          s.lastConfirmedAt !== null &&
+          s.contentChangedAt !== null &&
+          Date.parse(s.lastConfirmedAt) >= Date.parse(s.contentChangedAt)
+            ? s.lastConfirmedAt
+            : (s.lastConfirmedAt ??
+              (s.contentChangedAt && now - Date.parse(s.contentChangedAt) <= STALE_AFTER_MS
+                ? s.contentChangedAt
+                : null));
+
         if (!hasConfirmed) {
-          lastConfirmedAt = s.lastConfirmedAt;
+          lastConfirmedAt = pullAt;
           hasConfirmed = true;
-        } else if (lastConfirmedAt !== null && (s.lastConfirmedAt === null || s.lastConfirmedAt < lastConfirmedAt)) {
-          lastConfirmedAt = s.lastConfirmedAt;
+        } else if (lastConfirmedAt !== null && (pullAt === null || pullAt < lastConfirmedAt)) {
+          lastConfirmedAt = pullAt;
         }
       }
 

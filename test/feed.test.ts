@@ -202,6 +202,31 @@ describe("freshness", () => {
     expect(staleEndfield.sources[0]?.contentChangedAt).toBe(OLD_SITE);
   });
 
+  test("differentiates blame across multiple sources when one updated recently and another confirmed 304", () => {
+    const PULL_TIME = new Date(NOW - 11 * HOUR).toISOString();
+    const OLD_SITE = new Date(NOW - 60 * HOUR).toISOString();
+    const RECENT_CONTENT = new Date(NOW - 1 * HOUR).toISOString();
+    const result = freshness(
+      [
+        {
+          ...source("endfield", OLD_SITE, "endfield-wikigg-events"),
+          lastConfirmedAt: PULL_TIME,
+          contentChangedAt: OLD_SITE,
+        },
+        {
+          ...source("endfield", RECENT_CONTENT, "endfield-game8-events"),
+          lastConfirmedAt: null,
+          contentChangedAt: RECENT_CONTENT,
+        },
+      ],
+      NOW,
+    );
+    expect(result.stale).toHaveLength(1);
+    const staleEndfield = result.stale[0]!;
+    expect(staleEndfield.lastConfirmedAt).toBe(PULL_TIME);
+    expect(staleEndfield.contentChangedAt).toBe(OLD_SITE);
+  });
+
   test("an empty feed reports nothing rather than throwing", () => {
     expect(freshness([], NOW)).toEqual({ refreshedAt: null, stale: [] });
   });
@@ -393,5 +418,15 @@ describe("recording a source's health at build time", () => {
     expect(health.parsedCount).toBeNull();
     expect(health.statesNoEvents).toBe(false);
     expect(brokenSources([health])).toEqual([]);
+  });
+
+  test("lastConfirmedAt is never older than contentChangedAt", () => {
+    const OLD_CONFIRM = "2026-09-12T00:00:00.000Z";
+    const NEW_CONTENT = "2026-09-18T00:00:00.000Z";
+    const health = sourceHealth(adapter(), FULL, NEW_CONTENT, 1, {
+      lastConfirmedAt: OLD_CONFIRM,
+      contentChangedAt: NEW_CONTENT,
+    });
+    expect(health.lastConfirmedAt).toBe(NEW_CONTENT);
   });
 });

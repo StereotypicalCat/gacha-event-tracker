@@ -47,12 +47,20 @@ async function latestFixture(adapterId: string, game: GameId) {
 async function documentFor(adapterId: string, game: GameId) {
   const cached = await snapshots.read(adapterId);
   if (cached !== null) {
+    const rawConfirmed = cached.state.lastConfirmedAt;
+    const contentChangedAt = cached.meta.contentChangedAt;
+    const lastConfirmedAt =
+      rawConfirmed !== null &&
+      contentChangedAt !== null &&
+      Date.parse(rawConfirmed) >= Date.parse(contentChangedAt)
+        ? rawConfirmed
+        : (contentChangedAt ?? rawConfirmed);
     return {
       file: snapshots.bodyPath(adapterId),
       html: cached.html,
       at: freshnessAt(cached),
-      lastConfirmedAt: cached.state.lastConfirmedAt,
-      contentChangedAt: cached.meta.contentChangedAt,
+      lastConfirmedAt,
+      contentChangedAt,
     };
   }
   const { file, html } = await latestFixture(adapterId, game);
