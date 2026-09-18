@@ -145,6 +145,7 @@ jobs:
       # needs: on Gitea the registry does not accept the Actions token at all,
       # so `packages: write` on it authorises nothing. See the login step.
       packages: write
+    steps:
       - uses: https://github.com/actions/checkout@v4
 
       # Restore refresh bookkeeping before docker build so snapshots/*.state.json
