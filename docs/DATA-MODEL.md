@@ -635,3 +635,8 @@ takes the offline promise down with it. A default must also be the *strict* read
 `parsedCount` defaults to `null` — an older feed never recorded the figure, which is an absence of
 information and not evidence of health — and `statesNoEvents` to `false`, because a feed built
 before the field existed never asked the page and cannot be read as having got an answer.
+
+Two timestamp fields distinguish crawler activity from site updates: `lastConfirmedAt` records when
+the crawler last successfully contacted and verified the source (HTTP 200 or 304 Not Modified), and
+`contentChangedAt` records when the served bytes last changed. Both default to `null` so feeds built
+before their introduction continue to validate.

@@ -27,12 +27,16 @@ function source(
   game: GameId,
   lastSuccessAt: string | null,
   sourceId = `${game}-src`,
+  lastConfirmedAt: string | null = null,
+  contentChangedAt: string | null = lastSuccessAt,
 ): SourceHealth {
   return {
     sourceId,
     game,
     url: "https://example.test/events",
     lastSuccessAt,
+    lastConfirmedAt,
+    contentChangedAt,
     eventCount: 3,
 
     parsedCount: 3,
@@ -67,7 +71,28 @@ describe("freshness", () => {
     );
     expect(result.refreshedAt).toBe("2026-08-17T11:00:00.000Z");
     expect(result.stale).toEqual([
-      { game: "endfield", lastSuccessAt: "2026-08-10T11:00:00.000Z" },
+      {
+        game: "endfield",
+        lastSuccessAt: "2026-08-10T11:00:00.000Z",
+        lastConfirmedAt: null,
+        contentChangedAt: "2026-08-10T11:00:00.000Z",
+        sources: [
+          {
+            sourceId: "endfield-game8-events",
+            url: "https://example.test/events",
+            lastSuccessAt: "2026-08-10T11:00:00.000Z",
+            lastConfirmedAt: null,
+            contentChangedAt: "2026-08-10T11:00:00.000Z",
+          },
+          {
+            sourceId: "endfield-wikigg-events",
+            url: "https://example.test/events",
+            lastSuccessAt: "2026-08-17T11:00:00.000Z",
+            lastConfirmedAt: null,
+            contentChangedAt: "2026-08-17T11:00:00.000Z",
+          },
+        ],
+      },
     ]);
   });
 
@@ -79,7 +104,30 @@ describe("freshness", () => {
       ],
       NOW,
     );
-    expect(result.stale).toEqual([{ game: "endfield", lastSuccessAt: null }]);
+    expect(result.stale).toEqual([
+      {
+        game: "endfield",
+        lastSuccessAt: null,
+        lastConfirmedAt: null,
+        contentChangedAt: null,
+        sources: [
+          {
+            sourceId: "endfield-game8-events",
+            url: "https://example.test/events",
+            lastSuccessAt: null,
+            lastConfirmedAt: null,
+            contentChangedAt: null,
+          },
+          {
+            sourceId: "endfield-wikigg-events",
+            url: "https://example.test/events",
+            lastSuccessAt: "2026-08-17T11:00:00.000Z",
+            lastConfirmedAt: null,
+            contentChangedAt: "2026-08-17T11:00:00.000Z",
+          },
+        ],
+      },
+    ]);
   });
 
   test("order of sources does not change the answer", () => {
@@ -114,7 +162,44 @@ describe("freshness", () => {
     // footer must say something honest rather than format a null.
     const result = freshness([source("genshin", null)], NOW);
     expect(result.refreshedAt).toBeNull();
-    expect(result.stale).toEqual([{ game: "genshin", lastSuccessAt: null }]);
+    expect(result.stale).toEqual([
+      {
+        game: "genshin",
+        lastSuccessAt: null,
+        lastConfirmedAt: null,
+        contentChangedAt: null,
+        sources: [
+          {
+            sourceId: "genshin-src",
+            url: "https://example.test/events",
+            lastSuccessAt: null,
+            lastConfirmedAt: null,
+            contentChangedAt: null,
+          },
+        ],
+      },
+    ]);
+  });
+
+  test("differentiates blame when data was pulled recently but site has not changed", () => {
+    const PULL_TIME = new Date(NOW - 3 * HOUR).toISOString();
+    const OLD_SITE = new Date(NOW - 60 * HOUR).toISOString();
+    const result = freshness(
+      [
+        {
+          ...source("endfield", OLD_SITE, "endfield-wikigg-events"),
+          lastConfirmedAt: PULL_TIME,
+          contentChangedAt: OLD_SITE,
+        },
+      ],
+      NOW,
+    );
+    expect(result.stale).toHaveLength(1);
+    const staleEndfield = result.stale[0]!;
+    expect(staleEndfield.lastConfirmedAt).toBe(PULL_TIME);
+    expect(staleEndfield.contentChangedAt).toBe(OLD_SITE);
+    expect(staleEndfield.sources[0]?.lastConfirmedAt).toBe(PULL_TIME);
+    expect(staleEndfield.sources[0]?.contentChangedAt).toBe(OLD_SITE);
   });
 
   test("an empty feed reports nothing rather than throwing", () => {
@@ -133,6 +218,8 @@ describe("telling a broken source from a stale one", () => {
     game: "nikki" as GameId,
     url: "https://example.test/nikki",
     lastSuccessAt: "2026-08-19T00:00:00.000Z",
+    lastConfirmedAt: null,
+    contentChangedAt: "2026-08-19T00:00:00.000Z",
     eventCount: 0,
     parsedCount: 7,
     statesNoEvents: false,

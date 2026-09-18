@@ -51,10 +51,19 @@ async function documentFor(adapterId: string, game: GameId) {
       file: snapshots.bodyPath(adapterId),
       html: cached.html,
       at: freshnessAt(cached),
+      lastConfirmedAt: cached.state.lastConfirmedAt,
+      contentChangedAt: cached.meta.contentChangedAt,
     };
   }
   const { file, html } = await latestFixture(adapterId, game);
-  return { file, html, at: fixtureDate(file) };
+  const date = fixtureDate(file);
+  return {
+    file,
+    html,
+    at: date,
+    lastConfirmedAt: null,
+    contentChangedAt: date,
+  };
 }
 
 const now = new Date().toISOString();
@@ -62,7 +71,10 @@ const byGame = new Map<GameId, Array<{ priority: number; events: GachaEvent[] }>
 const sources: SourceHealth[] = [];
 
 for (const adapter of ADAPTERS) {
-  const { file, html, at } = await documentFor(adapter.id, adapter.game);
+  const { file, html, at, lastConfirmedAt, contentChangedAt } = await documentFor(
+    adapter.id,
+    adapter.game,
+  );
   const events = adapter.parse(html, {
     now,
     sourceUrl: adapter.url,
@@ -72,7 +84,10 @@ for (const adapter of ADAPTERS) {
 
   // Which of the three empties this is, decided in a module a test can reach
   // rather than here — see `src/ingest/health.ts` for why that matters.
-  const health = sourceHealth(adapter, html, at, events.length);
+  const health = sourceHealth(adapter, html, at, events.length, {
+    lastConfirmedAt,
+    contentChangedAt,
+  });
   const { parsedCount } = health;
 
   const groups = byGame.get(adapter.game) ?? [];

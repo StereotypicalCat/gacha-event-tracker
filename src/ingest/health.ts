@@ -44,6 +44,10 @@ export function sourceHealth(
   html: string,
   at: string | null,
   eventCount: number,
+  timestamps?: {
+    lastConfirmedAt?: string | null;
+    contentChangedAt?: string | null;
+  },
 ): SourceHealth {
   // Parsed a second time as of the document's own capture date, when nothing in
   // it had expired yet. That figure is what separates "this parser has stopped
@@ -82,6 +86,8 @@ export function sourceHealth(
     // When the bytes were last confirmed live; a fixture's capture date when
     // this source has never been refreshed.
     lastSuccessAt: at,
+    lastConfirmedAt: timestamps?.lastConfirmedAt ?? null,
+    contentChangedAt: timestamps?.contentChangedAt ?? at,
     eventCount,
     parsedCount,
     statesNoEvents,

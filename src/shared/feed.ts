@@ -15,6 +15,16 @@ export const SourceHealth = z.object({
   game: GameId,
   url: z.string().url(),
   lastSuccessAt: z.string().datetime().nullable(),
+  /**
+   * When the crawler last successfully contacted and confirmed this source
+   * (HTTP 200 or 304 Not Modified). Null when never checked (e.g. clean checkout
+   * using fixtures, or older feed).
+   */
+  lastConfirmedAt: z.string().datetime().nullable().default(null),
+  /**
+   * When the served bytes last changed.
+   */
+  contentChangedAt: z.string().datetime().nullable().default(null),
   /** Events this source contributed to the feed — after expired ones are dropped. */
   eventCount: z.number().int().nonnegative(),
   /**
@@ -69,6 +79,22 @@ export type EventFeed = z.infer<typeof EventFeed>;
 /** A game's data is stale past this age (PRD F7). */
 export const STALE_AFTER_MS = 48 * 60 * 60 * 1000;
 
+export interface StaleSourceInfo {
+  sourceId: string;
+  url: string;
+  lastSuccessAt: string | null;
+  lastConfirmedAt: string | null;
+  contentChangedAt: string | null;
+}
+
+export interface StaleGame {
+  game: GameId;
+  lastSuccessAt: string | null;
+  lastConfirmedAt: string | null;
+  contentChangedAt: string | null;
+  sources: StaleSourceInfo[];
+}
+
 export interface Freshness {
   /**
    * When any source last had its bytes confirmed — the newest `lastSuccessAt`.
@@ -84,7 +110,7 @@ export interface Freshness {
    */
   refreshedAt: string | null;
   /** Per game, oldest first: what has not refreshed inside `STALE_AFTER_MS`. */
-  stale: Array<{ game: GameId; lastSuccessAt: string | null }>;
+  stale: StaleGame[];
 }
 
 /**
@@ -101,6 +127,7 @@ export function freshness(
   now: number,
 ): Freshness {
   const oldestPerGame = new Map<GameId, string | null>();
+  const sourcesByGame = new Map<GameId, SourceHealth[]>();
   let refreshedAt: string | null = null;
 
   for (const source of sources) {
@@ -117,11 +144,56 @@ export function freshness(
     if (known === undefined || (known !== null && (at === null || at < known))) {
       oldestPerGame.set(source.game, at);
     }
+
+    const list = sourcesByGame.get(source.game) ?? [];
+    list.push(source);
+    sourcesByGame.set(source.game, list);
   }
 
-  const stale = [...oldestPerGame.entries()]
+  const stale: StaleGame[] = [...oldestPerGame.entries()]
     .filter(([, at]) => at === null || now - Date.parse(at) > STALE_AFTER_MS)
-    .map(([game, lastSuccessAt]) => ({ game, lastSuccessAt }))
+    .map(([game, lastSuccessAt]) => {
+      const gameSources = sourcesByGame.get(game) ?? [];
+      const sourcesInfo: StaleSourceInfo[] = gameSources
+        .map((s) => ({
+          sourceId: s.sourceId,
+          url: s.url,
+          lastSuccessAt: s.lastSuccessAt,
+          lastConfirmedAt: s.lastConfirmedAt ?? null,
+          contentChangedAt: s.contentChangedAt ?? s.lastSuccessAt,
+        }))
+        .sort((a, b) => a.sourceId.localeCompare(b.sourceId));
+
+      let lastConfirmedAt: string | null = null;
+      let hasConfirmed = false;
+      for (const s of sourcesInfo) {
+        if (!hasConfirmed) {
+          lastConfirmedAt = s.lastConfirmedAt;
+          hasConfirmed = true;
+        } else if (lastConfirmedAt !== null && (s.lastConfirmedAt === null || s.lastConfirmedAt < lastConfirmedAt)) {
+          lastConfirmedAt = s.lastConfirmedAt;
+        }
+      }
+
+      let contentChangedAt: string | null = null;
+      let hasContent = false;
+      for (const s of sourcesInfo) {
+        if (!hasContent) {
+          contentChangedAt = s.contentChangedAt;
+          hasContent = true;
+        } else if (contentChangedAt !== null && (s.contentChangedAt === null || s.contentChangedAt < contentChangedAt)) {
+          contentChangedAt = s.contentChangedAt;
+        }
+      }
+
+      return {
+        game,
+        lastSuccessAt,
+        lastConfirmedAt,
+        contentChangedAt,
+        sources: sourcesInfo,
+      };
+    })
     .sort((a, b) => (a.lastSuccessAt ?? "").localeCompare(b.lastSuccessAt ?? ""));
 
   return { refreshedAt, stale };
