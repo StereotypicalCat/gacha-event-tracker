@@ -385,16 +385,28 @@ describe("the six-hour floor", () => {
     expect(state.lastConfirmedAt).toBe(T1);
   });
 
-  test("check bookkeeping lives outside the committed metadata", async () => {
+  test("failed check bookkeeping lives in state without modifying meta", async () => {
     await save("<html>one</html>", T0);
     const before = await Bun.file(store.metaPath("genshin-game8-events")).text();
+    await store.recordCheck("genshin-game8-events", {
+      at: T1,
+      status: 503,
+      ok: false,
+    });
+    const after = await Bun.file(store.metaPath("genshin-game8-events")).text();
+    expect(after).toBe(before);
+  });
+
+  test("successful confirmation updates lastConfirmedAt in metadata", async () => {
+    await save("<html>one</html>", T0);
     await store.recordCheck("genshin-game8-events", {
       at: T1,
       status: 304,
       ok: true,
     });
-    const after = await Bun.file(store.metaPath("genshin-game8-events")).text();
-    expect(after).toBe(before);
+    const meta = await store.readMeta("genshin-game8-events");
+    expect(meta?.lastConfirmedAt).toBe(T1);
+    expect(meta?.contentChangedAt).toBe(T0);
   });
 });
 

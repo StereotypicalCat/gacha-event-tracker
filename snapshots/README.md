@@ -4,8 +4,8 @@ Raw pages, exactly as fetched. `scripts/refresh-sources.ts` writes them; nothing
 
 ```
 <source-id>.html        the body verbatim — tracked
-<source-id>.meta.json   hash, size, charset, ETag, Last-Modified, when the bytes last changed — tracked
-<source-id>.state.json  when we last checked, and failure streak — gitignored
+<source-id>.meta.json   hash, size, charset, ETag, Last-Modified, contentChangedAt, lastConfirmedAt — tracked
+<source-id>.state.json  transient run bookkeeping: last attempt and failure streak — gitignored
 ```
 
 "Verbatim" means the bytes as served, not text we re-encoded. `charset` in the metadata records
@@ -29,14 +29,12 @@ Three reasons this is committed rather than cached:
 - **The build stays offline.** `bun run build:feed` parses whichever of these exists and falls back
   to `fixtures/` otherwise, so a clean checkout and the container build work with no network.
 
-The `.state.json` files are the exception: they change every cycle whether or not a page did, and
-committing them would mean a commit per run saying nothing happened. CI keeps them in the actions
-cache instead: `refresh.yml` saves that cache, and `ci.yml` restores it read-only before building
-the feed. Both halves matter — `lastConfirmedAt` lives only there, and without the restore the feed
-falls back to `contentChangedAt` and the UI calls every source stale two days after its bytes last
-moved.
+The `.state.json` files track transient check attempts and failure streaks. When a source is
+confirmed (200 or 304), `lastConfirmedAt` is recorded in `<source-id>.meta.json` so downstream builds
+(including GitHub Pages, which deploys from git without access to the Gitea Actions cache) know the
+exact time the source was confirmed current.
 
-The metadata is rewritten on an unchanged page in one case: the server rotating an `ETag` or
+The metadata is also rewritten on an unchanged page when the server rotates an `ETag` or
 `Last-Modified` while serving the same bytes. Keeping the old validator would mean sending a stale
 `If-None-Match` forever and being served the whole page every cycle, so that diff is worth the
 commit — `contentChangedAt` and the body stay put, so it is still visibly not a content change.

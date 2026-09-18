@@ -173,6 +173,7 @@ describe("a normal cycle", () => {
     const snapshot = await store.read("genshin-game8-events");
     expect(snapshot?.html).toBe("<html><event></event></html>");
     expect(snapshot?.meta.contentChangedAt).toBe("2026-08-01T00:00:00.000Z");
+    expect(snapshot?.meta.lastConfirmedAt).toBe(NOW.toISOString());
     expect(snapshot?.state.lastConfirmedAt).toBe(NOW.toISOString());
   });
 

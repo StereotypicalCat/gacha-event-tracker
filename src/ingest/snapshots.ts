@@ -32,6 +32,8 @@ export interface SnapshotMeta {
   lastModified: string | null;
   /** ISO timestamp of the fetch that last produced *different* bytes. */
   contentChangedAt: string;
+  /** ISO timestamp of the last fetch that confirmed the body is still current. */
+  lastConfirmedAt?: string | null;
   /** Events the adapter yielded from this body, for drop detection. */
   eventCount: number | null;
   /**
@@ -320,6 +322,7 @@ export class SnapshotStore {
       etag: input.etag,
       lastModified: input.lastModified,
       contentChangedAt: changed ? input.at : (previous?.contentChangedAt ?? input.at),
+      lastConfirmedAt: changed ? input.at : (previous?.lastConfirmedAt ?? input.at),
       // New bytes mean the count they yielded, even when that is unknown; the
       // same bytes keep the count we already recorded for them.
       eventCount: changed
@@ -347,7 +350,7 @@ export class SnapshotStore {
     return { changed: true, meta };
   }
 
-  /** Record an attempt: success, 304 or failure. Writes only state. */
+  /** Record an attempt: success, 304 or failure. Writes state, and updates lastConfirmedAt in meta if confirmed. */
   async recordCheck(
     sourceId: string,
     check: { at: string; status: number | null; ok: boolean },
@@ -363,6 +366,15 @@ export class SnapshotStore {
 
     await mkdir(this.root, { recursive: true });
     await writeAtomic(this.statePath(sourceId), `${JSON.stringify(state, null, 2)}\n`);
+
+    if (check.ok) {
+      const meta = await this.readMeta(sourceId);
+      if (meta !== null && meta.lastConfirmedAt !== check.at) {
+        meta.lastConfirmedAt = check.at;
+        await writeAtomic(this.metaPath(sourceId), `${JSON.stringify(meta, null, 2)}\n`);
+      }
+    }
+
     return state;
   }
 
@@ -386,7 +398,7 @@ export class SnapshotStore {
  * that overstates is worse than one that lags.
  */
 export function freshnessAt(snapshot: Snapshot): string {
-  const confirmed = snapshot.state.lastConfirmedAt;
+  const confirmed = snapshot.meta.lastConfirmedAt ?? snapshot.state.lastConfirmedAt;
   if (confirmed === null) return snapshot.meta.contentChangedAt;
   return Date.parse(confirmed) > Date.parse(snapshot.meta.contentChangedAt)
     ? confirmed

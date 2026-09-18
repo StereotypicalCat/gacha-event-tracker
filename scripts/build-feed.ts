@@ -47,7 +47,7 @@ async function latestFixture(adapterId: string, game: GameId) {
 async function documentFor(adapterId: string, game: GameId) {
   const cached = await snapshots.read(adapterId);
   if (cached !== null) {
-    const rawConfirmed = cached.state.lastConfirmedAt;
+    const rawConfirmed = cached.meta.lastConfirmedAt ?? cached.state.lastConfirmedAt;
     const contentChangedAt = cached.meta.contentChangedAt;
     const lastConfirmedAt =
       rawConfirmed !== null &&
