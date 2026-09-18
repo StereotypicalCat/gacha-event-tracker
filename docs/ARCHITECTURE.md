@@ -224,7 +224,9 @@ that ordering is load-bearing.
 
 `Dockerfile` builds and serves this; the image runs typecheck and tests during build, ships no source
 or toolchain, and runs unprivileged. `.gitea/workflows/ci.yml` and `.gitlab-ci.yml` run the same
-gates and publish it, while `.github/workflows/ci.yml` builds and deploys to GitHub Pages.
+gates and publish it, while `.github/workflows/ci.yml` builds and deploys to GitHub Pages. GitHub
+only needs to build and serve, not refresh data sources; the scheduled refresh and container image
+publishing run exclusively on Gitea Actions.
 
 ### Hosting under a subpath
 

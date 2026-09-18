@@ -1,4 +1,9 @@
 name: CI
+# GitHub Actions CI/CD
+#
+# GitHub only needs to build and serve (deploying to GitHub Pages), not refresh
+# data sources. Scheduled fetching and snapshot refresh run exclusively on
+# Gitea Actions (.gitea/workflows/refresh.yml).
 
 on:
   push:

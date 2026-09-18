@@ -388,13 +388,12 @@ pipeline always means the code changed rather than a wiki being down.
 
 ### Refreshing the data
 
-Gitea Actions only — the GitLab and GitHub pipelines run the gates / builds, but do not fetch wikis.
-`.gitea/workflows/refresh.yml` runs `bun run refresh` twice a day (and on demand, with a dry-run
-input). It fetches each source at most once per cycle, and **commits only when a page's bytes
-actually changed** — a `304`, an identical body, or a fetch that fails to parse all leave the
-working tree clean and produce no commit. When something did change it commits the raw snapshots and
-dispatches `ci.yml`, which typechecks, tests, rebuilds the feed and republishes the image through the
-path that already existed; none of that logic is duplicated.
+Gitea Actions only — GitHub Actions only needs to build and serve (deploying to GitHub Pages),
+and never refreshes data sources. `.gitea/workflows/refresh.yml` runs `bun run refresh` twice a
+day (and on demand, with a dry-run input). It fetches each source at most once per cycle, and
+commits the snapshots when a page's bytes actually changed. On every non-dry run, it dispatches
+`ci.yml` so that updated cache confirmations or new snapshots trigger a feed rebuild and
+container image publication; none of that logic is duplicated.
 
 That dispatch is a REST call rather than `gh workflow run`, there being no `gh` on a Gitea runner.
 It is also, strictly, belt and braces: unlike GitHub, Gitea does **not** suppress workflow triggers

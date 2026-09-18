@@ -1130,6 +1130,13 @@ describe("the workflows that drive the refresh", () => {
     expect(githubCi).toContain("deploy-pages");
     expect(githubCi).toContain("pages:");
   });
+
+  test("GitHub only builds and serves and has no refresh workflow", async () => {
+    const githubRefresh = Bun.file(
+      new URL("../.github/workflows/refresh.yml", import.meta.url),
+    );
+    expect(await githubRefresh.exists()).toBe(false);
+  });
 });
 
 describe("flags", () => {

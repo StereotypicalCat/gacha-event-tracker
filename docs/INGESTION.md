@@ -394,11 +394,12 @@ annotated on the run page, listed in the job summary with its status code, and c
 conduct for why that ordering is load-bearing.
 
 **Built: `scripts/refresh-sources.ts`** (`bun run refresh`), scheduled by
-`.gitea/workflows/refresh.yml`. It takes its adapters, store, robots gate, fetch and clock by
-injection, so the whole runner is tested offline against a fake fetch. A fetched body is *rejected*
-— the previous snapshot survives — when it fails `canParse`, throws, or yields zero events; storing
-an empty parse would make the feed build prefer it over the fixture and silently empty a game's
-calendar.
+`.gitea/workflows/refresh.yml`. Scheduled fetching and data refresh run exclusively on Gitea
+Actions; GitHub Actions only builds and serves, and never refreshes data sources. The runner
+takes its adapters, store, robots gate, fetch and clock by injection, so the whole runner is
+tested offline against a fake fetch. A fetched body is *rejected* — the previous snapshot survives
+— when it fails `canParse`, throws, or yields zero events; storing an empty parse would make the feed
+build prefer it over the fixture and silently empty a game's calendar.
 
 The one exception is a page that states its own emptiness: when a parser's `statesNoEvents` says the
 document itself reports listing nothing, the empty parse is stored as that source's real answer and

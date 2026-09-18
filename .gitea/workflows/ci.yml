@@ -1,4 +1,9 @@
 name: CI
+# Gitea Actions CI/CD
+#
+# Runs typecheck, tests, and feed sanity checks; builds the site; and publishes
+# the container image to Gitea's registry. Scheduled source refreshes are
+# handled by .gitea/workflows/refresh.yml.
 
 on:
   push:
