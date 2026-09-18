@@ -298,8 +298,17 @@ export function Colophon({
                 {shownStale.flatMap((g) =>
                   g.sources.map((src) => {
                     const site = siteFor(src.url);
-                    const confirmed = src.lastConfirmedAt
-                      ? `${formatRemaining(now - Date.parse(src.lastConfirmedAt))} ago`
+                    const pullDate =
+                      src.lastConfirmedAt !== null &&
+                      src.contentChangedAt !== null &&
+                      Date.parse(src.lastConfirmedAt) >= Date.parse(src.contentChangedAt)
+                        ? src.lastConfirmedAt
+                        : (src.lastConfirmedAt ??
+                          (src.contentChangedAt && now - Date.parse(src.contentChangedAt) <= STALE_AFTER_MS
+                            ? src.contentChangedAt
+                            : null));
+                    const confirmed = pullDate
+                      ? `${formatRemaining(now - Date.parse(pullDate))} ago`
                       : "never";
                     const updated = src.contentChangedAt
                       ? `${formatRemaining(now - Date.parse(src.contentChangedAt))} ago`
@@ -307,8 +316,8 @@ export function Colophon({
                         ? `${formatRemaining(now - Date.parse(src.lastSuccessAt))} ago`
                         : "never";
                     const isPullRecent =
-                      src.lastConfirmedAt !== null &&
-                      now - Date.parse(src.lastConfirmedAt) <= STALE_AFTER_MS;
+                      pullDate !== null &&
+                      now - Date.parse(pullDate) <= STALE_AFTER_MS;
                     const isContentStale =
                       src.contentChangedAt === null ||
                       now - Date.parse(src.contentChangedAt) > STALE_AFTER_MS;

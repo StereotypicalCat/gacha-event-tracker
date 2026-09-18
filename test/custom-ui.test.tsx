@@ -304,6 +304,44 @@ describe("Colophon freshness notice (PRD F7)", () => {
     expect(html).toContain("site has no new updates");
   });
 
+  test("source breakdown does not report recent content updates as pulled never or overdue", () => {
+    const PULL_TIME = new Date(NOW - 11 * HOUR).toISOString();
+    const OLD_SITE = new Date(NOW - 57 * HOUR).toISOString();
+    const RECENT_CONTENT = new Date(NOW - 1 * HOUR).toISOString();
+    const html = renderToStaticMarkup(
+      <Colophon
+        sources={[
+          fresh,
+          {
+            ...fresh,
+            sourceId: "endfield-wikigg-events",
+            game: "endfield",
+            url: "https://endfield.wiki.gg/wiki/Event",
+            lastSuccessAt: OLD_SITE,
+            lastConfirmedAt: PULL_TIME,
+            contentChangedAt: OLD_SITE,
+          },
+          {
+            ...fresh,
+            sourceId: "endfield-game8-events",
+            game: "endfield",
+            url: "https://game8.co/games/Arknights-Endfield/archives/535443",
+            lastSuccessAt: RECENT_CONTENT,
+            lastConfirmedAt: null,
+            contentChangedAt: RECENT_CONTENT,
+          },
+        ]}
+        now={NOW}
+      />,
+    );
+    expect(html).toContain("Arknights: Endfield");
+    expect(html).toContain("data pulled 11h 0m ago, site updated 2d 9h ago");
+    expect(html).toContain("Game8");
+    expect(html).toContain("pulled 1h 0m ago, site updated 1h 0m ago (up to date)");
+    expect(html).not.toContain("pulled never");
+    expect(html).not.toContain("pull overdue");
+  });
+
   test("summarises instead of listing when every game is behind", () => {
     // What a refresh that stopped running looks like. Ten names each repeating
     // the same age is less readable than the count this replaced.
