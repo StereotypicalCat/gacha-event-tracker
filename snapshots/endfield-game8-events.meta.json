@@ -1,11 +1,12 @@
 {
   "sourceId": "endfield-game8-events",
   "url": "https://game8.co/games/Arknights-Endfield/archives/535443",
-  "contentHash": "24148338a6590c7d5ecd5698afe967ce0ac291009a2b4acf13fd7fe2579c82c1",
-  "bytes": 350752,
-  "etag": "W/\"24148338a6590c7d5ecd5698afe967ce\"",
+  "contentHash": "f4a4d2b64875a3a3bb64fa101e68379b301440b271d7f577a83211164f700b1c",
+  "bytes": 350513,
+  "etag": "W/\"f4a4d2b64875a3a3bb64fa101e68379b\"",
   "lastModified": null,
-  "contentChangedAt": "2026-09-18T08:04:23.327Z",
+  "contentChangedAt": "2026-09-18T17:27:58.140Z",
+  "lastConfirmedAt": "2026-09-18T17:27:58.140Z",
   "eventCount": 5,
   "charset": "utf-8"
 }
