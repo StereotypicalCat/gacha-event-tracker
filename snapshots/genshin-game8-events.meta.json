@@ -1,12 +1,12 @@
 {
   "sourceId": "genshin-game8-events",
   "url": "https://game8.co/games/Genshin-Impact/archives/301601",
-  "contentHash": "27067c3b1487c4944e6f9300b7f86aed3b62fce2a75a8b2ef42a159ee302a461",
-  "bytes": 346205,
-  "etag": "W/\"27067c3b1487c4944e6f9300b7f86aed\"",
+  "contentHash": "75fbef143efe1df8f8b675111cecaa9d1c1ba297ceee7a675e3e3f2b7fe160b7",
+  "bytes": 346219,
+  "etag": "W/\"75fbef143efe1df8f8b675111cecaa9d\"",
   "lastModified": null,
-  "contentChangedAt": "2026-09-19T05:27:48.296Z",
-  "lastConfirmedAt": "2026-09-19T05:27:48.296Z",
+  "contentChangedAt": "2026-09-19T17:27:47.475Z",
+  "lastConfirmedAt": "2026-09-19T17:27:47.475Z",
   "eventCount": 11,
   "charset": "utf-8"
 }
