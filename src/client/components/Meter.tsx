@@ -33,9 +33,12 @@ interface MeterProps {
  */
 export function Meter({ progress, urgency, animate = true, label }: MeterProps) {
   const unknown = progress === null;
-  const remainingTicks = unknown
+  // Never rounds a running event down to an empty strip. Forty minutes left of
+  // a two-week event is under half a tick, and drawing it as fully spent made
+  // the most urgent rows on the page look like the ones already over.
+  const remainingTicks = unknown || progress >= 1
     ? 0
-    : Math.max(0, Math.round((1 - progress) * TICKS));
+    : Math.max(1, Math.round((1 - progress) * TICKS));
 
   return (
     <div

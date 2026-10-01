@@ -423,7 +423,9 @@ The unit of the checklist. It is one full-bleed target that opens the event and 
 A strip of discrete ticks 10px tall with 2px gaps, lifted from the in-game stamina meters these
 games all use. Ticks drain from the right, so what is left sits at the left edge and stacked rows
 line up into a readable ramp. Remaining ticks carry the urgency colour and its glow; spent ticks
-recede to hairline. **An unannounced end is hatched, never full.** Ticks fill in with a staggered
+recede to hairline. A running event always keeps at least one lit tick, however little of its window
+is left: an empty strip means "over", and the event with forty minutes left is the last one that
+should look over. **An unannounced end is hatched, never full.** Ticks fill in with a staggered
 scale-in animation (320ms, at most a 14ms delay per tick) unless reduced motion is requested.
 
 ### Headline deadline
