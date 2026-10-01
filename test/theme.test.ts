@@ -68,10 +68,39 @@ describe("resolveTheme", () => {
 });
 
 describe("readableHue", () => {
-  test("dark is untouched, hue for hue", () => {
-    // The one thing adding a theme must not do is change the theme that was
-    // already there. These colours were chosen against this ground.
-    for (const hue of HUES) expect(readableHue(hue, "dark")).toBe(hue);
+  test("on dark, a hue that already reads is untouched, hue for hue", () => {
+    // Lifting the dim few is a fix; moving the rest would be redrawing the
+    // theme that shipped.
+    for (const hue of HUES) {
+      if (contrast(hue, THEME_COLOR.dark) >= 4.5) {
+        expect(readableHue(hue, "dark")).toBe(hue);
+      }
+    }
+  });
+
+  test("every hue reads on the dark ground", () => {
+    // Fate's navy was 1.8:1 here — the game name under the headline deadline
+    // was all but invisible.
+    for (const hue of HUES) {
+      const adjusted = readableHue(hue, "dark");
+      expect(contrast(adjusted, THEME_COLOR.dark)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  test("lifting on dark keeps the colour, not just the contrast", () => {
+    // Only lightness moves, so Punishing's red is still red and Fate's navy
+    // is still blue rather than a grey that happens to pass.
+    const red = readableHue(GAMES.pgr.hue, "dark");
+    const blue = readableHue(GAMES.fgo.hue, "dark");
+    const rgb = (hex: string) =>
+      [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)) as [number, number, number];
+    const [rr, rg, rb] = rgb(red);
+    const [br, bg, bb] = rgb(blue);
+    expect(red).not.toBe(GAMES.pgr.hue);
+    expect(rr).toBeGreaterThan(rg);
+    expect(rr).toBeGreaterThan(rb);
+    expect(bb).toBeGreaterThan(br);
+    expect(bb).toBeGreaterThan(bg);
   });
 
   test("every hue reads on the light ground", () => {

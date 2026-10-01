@@ -1048,8 +1048,12 @@ to an open page). Four things hold it up:
   pinned by `test/theme.test.ts`.
   Two rules follow. **The heat ramp must stay readable on whichever ground it is on** — it carries
   meaning, and the dark theme's amber is 1.9:1 on paper, so each step is re-struck rather than
-  reused. And **the dark theme does not move**: `readableHue` returns dark untouched by
-  construction, because adding a theme is not a licence to redraw the one that shipped.
+  reused. And **the dark theme moves only where it failed**: `readableHue` returns a dark hue
+  untouched when it already clears 4.5:1 on the dark ground, and lifts the lightness of the
+  ones that do not (repository owner, 2026-10-01). This rule used to say dark never moved, on
+  the claim that every hue cleared the bar there; five did not, and Fate's navy was 1.8:1, so
+  the game name under the headline deadline was close to invisible. Fixing a failure is not
+  the same as redrawing the theme that shipped, and the fifteen hues that pass do not change.
 - **The page is two columns past `lg`, and the split is the one below.** What the page *tells* the
   reader to do — the next deadlines, tonight's dailies — pins to a rail on the left and stays put
   while the lists it *shows* them scroll beside it. Below that breakpoint it is one column in the

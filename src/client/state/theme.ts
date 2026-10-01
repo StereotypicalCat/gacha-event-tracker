@@ -12,9 +12,10 @@ import type { GameMeta } from "../../shared/games.ts";
  * - **Resolving the reader's answer.** "System" is a choice about a preference
  *   they set elsewhere, and it has to be read and watched.
  * - **The game hues.** They are data, not tokens — `games.ts` for the games we
- *   track, the reader's own typing for theirs — and they were all picked
- *   against a near-black ground. On paper the brighter ones are unreadable, so
- *   they are darkened until they are not.
+ *   track, the reader's own typing for theirs — and they were picked for
+ *   identity, not measured. On paper the brighter ones are unreadable, so they
+ *   are darkened until they are not; on the dark ground the few that are too
+ *   dim are lifted the same way.
  * - **The browser's own chrome.** `<meta name="theme-color">` is markup, so it
  *   is set from here rather than styled.
  */
@@ -62,7 +63,7 @@ export function resolveTheme(
 }
 
 // ---------------------------------------------------------------------------
-// Game hues on a light ground
+// Game hues on either ground
 // ---------------------------------------------------------------------------
 
 /**
@@ -114,13 +115,49 @@ function contrast(a: [number, number, number], b: [number, number, number]): num
 }
 
 const LIGHT_GROUND = parseHex(THEME_COLOR.light) as [number, number, number];
+const DARK_GROUND = parseHex(THEME_COLOR.dark) as [number, number, number];
+
+/** RGB channels as hue (0–1), saturation and lightness. */
+function toHsl([r, g, b]: [number, number, number]): [number, number, number] {
+  const [rs, gs, bs] = [r / 255, g / 255, b / 255];
+  const max = Math.max(rs, gs, bs);
+  const min = Math.min(rs, gs, bs);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, l];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  const h =
+    max === rs
+      ? ((gs - bs) / d + (gs < bs ? 6 : 0)) / 6
+      : max === gs
+        ? ((bs - rs) / d + 2) / 6
+        : ((rs - gs) / d + 4) / 6;
+  return [h, s, l];
+}
+
+function fromHsl([h, s, l]: [number, number, number]): [number, number, number] {
+  const k = (n: number) => (n + h * 12) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) =>
+    l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
+  return [f(0), f(8), f(4)].map((c) => Math.round(c * 255)) as [
+    number,
+    number,
+    number,
+  ];
+}
 
 /**
- * The same hue, dark enough to read on this theme's ground.
+ * The same hue, readable on this theme's ground.
  *
- * Dark is returned untouched, always: those hues were chosen against that
- * ground and every one of them clears the bar there, so adding a theme must
- * not move a single pixel of the app as it shipped.
+ * On dark, a hue that already clears the bar is returned untouched — which is
+ * fifteen of the twenty games, and those pixels do not move. The five that do
+ * not were picked for identity rather than measured: Fate's navy is 1.8:1 on
+ * the near-black ground, which made "Fate/Grand Order" under the headline
+ * deadline nearly invisible, and Punishing, Persona, Chaos Zero and Honkai 3rd
+ * sit between 3.4 and 4.3. Those are lifted in lightness alone, so the angle
+ * and saturation that say which game it is survive and only the value moves —
+ * Fate stays a blue, Punishing stays a red.
  *
  * On light it is a scale towards black — the channels keep their ratios, so
  * Genshin's blue stays Genshin's blue rather than becoming a computed
@@ -129,9 +166,22 @@ const LIGHT_GROUND = parseHex(THEME_COLOR.light) as [number, number, number];
  * colour is not ours to reinterpret when we do not understand it.
  */
 export function readableHue(hue: string, theme: Theme): string {
-  if (theme === "dark") return hue;
   const rgb = parseHex(hue);
   if (rgb === null) return hue;
+  if (theme === "dark") {
+    if (contrast(rgb, DARK_GROUND) >= MIN_HUE_CONTRAST) return hue;
+    const [h, s, l] = toHsl(rgb);
+    // Bisect the lightness, measuring the rounded colour that will actually
+    // be written, for the same reason as the light branch below.
+    let tooDim = l;
+    let enough = 1;
+    for (let i = 0; i < 20; i++) {
+      const mid = (tooDim + enough) / 2;
+      if (contrast(fromHsl([h, s, mid]), DARK_GROUND) >= MIN_HUE_CONTRAST) enough = mid;
+      else tooDim = mid;
+    }
+    return toHex(fromHsl([h, s, enough]));
+  }
   if (contrast(rgb, LIGHT_GROUND) >= MIN_HUE_CONTRAST) return hue;
 
   // Bisect the scale factor, measuring the colour that will actually be

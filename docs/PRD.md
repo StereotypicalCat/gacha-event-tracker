@@ -492,7 +492,9 @@ wrong:
 - **A game keeps its colour.** The hues are identity (F1) and were all picked against a near-black
   ground; on paper the bright ones vanish. They are darkened until they read, along the same hue, so
   Wuthering Waves is still the green one — including the hues a reader picked for a game they
-  invented (F13).
+  invented (F13). The same bar holds on dark: five hues were too dim for the ground they were
+  picked against (Fate's navy at 1.8:1), so those alone are lifted in lightness until they clear
+  4.5:1, and every hue that already read is left exactly as it shipped.
 
 Switching is instant, costs nothing and saves nothing: no reload, and nothing marked, typed or
 ticked is touched. And it survives the load it is chosen on — the shell sets the theme before first
