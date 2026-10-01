@@ -50,6 +50,20 @@ const PAST_LIMIT = 60 * DAY;
 /** Where the now rule sits when the board opens: a little in from the edge. */
 const OPEN_INSET = 28;
 
+/**
+ * The widest a bar's name may be: the part of the bar still on screen.
+ *
+ * Sticky keeps the name inside its bar, but a name wider than what is left of
+ * the bar is pushed out at its *start* — so a bar that began weeks back and
+ * ends tonight showed "e - Part 2", and the most urgent events on the board
+ * were the ones nobody could read. Capped to the visible run, the name
+ * truncates at its end instead. The name starts at the bar's 12px padding or
+ * `PIN` in from the pane's edge, whichever is later, and stops before the
+ * urgency dot and its gap (14px) inside the far padding.
+ */
+const nameFits = (left: number, right: number) =>
+  `max(0px, calc(${right - 26}px - max(${left + 12}px, var(--sx, 0px) + ${PIN}px)))`;
+
 /** The narrowest a bar is drawn, so a two-day event is still a target. */
 const MIN_BAR = 34;
 
@@ -216,6 +230,17 @@ export function Timeline({
    */
   const hold = useRef<{ ms: number; px: number } | null>(null);
 
+  /**
+   * How far the board is scrolled, as `--sx` on the pane, so a bar's name can
+   * be cut to the part of its bar that is on screen (see `nameFits`). Written
+   * straight to the element rather than kept in state: it changes on every
+   * scroll frame and only CSS reads it.
+   */
+  const trackScroll = () => {
+    const el = scroller.current;
+    if (el !== null) el.style.setProperty("--sx", `${el.scrollLeft}px`);
+  };
+
   const zoom = (by: 1 | -1) => {
     const el = scroller.current;
     if (el !== null) {
@@ -241,6 +266,7 @@ export function Timeline({
     // Keyed on the rounded offset so it runs when the range changes, not every
     // second — re-scrolling on each tick would fight the reader's own scrolling.
     el.scrollTo({ left: openAt, behavior: "instant" });
+    trackScroll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openAt]);
 
@@ -321,6 +347,7 @@ export function Timeline({
          * and nothing scrolls vertically at all.
          */
         className="scroll-pane relative max-h-[72vh] overflow-auto overscroll-x-contain"
+        onScroll={trackScroll}
       >
         <div className="relative" style={{ width: chartWidth, minWidth: "100%" }}>
           {/* Gridlines first, so everything else paints over them. */}
@@ -500,7 +527,7 @@ export function Timeline({
                               never wander outside the event it belongs to. */}
                           <span
                             className="sticky flex min-w-0 items-center gap-1.5 truncate"
-                            style={{ left: PIN }}
+                            style={{ left: PIN, maxWidth: nameFits(left, left + width) }}
                           >
                             {heading === null && width >= TAG_FROM && (
                               <span
