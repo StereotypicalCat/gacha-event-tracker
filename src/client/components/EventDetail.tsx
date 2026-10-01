@@ -216,7 +216,18 @@ export function EventDetail({
             onClick={() => onDaily(event.id, dailyOverride(true, detectedDaily))}
             className="mt-5 flex w-full items-center gap-2.5 rounded-xl border border-dashed border-hairline px-4 py-3 text-left transition-colors hover:border-faint"
           >
-            <span aria-hidden className="text-base leading-none text-faint">＋</span>
+            {/* Drawn rather than typed: the fullwidth plus this used to be is
+                missing from both faces, so it fell back to whatever the device
+                had — and on some, that was an empty box. */}
+            <svg viewBox="0 0 16 16" aria-hidden className="size-3.5 shrink-0 text-faint">
+              <path
+                d="M8 3v10M3 8h10"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+            </svg>
             <span>
               <span className="block text-sm font-medium">
                 It repeats daily
