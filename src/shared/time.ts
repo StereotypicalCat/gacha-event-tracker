@@ -283,7 +283,12 @@ export function formatAbsolute(iso: string | number, withTime: boolean): string 
     year: "numeric",
   });
   if (!withTime) return date;
-  return `${date}, ${d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`;
+  // The time is one reading: a line break inside it strands "AM" on a line of
+  // its own, so its spaces are made non-breaking.
+  const time = d
+    .toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+    .replace(/\s/g, " ");
+  return `${date}, ${time}`;
 }
 
 export interface EventClock {
