@@ -21,6 +21,8 @@ between repairing a rule and rediscovering it the expensive way.
 | `docs/ARCHITECTURE.md` | Process shape, file layout, request paths, offline and update mechanics | Moving files, adding a route, or changing the service worker |
 | `docs/FEEDBACK.md` | What readers actually said about the first release, and the work it argues for | Deciding what to build next |
 | `docs/SOURCES.md` | Which sites publish a usable schedule for the games we still do not cover, and what is wrong with the ones that do not | Picking the next game to add, or assessing a source request |
+| `docs/PRODUCT.md` | Who the product is for, its positioning, voice, brand commitments and the evidence on hand — the condensed product record design tooling reads | Design or copy work, or anything that claims something about users or the product |
+| `docs/DESIGN.md` | The shipped visual system: both themes' tokens, the two colour axes, type roles, layout, depth, and the signature components. `.impeccable/design.json` is its generated sidecar | Changing anything a reader sees — colour, type, spacing, a component's look or motion |
 
 Two rules that follow from that:
 
