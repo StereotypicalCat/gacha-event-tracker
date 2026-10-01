@@ -433,16 +433,19 @@ body {
  * `[tabindex]`, so the focus rule above does not reach it and the one control
  * that opens a group would have no visible focus at all.
  */
-.settings-group > summary {
+.settings-group > summary,
+.disclosure > summary {
   list-style: none;
   cursor: pointer;
 }
 
-.settings-group > summary::-webkit-details-marker {
+.settings-group > summary::-webkit-details-marker,
+.disclosure > summary::-webkit-details-marker {
   display: none;
 }
 
-.settings-group > summary:focus-visible {
+.settings-group > summary:focus-visible,
+.disclosure > summary:focus-visible {
   outline: 2px solid var(--color-near);
   outline-offset: 2px;
   border-radius: 3px;
@@ -461,7 +464,8 @@ body {
   transition: transform 150ms ease;
 }
 
-.settings-group[open] > summary .settings-chevron {
+.settings-group[open] > summary .settings-chevron,
+.disclosure[open] > summary .settings-chevron {
   transform: rotate(90deg);
 }
 

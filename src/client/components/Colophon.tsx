@@ -290,8 +290,15 @@ export function Colophon({
           )}
 
           {shownStale.some((s) => s.sources && s.sources.length > 0) && (
-            <details className="mt-2 text-faint">
-              <summary className="cursor-pointer hover:text-muted focus-visible:outline-none">
+            <details className="disclosure mt-2 text-faint">
+              <summary className="flex w-fit items-center gap-1.5 hover:text-muted">
+                <svg
+                  aria-hidden
+                  viewBox="0 0 16 16"
+                  className="settings-chevron size-2 shrink-0"
+                >
+                  <path d="M5 2.5l6 5.5-6 5.5z" fill="currentColor" />
+                </svg>
                 Source breakdown
               </summary>
               <ul className="mt-1.5 space-y-1 border-l border-hairline pl-3">
