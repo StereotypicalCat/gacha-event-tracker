@@ -1,0 +1,741 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-01T02:04:50.478Z",
+  "title": "Design System: Event Clock",
+  "extensions": {
+    "colorMeta": {
+      "ground": {
+        "role": "neutral",
+        "displayName": "Panel Ground",
+        "canonical": "#12141c",
+        "oklch": "oklch(19.3% 0.017 273.8)",
+        "tonalRamp": [
+          "#090b12",
+          "#22252d",
+          "#3f424b",
+          "#5e616b",
+          "#7f828d",
+          "#a1a5b0",
+          "#c5c9d4",
+          "#ebeefa"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Panel Surface",
+        "canonical": "#1b1e2a",
+        "oklch": "oklch(23.8% 0.024 273.6)",
+        "tonalRamp": [
+          "#080a15",
+          "#212431",
+          "#3e414f",
+          "#5d616f",
+          "#7e8291",
+          "#a0a4b4",
+          "#c4c8d9",
+          "#e9eeff"
+        ]
+      },
+      "raised": {
+        "role": "neutral",
+        "displayName": "Raised Tint",
+        "canonical": "#232739",
+        "oklch": "oklch(27.7% 0.034 274.3)",
+        "tonalRamp": [
+          "#070a19",
+          "#202436",
+          "#3c4154",
+          "#5b6075",
+          "#7c8197",
+          "#9ea4bb",
+          "#c2c8e0",
+          "#eaeefe"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#2c3145",
+        "oklch": "oklch(31.7% 0.037 273.3)",
+        "tonalRamp": [
+          "#07091a",
+          "#1f2437",
+          "#3b4156",
+          "#5a6076",
+          "#7b8199",
+          "#9da4bd",
+          "#c1c8e2",
+          "#e9eefe"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#e9ebf3",
+        "oklch": "oklch(94.1% 0.011 274.9)",
+        "tonalRamp": [
+          "#0a0b10",
+          "#23252b",
+          "#404248",
+          "#5f6168",
+          "#808289",
+          "#a3a5ac",
+          "#c7c9d0",
+          "#eceef6"
+        ]
+      },
+      "ink-strong": {
+        "role": "neutral",
+        "displayName": "Ink Strong",
+        "canonical": "#ffffff",
+        "oklch": "oklch(100.0% 0.000 89.9)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted Ink",
+        "canonical": "#888fa6",
+        "oklch": "oklch(65.2% 0.035 272.0)",
+        "tonalRamp": [
+          "#070a1a",
+          "#1f2436",
+          "#3b4155",
+          "#5a6076",
+          "#7b8198",
+          "#9da4bc",
+          "#c1c8e1",
+          "#e9eeff"
+        ]
+      },
+      "faint": {
+        "role": "neutral",
+        "displayName": "Faint Ink",
+        "canonical": "#5a6178",
+        "oklch": "oklch(49.5% 0.038 271.7)",
+        "tonalRamp": [
+          "#060a1b",
+          "#1e2438",
+          "#3b4156",
+          "#596077",
+          "#7a819a",
+          "#9ca4be",
+          "#c0c8e3",
+          "#e9eefe"
+        ]
+      },
+      "scrim": {
+        "role": "neutral",
+        "displayName": "Scrim",
+        "canonical": "rgb(18 20 28 / 0.8)",
+        "oklch": "oklch(19.3% 0.017 273.8)",
+        "tonalRamp": [
+          "#090b12",
+          "#22252d",
+          "#3f424b",
+          "#5e616b",
+          "#7f828d",
+          "#a1a5b0",
+          "#c5c9d4",
+          "#ebeefa"
+        ]
+      },
+      "glow": {
+        "role": "neutral",
+        "displayName": "Glow",
+        "canonical": "#1a1e2c",
+        "oklch": "oklch(23.8% 0.028 271.9)",
+        "tonalRamp": [
+          "#070a17",
+          "#202433",
+          "#3d4151",
+          "#5b6171",
+          "#7c8293",
+          "#9fa4b7",
+          "#c2c9dc",
+          "#e9eeff"
+        ]
+      },
+      "calm": {
+        "role": "primary",
+        "displayName": "calm",
+        "canonical": "#55607f",
+        "oklch": "oklch(49.2% 0.052 269.3)",
+        "tonalRamp": [
+          "#040821",
+          "#1b233e",
+          "#37415e",
+          "#55607f",
+          "#7681a2",
+          "#98a4c6",
+          "#bbc8ec",
+          "#e8eefe"
+        ]
+      },
+      "near": {
+        "role": "primary",
+        "displayName": "near",
+        "canonical": "#5b8def",
+        "oklch": "oklch(65.5% 0.156 262.5)",
+        "tonalRamp": [
+          "#000729",
+          "#001c61",
+          "#0d3893",
+          "#2d5bb8",
+          "#4d7edf",
+          "#73a3ff",
+          "#adcafe",
+          "#e7effe"
+        ]
+      },
+      "soon": {
+        "role": "primary",
+        "displayName": "soon",
+        "canonical": "#e8b33c",
+        "oklch": "oklch(79.5% 0.143 83.5)",
+        "tonalRamp": [
+          "#110a00",
+          "#312201",
+          "#553e01",
+          "#7c5b05",
+          "#a57a05",
+          "#d09c17",
+          "#f6c04c",
+          "#ffecca"
+        ]
+      },
+      "critical": {
+        "role": "primary",
+        "displayName": "critical",
+        "canonical": "#ff4d6a",
+        "oklch": "oklch(67.8% 0.213 15.8)",
+        "tonalRamp": [
+          "#1e0004",
+          "#4c0013",
+          "#7f0125",
+          "#b60039",
+          "#e53156",
+          "#ff6f80",
+          "#ffb1b5",
+          "#ffe8e9"
+        ]
+      },
+      "ground-light": {
+        "role": "neutral",
+        "displayName": "Panel Ground (light theme)",
+        "canonical": "#edf0f7",
+        "oklch": "oklch(95.5% 0.010 267.4)",
+        "tonalRamp": [
+          "#090b0f",
+          "#23252a",
+          "#404247",
+          "#5f6167",
+          "#808288",
+          "#a2a5ab",
+          "#c6c9d0",
+          "#ebeef5"
+        ]
+      },
+      "surface-light": {
+        "role": "neutral",
+        "displayName": "Panel Surface (light theme)",
+        "canonical": "#ffffff",
+        "oklch": "oklch(100.0% 0.000 89.9)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "raised-light": {
+        "role": "neutral",
+        "displayName": "Raised Tint (light theme)",
+        "canonical": "#dfe4f0",
+        "oklch": "oklch(91.9% 0.017 267.8)",
+        "tonalRamp": [
+          "#080b12",
+          "#21252e",
+          "#3e424b",
+          "#5d616b",
+          "#7e828d",
+          "#a0a5b0",
+          "#c4c9d5",
+          "#e9eefa"
+        ]
+      },
+      "hairline-light": {
+        "role": "neutral",
+        "displayName": "Hairline (light theme)",
+        "canonical": "#c9d1e2",
+        "oklch": "oklch(86.0% 0.025 265.6)",
+        "tonalRamp": [
+          "#060b16",
+          "#1f2532",
+          "#3c4250",
+          "#5a6170",
+          "#7b8292",
+          "#9da5b5",
+          "#c1c9da",
+          "#e7efff"
+        ]
+      },
+      "ink-light": {
+        "role": "neutral",
+        "displayName": "Ink (light theme)",
+        "canonical": "#151824",
+        "oklch": "oklch(21.2% 0.024 273.3)",
+        "tonalRamp": [
+          "#080a15",
+          "#212431",
+          "#3e414f",
+          "#5c616f",
+          "#7d8291",
+          "#a0a4b5",
+          "#c4c8d9",
+          "#e9eefe"
+        ]
+      },
+      "ink-strong-light": {
+        "role": "neutral",
+        "displayName": "Ink Strong (light theme)",
+        "canonical": "#000000",
+        "oklch": "oklch(0.0% 0.000 0.0)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "muted-light": {
+        "role": "neutral",
+        "displayName": "Muted Ink (light theme)",
+        "canonical": "#535b73",
+        "oklch": "oklch(47.4% 0.040 270.4)",
+        "tonalRamp": [
+          "#06091c",
+          "#1e2439",
+          "#3a4158",
+          "#586079",
+          "#79829b",
+          "#9ba4bf",
+          "#bfc8e4",
+          "#e9eefe"
+        ]
+      },
+      "faint-light": {
+        "role": "neutral",
+        "displayName": "Faint Ink (light theme)",
+        "canonical": "#767e94",
+        "oklch": "oklch(59.4% 0.035 269.5)",
+        "tonalRamp": [
+          "#060a1a",
+          "#1e2436",
+          "#3a4155",
+          "#596176",
+          "#7a8298",
+          "#9ca5bc",
+          "#c0c9e1",
+          "#e8eeff"
+        ]
+      },
+      "scrim-light": {
+        "role": "neutral",
+        "displayName": "Scrim (light theme)",
+        "canonical": "rgb(26 31 48 / 0.42)",
+        "oklch": "oklch(24.3% 0.033 271.2)",
+        "tonalRamp": [
+          "#060a19",
+          "#1f2436",
+          "#3b4154",
+          "#5a6175",
+          "#7b8297",
+          "#9da4bb",
+          "#c1c9e0",
+          "#e8eeff"
+        ]
+      },
+      "glow-light": {
+        "role": "neutral",
+        "displayName": "Glow (light theme)",
+        "canonical": "#ffffff",
+        "oklch": "oklch(100.0% 0.000 89.9)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "calm-light": {
+        "role": "primary",
+        "displayName": "calm (light theme)",
+        "canonical": "#8a92a8",
+        "oklch": "oklch(66.1% 0.034 269.6)",
+        "tonalRamp": [
+          "#060a19",
+          "#1e2436",
+          "#3b4154",
+          "#596175",
+          "#7a8297",
+          "#9ca5bb",
+          "#c0c9e0",
+          "#e8eefe"
+        ]
+      },
+      "near-light": {
+        "role": "primary",
+        "displayName": "near (light theme)",
+        "canonical": "#2b62c6",
+        "oklch": "oklch(51.7% 0.167 261.2)",
+        "tonalRamp": [
+          "#000826",
+          "#001f5b",
+          "#003897",
+          "#245bbe",
+          "#457ee5",
+          "#71a4fe",
+          "#accaff",
+          "#e6effe"
+        ]
+      },
+      "soon-light": {
+        "role": "primary",
+        "displayName": "soon (light theme)",
+        "canonical": "#8a6008",
+        "oklch": "oklch(52.0% 0.106 78.0)",
+        "tonalRamp": [
+          "#120900",
+          "#332101",
+          "#583c02",
+          "#805902",
+          "#a57a2e",
+          "#c99d53",
+          "#efc177",
+          "#feecd0"
+        ]
+      },
+      "critical-light": {
+        "role": "primary",
+        "displayName": "critical (light theme)",
+        "canonical": "#c81e3c",
+        "oklch": "oklch(53.9% 0.200 19.2)",
+        "tonalRamp": [
+          "#1e0003",
+          "#4c010f",
+          "#7f021f",
+          "#b60330",
+          "#e13c4f",
+          "#fe7179",
+          "#ffb2b2",
+          "#ffe8e8"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "numeral": {
+        "displayName": "Numeral",
+        "purpose": "The headline countdown only."
+      },
+      "display": {
+        "displayName": "Display",
+        "purpose": "Title of the event that expires next."
+      },
+      "wordmark": {
+        "displayName": "Wordmark",
+        "purpose": "EVENT in ink, CLOCK in near; 1.125rem past lg."
+      },
+      "reading": {
+        "displayName": "Reading",
+        "purpose": "Per-row countdown, coloured by urgency; 0.75rem in the Then list."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Event row titles, two lines max."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Prose, empty states, notices; max-w-sm/md."
+      },
+      "summary": {
+        "displayName": "Summary",
+        "purpose": "Event description, muted, two lines max."
+      },
+      "control": {
+        "displayName": "Control",
+        "purpose": "Tabs, chips, quiet buttons."
+      },
+      "label": {
+        "displayName": "Eyebrow",
+        "purpose": "Uppercase section legends and the game name over a row; faint."
+      },
+      "tag": {
+        "displayName": "Tag",
+        "purpose": "Type, status and provenance badges; 0.5625rem at the smallest."
+      }
+    },
+    "shadows": [
+      {
+        "name": "floating-notice",
+        "value": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+        "purpose": "Toasts and the update notice only (Tailwind shadow-lg)."
+      },
+      {
+        "name": "tick-glow",
+        "value": "0 0 6px -1px var(--tick)",
+        "purpose": "Live meter ticks glow in their urgency colour."
+      },
+      {
+        "name": "rail-glow",
+        "value": "0 0 10px -2px var(--hue)",
+        "purpose": "Event row rail under the cursor, in the game's hue."
+      },
+      {
+        "name": "hue-ring",
+        "value": "0 0 0 1px color-mix(in srgb, var(--hue) 45%, transparent)",
+        "purpose": "Game chip hover ring."
+      },
+      {
+        "name": "focus-ring",
+        "value": "outline: 2px solid var(--color-near); outline-offset: 2px",
+        "purpose": "Every interactive element, summary included."
+      },
+      {
+        "name": "body-glow",
+        "value": "radial-gradient(120% 70% at 50% -10%, var(--color-glow) 0%, var(--color-ground) 60%)",
+        "purpose": "The panel's light source, fixed to the viewport."
+      },
+      {
+        "name": "heat-wash",
+        "value": "radial-gradient(60% 100% at 50% 100%, <urgency>, transparent); opacity 0.16; blur-2xl",
+        "purpose": "Behind the headline deadline; the section warms as time runs out."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-quick",
+        "value": "cubic-bezier(0.2, 0.7, 0.3, 1)",
+        "purpose": "Transforms: rail growth, chip lift, check press, meter tick-in."
+      },
+      {
+        "name": "hover-in",
+        "value": "130ms ease-out",
+        "purpose": "Colour and background changes under the pointer (110–160ms band)."
+      },
+      {
+        "name": "press",
+        "value": "40–60ms",
+        "purpose": "Press feedback on rows, chips and checks."
+      },
+      {
+        "name": "tick-in",
+        "value": "320ms, ≤14ms stagger per tick",
+        "purpose": "Meter ticks scale in; only with prefers-reduced-motion: no-preference."
+      },
+      {
+        "name": "spark-fly",
+        "value": "900ms cubic-bezier(0.15, 0.7, 0.35, 1)",
+        "purpose": "Daily burst; not rendered at all under reduced motion."
+      },
+      {
+        "name": "disclosure",
+        "value": "150ms ease",
+        "purpose": "Settings chevron rotation."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px",
+        "note": "Shell gains hairline side borders; detail sheet centres."
+      },
+      {
+        "name": "lg",
+        "value": "1024px",
+        "note": "Rail (20rem) + main split; shell max-w-5xl."
+      },
+      {
+        "name": "xl",
+        "value": "1280px",
+        "note": "Rail 22rem; shell max-w-6xl."
+      },
+      {
+        "name": "2xl",
+        "value": "1536px",
+        "note": "Shell max-w-7xl."
+      }
+    ],
+    "gameHues": {
+      "source": "src/shared/games.ts (and the reader's own games)",
+      "note": "Data, not tokens. Always passed through readableHue(hue, theme) in src/client/state/theme.ts before display."
+    }
+  },
+  "components": [
+    {
+      "name": "Commit Button",
+      "kind": "button",
+      "refersTo": "button-commit",
+      "description": "The one solid action on a screen: Mark done, Continue.",
+      "html": "<button class=\"ds-btn-commit\">Mark done</button>",
+      "css": ".ds-btn-commit{background:var(--color-ink);color:var(--color-ground);border:1px solid transparent;border-radius:8px;padding:10px 16px;font:500 0.875rem/1.25 var(--font-body);cursor:pointer;transition:background-color 150ms ease-out}.ds-btn-commit:hover{background:var(--color-ink-strong)}.ds-btn-commit:focus-visible{outline:2px solid var(--color-near);outline-offset:2px}.ds-btn-commit:disabled{background:var(--color-raised);color:var(--color-faint);cursor:not-allowed}"
+    },
+    {
+      "name": "Quiet Button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "Every secondary action: hairline at rest, ink under the pointer.",
+      "html": "<button class=\"ds-btn-quiet\">Export</button>",
+      "css": ".ds-btn-quiet{background:transparent;color:var(--color-muted);border:1px solid var(--color-hairline);border-radius:8px;padding:6px 12px;font:500 0.75rem/1.2 var(--font-body);cursor:pointer;transition:color 150ms ease-out}.ds-btn-quiet:hover{color:var(--color-ink)}.ds-btn-quiet:focus-visible{outline:2px solid var(--color-near);outline-offset:2px}"
+    },
+    {
+      "name": "View Tabs",
+      "kind": "nav",
+      "refersTo": "tab",
+      "description": "The Checklist / Timeline switch in the header.",
+      "html": "<div class=\"ds-tabs\" role=\"tablist\"><button class=\"ds-tab\" role=\"tab\" aria-selected=\"true\">Checklist</button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\">Timeline</button></div>",
+      "css": ".ds-tabs{display:inline-flex;border:1px solid var(--color-hairline);border-radius:8px;padding:2px}.ds-tab{background:transparent;border:0;border-radius:6px;padding:6px 10px;font:500 0.75rem/1 var(--font-body);color:var(--color-faint);cursor:pointer;transition:color 150ms}.ds-tab:hover{color:var(--color-muted)}.ds-tab[aria-selected=\"true\"]{background:var(--color-raised);color:var(--color-ink)}.ds-tab:focus-visible{outline:2px solid var(--color-near);outline-offset:2px}"
+    },
+    {
+      "name": "Game Chip",
+      "kind": "chip",
+      "refersTo": "hue-chip",
+      "description": "Focus bar and dailies: a pill carrying a game's hue, pressed or not.",
+      "html": "<button class=\"ds-chip\" aria-pressed=\"true\" style=\"--hue:#3DD6A0\">Wuwa <span class=\"ds-chip-n\">3</span></button><button class=\"ds-chip\" aria-pressed=\"false\" style=\"--hue:#4EA8DE\">Genshin <span class=\"ds-chip-n\">5</span></button>",
+      "css": ".ds-chip{display:inline-flex;align-items:center;gap:6px;margin-right:6px;border-radius:9999px;padding:6px 12px;font:500 0.75rem/1 var(--font-body);cursor:pointer;border:1px solid var(--color-hairline);color:var(--color-muted);background:transparent;transition:border-color 130ms ease-out,background-color 130ms ease-out,color 130ms ease-out,box-shadow 130ms ease-out,transform 120ms cubic-bezier(.2,.7,.3,1)}.ds-chip[aria-pressed=\"true\"]{border-color:color-mix(in srgb,var(--hue) 55%,transparent);color:var(--hue);background:color-mix(in srgb,var(--hue) 14%,transparent)}.ds-chip:hover{transform:translateY(-1px);box-shadow:0 0 0 1px color-mix(in srgb,var(--hue) 45%,transparent)}.ds-chip[aria-pressed=\"false\"]:hover{color:var(--color-ink)}.ds-chip:active{transform:scale(.96)}.ds-chip-n{font-size:.625rem;opacity:.7;font-variant-numeric:tabular-nums}"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Fields in the custom game and event forms.",
+      "html": "<label class=\"ds-field\">Event name<input class=\"ds-input\" placeholder=\"Login bonus\"></label>",
+      "css": ".ds-field{display:block;font:400 0.75rem/1.4 var(--font-body);color:var(--color-muted)}.ds-input{display:block;margin-top:4px;width:100%;box-sizing:border-box;background:var(--color-ground);color:var(--color-ink);border:1px solid var(--color-hairline);border-radius:8px;padding:8px 12px;font:400 0.875rem/1.4 var(--font-body);outline:none;transition:border-color 130ms}.ds-input:focus{border-color:var(--color-faint)}"
+    },
+    {
+      "name": "Event Row",
+      "kind": "custom",
+      "refersTo": "event-row",
+      "description": "Signature. One full-bleed target: hue rail, eyebrow, title, heat-coloured reading, depletion meter.",
+      "html": "<div class=\"ds-row\" style=\"--hue:#F2A03D;--tick:#e8b33c\"><span class=\"ds-rail\"></span><div class=\"ds-row-main\"><span class=\"ds-eyebrow\">ZZZ · Event</span><div class=\"ds-row-head\"><span class=\"ds-row-title\">Hollow Zero: Lost Void Run</span><span class=\"ds-reading\">2d 4h</span></div><div class=\"ds-meter\"><i data-live=\"true\"></i><i data-live=\"true\"></i><i data-live=\"true\"></i><i data-live=\"true\"></i><i data-live=\"true\"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div>",
+      "css": ".ds-row{display:flex;gap:12px;padding:14px 16px;border-bottom:1px solid color-mix(in srgb,var(--color-hairline) 70%,transparent);cursor:pointer;transition:background-color 130ms ease-out}.ds-row:hover{background:color-mix(in srgb,var(--color-raised) 62%,transparent)}.ds-row:active{background:color-mix(in srgb,var(--color-raised) 82%,transparent)}.ds-rail{width:3px;border-radius:9999px;background:var(--hue);opacity:.55;transform:scaleY(.82);transition:transform 160ms cubic-bezier(.2,.7,.3,1),opacity 130ms,box-shadow 160ms}.ds-row:hover .ds-rail{opacity:1;transform:scaleY(1);box-shadow:0 0 10px -2px var(--hue)}.ds-row-main{flex:1;min-width:0}.ds-eyebrow{font:600 .6875rem/1 var(--font-display);letter-spacing:.14em;text-transform:uppercase;color:var(--color-faint)}.ds-row-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:4px}.ds-row-title{font:500 .9375rem/1.375 var(--font-body);color:var(--color-ink)}.ds-reading{font:600 .875rem/1 var(--font-display);font-variant-numeric:tabular-nums;color:var(--tick);white-space:nowrap}.ds-meter{display:flex;gap:2px;height:10px;margin-top:10px}.ds-meter i{flex:1;border-radius:1px;background:var(--color-hairline)}.ds-meter i[data-live=\"true\"]{background:var(--tick);box-shadow:0 0 6px -1px var(--tick)}.ds-row:hover .ds-meter i[data-live=\"true\"]{filter:brightness(1.28) saturate(1.08)}"
+    },
+    {
+      "name": "Depletion Meter (unknown end)",
+      "kind": "custom",
+      "refersTo": "event-row",
+      "description": "An unannounced end is hatched, never full.",
+      "html": "<div class=\"ds-meter-u\"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>",
+      "css": ".ds-meter-u{display:flex;gap:2px;height:10px;width:240px}.ds-meter-u i{flex:1;border-radius:1px;background:repeating-linear-gradient(90deg,var(--color-hairline) 0 2px,transparent 2px 4px)}"
+    },
+    {
+      "name": "Timeline Bar",
+      "kind": "custom",
+      "refersTo": "timeline-bar",
+      "description": "Running (solid edge), not started (dashed edge, thinner wash), end unknown (frayed right).",
+      "html": "<div class=\"ds-bars\"><div class=\"ds-bar\" style=\"--hue:#7B8CFF\">Memory of Chaos</div><div class=\"ds-bar ds-bar-next\" style=\"--hue:#3DD6A0\">Version 3.1 story</div><div class=\"ds-bar ds-bar-open\" style=\"--hue:#C77DFF\">Login campaign</div></div>",
+      "css": ".ds-bars{display:grid;gap:6px;width:320px}.ds-bar{height:36px;display:flex;align-items:center;padding:0 12px;border-radius:5px;font:500 .75rem/1 var(--font-body);color:var(--color-ink);background:color-mix(in srgb,var(--hue) 22%,var(--color-surface));border-left:3px solid var(--hue);opacity:.9;transition:opacity 150ms}.ds-bar:hover{opacity:1}.ds-bar-next{background:color-mix(in srgb,var(--hue) 11%,var(--color-surface));border-left-style:dashed}.ds-bar-open{-webkit-mask-image:linear-gradient(90deg,#000 60%,transparent 100%);mask-image:linear-gradient(90deg,#000 60%,transparent 100%)}"
+    },
+    {
+      "name": "Toast",
+      "kind": "card",
+      "refersTo": "toast",
+      "description": "The only floating, shadowed object: transient notices with one action.",
+      "html": "<div class=\"ds-toast\"><span>A new version is ready.</span><button class=\"ds-toast-act\">Reload</button></div>",
+      "css": ".ds-toast{display:flex;align-items:center;gap:12px;max-width:28rem;background:var(--color-raised);color:var(--color-ink);border:1px solid var(--color-hairline);border-radius:12px;padding:12px 16px;font:400 .875rem/1.4 var(--font-body);box-shadow:0 10px 15px -3px rgb(0 0 0/.1),0 4px 6px -4px rgb(0 0 0/.1)}.ds-toast-act{margin-left:auto;background:transparent;border:0;color:var(--color-near);font:500 .75rem/1 var(--font-body);cursor:pointer}.ds-toast-act:hover{color:var(--color-ink)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Lit Instrument Panel",
+    "overview": "Event Clock is a cockpit at night. The ground is a deep blue-black, never a neutral void, lit faintly from\nabove so the page reads as a panel with a light source. Against that calm, only two things are\nallowed to glow: **whose game this is** (the game's hue) and **how long is left** (the heat ramp).\nEverything else (chrome, borders, labels, controls) stays muted until a hand reaches for it. The\nreader should be able to tell at a glance which events need them, because those are the only things\nthat are lit.\n\nThe character is **calm, precise and honest**. Calm, because the surfaces are quiet, the type is\nsmall and exact, and motion is quick and then still. Precise, because every number uses tabular\nfigures, every countdown resolves on the game's own clock, and labels read like instrument\nlegends. Honest, because uncertainty has its own look and is never drawn as a full reading. An\nunannounced end is a hatched meter or a frayed bar, a bar that started before the view shows a\nfaded edge, and an event that has not started has a dashed edge. \"We don't know\" never looks like\n\"plenty of time\".\n\nDensity sits at checklist level, not dashboard level. Rows are full-bleed with a 16px gutter and\nhairline rules between them, with no cards around each event. The one place the panel raises its\nvoice is the headline deadline. There the event title is set in display type, the countdown in a\n44px numeral, and an urgency-coloured wash warms the whole section as the deadline closes in.",
+    "keyCharacteristics": [
+      "Deep blue-black ground (dark is the default theme), with a light theme that swaps in different values rather than inverting the dark ones.",
+      "Two colour axes that never cross: game hue for identity, the heat ramp for urgency.",
+      "Two typefaces: Chakra Petch for anything that is a reading (numbers, labels, the wordmark), Public Sans for anything that is language.",
+      "Flat, tonal surfaces. The only light comes from meaning.",
+      "The segmented depletion meter as the signature element.",
+      "Quiet controls that answer within 110–160ms of being touched."
+    ],
+    "rules": [
+      {
+        "name": "The Two Axes Rule",
+        "body": "Hue answers *whose event*; heat answers *how long*. Never colour an urgency element with a game hue, or a game element with a heat colour. Keeping them apart is what lets one glance answer both questions.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Answers Rule",
+        "body": "Every UI colour is a token with a dark value and a light value. A component names `ink`, `hairline` or `soon` and never a literal. `bg-white`, a hex value or a hard-coded scrim looks right in one theme and wrong in the other, and nothing will warn you which.",
+        "section": "colors"
+      },
+      {
+        "name": "The Moves-Only-Where-It-Failed Rule",
+        "body": "The dark theme changes only where a colour failed contrast. A hue that already reads is left exactly as it shipped.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Voices Rule",
+        "body": "If a reader reads it *off* the panel (a number, a legend, a count), it is Chakra Petch. If they read it as language, it is Public Sans. Never set a paragraph in Chakra Petch.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tabular Rule",
+        "body": "Anything that ticks or lines up in a column uses tabular figures (`.tnum`). A countdown that reflows every second is a broken instrument.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tells-Left, Shows-Right Rule",
+        "body": "Instructions pin, information scrolls. On a wide screen the headline deadline must never be pushed below the fold by a full-width control row.",
+        "section": "layout"
+      },
+      {
+        "name": "The Rule-Not-Card Rule",
+        "body": "Lists are full-bleed rows divided by hairlines. Use a bordered, rounded container only for something that is genuinely a separate object (a form, a daily checklist, a sheet, a toast), never as a wrapper around each event.",
+        "section": "layout"
+      },
+      {
+        "name": "The Emitted-Light Rule",
+        "body": "Nothing glows unless the glow carries information about urgency or identity. A decorative glow, gradient or drop shadow on a static surface breaks the panel.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do name colours by token (`ink`, `hairline`, `soon`) and add a light-theme value whenever you add a token.",
+      "Do pass every game hue through `readableHue` for the active theme before it reaches the screen.",
+      "Do use tabular figures (`.tnum`) on every countdown, count and date that sits in a column.",
+      "Do draw uncertainty as uncertainty: a hatched meter, a frayed bar end, a faded clipped start, a dashed not-yet-started edge, and the words \"end date unknown\".",
+      "Do keep hover and press feedback fast and eased out (110–160ms in, 40–60ms on press), behind `@media (hover: hover)`, and remove the transforms under `prefers-reduced-motion: reduce`.",
+      "Do show the 2px `near` focus outline on every interactive element, `summary` included.",
+      "Do keep the board's controls out of the list rows: status, effort and notes live in the detail sheet."
+    ],
+    "donts": [
+      "Don't use literal colours (`bg-white`, hex values in a component, a hard-coded scrim). They break one of the two themes silently.",
+      "Don't colour an urgency element with a game hue, or a game element with a heat step.",
+      "Don't replace the segmented meter with a smooth progress bar, or draw an unknown end as a full one.",
+      "Don't add glows, gradients or drop shadows to static surfaces. Light has to mean something.",
+      "Don't wrap individual events in cards. Rows are full-bleed and divided by hairlines.",
+      "Don't set prose in Chakra Petch, or numbers that tick in a proportional face.",
+      "Don't default the theme from `prefers-color-scheme`. Dark is the default until the reader chooses.",
+      "Don't put a second control inside a row, or a drag target on the focus bar or the dailies strip."
+    ]
+  }
+}
