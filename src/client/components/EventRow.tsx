@@ -114,7 +114,10 @@ export function EventRow({
                 )}
               </span>
               <span
-                className={`row-title block truncate text-[0.9375rem] font-medium leading-snug ${
+                // Two lines, not one: on a phone a single line cut most titles
+                // to "Faerie Sugoroku Insect Cage Ga…", and the title is the
+                // thing a reader is scanning the list for.
+                className={`row-title line-clamp-2 break-words text-[0.9375rem] font-medium leading-snug ${
                   completed ? "line-through decoration-faint" : ""
                 }`}
               >
