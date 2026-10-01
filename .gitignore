@@ -132,3 +132,7 @@ snapshots/*.state.json
 # the refresh workflow commits the whole snapshots/ directory, which would
 # otherwise pin a truncated page in git forever.
 snapshots/*.tmp-*
+
+# Impeccable design tooling. The sidecar (design.json) is tracked; the local
+# config only records this machine's hook consent.
+.impeccable/config.local.json
