@@ -1,12 +1,12 @@
 {
   "sourceId": "gfl2-iopwiki-events",
   "url": "https://iopwiki.com/wiki/GFL2_Events",
-  "contentHash": "2b6ae93e0d24b33bc92ff56d640e87e9a18e4ac558c0cafcfa3d5dc464c90006",
+  "contentHash": "5e17e77f4528782bc9f02bbf97d17fe5e48ca60f331118749b0ffe6b564a34e8",
   "bytes": 288708,
   "etag": null,
-  "lastModified": "Tue, 06 Oct 2026 02:20:10 GMT",
-  "contentChangedAt": "2026-10-06T05:28:09.682Z",
-  "lastConfirmedAt": "2026-10-06T05:28:09.682Z",
+  "lastModified": "Tue, 06 Oct 2026 12:30:38 GMT",
+  "contentChangedAt": "2026-10-06T17:28:08.193Z",
+  "lastConfirmedAt": "2026-10-06T17:28:08.193Z",
   "eventCount": 2,
   "charset": "utf-8"
 }
