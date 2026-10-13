@@ -2,7 +2,9 @@
 
 **Date:** 2026-10-13
 
-**Status:** phase 2a implemented 2026-10-13; phase 2b not started. Spec 2 of 2. Builds on `2026-10-03-check-in-goals-design.md` (the
+**Status:** implemented 2026-10-13 (2a and 2b). Spec 2 of 2. The per-game switch lives in *What
+you see* beside the daily-chores switch rather than on each game row, and *Make it mine* is in
+settings only. Builds on `2026-10-03-check-in-goals-design.md` (the
 period engine and goals) and ships after it, in two phases.
 
 ## Request and intended outcome

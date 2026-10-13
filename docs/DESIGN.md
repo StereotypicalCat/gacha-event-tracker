@@ -415,6 +415,9 @@ selected tab fills with `raised` and turns ink; unselected tabs are faint and go
   label, a small numeric field on `ground`, `/ 2,100 points`, and a near-pill Save. Weekly and
   monthly counts sit on their own faint line under the strip's heading, so the reset countdown
   never wraps.
+- **Built-in question** (top of the dailies strip, once per game): one line of muted text —
+  `Track Zenless Zone Zero's built-in weekly tasks?` — with a near-coloured **Yes** and a faint **No
+  thanks** as plain text buttons. Never a card, never a modal; the strip renders for it alone.
 - **Check-in goal control** (detail sheet, under the daily checklist): the status pills' style —
   Off / Each week / Across the event — then a small number field and, for weeks, a weekday select,
   both on `ground` with a hairline border like the notes field. Once a goal is set, a smaller

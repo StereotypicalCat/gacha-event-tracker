@@ -473,7 +473,7 @@ ID spaces, and the reason is the one this document keeps making:
 mygame:<slug>        a game the reader defined      "mygame:limbus-company"
 myevent:<random>     an event the reader entered    "myevent:k3f9qa2m"
 mytask:<random>      a weekly or monthly task       "mytask:p0q8n3x2ab"
-routine:<game>:<slug>  a built-in task (held for phase 2b; nothing writes it yet)
+routine:<game>:<slug>  a built-in weekly task      "routine:zzz:ridu-weekly"
 ```
 
 **A reader's event is never minted as `${game}:${slug}:${date}`.** That space is derived from source
@@ -512,6 +512,14 @@ one a newer version wrote, and opening an older tab must not erase it. `amounts`
 (`periodOf`, `src/shared/period.ts`), so a new week starts with no value and old weeks are never
 pruned. An event's points goal stores its numbers the same way, under the event id. Deleting a task
 removes the task record only.
+
+**Built-in tasks** (`src/shared/routines.ts`) are not stored: they ship in the bundle, each with a
+`source` URL and the `asOf` date that page gives, and their ticks and numbers are stored under their
+`routine:` id exactly as a reader's task's are. Two prefs govern them: `routineGames` (games whose
+built-ins are on) and `routinesAsked` (games already asked), both **absent meaning none** so they
+are opt-in for every install. *Make it mine* adds a `mytask:` with `from: <routine id>` and copies
+the routine's day log and amounts to it — additively, so deleting the copy shows the original
+with its own numbers again.
 
 Reader-authored events reuse `progress`, `daily` and `ignored` unchanged, keyed by their `myevent:`
 id — everything the reader can say about a scraped event they can say about their own, with no

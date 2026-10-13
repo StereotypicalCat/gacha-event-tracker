@@ -557,8 +557,12 @@ default) or **reach a number** (a target such as 2,100, with an optional unit).
 - **Theirs, kept and exported.** Deleting a task removes the task only; its ticks and numbers stay.
   Both travel in the export, and import never rolls a newer week back.
 
-Built-in tasks per game, offered when a game is switched on, are specified as the next phase
-(`docs/superpowers/specs/2026-10-13-periodic-tasks-design.md` § Phase 2b) and are not built yet.
+**Some games' weekly tasks are built in** — ZZZ's Ridu Weekly (1,300 points) and Endfield's Weekly
+Routine (10 points) so far, each from a cited page and shown with the date that page gives, so a
+figure from an old guide is visibly old. They are **off until the reader says yes**: the strip asks
+once, in one line, about a game on screen that has them, and a switch per game in *What you see*
+governs them after. Built-ins are not edited in place; **Make it mine** copies one into the reader's
+own tasks with its ticks and numbers, and hides the original while the copy exists.
 
 ## Out of scope for v1
 
