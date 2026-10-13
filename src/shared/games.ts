@@ -141,9 +141,11 @@ export const GAMES: Record<GameId, GameMeta> = {
   // starts, 12:59 and 19:59 ends), so there is no reset hour to read off it
   // either. See the fgo entry below for the same reasoning at more length.
   stellasora: { id: "stellasora", name: "Stella Sora", short: "Stella Sora", hue: "#2E9E9E", studio: "Yostar", dailyTasks: "Daily missions" },
-  // No `resetOffsets`: the source is Game8, which states day-precision prose
-  // and no clock at all — the same silence p5x has, and the same answer.
-  czn: { id: "czn", name: "Chaos Zero Nightmare", short: "CZN", hue: "#B84A9C", studio: "Smilegate", dailyTasks: "Daily missions" },
+  // Chaos Zero Nightmare runs one worldwide server whose day rolls at 18:00 UTC,
+  // per Game-Time-Master (github.com/cicerakes/Game-Time-Master); GameWith's
+  // guide states the same instant in UTC. The source is Game8 prose with no
+  // clock of its own, so the zone is taken as Game-Time-Master states it.
+  czn: { id: "czn", name: "Chaos Zero Nightmare", short: "CZN", hue: "#B84A9C", studio: "Smilegate", dailyTasks: "Daily missions", resetOffsets: { asia: 0, america: 0, europe: 0 }, resetHourLocal: { asia: 18, america: 18, europe: 18 } },
   // Nikke runs one worldwide server on a Japanese clock that rolls its day at
   // **05:00**, not 04:00 — and both halves come from the source rather than
   // from habit. Every schedule column on the wiki is headed `Start(UTC+9)` /
