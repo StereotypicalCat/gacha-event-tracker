@@ -514,6 +514,9 @@ describe("reset clocks, per server, as Game-Time-Master states them", () => {
     ["czn", "asia", "18:00", 0],
     ["czn", "america", "18:00", 0],
     ["czn", "europe", "18:00", 0],
+    ["p5x", "asia", "20:00", 0],
+    ["p5x", "america", "20:00", 0],
+    ["p5x", "europe", "20:00", 0],
   ];
 
   for (const [game, region, utc, offset] of ROWS) {

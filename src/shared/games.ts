@@ -87,10 +87,12 @@ export const GAMES: Record<GameId, GameMeta> = {
   // Daily Wishes page agrees, and America's is fixed rather than Pacific — the
   // December 2024 maintenance was still announced in UTC-7.
   nikki: { id: "nikki", name: "Infinity Nikki", short: "Nikki", hue: "#F27BB0" , studio: "Infold Games", dailyTasks: "Daily tasks, Vital Energy", resetOffsets: { america: -7, europe: 2 } },
-  // No `resetOffsets`: nothing in the source states a server map that differs
-  // from the regional default, and an offset invented here would move real
-  // readers' day keys. Add one only against evidence — see games.ts § resetOffsets.
-  p5x: { id: "p5x", name: "Persona 5: The Phantom X", short: "P5X", hue: "#D62246" , studio: "Perfect World", dailyTasks: "Daily missions, stamina" },
+  // The English and Japanese versions of P5X share one server whose day rolls
+  // at 20:00 UTC, per Game-Time-Master (github.com/cicerakes/Game-Time-Master).
+  // Its CN, KR and TW servers are separate games to us, so every region we
+  // model gets the shared server's clock. The source is Game8 prose with no
+  // clock of its own, so the zone is taken as Game-Time-Master states it.
+  p5x: { id: "p5x", name: "Persona 5: The Phantom X", short: "P5X", hue: "#D62246" , studio: "Perfect World", dailyTasks: "Daily missions, stamina", resetOffsets: { asia: 0, america: 0, europe: 0 }, resetHourLocal: { asia: 20, america: 20, europe: 20 } },
   // Reverse: 1999 runs one global server on a fixed UTC-5 and rolls its day at
   // **05:00**, not the 04:00 every other game here uses. Both facts come from
   // the source rather than from habit: all 154 rows on the wiki's event list
