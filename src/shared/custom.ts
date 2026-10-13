@@ -26,11 +26,19 @@ import { EventType, GachaEvent, Precision, slugify } from "./schema.ts";
  *
  * Every id in this app is colon-separated and the first segment decides which
  * space it belongs to: `dailies:<game>` is a standing chore, `mygame:` and
- * `myevent:` are the reader's own, and anything else is `<game>:<slug>:<date>`
- * from a source. The day one of these becomes a game id is the day two key
- * spaces merge silently, so a test pins it against `GameId.options`.
+ * `myevent:` are the reader's own, `mytask:` is a weekly or monthly task they
+ * set up (task.ts), `routine:` is held for the built-in ones, and anything else
+ * is `<game>:<slug>:<date>` from a source. The day one of these becomes a game
+ * id is the day two key spaces merge silently, so a test pins it against
+ * `GameId.options`.
  */
-export const RESERVED_ID_SEGMENTS = ["dailies", "mygame", "myevent"] as const;
+export const RESERVED_ID_SEGMENTS = [
+  "dailies",
+  "mygame",
+  "myevent",
+  "mytask",
+  "routine",
+] as const;
 
 const GAME_PREFIX = "mygame";
 const EVENT_PREFIX = "myevent";

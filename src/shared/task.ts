@@ -1,0 +1,121 @@
+import { z } from "zod";
+import type { LaneId } from "./custom.ts";
+import { dayKey } from "./daily.ts";
+import { AmountTarget, type AmountLog, type GoalStatus } from "./goal.ts";
+import { periodOf, PeriodSchema } from "./period.ts";
+import type { Region } from "./schema.ts";
+
+/**
+ * Weekly and monthly chores the reader sets up per game — ZZZ's weekly
+ * activity points, Endfield's weekly routine.
+ *
+ * Not events: no window, no end, no done or ignored. A task is a period that
+ * rolls on the game's own reset (`periodOf`) and a measure that fills it —
+ * days ticked, or a number entered against a target. Its status is the same
+ * `GoalStatus` an event's goal produces, so the dailies strip draws, counts and
+ * labels both with one set of rules.
+ *
+ * Reader-authored, so its id lives in its own reserved space and its `game` is
+ * any lane, for the reason `CustomEvent.game` is: narrowing it to `GameId`
+ * would arm every future game removal to hide a reader's row.
+ */
+
+const TASK_PREFIX = "mytask";
+
+export const TaskId = z.string().regex(/^mytask:[a-z0-9]{6,32}$/);
+
+/** Random, like `mintCustomEventId`: renaming a task never moves its ticks or numbers. */
+export function mintTaskId(random: () => number = Math.random): string {
+  let token = "";
+  while (token.length < 10) {
+    token += Math.floor(random() * 36 ** 6)
+      .toString(36)
+      .padStart(6, "0");
+  }
+  return `${TASK_PREFIX}:${token.slice(0, 10)}`;
+}
+
+export const MeasureSchema = z.union([
+  /** N distinct game-days ticked in the period; 1 is "done this week". */
+  z.object({ kind: z.literal("days"), required: z.number().int().min(1).max(31) }),
+  /** A number entered against a target, with an optional unit to print. */
+  z.object({
+    kind: z.literal("amount"),
+    target: AmountTarget,
+    unit: z.string().trim().max(24).optional(),
+  }),
+]);
+export type Measure = z.infer<typeof MeasureSchema>;
+
+export const TaskSchema = z.object({
+  id: TaskId,
+  game: z.string().min(1),
+  title: z.string().trim().min(1).max(80),
+  period: PeriodSchema,
+  measure: MeasureSchema,
+  /** The built-in routine this was copied from, when it was (phase 2b). */
+  from: z.string().optional(),
+  at: z.string(),
+  updatedAt: z.string(),
+});
+export type Task = z.infer<typeof TaskSchema>;
+
+/** Where the reader is with a task this period. Pure; `now` explicit. */
+export function taskStatus(input: {
+  task: Task;
+  region: Region;
+  now: number;
+  logged: readonly string[];
+  amounts?: AmountLog | undefined;
+}): GoalStatus {
+  const { task, region, now, logged, amounts } = input;
+  const today = dayKey(now, region, task.game as LaneId);
+  const { start, days } = periodOf(task.period, today);
+  const scope = task.period.unit;
+  const left = days.filter((k) => k >= today);
+
+  if (task.measure.kind === "amount") {
+    const count = amounts?.[start]?.value ?? 0;
+    const required = task.measure.target;
+    return {
+      scope, measure: "amount", periodStart: start, required, count,
+      met: count >= required, needed: Math.max(0, required - count),
+      open: left.length, shortfall: false,
+    };
+  }
+
+  const ticked = new Set(logged);
+  const count = days.filter((k) => k <= today && ticked.has(k)).length;
+  // A count saved for a month cannot ask for a 31st day in February.
+  const required = Math.min(task.measure.required, days.length);
+  const open = left.filter((k) => !ticked.has(k)).length;
+  const needed = Math.max(0, required - count);
+  return {
+    scope, measure: "days", periodStart: start, required, count,
+    met: count >= required, needed, open, shortfall: needed > open,
+  };
+}
+
+const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+function ordinal(n: number): string {
+  const tens = n % 100;
+  if (tens >= 11 && tens <= 13) return `${n}th`;
+  return `${n}${["th", "st", "nd", "rd"][n % 10] ?? "th"}`;
+}
+
+/** One line saying when it rolls and what it wants. */
+export function taskCaption(task: Task): string {
+  const when =
+    task.period.unit === "week"
+      ? `every week from ${WEEKDAYS[task.period.startsOn - 1]}`
+      : `every month from the ${ordinal(task.period.startsOn)}`;
+  const m = task.measure;
+  const what =
+    m.kind === "amount"
+      ? `reach ${m.target.toLocaleString("en-US")}${m.unit ? ` ${m.unit}` : ""}`
+      : m.required === 1
+        ? "tick it off"
+        : `${m.required} days`;
+  return `${when} · ${what}`;
+}
