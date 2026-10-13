@@ -13,7 +13,8 @@ import type { GameMeta } from "../../shared/games.ts";
 import type { GameId, Region } from "../../shared/schema.ts";
 import { goalCount, goalLabel, type GoalStatus } from "../../shared/goal.ts";
 import { addDays, periodOf, type Period } from "../../shared/period.ts";
-import type { Task } from "../../shared/task.ts";
+import type { TaskShape } from "../../shared/task.ts";
+import { asOfLabel } from "../../shared/routines.ts";
 import { AmountEditor } from "./AmountEditor.tsx";
 import { formatRemaining } from "../../shared/time.ts";
 import { DayPip } from "./DayPip.tsx";
@@ -72,6 +73,12 @@ export interface DailyItem {
   unit?: string | undefined;
 }
 
+/**
+ * A task as the strip needs it: a reader's own, or a built-in routine, which
+ * also says what date its source gives (`asOf`) so the tooltip can show it.
+ */
+export type StripTask = TaskShape & { asOf?: string | undefined };
+
 /** A game and everything of its that wants ticking today. */
 export interface DailyGroup {
   game: LaneId;
@@ -110,8 +117,8 @@ export function dailyGroups(
   startOf: (event: DisplayEvent) => number,
   showChores = true,
   goalFor: (id: string) => GoalStatus | undefined = () => undefined,
-  tasks: readonly Task[] = [],
-  taskStatusFor: (task: Task) => GoalStatus | undefined = () => undefined,
+  tasks: readonly StripTask[] = [],
+  taskStatusFor: (task: StripTask) => GoalStatus | undefined = () => undefined,
 ): DailyGroup[] {
   // A lane can arrive through an event without being in `games` — an event on a
   // game the reader has since switched off, say — and dropping it here would
@@ -177,7 +184,12 @@ export function dailyGroups(
           key: task.id,
           game: lane,
           label: task.title,
-          title: `${game.name} — ${task.title}`,
+          // A built-in is someone else's figure; say how old it is where the
+          // reader can find it without opening settings.
+          title:
+            task.asOf === undefined
+              ? `${game.name} — ${task.title}`
+              : `${game.name} — ${task.title} · built in, from a source as of ${asOfLabel(task.asOf)}`,
           ariaLabel: `${task.title} (${game.name})`,
           today,
           resetsIn,
@@ -265,6 +277,7 @@ export function Dailies({
   taskStatusFor,
   onSetAmount,
   amountFor,
+  ask,
 }: {
   /** Every lane the reader is looking at, in their own order. */
   games: LaneId[];
@@ -285,9 +298,18 @@ export function Dailies({
    * completes its item for the header without ticking anything.
    */
   goalFor?: ((id: string) => GoalStatus | undefined) | undefined;
-  /** The reader's weekly and monthly tasks, all of them; the strip picks its lanes'. */
-  tasks?: readonly Task[] | undefined;
-  taskStatusFor?: ((task: Task) => GoalStatus | undefined) | undefined;
+  /**
+   * Weekly and monthly tasks — the reader's own and any built-ins they turned
+   * on — all of them; the strip picks its lanes'.
+   */
+  tasks?: readonly StripTask[] | undefined;
+  taskStatusFor?: ((task: StripTask) => GoalStatus | undefined) | undefined;
+  /**
+   * A game whose built-in weekly tasks the reader has not been asked about yet,
+   * and how to record the answer. Asked here because this is where the tasks
+   * would appear; one line, never a modal, never twice.
+   */
+  ask?: { game: LaneId; onAnswer: (yes: boolean) => void } | undefined;
   /** Record a number for an item's period. */
   onSetAmount?: ((key: string, periodStart: string, value: number) => void) | undefined;
   /** The number recorded for an item's period, if any. */
@@ -350,7 +372,36 @@ export function Dailies({
     return () => clearTimeout(id);
   }, [burst]);
 
-  if (items.length === 0) return null;
+  if (items.length === 0 && ask === undefined) return null;
+
+  const question =
+    ask === undefined ? null : (
+      <div className="relative flex flex-wrap items-baseline gap-x-3 gap-y-1 text-xs">
+        <p className="text-muted">
+          Track {gameMeta(ask.game).name}'s built-in weekly tasks?
+        </p>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => ask.onAnswer(true)}
+            className="font-medium text-near transition-colors hover:text-ink"
+          >
+            Yes
+          </button>
+          <button
+            type="button"
+            onClick={() => ask.onAnswer(false)}
+            className="text-faint transition-colors hover:text-muted"
+          >
+            No thanks
+          </button>
+        </div>
+      </div>
+    );
+
+  if (items.length === 0) {
+    return <section className="relative border-b border-hairline px-4 py-3">{question}</section>;
+  }
 
   // With mixed reset clocks there is no single "resets in", so the header
   // reports the next one to land and says that it is the next one.
@@ -361,6 +412,7 @@ export function Dailies({
   return (
     <section className="relative border-b border-hairline px-4 py-4">
       {burst > 0 && <Fireworks key={burst} />}
+      {question !== null && <div className="mb-3">{question}</div>}
 
       <div className="relative flex items-baseline justify-between gap-3">
         <h2 className="eyebrow">

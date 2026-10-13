@@ -25,6 +25,7 @@ import {
 } from "../src/client/components/GoalControl.tsx";
 import { AmountEditor, parseAmount } from "../src/client/components/AmountEditor.tsx";
 import type { Task } from "../src/shared/task.ts";
+import { routinesFor } from "../src/shared/routines.ts";
 import { DailyChecklist } from "../src/client/components/DailyChecklist.tsx";
 import { timelineLanes } from "../src/client/state/lanes.ts";
 import { GameMetaProvider } from "../src/client/state/gameMeta.tsx";
@@ -1352,7 +1353,8 @@ describe("weekly and monthly tasks in the dailies strip", () => {
     scope: "month", measure: "days", periodStart: "2026-10-01", required: 1, count: 1,
     met: true, needed: 0, open: 16, shortfall: false,
   };
-  const statusOf = (t: Task) => (t.measure.kind === "amount" ? amountStatus : monthStatus);
+  const statusOf = (t: Pick<Task, "measure">) =>
+    t.measure.kind === "amount" ? amountStatus : monthStatus;
   const ev = {
     id: "z1", game: "zzz", title: "Login", type: "login", summary: null,
     startsAt: "2026-10-01T00:00:00.000Z", startPrecision: "day", endsAt: null,
@@ -1479,5 +1481,39 @@ describe("review fixes: an event's points goal is not a daily", () => {
     };
     expect(tally(week)).toMatchObject({ total: 0, week: { total: 1, complete: 0 } });
     expect(tally(total)).toMatchObject({ total: 0, week: { total: 0 }, month: { total: 0 } });
+  });
+});
+
+describe("built-in weekly tasks in the strip", () => {
+  const NOW = Date.parse("2026-10-15T12:00:00.000Z");
+  const ridu = routinesFor("zzz")[0]!;
+  const status: GoalStatus = {
+    scope: "week", measure: "amount", periodStart: "2026-10-12", required: 1300, count: 0,
+    met: false, needed: 1300, open: 4, shortfall: false,
+  };
+
+  test("a routine draws like a task, and its tooltip says its source date", () => {
+    const [group] = dailyGroups(["zzz"], [], NOW, "europe", (id) => metaFor(id, {}),
+      (e) => Date.parse(e.startsAt), false, undefined, [ridu], () => status);
+    expect(group!.items[0]!.key).toBe("routine:zzz:ridu-weekly");
+    expect(group!.items[0]!.title).toContain("as of 2 Dec 2025");
+  });
+
+  test("the question shows on its own, and names the game", () => {
+    const html = render(
+      <Dailies games={["zzz"]} events={[]} region="europe" now={NOW} showChores={false}
+        daysFor={() => []} onToggleDay={() => {}} ask={{ game: "zzz", onAnswer: () => {} }} />,
+    );
+    expect(html).toContain("Track Zenless Zone Zero");
+    expect(html).toContain("weekly tasks?");
+    expect(html).toContain("No thanks");
+  });
+
+  test("with nothing to show and nothing to ask, the strip is absent", () => {
+    const html = render(
+      <Dailies games={["zzz"]} events={[]} region="europe" now={NOW} showChores={false}
+        daysFor={() => []} onToggleDay={() => {}} />,
+    );
+    expect(html).toBe("");
   });
 });

@@ -34,7 +34,8 @@ import {
 import { clockFor, formatRemaining } from "../shared/time.ts";
 import { dailySummary, isDaily, resolveDaily } from "../shared/daily.ts";
 import { goalStatus, readGoal, type GoalStatus } from "../shared/goal.ts";
-import { taskStatus, type Task } from "../shared/task.ts";
+import { taskStatus, type TaskShape } from "../shared/task.ts";
+import { activeRoutines, routineToAsk } from "../shared/routines.ts";
 import { strandedOccurrences } from "../shared/recurrence.ts";
 import { orderGames } from "./state/gameOrder.ts";
 import { GameMetaProvider, type MetaResolver } from "./state/gameMeta.tsx";
@@ -192,7 +193,17 @@ export function App() {
     });
   };
 
-  const taskStatusOf = (task: Task): GoalStatus =>
+  /**
+   * Built-ins the reader turned on, less any they made their own — then theirs
+   * and the built-ins together, as the strip draws them.
+   */
+  const copiedFrom = new Set(
+    tasks.tasks.flatMap((t) => (t.from === undefined ? [] : [t.from])),
+  );
+  const routines = activeRoutines(prefs.routineGames, copiedFrom);
+  const stripTasks = [...tasks.tasks, ...routines];
+
+  const taskStatusOf = (task: TaskShape): GoalStatus =>
     taskStatus({
       task,
       region: prefs.region,
@@ -588,8 +599,25 @@ export function App() {
               const row = todo.find((r) => r.event.id === id);
               return row === undefined ? undefined : goalStatusOf(row);
             }}
-            tasks={tasks.tasks}
+            tasks={stripTasks}
             taskStatusFor={taskStatusOf}
+            ask={(() => {
+              const game = routineToAsk(
+                focus === null ? enabled : [focus],
+                prefs.routineGames,
+                prefs.routinesAsked,
+              );
+              if (game === null) return undefined;
+              return {
+                game,
+                // Either answer is recorded, so the question is asked once.
+                onAnswer: (yes: boolean) =>
+                  update({
+                    routinesAsked: [...(prefs.routinesAsked ?? []), game],
+                    ...(yes ? { routineGames: [...(prefs.routineGames ?? []), game] } : {}),
+                  }),
+              };
+            })()}
             onSetAmount={amounts.setAmount}
             amountFor={(key, period) => amounts.amountsFor(key)[period]?.value}
           />
