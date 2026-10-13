@@ -177,10 +177,11 @@ export const GAMES: Record<GameId, GameMeta> = {
   // per-region split, so there is nothing here that could evidence a server
   // map even if a clock appeared. See src/ingest/parsers/arustats.ts.
   hi3: { id: "hi3", name: "Honkai Impact 3rd", short: "Honkai 3rd", hue: "#8B5CF6", studio: "HoYoverse", dailyTasks: "Daily missions, stamina" },
-  // No `resetOffsets`: Karendar states all times for the Global server in UTC
-  // with no per-region columns and no stated reset hour, so PGR takes the
-  // default regional reset until a source evidences an override.
-  pgr: { id: "pgr", name: "Punishing: Gray Raven", short: "PGR", hue: "#CC292B", studio: "Kuro Games", dailyTasks: "Daily missions, serum" },
+  // PGR's Global server rolls its day at 05:00 UTC for every region, per
+  // Game-Time-Master (github.com/cicerakes/Game-Time-Master). Karendar, the
+  // source, states every Global time in UTC with no per-region columns, which
+  // agrees with one server on a UTC clock.
+  pgr: { id: "pgr", name: "Punishing: Gray Raven", short: "PGR", hue: "#CC292B", studio: "Kuro Games", dailyTasks: "Daily missions, serum", resetOffsets: { asia: 0, america: 0, europe: 0 }, resetHourLocal: { asia: 5, america: 5, europe: 5 } },
 };
 
 export const GAME_LIST: GameMeta[] = Object.values(GAMES);
