@@ -110,6 +110,25 @@ bun test --test-name-pattern "year-less"
 BASE_PATH=/gacha-event-tracker/ bun run build
 ```
 
+**Looking at the built app.** UI work is checked in a real browser, not reasoned about. Build the
+shell without touching the feed — `bun run build:css && bun run build:js && bun run build:static` —
+and serve it with `PORT=<port> bun run serve.ts`. Drive a headless Chrome with `puppeteer-core`
+installed in a scratch directory, never in the project (`zod` is the only runtime dependency); on
+the owner's machine the browser is `/usr/bin/google-chrome-stable`. Traps that have each cost a
+cycle:
+
+- **Use a fresh, distinctive port for every rebuild**, and stop your own server by its PID. The shell
+  is cached cache-first (PRD F14), so the same origin serves the *previous* bundle after a rebuild;
+  a new origin has no service worker at all. Other sessions may be serving on nearby ports — never
+  `pkill -f serve.ts`.
+- **Reach a state through `localStorage`, then reload.** `gacha-tracker:v1:prefs` with
+  `onboarded: true` skips first run; `view` is `"soon"` (the list) or `"timeline"` — anything else
+  falls back to the default. Wait for something the view renders, not for `networkidle0`, which
+  returns before React mounts.
+- **Read text with `textContent`.** Eyebrows are uppercased in CSS, so `innerText` returns
+  `TODAY'S DAILIES` and a wait for `Today's dailies` never ends.
+- **Keep total capture scale at or below about 3×**; above it sticky panes rasterise blank.
+
 **`build:js` passes `--production`, and that flag is load-bearing.** Without it Bun bundles React's
 *development* build: 566 KB rather than 344 KB (164 KB vs 103 KB gzipped), every element creation
 validated at runtime, and `StrictMode` double-invoking effects — which in this app means
@@ -377,6 +396,15 @@ proxy, or a residential egress would each be defeating a deliberate access contr
 same reason `uma.moe` was declined below — and unlike `uma.moe` we would be doing it to a host whose
 `robots.txt` was welcoming, which makes it worse, not better. The legitimate options are to run the
 refresh from an address game8 will serve, or to find those games another source.
+
+**When CI cannot reach a source but the owner's own machine can, the owner refreshes by hand** —
+`bun run refresh`, then commits the snapshots as `chore(data): refresh source snapshots`. Asked on
+2026-08-17 whether to add a recorded-robots-policy override for `reverse1999.fandom.com`, whose
+`/robots.txt` refused a datacenter address, the owner declined the machinery and took the manual
+route. So register such a source normally, write down why CI cannot fetch it, and say plainly that
+refreshing it is a manual run. Do not propose header shaping, a proxy or a robots override: a
+`skipped_robots` outcome is only a warning and never touches the failure streak, so the source costs
+a warning line per cycle and nothing else.
 
 **CI moved to a Gitea runner on 2026-09-16, which is the first of those two options — and its result
 is not yet known.** A different address is exactly the variable this failure turns on, so the nine
@@ -1034,6 +1062,10 @@ to an open page). Four things hold it up:
   test and existence in a script run from a full checkout, as `scripts/check-changelog.ts` does.
   To see what the image sees, copy the Dockerfile's `COPY` list into a scratch directory, link
   `node_modules`, and run the suite there.
+- **One command per shell call when someone is approving them.** A call that runs an edit, `git add`
+  and `git commit` chained with `&&` is one approve-or-deny decision over three actions: the edit
+  cannot be inspected before the commit lands, and the transcript hides the diff at the moment it is
+  approved. Read-only commands may share a call; a commit never rides along with anything.
 - **Only ever commit your own work.** Stage the files you changed, by path, and nothing else. The
   working tree may already hold edits, untracked fixtures or a half-finished experiment that someone
   else — the user, or another agent — put there and has not decided about yet; `git add -A`, `git

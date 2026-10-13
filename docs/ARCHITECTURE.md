@@ -228,6 +228,27 @@ gates and publish it, while `.github/workflows/ci.yml` builds and deploys to Git
 only needs to build and serve, not refresh data sources; the scheduled refresh and container image
 publishing run exclusively on Gitea Actions.
 
+**Gitea Actions is GitHub-Actions-compatible, not GitHub Actions.** That compatibility makes
+GitHub-shaped answers look right and then fail in specific places, so ask what *Gitea* does before
+changing CI, the registry or secrets. The directory name `.github/` is not evidence of which forge
+runs a workflow: Gitea reads `.gitea/workflows/` natively, and `test/refresh.test.ts` asserts on the
+workflow files by path. The divergences found so far, each one paid for once:
+
+- **The registry does not take the Actions token.** A Gitea package belongs to a user or org, not a
+  repository, so `secrets.GITHUB_TOKEN` carries no authority over it and `permissions: packages:
+  write` authorises nothing. The image push logs in with an access token with the *package* scope,
+  stored as `REGISTRY_TOKEN` — the comments in `.gitea/workflows/ci.yml` carry the detail.
+- **`uses:` takes full URLs** (`https://github.com/actions/checkout@v4`); a bare reference resolves
+  against the instance's `DEFAULT_ACTIONS_URL`.
+- **No `gh` CLI on the runner.** `refresh.yml` dispatches `ci.yml` through Gitea's REST API
+  (`${{ github.server_url }}/api/v1`) with `curl`.
+- **A push made with the Actions token *does* trigger workflows**, unlike on GitHub, which suppresses
+  them. `refresh.yml` dispatches `ci.yml` anyway, and the per-ref concurrency group absorbs the
+  duplicate.
+- **No Pages.** Gitea's deploy artefact is the container image, built without `BASE_PATH`; Pages is
+  the GitHub mirror's job alone.
+- **Gitea push-mirrors to GitHub** — see `AGENTS.md` § Conventions on pushing.
+
 ### Hosting under a subpath
 
 Assets resolve against a `<base href>` substituted at build time, the feed URL resolves against
