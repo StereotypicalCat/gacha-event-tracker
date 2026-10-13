@@ -35,6 +35,13 @@ export const KEYS = {
    */
   customGames: `${NS}:customGames`,
   customEvents: `${NS}:customEvents`,
+  /**
+   * Weekly and monthly tasks the reader set up (task.ts), and the numbers they
+   * entered against targets, one per item per period. Two keys because a task
+   * is a definition and an amount is a log; the log outlives a deleted task.
+   */
+  tasks: `${NS}:tasks`,
+  amounts: `${NS}:amounts`,
 } as const;
 
 /**
