@@ -81,6 +81,15 @@ describe("the seen marker in prefs", () => {
       hiddenGames: ["genshin"],
       view: "soon",
       changelogSeen: newestId(ENTRIES),
+      showUpcoming: true,
     });
+  });
+
+  test("a new reader sees events that have not started; an existing one keeps their answer", async () => {
+    const { firstRunPrefs, defaults } = await import("../src/client/state/usePrefs.ts");
+    expect(firstRunPrefs(["genshin"], ["genshin"], "soon").showUpcoming).toBe(true);
+    // The default stays off, so an install whose stored prefs predate the
+    // field is not switched on underneath its reader.
+    expect(defaults().showUpcoming).toBe(false);
   });
 });

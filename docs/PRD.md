@@ -111,11 +111,14 @@ few pixels apart the board is being asked the one question it exists to answer a
 reader to squint. It also gives a one-day event a bar to read and to tap rather than the 34px
 minimum every short bar collapses to.
 
-**What has not started yet is off by default, and the reader can switch it on** — `prefs.showUpcoming`,
+**What has not started yet is shown to a new reader, and either can switch it** — `prefs.showUpcoming`,
 which governs **both views**: the board plots them, and the checklist keeps its "Not started yet"
-section (F2). One question, asked once, because they are the same events. It defaults to `false`
-because this app answers *what expires next*, and a reader with fourteen lanes has a next patch
-queued behind every one of them.
+section (F2). One question, asked once, because they are the same events. It was off by default,
+because this app answers *what expires next* and a reader with fourteen lanes has a next patch queued
+behind every one of them. Since 2026-10-13 (repository owner) first-run setup turns it **on**: a new
+reader should see what is coming before deciding they do not want it. The stored default is still
+`false`, so an existing install whose saved prefs predate the field keeps today's answer rather than
+having it switched on underneath its reader.
 
 On the board that is structural as well as editorial: the window is drawn from what is plotted, so
 showing the future stretches the right edge weeks past today and squeezes the running bars the
@@ -172,8 +175,8 @@ A flat list of all *currently running* events sorted ascending by end date, with
 countdown ("ends in 2 days", "ends in 4 hours"). Under 24 hours, the row is emphasized. This is the
 view that justifies the app, and it is one tap from the timeline.
 
-**"Not started yet" is a second section, and it is off by default** (`prefs.showUpcoming`, F1 — the
-same switch the board reads). Running events are the list's whole claim; what has not opened is
+**"Not started yet" is a second section, on for a new reader** (`prefs.showUpcoming`, F1 — the
+same switch the board reads, set at first run). Running events are the list's whole claim; what has not opened is
 context, and on fourteen lanes it is more rows than the thing the reader came for. Split into its
 own section rather than mixed into the order, because that is what the list *is*: a queue of jobs
 you can do now, and one you cannot do yet does not belong among them. The board offers the mixed

@@ -204,7 +204,10 @@ export interface Prefs {
 /**
  * What finishing first-run setup writes. A new reader is marked up to date
  * with the changelog: a list of changes means nothing before you've used the
- * thing it changes.
+ * thing it changes. They also start with events that have not opened yet
+ * shown (owner, 2026-10-13) — set here rather than in `defaults()`, so an
+ * install whose stored prefs predate the field keeps today's answer instead of
+ * having it switched on underneath them.
  */
 export function firstRunPrefs(
   games: readonly LaneId[],
@@ -216,6 +219,7 @@ export function firstRunPrefs(
     hiddenGames: games.filter((g) => !chosen.includes(g)),
     view,
     changelogSeen: newestId(ENTRIES),
+    showUpcoming: true,
   };
 }
 

@@ -240,9 +240,11 @@ Namespaced, versioned, and small. Nothing here ever goes to the server.
                                 // moved nobody's board; see PRD F1.
                                 // showUpcoming shows events that have not started yet, in
                                 // BOTH views — the board plots them, the checklist keeps its
-                                // "Not started yet" section. Defaults to false; set from
-                                // settings alongside showCompleted / showIgnored, which is the
-                                // same question. See PRD F1.
+                                // "Not started yet" section. Defaults to false, but
+                                // first-run setup (firstRunPrefs) sets it true, so new
+                                // readers start with it on and older installs keep their
+                                // answer. Set from settings alongside showCompleted /
+                                // showIgnored, which is the same question. See PRD F1.
                                 // It was named timelineUpcoming while it governed the board
                                 // alone. `adoptRenamed` in usePrefs.ts carries a stored old
                                 // value across on load — nothing is lost by dropping it, since
