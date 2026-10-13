@@ -404,6 +404,13 @@ selected tab fills with `raised` and turns ink; unselected tabs are faint and go
 - **State:** `aria-pressed` carries the state. On hover a chip lifts 1px and gains a 1px hue ring,
   and an unpressed chip's label goes to ink. On press it scales to 0.96. A chip with nothing waiting
   sits at 50% opacity: still reachable, but not competing for attention.
+- **Goal met, not ticked today** (a dailies chip whose event has a check-in goal): full-strength hue
+  border, label and check — the check drawn dashed — on the *outstanding* ground, with no wash. The
+  wash belongs to a real tick only, so "done this week" never reads as "done today". A goal chip's
+  count is the goal's (`3/5 wk`) and replaces the streak; one counter per pill.
+- **Check-in goal control** (detail sheet, under the daily checklist): the status pills' style —
+  Off / Each week / Across the event — then a small number field and, for weeks, a weekday select,
+  both on `ground` with a hairline border like the notes field.
 
 ### Event row (signature)
 The unit of the checklist. It is one full-bleed target that opens the event and does nothing else.

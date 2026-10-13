@@ -297,6 +297,20 @@ Three rules hold it honest:
   logged, keeps counting toward the streak and the totals, and is simply off-screen. Nothing removes a
   day the reader did not remove themselves.
 
+**Some events want a number of days, not every day.** Genshin's “To Temper Thyself and Journey
+Far” asks for five check-ins out of seven each week. Ticking it as a daily calls two unticked days a
+failure and keeps it outstanding when the week is already done. So a repeating event can carry a
+**check-in goal**: N days each week (weeks starting on a weekday the reader picks, at the game's own
+reset), or N days across the whole event. It is always the reader's input — nothing is read off a
+title — and a goal makes an event a daily even with detection off.
+
+- **A met week stays in the strip** as done this week, counted complete in the header, and comes
+  back when the next week opens. No tick is invented for it, and only a real tick celebrates.
+- **Meeting a goal never marks the event done.** A count may not have claimed the rewards. An
+  event-wide goal reached offers *Mark event done*; the reader decides.
+- **The target is never lowered.** A short first or last week keeps it and says when too few days
+  are left; an unknown end leaves the days left unknown.
+
 **F13 — Your own games and your own events.**
 No feasible adapter set covers everyone. Fourteen games were named in the first release thread and
 the reader with the largest collection asked for exactly one thing — *"can you add a custom game

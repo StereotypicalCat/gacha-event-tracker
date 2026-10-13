@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-03, revised and approved 2026-10-13
 
-**Status:** approved; spec 1 of 2. Spec 2 is
+**Status:** implemented 2026-10-13; spec 1 of 2. Spec 2 is
 `2026-10-13-periodic-tasks-design.md`, which reuses the period engine defined here.
 
 ## Request and intended outcome

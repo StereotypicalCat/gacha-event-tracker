@@ -952,6 +952,10 @@ event's length. It adds **no schema field**, so the feed contract is untouched.
   on or off. Store an override only when it *disagrees* with detection —
   recording agreement would freeze today's guess and stop a better parser from ever reaching that
   event. Neither control ever deletes a mark or a logged day, so both are reversible.
+- **A check-in goal makes an event a daily, and meeting it never makes the event done.** Some events
+  want five days of seven (`progress.goal`, `src/shared/goal.ts`, PRD F12). A met week stays in the
+  strip as done this week without a tick being invented; only the reader marks the event done. A
+  goal this build cannot read is kept in storage and treated as none — never stripped on load.
 
 ## Events the reader entered themselves
 

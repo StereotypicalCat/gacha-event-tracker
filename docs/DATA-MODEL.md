@@ -214,7 +214,7 @@ malformed row surfaces at the boundary rather than deep in the UI.
 Namespaced, versioned, and small. Nothing here ever goes to the server.
 
 ```ts
-"gacha-tracker:v1:progress"     // { [eventId]: { status?, effort?, note?, at } }
+"gacha-tracker:v1:progress"     // { [eventId]: { status?, effort?, daily?, note?, goal?, at } }
 "gacha-tracker:v1:daily"        // { [id]: { days: ["2026-08-15", ...], at } }
 "gacha-tracker:v1:ignored"      // { [eventId]: { at } }  — "stop showing me this"
 "gacha-tracker:v1:prefs"        // { region, hiddenGames[], knownGames[]?, gameOrder[]?,
@@ -280,9 +280,19 @@ Namespaced, versioned, and small. Nothing here ever goes to the server.
 | `effort` | `"quick"` \| `"short"` \| `"long"` \| `"grind"` \| absent | How much work they reckon it is |
 | `note` | free text | Anything worth remembering |
 | `daily` | `true` \| `false` \| absent | Whether it repeats daily, overruling detection |
+| `goal` | `{ period: "week", measure: "days", required: 1–7, weekStartsOn: 1–7 }` \| `{ period: "event", measure: "days", required }` \| absent | A check-in goal: N distinct game-days per week or across the event (PRD F12) |
 
-An entry with none of the three set is deleted rather than kept, so the store stays a set of things
-the reader actually said something about.
+An entry with none of these set is deleted rather than kept, so the store stays a set of things the
+reader actually said something about. `isEmpty` in `useProgress.ts` must name every field: one left
+out is a record marked only with that field, silently dropped on the next write.
+
+**`goal` is read where it is used and never stripped.** It is stored typed `unknown` and read through
+`readGoal` (`src/shared/goal.ts`), which returns undefined for anything that does not parse. Nothing
+removes an unreadable goal from the record — the likeliest one is a newer shape (weekly tasks add
+`measure: "amount"`) met by an older cached bundle, and dropping it on load would delete it on the
+next write. A goal makes the event a daily regardless of `daily` and detection; setting one clears a
+stored `daily: false`, and any `daily` answer clears the goal, so the two never contradict in
+storage.
 
 **`effort` is load-bearing, not decorative.** Combined with the time remaining it answers "can I
 still finish this?" — the same two days is comfortable for a `quick` event and hopeless for a
@@ -323,6 +333,12 @@ That window bounds **display and never storage**. A tick older than it stays in 
 counting toward `streakOf` and `dailySummary`, and is simply not drawn — the same rule as a tick
 outside the window the feed now claims. Nothing prunes the log against either window, because a
 fortnight's streak exists on that device and nowhere else.
+
+**A check-in goal counts days in this same log; it stores no days of its own.** `goalStatus`
+recomputes from `daily` on every read, so a backfill, a removed tick or a week rolling over needs no
+bookkeeping and clears nothing. Weeks are cut in day-key space by `periodOf`
+(`src/shared/period.ts`): the seven keys from the chosen weekday, so a week rolls exactly where the
+game's day does, per region and per reset override. A day key later than today never counts.
 
 **Not every game has a server per region.** `GameMeta.resetOffsets` records the regions where a
 game's server clock differs from `REGION_RESET_UTC_OFFSET`. Endfield is the case this exists for: it
@@ -596,7 +612,8 @@ the earlier copy there discards every edit made after it, in both directions an 
 restoring a backup taken before an evening's work would roll that evening back, and importing an old
 file onto a device with newer progress would roll the device back. Taking the maximum of the two
 timestamps keeps the merge order-independent and idempotent either way, and removes nothing.
-`mergeProgress` is pure and `test/progress.test.ts` pins it. An export written before daily checklists existed
+`mergeProgress` is pure and `test/progress.test.ts` pins it. Check-in goals ride `progress`, so they need no export key of their own
+and merge with the record they belong to. An export written before daily checklists existed
 simply has no `daily` key, which is not an error. Losing a user's marks to a bad import is unrecoverable, so the merge is
 deliberately one-directional. A file whose `format` is unrecognised is refused outright rather than
 partly applied.
