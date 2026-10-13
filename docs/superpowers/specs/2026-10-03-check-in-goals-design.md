@@ -133,8 +133,9 @@ overwrites whatever was there.
 
 ## What the reader sees
 
-**Detail sheet — “Check-in goal”** under the daily checklist, and offered on non-daily
-events too (setting one makes the event a daily). Three choices in the style of the
+**Detail sheet — “Check-in goal”** under the daily checklist. A non-daily event gets there
+through the existing “It repeats daily” button, so there is one entry point rather than
+two; once a goal is set, it keeps the event daily on its own. Three choices in the style of the
 existing status and effort controls: **Off** · **Each week** `[5] days, weeks start
 [Monday]` · **Across the event** `[5] days`. Weekly `required` is 1–7; event-wide is
 capped at the known number of days when the end is known.
