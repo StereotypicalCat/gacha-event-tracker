@@ -51,6 +51,14 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "upcoming-shown-to-new-readers",
+    date: "2026-10-13",
+    kind: "feature",
+    title: "New readers start with upcoming events shown",
+    body: "Events that haven't started yet are on for anyone setting the app up for the first time. If you already use it, your setting is unchanged; it's under What you see.",
+    ref: "5297b8e",
+  },
+  {
     id: "changelog",
     date: "2026-10-13",
     kind: "feature",
