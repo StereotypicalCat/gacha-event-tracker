@@ -634,7 +634,9 @@ timestamps keeps the merge order-independent and idempotent either way, and remo
 `mergeProgress` is pure and `test/progress.test.ts` pins it. Check-in goals ride `progress`, so they need no export key of their own
 and merge with the record they belong to. `tasks` and `amounts` are additive export keys like
 `customGames`: a file without them is from a device that had none. Tasks merge by id with the later
-`updatedAt` winning (`mergeTasks`), incoming records validated and current ones kept as stored;
+`updatedAt` winning (`mergeTasks`); an incoming record is let in on its identity alone (a `mytask:`
+id and an `updatedAt`) and stored exactly as it came, so a newer version's task — or a field this
+build does not know — survives a trip through an older build, and an edit keeps such fields too;
 amounts merge per item **and per period** with the later `at` winning (`mergeAmounts`), so restoring
 an old backup cannot roll this week's number back, and a week only one side has survives. An export written before daily checklists existed
 simply has no `daily` key, which is not an error. Losing a user's marks to a bad import is unrecoverable, so the merge is

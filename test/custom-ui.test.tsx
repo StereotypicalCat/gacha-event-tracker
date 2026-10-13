@@ -10,7 +10,7 @@ import {
   strandedNotice,
 } from "../src/client/components/CustomForms.tsx";
 import { eventCaption, YourOwn } from "../src/client/components/YourOwn.tsx";
-import { TaskForm, taskDraftFrom } from "../src/client/components/TaskForm.tsx";
+import { parseMonthDay, TaskForm, taskDraftFrom } from "../src/client/components/TaskForm.tsx";
 import { EventRow } from "../src/client/components/EventRow.tsx";
 import { EventDetail } from "../src/client/components/EventDetail.tsx";
 import { AUTHOR, Colophon, REPO_URL, RESET_CLOCK_CREDIT } from "../src/client/components/Colophon.tsx";
@@ -1309,5 +1309,14 @@ describe("the reader's weekly and monthly tasks in settings", () => {
         period: { unit: "month", startsOn: 31 },
         measure: { kind: "days", required: 9 },
       });
+  });
+});
+
+describe("review fixes: the month-day field", () => {
+  test("an emptied field is mid-edit, not day 1", () => {
+    expect(parseMonthDay("")).toBeNull();
+    expect(parseMonthDay("5")).toBe(5);
+    expect(parseMonthDay("40")).toBe(31);
+    expect(parseMonthDay("0")).toBe(1);
   });
 });

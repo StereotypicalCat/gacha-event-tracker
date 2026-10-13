@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { mergeAmounts, readableAmounts } from "../src/client/state/useAmounts.ts";
-import { mergeTasks, visibleTasks } from "../src/client/state/useTasks.ts";
+import { editedTask, mergeTasks, visibleTasks } from "../src/client/state/useTasks.ts";
 
 /**
  * The two stores weekly and monthly tasks add. Both are the only copy of what
@@ -89,5 +89,30 @@ describe("amounts", () => {
       [B]: "nope",
     });
     expect(merged).toEqual({});
+  });
+});
+
+describe("review fixes: a task's data outlives this build", () => {
+  test("merge keeps fields this build does not know", () => {
+    const withExtra = { ...task(A, "Weekly", "2026-10-05T00:00:00.000Z"), notes: "keep me" };
+    expect(mergeTasks({}, { [A]: withExtra })[A]).toEqual(withExtra);
+  });
+
+  test("a newer version's task in a backup reaches a fresh device", () => {
+    expect(mergeTasks({}, { [FUTURE.id]: FUTURE })[FUTURE.id]).toEqual(FUTURE);
+  });
+
+  test("but junk without a task id or a timestamp still stays out", () => {
+    expect(mergeTasks({}, { x: { id: "myevent:abcdef1234", updatedAt: "2026" } })).toEqual({});
+    expect(mergeTasks({}, { x: { id: "mytask:abcdef1234" } })).toEqual({});
+  });
+
+  test("editing keeps fields this build does not know", () => {
+    const stored = { ...task(A, "Weekly", "2026-10-05T00:00:00.000Z"), notes: "keep me" };
+    const next = editedTask(stored, {
+      game: "zzz", title: "Renamed", period: { unit: "week", startsOn: 1 },
+      measure: { kind: "days", required: 1 },
+    }, "2026-10-06T00:00:00.000Z");
+    expect(next).toMatchObject({ title: "Renamed", notes: "keep me", updatedAt: "2026-10-06T00:00:00.000Z" });
   });
 });

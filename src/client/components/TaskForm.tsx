@@ -13,11 +13,18 @@ export interface TaskFields {
   title: string;
   unit: "week" | "month";
   weekday: number;
-  monthDay: number;
+  /** As typed, so the field can be emptied and retyped; read through `parseMonthDay`. */
+  monthDay: string | number;
   kind: "days" | "amount";
   required: string;
   target: string;
   amountUnit: string;
+}
+
+/** A typed day of the month, clamped to 1–31; null while empty or unreadable. */
+export function parseMonthDay(raw: string): number | null {
+  const n = Number.parseInt(raw, 10);
+  return Number.isFinite(n) ? Math.min(31, Math.max(1, n)) : null;
 }
 
 /**
@@ -26,10 +33,12 @@ export interface TaskFields {
  * never offer Save on something the store would then refuse.
  */
 export function taskDraftFrom(f: TaskFields): TaskDraft | null {
+  const monthDay = parseMonthDay(String(f.monthDay));
+  if (f.unit === "month" && monthDay === null) return null;
   const period =
     f.unit === "week"
       ? ({ unit: "week", startsOn: f.weekday } as const)
-      : ({ unit: "month", startsOn: f.monthDay } as const);
+      : ({ unit: "month", startsOn: monthDay ?? 1 } as const);
   const unit = f.amountUnit.trim();
   const target = parseAmount(f.target);
   const measure =
@@ -78,7 +87,7 @@ export function TaskForm({
     title: initial?.title ?? "",
     unit: initial?.period.unit ?? "week",
     weekday: initial?.period.unit === "week" ? initial.period.startsOn : 1,
-    monthDay: initial?.period.unit === "month" ? initial.period.startsOn : 1,
+    monthDay: String(initial?.period.unit === "month" ? initial.period.startsOn : 1),
     kind: initial?.measure.kind ?? "days",
     required: initial?.measure.kind === "days" ? String(initial.measure.required) : "1",
     target: initial?.measure.kind === "amount" ? String(initial.measure.target) : "",
@@ -156,7 +165,7 @@ export function TaskForm({
               min={1}
               max={31}
               value={f.monthDay}
-              onChange={(e) => set({ monthDay: Number.parseInt(e.target.value, 10) || 1 })}
+              onChange={(e) => set({ monthDay: e.target.value })}
               className={`tnum w-14 ${field}`}
             />
           </label>

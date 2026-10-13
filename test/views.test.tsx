@@ -1457,3 +1457,27 @@ describe("GoalControl with points", () => {
     expect(html).toContain("points each week, weeks start");
   });
 });
+
+describe("review fixes: an event's points goal is not a daily", () => {
+  test("it is counted with the week, not as waiting today", () => {
+    const NOW = Date.parse("2026-10-15T12:00:00.000Z");
+    const ev = {
+      id: "p1", game: "zzz", title: "Points event", type: "other", summary: null,
+      startsAt: "2026-10-01T00:00:00.000Z", startPrecision: "day", endsAt: null,
+      endPrecision: "unknown", regionScoped: false, regionEnds: null,
+      sourceUrl: "https://example.test",
+    } as never;
+    const week: GoalStatus = {
+      scope: "week", measure: "amount", periodStart: "2026-10-12", required: 2100, count: 100,
+      met: false, needed: 2000, open: 4, shortfall: false,
+    };
+    const total: GoalStatus = { ...week, scope: "event", periodStart: "2026-10-01" };
+    const tally = (goal: GoalStatus) => {
+      const [group] = dailyGroups(["zzz"], [ev], NOW, "europe", (id) => metaFor(id, {}),
+        (e) => Date.parse(e.startsAt), false, () => goal);
+      return dailyTally(group!.items, () => []);
+    };
+    expect(tally(week)).toMatchObject({ total: 0, week: { total: 1, complete: 0 } });
+    expect(tally(total)).toMatchObject({ total: 0, week: { total: 0 }, month: { total: 0 } });
+  });
+});

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Measure, Task } from "../../shared/task.ts";
-import { mintTaskId, TaskSchema } from "../../shared/task.ts";
+import { mintTaskId, TaskId, TaskSchema } from "../../shared/task.ts";
 import type { Period } from "../../shared/period.ts";
 import { KEYS, readJson, writeJson } from "./storage.ts";
 
@@ -39,22 +39,37 @@ const updatedAtOf = (v: unknown): string => {
 /**
  * Import: union by id, the later `updatedAt` winning, nothing removed.
  *
- * Incoming records are validated — a file is untrusted input — and one that
- * does not parse is skipped. Records already on the device are kept as they
- * are, readable or not.
+ * A record is let in on its identity alone — a `mytask:` id and a timestamp —
+ * and stored **exactly as it came**, not as this build parses it. A backup is
+ * where a newer version's task (or a field this build does not know) has to
+ * survive a trip through an older one; parsing on the way in would strip the
+ * field or drop the task, and re-importing could never bring either back.
+ * Whether it can be *shown* is `visibleTasks`' question.
  */
 export function mergeTasks(current: StoredTasks, incoming: unknown): StoredTasks {
   if (typeof incoming !== "object" || incoming === null) return current;
   const next: StoredTasks = { ...current };
   for (const value of Object.values(incoming as Record<string, unknown>)) {
-    const parsed = TaskSchema.safeParse(value);
-    if (!parsed.success) continue;
-    const id = parsed.data.id;
-    if (next[id] === undefined || parsed.data.updatedAt > updatedAtOf(next[id])) {
-      next[id] = parsed.data;
+    if (typeof value !== "object" || value === null) continue;
+    const id = (value as { id?: unknown }).id;
+    if (!TaskId.safeParse(id).success || updatedAtOf(value) === "") continue;
+    const key = id as string;
+    if (next[key] === undefined || updatedAtOf(value) > updatedAtOf(next[key])) {
+      next[key] = value;
     }
   }
   return next;
+}
+
+/**
+ * A stored task with the reader's edit applied, or null if it is not one this
+ * build can edit. Built on the stored record, not on its parse, so a field a
+ * newer version added rides through the edit untouched.
+ */
+export function editedTask(stored: unknown, draft: TaskDraft, at: string): unknown {
+  if (!TaskSchema.safeParse(stored).success) return null;
+  const next = { ...(stored as Record<string, unknown>), ...draft, updatedAt: at };
+  return TaskSchema.safeParse(next).success ? next : null;
 }
 
 /**
@@ -86,14 +101,8 @@ export function useTasks() {
 
   const editTask = useCallback((id: string, draft: TaskDraft) => {
     setRaw((prev) => {
-      const existing = TaskSchema.safeParse(prev[id]);
-      if (!existing.success) return prev;
-      const next = TaskSchema.parse({
-        ...existing.data,
-        ...draft,
-        updatedAt: new Date().toISOString(),
-      });
-      return { ...prev, [id]: next };
+      const next = editedTask(prev[id], draft, new Date().toISOString());
+      return next === null ? prev : { ...prev, [id]: next };
     });
   }, []);
 

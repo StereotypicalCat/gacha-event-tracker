@@ -61,9 +61,11 @@ export interface DailyItem {
   goal?: GoalStatus | undefined;
   /**
    * How often it is due. Chores and events are daily and make up the header's
-   * "today" count; tasks are counted by their own period beside it.
+   * "today" count; tasks are counted by their own period beside it. An event
+   * whose goal is a number has no "today" — nothing ticks — so it counts with
+   * its week, or, over its whole run, in no tally at all.
    */
-  cadence: "day" | "week" | "month";
+  cadence: "day" | "week" | "month" | "event";
   /** A task's period, for finding the one before it in Catch up. */
   period?: Period | undefined;
   /** A task's unit, printed after its target. */
@@ -149,6 +151,7 @@ export function dailyGroups(
 
     for (const event of events) {
       if (event.game !== lane) continue;
+      const goal = goalFor(event.id);
       items.push({
         key: event.id,
         game: lane,
@@ -158,8 +161,8 @@ export function dailyGroups(
         today,
         resetsIn,
         notBefore: startOf(event),
-        goal: goalFor(event.id),
-        cadence: "day",
+        goal,
+        cadence: goal?.measure !== "amount" ? "day" : goal.scope === "week" ? "week" : "event",
       });
     }
 
@@ -221,6 +224,7 @@ export function dailyTally(
   const month = { total: 0, complete: 0 };
   for (const i of items) {
     const met = i.goal?.met === true;
+    if (i.cadence === "event") continue;
     if (i.cadence !== "day") {
       const tally = i.cadence === "week" ? week : month;
       tally.total += 1;
