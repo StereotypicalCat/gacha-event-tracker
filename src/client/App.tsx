@@ -761,6 +761,7 @@ export function App() {
           detectedDaily={prefs.detectDaily && isDaily(openRow.event)}
           dailyDays={daily.daysFor(openRow.event.id)}
           goal={goalOf(openRow.event.id)}
+          hasStoredGoal={prog.progress[openRow.event.id]?.goal !== undefined}
           onDaily={prog.setDaily}
           onGoal={prog.setGoal}
           onToggleDay={daily.toggleDay}

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { buildExportData, parseImportData } from "../src/client/state/export.ts";
 import { restorePrefsValue } from "../src/client/state/usePrefs.ts";
-import { applyPatch, goalPatch, mergeProgress } from "../src/client/state/useProgress.ts";
+import { applyPatch, dailyPatch, goalPatch, mergeProgress } from "../src/client/state/useProgress.ts";
 import type { ProgressMap } from "../src/client/state/useProgress.ts";
 
 /**
@@ -219,5 +219,18 @@ describe("goals on progress", () => {
       progress: { e: { status: "done", at: at("10") } },
     };
     expect(parseImportData(old)!.progress).toEqual({ e: { status: "done", at: at("10") } });
+  });
+});
+
+describe("a goal this build cannot read is never cleared by accident", () => {
+  // Final review: "It repeats daily" wiped a newer-shaped goal it could not
+  // see. Only saying the event is *not* daily clears a goal.
+  test("answering 'it repeats daily' leaves the goal alone", () => {
+    expect(dailyPatch(true, false)).toStrictEqual({ daily: true });
+    expect(dailyPatch(undefined, false)).toStrictEqual({ daily: undefined });
+  });
+
+  test("answering 'not daily' clears it in the same write", () => {
+    expect(dailyPatch(false, true)).toStrictEqual({ daily: false, goal: undefined });
   });
 });

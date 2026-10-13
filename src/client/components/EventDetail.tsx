@@ -38,6 +38,7 @@ export function EventDetail({
   detectedDaily,
   dailyDays,
   goal,
+  hasStoredGoal,
   onDaily,
   onGoal,
   onToggleDay,
@@ -64,7 +65,13 @@ export function EventDetail({
   dailyDays: string[];
   /** The reader's check-in goal, already read through `readGoal`. */
   goal: Goal | undefined;
-  onDaily: (id: string, daily: boolean | undefined) => void;
+  /**
+   * Whether anything is stored under the goal at all, readable or not. A goal
+   * of a newer shape reads as none, and "not daily" would still remove it, so
+   * the warning keys off this rather than off `goal`.
+   */
+  hasStoredGoal: boolean;
+  onDaily: (id: string, daily: boolean | undefined, clearsGoal?: boolean) => void;
   onGoal: (id: string, goal: Goal | undefined) => void;
   onToggleDay: (id: string, day: string) => void;
   onIgnore: (id: string) => void;
@@ -246,10 +253,10 @@ export function EventDetail({
             )}
             <button
               type="button"
-              onClick={() => onDaily(event.id, dailyOverride(false, detectedDaily))}
+              onClick={() => onDaily(event.id, dailyOverride(false, detectedDaily), true)}
               className="mt-2 block text-xs text-faint transition-colors hover:text-muted"
             >
-              {goal === undefined
+              {!hasStoredGoal
                 ? "This isn't a daily event"
                 : "This isn't a daily event — removes the goal"}
             </button>

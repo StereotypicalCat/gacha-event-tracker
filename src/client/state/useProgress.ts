@@ -89,6 +89,19 @@ export function applyPatch(
 }
 
 /**
+ * A daily answer. Only "not daily" clears a goal: the two would contradict.
+ * "It repeats daily" leaves `goal` untouched, because the event it is offered
+ * on may hold a goal this build cannot read — one it shows as none — and an
+ * answer about dailiness is no licence to delete it.
+ */
+export function dailyPatch(
+  daily: boolean | undefined,
+  clearsGoal: boolean,
+): Partial<Progress> {
+  return clearsGoal ? { daily, goal: undefined } : { daily };
+}
+
+/**
  * Setting a goal makes the event a daily; a stored `daily: false` would
  * contradict it, so that alone is cleared. Any other `daily` answer stays, so
  * removing the goal later restores exactly what was there before.
@@ -167,12 +180,13 @@ export function useProgress() {
   // the press after "done" cleared the status instead of undoing it. Status is
   // set outright now, by a control per state.
 
-  // "This isn't a daily event" must not leave a goal hidden in storage that
-  // contradicts it, so any daily answer clears the goal in the same write. The
-  // other direction — "it repeats daily" — only ever runs on an event with no
-  // goal, because a goal already makes it daily.
+  // `clearsGoal` is the caller saying "this isn't a daily event": that answer
+  // must not leave a contradicting goal hidden in storage. The stored override
+  // alone cannot say which way the reader answered — agreeing with detection
+  // stores undefined either way — so the caller says.
   const setDaily = useCallback(
-    (id: string, daily: boolean | undefined) => patch(id, { daily, goal: undefined }),
+    (id: string, daily: boolean | undefined, clearsGoal = false) =>
+      patch(id, dailyPatch(daily, clearsGoal)),
     [patch],
   );
 

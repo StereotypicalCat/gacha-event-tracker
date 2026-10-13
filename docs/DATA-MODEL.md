@@ -291,8 +291,10 @@ out is a record marked only with that field, silently dropped on the next write.
 removes an unreadable goal from the record — the likeliest one is a newer shape (weekly tasks add
 `measure: "amount"`) met by an older cached bundle, and dropping it on load would delete it on the
 next write. A goal makes the event a daily regardless of `daily` and detection; setting one clears a
-stored `daily: false`, and any `daily` answer clears the goal, so the two never contradict in
-storage.
+stored `daily: false`, and answering "this isn't a daily event" clears the goal, so the two never
+contradict in storage. No other control removes a goal — not "it repeats daily", and not pressing
+*Off* when no goal is readable — because either could be standing on one this build cannot see. The
+"not daily" control says it removes the goal whenever *anything* is stored there, readable or not.
 
 **`effort` is load-bearing, not decorative.** Combined with the time remaining it answers "can I
 still finish this?" — the same two days is comfortable for a `quick` event and hopeless for a

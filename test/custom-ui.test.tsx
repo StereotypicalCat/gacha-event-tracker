@@ -784,6 +784,7 @@ describe("the derived-boundary note", () => {
     detectedDaily: false,
     dailyDays: [],
     goal: undefined,
+    hasStoredGoal: false,
     onDaily: noop,
     onGoal: noop,
     onToggleDay: noop,
@@ -858,6 +859,7 @@ describe("the derived-boundary note", () => {
             status={status}
             daily
             goal={{ period: "event", measure: "days", required: 5 }}
+            hasStoredGoal
             dailyDays={["2026-08-20", "2026-08-21", "2026-08-22", "2026-08-23", "2026-08-24"]}
             row={{ event: PARSED, clock: clockFor(PARSED, detailProps.region, NOW) }}
           />
@@ -868,6 +870,21 @@ describe("the derived-boundary note", () => {
     expect(open).toContain("Mark event done");
     expect(open).toContain("This isn&#x27;t a daily event — removes the goal");
     expect(sheet("done")).not.toContain("Mark event done");
+  });
+
+  test("'not daily' warns it removes a goal even when this build cannot read it", () => {
+    const html = renderToStaticMarkup(
+      <GameMetaProvider value={(id) => metaFor(id, GAMES)}>
+        <EventDetail
+          {...detailProps}
+          daily
+          goal={undefined}
+          hasStoredGoal
+          row={{ event: PARSED, clock: clockFor(PARSED, detailProps.region, NOW) }}
+        />
+      </GameMetaProvider>,
+    );
+    expect(html).toContain("removes the goal");
   });
 });
 

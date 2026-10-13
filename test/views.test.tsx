@@ -17,7 +17,7 @@ import {
 } from "../src/client/components/Dailies.tsx";
 import type { GoalStatus } from "../src/shared/goal.ts";
 import { Welcome } from "../src/client/components/Welcome.tsx";
-import { GoalControl } from "../src/client/components/GoalControl.tsx";
+import { chooseGoal, GoalControl, parseDraft } from "../src/client/components/GoalControl.tsx";
 import { DailyChecklist } from "../src/client/components/DailyChecklist.tsx";
 import { timelineLanes } from "../src/client/state/lanes.ts";
 import { GameMetaProvider } from "../src/client/state/gameMeta.tsx";
@@ -1286,5 +1286,36 @@ describe("DailyChecklist with a goal", () => {
     );
     expect(html).toContain("1 of 5 this week · 4 needed · 4 days left this week");
     expect(html).not.toContain("missed");
+  });
+});
+
+describe("GoalControl decisions", () => {
+  const weekly = { period: "week", measure: "days", required: 5, weekStartsOn: 1 } as const;
+
+  test("pressing Off when no goal is readable changes nothing", () => {
+    // An unreadable stored goal reads as none, so Off already shows pressed;
+    // pressing it must not delete what is stored.
+    expect(chooseGoal("off", undefined, 1, 84)).toBeNull();
+    expect(chooseGoal("off", weekly, 1, 84)).toBeUndefined();
+  });
+
+  test("pressing the mode already chosen changes nothing", () => {
+    expect(chooseGoal("week", weekly, 1, 84)).toBeNull();
+  });
+
+  test("switching modes keeps the count, clamped", () => {
+    expect(chooseGoal("event", weekly, 1, 3)).toEqual({
+      period: "event", measure: "days", required: 3,
+    });
+    expect(chooseGoal("week", undefined, 4, 84)).toEqual({
+      period: "week", measure: "days", required: 5, weekStartsOn: 4,
+    });
+  });
+
+  test("an emptied or unreadable field is mid-edit, not an answer", () => {
+    expect(parseDraft("", "week", null)).toBeNull();
+    expect(parseDraft("abc", "week", null)).toBeNull();
+    expect(parseDraft("3", "week", null)).toBe(3);
+    expect(parseDraft("53", "week", null)).toBe(7);
   });
 });
