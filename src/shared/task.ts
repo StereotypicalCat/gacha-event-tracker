@@ -60,9 +60,15 @@ export const TaskSchema = z.object({
 });
 export type Task = z.infer<typeof TaskSchema>;
 
+/**
+ * What the strip and `taskStatus` need from a task — a reader's own, or a
+ * built-in routine (routines.ts), which shares this shape under its own id.
+ */
+export type TaskShape = Pick<Task, "id" | "game" | "title" | "period" | "measure">;
+
 /** Where the reader is with a task this period. Pure; `now` explicit. */
 export function taskStatus(input: {
-  task: Task;
+  task: Pick<Task, "game" | "period" | "measure">;
   region: Region;
   now: number;
   logged: readonly string[];
@@ -105,7 +111,7 @@ function ordinal(n: number): string {
 }
 
 /** One line saying when it rolls and what it wants. */
-export function taskCaption(task: Task): string {
+export function taskCaption(task: Pick<Task, "period" | "measure">): string {
   const when =
     task.period.unit === "week"
       ? `every week from ${WEEKDAYS[task.period.startsOn - 1]}`
