@@ -103,3 +103,23 @@ export function asOfLabel(day: string): string {
   const [y, m, d] = day.split("-").map(Number);
   return `${d} ${MONTHS[(m ?? 1) - 1]} ${y}`;
 }
+
+/**
+ * A reader's own task copied from a built-in, remembering where it came from.
+ * The copy is theirs to edit; the original stays hidden while it exists.
+ */
+export function mineFrom(routine: Routine): {
+  game: string;
+  title: string;
+  period: Routine["period"];
+  measure: Routine["measure"];
+  from: string;
+} {
+  return {
+    game: routine.game,
+    title: routine.title,
+    period: routine.period,
+    measure: routine.measure,
+    from: routine.id,
+  };
+}

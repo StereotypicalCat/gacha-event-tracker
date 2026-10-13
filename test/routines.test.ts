@@ -5,6 +5,7 @@ import {
   RoutineSchema,
   routinesFor,
   routineToAsk,
+  mineFrom,
 } from "../src/shared/routines.ts";
 import { restorePrefsValue } from "../src/client/state/usePrefs.ts";
 import { taskStatus } from "../src/shared/task.ts";
@@ -81,5 +82,15 @@ describe("restoring prefs with the new fields", () => {
     expect(r.routineGames).toEqual(["zzz"]);
     expect(r.routinesAsked).toBeUndefined();
     expect(restorePrefsValue({}).routineGames).toBeUndefined();
+  });
+});
+
+describe("making a built-in your own", () => {
+  test("copies its shape and remembers where it came from", () => {
+    const ridu = routinesFor("zzz")[0]!;
+    expect(mineFrom(ridu)).toEqual({
+      game: "zzz", title: "Ridu Weekly", period: { unit: "week", startsOn: 1 },
+      measure: { kind: "amount", target: 1300, unit: "points" }, from: "routine:zzz:ridu-weekly",
+    });
   });
 });

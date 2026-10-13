@@ -10,6 +10,8 @@ export interface TaskDraft {
   title: string;
   period: Period;
   measure: Measure;
+  /** The built-in this copies, when it does (routines.ts). */
+  from?: string | undefined;
 }
 
 /** The store as it sits on disk, every record kept whether or not this build reads it. */

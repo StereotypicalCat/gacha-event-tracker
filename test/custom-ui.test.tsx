@@ -1320,3 +1320,20 @@ describe("review fixes: the month-day field", () => {
     expect(parseMonthDay("0")).toBe(1);
   });
 });
+
+describe("built-in weekly tasks in Your own", () => {
+  test("listed with their source's date, and a way to make one yours", async () => {
+    const { routinesFor } = await import("../src/shared/routines.ts");
+    const noop = () => {};
+    const html = render(
+      <YourOwn games={GAMES} events={{}} lanes={["zzz"]} now={0} onOpen={noop}
+        onAddGame={noop} onEditGame={noop} onRemoveGame={() => ({ removed: true, blockedBy: 0 })}
+        onAddEvent={noop} onAddTask={noop} onEditTask={noop} onRemoveTask={noop} tasks={[]}
+        routines={routinesFor("zzz")} onMakeItMine={noop} />,
+    );
+    expect(html).toContain("Ridu Weekly");
+    expect(html).toContain("as of 2 Dec 2025");
+    expect(html).toContain('href="https://game8.co/games/Zenless-Zone-Zero/archives/484723"');
+    expect(html).toContain("Make it mine");
+  });
+});

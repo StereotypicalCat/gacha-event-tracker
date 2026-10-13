@@ -7,6 +7,7 @@ import { cadenceLabel, EventForm, GameForm } from "./CustomForms.tsx";
 import { taskCaption, type Task } from "../../shared/task.ts";
 import type { TaskDraft } from "../state/useTasks.ts";
 import { TaskForm } from "./TaskForm.tsx";
+import { asOfLabel, type Routine } from "../../shared/routines.ts";
 
 /**
  * The reader's own games and events — a group of the settings panel (PRD F13).
@@ -68,6 +69,8 @@ export function YourOwn({
   onAddTask,
   onEditTask,
   onRemoveTask,
+  routines = [],
+  onMakeItMine,
 }: {
   games: CustomGames;
   events: CustomEvents;
@@ -89,6 +92,9 @@ export function YourOwn({
   onAddTask?: ((draft: TaskDraft) => void) | undefined;
   onEditTask?: ((id: string, draft: TaskDraft) => void) | undefined;
   onRemoveTask?: ((id: string) => void) | undefined;
+  /** Built-in weekly tasks the reader has on, and how to copy one into their own. */
+  routines?: readonly Routine[] | undefined;
+  onMakeItMine?: ((routine: Routine) => void) | undefined;
 }) {
   const gameMeta = useGameMeta();
   const [adding, setAdding] = useState<"game" | "event" | "task" | null>(null);
@@ -307,6 +313,44 @@ export function YourOwn({
                     onCancel={() => setEditingTask(null)}
                   />
                 )}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {/* Built-ins are not editable in place — they are someone else's figures,
+          dated by their source — so the way to change one is to make it yours:
+          a copy that replaces it while it exists, numbers and ticks included. */}
+      {routines.length > 0 && onMakeItMine !== undefined && (
+        <>
+          <p className="mt-4 text-xs text-faint">Built-in weekly tasks</p>
+          <ul className="mt-1.5 flex flex-col gap-1">
+            {routines.map((routine) => (
+              <li key={routine.id}>
+                <div className="flex items-baseline gap-2">
+                  <span className="shrink-0 text-xs text-faint">{gameMeta(routine.game).short}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm text-muted">{routine.title}</span>
+                  <a
+                    href={routine.source}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="shrink-0 text-xs text-faint underline decoration-hairline underline-offset-2 transition-colors hover:text-muted"
+                  >
+                    as of {asOfLabel(routine.asOf)}
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => onMakeItMine(routine)}
+                    className="shrink-0 text-xs text-faint transition-colors hover:text-ink"
+                  >
+                    Make it mine
+                  </button>
+                </div>
+                <p className="text-xs text-faint">
+                  {taskCaption(routine)}
+                  {routine.note !== undefined && ` · ${routine.note}`}
+                </p>
               </li>
             ))}
           </ul>

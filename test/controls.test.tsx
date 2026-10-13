@@ -38,11 +38,11 @@ const PREFS: Prefs = {
   onboarded: true,
 };
 
-function render(prefs: Prefs, ignoredCount = 0): string {
+function render(prefs: Prefs, ignoredCount = 0, games = ["genshin", "hsr"]): string {
   return renderToStaticMarkup(
     <GameMetaProvider value={(id) => metaFor(id, {})}>
       <Controls
-        games={["genshin", "hsr"]}
+        games={games}
         prefs={prefs}
         onToggleGame={() => {}}
         onUpdate={() => {}}
@@ -301,3 +301,18 @@ describe("Controls: backup and export actions", () => {
   });
 });
 
+
+describe("Controls: built-in weekly tasks", () => {
+  test("a switch per game that has them, reflecting the reader's answer", () => {
+    const off = render(PREFS, 0, ["genshin", "zzz"]);
+    expect(off).toContain("Built-in weekly tasks for Zenless Zone Zero");
+    expect(off).not.toContain("for Genshin Impact");
+    const on = render({ ...PREFS, routineGames: ["zzz"] }, 0, ["genshin", "zzz"]);
+    const box = on.match(/<input type="checkbox"[^>]*>(?=[^<]*<span>Built-in weekly tasks for Zenless)/);
+    expect(box?.[0]).toContain('checked=""');
+  });
+
+  test("no switch when no game on the list has any", () => {
+    expect(render(PREFS)).not.toContain("Built-in weekly tasks");
+  });
+});

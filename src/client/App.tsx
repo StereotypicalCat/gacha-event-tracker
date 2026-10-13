@@ -35,7 +35,7 @@ import { clockFor, formatRemaining } from "../shared/time.ts";
 import { dailySummary, isDaily, resolveDaily } from "../shared/daily.ts";
 import { goalStatus, readGoal, type GoalStatus } from "../shared/goal.ts";
 import { taskStatus, type TaskShape } from "../shared/task.ts";
-import { activeRoutines, routineToAsk } from "../shared/routines.ts";
+import { activeRoutines, mineFrom, routineToAsk, type Routine } from "../shared/routines.ts";
 import { strandedOccurrences } from "../shared/recurrence.ts";
 import { orderGames } from "./state/gameOrder.ts";
 import { GameMetaProvider, type MetaResolver } from "./state/gameMeta.tsx";
@@ -202,6 +202,21 @@ export function App() {
   );
   const routines = activeRoutines(prefs.routineGames, copiedFrom);
   const stripTasks = [...tasks.tasks, ...routines];
+
+  /**
+   * Copy a built-in into the reader's own tasks, ticks and numbers included.
+   * Additive: the built-in's own log stays under its id, so deleting the copy
+   * brings the original back as it was. A second press while a copy exists
+   * does nothing rather than making two.
+   */
+  const makeItMine = (routine: Routine) => {
+    if (tasks.tasks.some((t) => t.from === routine.id)) return;
+    const id = tasks.addTask(mineFrom(routine));
+    const log = daily.logs[routine.id];
+    if (log !== undefined) daily.merge({ [id]: log });
+    const numbers = amounts.amounts[routine.id];
+    if (numbers !== undefined) amounts.merge({ [id]: numbers });
+  };
 
   const taskStatusOf = (task: TaskShape): GoalStatus =>
     taskStatus({
@@ -727,6 +742,8 @@ export function App() {
           onAddTask: tasks.addTask,
           onEditTask: tasks.editTask,
           onRemoveTask: tasks.removeTask,
+          routines,
+          onMakeItMine: makeItMine,
           now,
           // The index lists rules; the sheet opens rows. A repeating rule's
           // own id is never a row — the lists hold its occurrences — so it is

@@ -7,6 +7,7 @@ import { moveGame } from "../state/gameOrder.ts";
 import type { ThemeChoice } from "../state/theme.ts";
 import type { Prefs } from "../state/usePrefs.ts";
 import { YourOwn } from "./YourOwn.tsx";
+import { asOfLabel, routinesFor } from "../../shared/routines.ts";
 
 const REGIONS: Array<{ id: Region; label: string }> = (
   ["america", "europe", "asia"] as const
@@ -91,6 +92,7 @@ export function Controls({
   /** Everything the reader entered themselves, and the ways to change it. */
   own: React.ComponentProps<typeof YourOwn>;
 }) {
+  const gameMeta = useGameMeta();
   const shown = games.filter((g) => !prefs.hiddenGames.includes(g)).length;
   const ownGames = Object.keys(own.games).length;
   const ownEvents = Object.keys(own.events).length;
@@ -245,6 +247,36 @@ export function Controls({
               label="Show each game's own daily chores"
               hint="Commissions, resin, daily training and the rest. Nobody publishes these, so the app keeps a fixed list per game. Off, the strip shows only events with a checklist. Your ticks and streaks are kept either way."
             />
+
+            {/* Beside the chores rather than on each game's row, which already
+                carries a handle, two arrows and a switch. Opt-in per game: these
+                are someone else's figures, each dated by its source. */}
+            {games
+              .filter((game) => routinesFor(game).length > 0)
+              .map((game) => {
+                const on = prefs.routineGames?.includes(game) ?? false;
+                const list = routinesFor(game);
+                return (
+                  <Check
+                    key={game}
+                    checked={on}
+                    onChange={(checked) =>
+                      onUpdate({
+                        routineGames: checked
+                          ? [...(prefs.routineGames ?? []), game]
+                          : (prefs.routineGames ?? []).filter((g) => g !== game),
+                        // Answering here answers the strip's question too.
+                        routinesAsked: [
+                          ...(prefs.routinesAsked ?? []).filter((g) => g !== game),
+                          game,
+                        ],
+                      })
+                    }
+                    label={`Built-in weekly tasks for ${gameMeta(game).name}`}
+                    hint={`${list.map((r) => r.title).join(", ")} — from a source as of ${asOfLabel(list[0]!.asOf)}. Off hides them; your numbers are kept.`}
+                  />
+                );
+              })}
 
             {ignoredCount > 0 && (
               <Check
