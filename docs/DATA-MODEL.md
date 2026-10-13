@@ -334,74 +334,68 @@ reader cannot see.
 
 | Game | Reset (server local) | Server offset | Reset (UTC) | Copenhagen, summer / winter |
 |---|---|---|---|---|
-| Genshin, Star Rail, ZZZ, Wuwa, NTE | 04:00 | region (EU = UTC+1) | 03:00 | 05:00 / 04:00 |
-| Infinity Nikki, P5X, Blue Archive | 04:00 | region (assumed) | 03:00 | 05:00 / 04:00 |
+| Genshin, Star Rail, ZZZ, Wuwa, Honkai Impact 3rd | 04:00 | region (EU = UTC+1) | 03:00 | 05:00 / 04:00 |
+| Fate/Grand Order | 04:00 | region (see below — the real one shifts) | 03:00 | 05:00 / 04:00 |
+| Infinity Nikki, Asia / America / Europe | 04:00 | UTC+8 / **UTC-7** / **UTC+2** | 20:00 / 11:00 / 02:00 | 04:00 / 03:00 in Europe |
+| Neverness to Everness, Asia / America / Europe | **05:00** | UTC+8 / **UTC-4** / UTC+1 | 21:00 / 09:00 / 04:00 | 06:00 / 05:00 in Europe |
 | Arknights, all regions | 04:00 | UTC-7 (one Global server) | 11:00 | 13:00 / 12:00 |
 | Endfield, Europe | 04:00 | UTC-5 (on the Americas server) | 09:00 | 11:00 / 10:00 |
 | Endfield, Asia / Americas | 04:00 | regional default | 20:00 / 09:00 | — |
-| Reverse: 1999, all regions | **05:00** | UTC-5 (one global server) | 10:00 | 12:00 / 11:00 |
-| hololive Dreams, all regions | 04:00 | UTC+9 (one worldwide server) | 19:00 | 21:00 / 20:00 |
+| Reverse: 1999, America / Europe | **05:00** | UTC-5 (Global server) | 10:00 | 12:00 / 11:00 |
+| Reverse: 1999, Asia | **05:00** | UTC+8 (Asia server) | 21:00 | — |
+| Girls' Frontline 2, Asia | **05:00** | UTC+8 (Haoplay Asia) | 21:00 | — |
+| Girls' Frontline 2, America / Europe | **21:00** | UTC-8 (Haoplay Global) | 05:00 | 07:00 / 06:00 |
+| hololive Dreams, Nikke, all regions | **05:00** | UTC+9 (one worldwide server) | 20:00 | 22:00 / 21:00 |
+| Blue Archive, all regions | 04:00 | UTC+9 (one worldwide server) | 19:00 | 21:00 / 20:00 |
+| Umamusume, all regions | **15:00** | UTC (midnight JST, on the source's UTC calendar) | 15:00 | 17:00 / 16:00 |
+| Chaos Zero Nightmare, all regions | **18:00** | UTC (one worldwide server) | 18:00 | 20:00 / 19:00 |
+| P5X, all regions | **20:00** | UTC (the shared EN/JP server) | 20:00 | 22:00 / 21:00 |
+| Punishing: Gray Raven, all regions | **05:00** | UTC (Global server) | 05:00 | 07:00 / 06:00 |
+| Stella Sora, all regions | **13:00** | UTC-7, fixed (one worldwide server) | 20:00 | 22:00 / 21:00 |
 
-Arknights and hololive Dreams are the games whose override covers **all three** regions, and neither
-is a blanket per-game offset of the kind this section warns about below: both genuinely run a single
-worldwide server for every region we model. Arknights' offset is read off the source rather than
-assumed — every ending event on arknights.wiki.gg carries an exact end of `10:59:59Z`, which is
-`03:59:59` at UTC-7, one second before a 04:00 reset.
+**Where these come from.** Arknights, Reverse: 1999's Global server and Nikke were read off their
+own sources; Endfield's off its server map. Everything else in the table — and the hours that
+corrected hololive Dreams (05:00, where one mission's `3:59AM JST` end had been read as a 04:00
+reset) — comes from [Game-Time-Master](https://github.com/cicerakes/Game-Time-Master), which tracks
+each game's servers with a zone and a reset hour apiece and is credited in the colophon. Until
+2026-10-13 Infinity Nikki, P5X, Blue Archive, Chaos Zero Nightmare, Umamusume, Girls' Frontline 2,
+Stella Sora, Punishing: Gray Raven and Neverness to Everness took the regional default as an
+assumption no source had checked, and every one of them was wrong for at least one region. Infinity
+Nikki's was the report that found it: its American readers' day rolled two hours early. Correcting
+them re-labelled ticks readers had already logged, which an override that arrives with the game
+never does — so check Game-Time-Master when a game is added, not after it has readers.
 
-hololive Dreams is read the same way and is the cleaner case of the two, because the source states
-its zone outright: every boundary on holodori.wiki carries `(JST)`, the game launched worldwide
-simultaneously on one service, and `Training Support Missions` ends at `3:59AM JST` — one minute
-before a 04:00 local reset. Only the offset is overridden; the hour is the default. It also cost
-nothing to add, which is the point worth carrying to the next game: an override that arrives with
-the game moves nobody, while the same override added a year later re-labels every tick already
-logged under the old clock. Get it right at introduction or accept a migration.
+Arknights' offset is read off the source rather than assumed — every ending event on
+arknights.wiki.gg carries an exact end of `10:59:59Z`, which is `03:59:59` at UTC-7, one second
+before a 04:00 reset. Nikke's is read the same way, and earns an hour too: every schedule column on
+its wiki is headed `Start(UTC+9)` / `End(UTC+9)`, and a story event ends at 04:59:59 while the
+pickup banner replacing it starts at 05:00:00. hololive Dreams' zone is the source's (`(JST)` on
+every boundary); its hour is Game-Time-Master's.
 
-Nikke is the third game to earn one from the source rather than from habit, after Arknights and
-Reverse: 1999, and it earns `resetHourLocal` too: every schedule column on its wiki is headed
-`Start(UTC+9)` / `End(UTC+9)`, and the rows show where the day turns — a story event ends at
-04:59:59 and the pickup banner replacing it starts at 05:00:00, one second later. So UTC+9 for every
-region, rolling at 05:00 rather than 04:00. It shipped in the same commit as the game, which costs
-nothing while no reader has a day key for it.
+An override covering **all three** regions is not the blanket per-game offset this section warns
+about below: each of those games genuinely runs one worldwide server for every region we model.
+Where a game runs more than one — Infinity Nikki, Neverness to Everness, Reverse: 1999, Girls'
+Frontline 2, Endfield — only the regions that differ are listed.
+
+**The offset is chosen so the day key names the source's calendar day.** A day-precision boundary
+resolves to the reset that opens that day key (§ above), so the same instant written in two zones is
+not the same entry. Umamusume resets at midnight JST, but its source heads its dates
+`Availability (UTC)`; stored as UTC+9 at 00:00, a bare end date of the 14th would resolve to 15:00
+UTC on the 13th — a day early. Stored as UTC at 15:00, it resolves to the 14th. Where the source
+prints no zone at all, the zone Game-Time-Master states is taken as written.
 
 Note also that `nikke` and `nikki` are one letter apart and are different games — Goddess of Victory:
 Nikke and Infinity Nikki. Both are the first segment of every completion key their game will ever
 have, so a typo in either direction is silent data loss for real readers.
 
-Infinity Nikki's source changed on 2026-08-19 and its silence changed shape with it: the Fandom wiki
-states a wall clock on every boundary and no zone for it, so there is still nothing to read a server
-map off — the clock is discarded at ingest and only the printed day is published. An offset invented
-here would move real readers' day keys.
-
-Infinity Nikki, P5X, Blue Archive, Chaos Zero Nightmare and Umamusume carry **no `resetOffsets`
-entry**, so they take the regional default. That is an assumption, not a verified server map — none
-of those sources states one. Two of the 2026-08-19 additions are worth separating out, because they
-are silent for different reasons and neither is the usual one:
-
-- **Girls' Frontline 2** states an exact UTC instant on every boundary, so the data is there and
-  still settles nothing: its EN events end at 22:59 (33 of them), 08:59 (11) and 02:59 (5). Arknights
-  and Reverse: 1999 each earned an override from a single boundary the whole page agreed on; three
-  of them is a patch window, not a reset hour.
-- **Stella Sora** states an offset outright — `-07:00` — and that is precisely why it gets no entry.
-  `-07:00` is US Pacific in summer and `-08:00` in winter, so one fixed number is wrong for half the
-  year in either direction. This is the Fate/Grand Order gap, arriving through a source that looks
-  like it answered the question.
-
-
-Blue Archive is the case where the assumption is most likely wrong and still the right entry: the
-game does run one worldwide server, but `bluearchive.wiki` states no time of day and no timezone
-anywhere on the page, so there is no offset to read off it. Confirm these against the games before
-relying on them, and note that adding an override later re-labels the game-day of ticks readers have
-already logged, which is the change this table warns about below.
-
-**Reverse: 1999 is the one game that rolls on a different hour**, and it needs its own field rather
-than a bent offset. It runs a single global server on UTC-5 and resets at **05:00**, so its day rolls
-at 10:00 UTC. `resetOffsets` alone cannot say that: landing 10:00 UTC through the offset would mean
-claiming a UTC-6 server, which is a lie every other reader of `serverOffsetUtc` would inherit. So
-`GameMeta.resetHourLocal` overrides `RESET_HOUR_LOCAL` per region, like `resetOffsets` — a game's
-servers need not agree on the hour any more than on the offset — and is absent — meaning 04:00 — for
-everything else, which is why introducing it moved no existing day key. Both facts come off the
-source: all 154 rows of the wiki's event list state `(UTC-5)`, and every one runs 05:00 → 04:59, an
-event ending one minute before the reset the next one starts on.
+**A game that rolls on a different hour needs its own field rather than a bent offset.** Reverse:
+1999's Global server runs UTC-5 and resets at **05:00**, so its day rolls at 10:00 UTC.
+`resetOffsets` alone cannot say that: landing 10:00 UTC through the offset would mean claiming a
+UTC-6 server, which is a lie every other reader of `serverOffsetUtc` would inherit. So
+`GameMeta.resetHourLocal` overrides `RESET_HOUR_LOCAL` per region, like `resetOffsets` — Girls'
+Frontline 2's Asia server rolls at 05:00 and its Global server at 21:00, so one number per game
+would lie about one of them — and is absent, meaning 04:00, for everything else. That is why
+introducing it moved no existing day key.
 
 These server offsets are **fixed and do not observe DST**, so the reader's local reset time moves by
 an hour across the European clock change while the UTC instant stays put.

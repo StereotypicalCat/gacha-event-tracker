@@ -817,8 +817,8 @@ Adding a game is never only a `SOURCES` entry:
 - a `GameId` in `src/shared/schema.ts` — an enum value that becomes the first segment of every
   completion key for that game, forever;
 - a `GAMES` entry in `src/shared/games.ts` (name, short, hue, studio, `dailyTasks`), plus
-  `resetOffsets` / `resetHourLocal` **only where the source states the clock** — Nikke's is evidenced,
-  Stella Sora's is not stated on the page we would read;
+  `resetOffsets` / `resetHourLocal` **only where the clock is evidenced** — by the source, as Nikke's
+  is, or by Game-Time-Master, as Stella Sora's is (`AGENTS.md` § Event IDs);
 - a fixture in `fixtures/<game>/` and a test asserting parsed output, one commit per game
   (`docs/FEEDBACK.md` P1 step 4);
 - the lane arriving switched off for existing readers via `adoptNewLanes`, which is automatic but

@@ -308,8 +308,9 @@ Two more key spaces have the same property, for the same reason:
   Endfield serves Europe off the Americas machine, so `europe` is UTC-5 there and its reset is
   09:00 UTC, not 03:00. Keep that override **per region**: a blanket per-game offset drags the
   regions that do have their own server onto someone else's clock.
-  A game that rolls on a different *hour* says so in `resetHourLocal` instead — Reverse: 1999 resets
-  at 05:00, not 04:00, so its day rolls at 10:00 UTC on its single UTC-5 server. Do not encode that
+  A game that rolls on a different *hour* says so in `resetHourLocal` instead, also per region —
+  Reverse: 1999 resets at 05:00, not 04:00, so its day rolls at 10:00 UTC on its UTC-5 Global
+  server, and Girls' Frontline 2's two servers disagree on the hour outright. Do not encode that
   as a bent `resetOffsets` value: shifting a game's stated server offset to land the right instant
   would misreport the server clock to everything else that asks for it. Both fields are absent for
   every game that takes the default, which is why adding the second one moved nobody's day keys.
@@ -317,6 +318,13 @@ Two more key spaces have the same property, for the same reason:
   on US Pacific, which observes daylight saving, and one fixed number is wrong for half the year in
   either direction — so `fgo` takes the default and `games.ts` says why. Reaching for a value anyway
   would re-label day keys twice a year, which is the one thing this whole section exists to prevent.
+  Server clocks come from the game's own source where it states one, and otherwise from
+  [Game-Time-Master](https://github.com/cicerakes/Game-Time-Master), which tracks each server's
+  zone and reset hour; cite it on the `games.ts` entry. Transcribe the value, never the file — it is
+  GPL-3.0 and this repo is MIT. Pick the offset that makes the day key name the **same calendar day
+  the source prints**: Umamusume resets at midnight JST, but its source's dates are headed
+  `Availability (UTC)`, so it is stored as 15:00 UTC — same instant, and a bare end date resolves
+  to the right day instead of one early.
   Every day-key function takes an optional `game` — **anything reading or writing a tick must pass
   it**, or it writes under one clock and reads under another. A day that drops out of `dailyDays`
   renders no pip, so a tick on it becomes unreachable; check real fixture windows before changing an
