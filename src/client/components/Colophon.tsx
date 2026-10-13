@@ -84,6 +84,20 @@ export const IDEA_CREDITS = [
 ] as const;
 
 /**
+ * Where the daily reset clocks come from.
+ *
+ * Every game's reset hour and server offset in `games.ts` was checked against
+ * Game-Time-Master, which keeps a zone and a reset time for each server of each
+ * game. The values are transcribed facts, not its code — it is GPL-3.0 and
+ * nothing of it ships here — so this is thanks, beside the schedules' sources,
+ * rather than a NOTICE entry.
+ */
+export const RESET_CLOCK_CREDIT = {
+  name: "Game-Time-Master",
+  url: "https://github.com/cicerakes/Game-Time-Master",
+} as const;
+
+/**
  * How many lagging games to name before summarising the rest.
  *
  * Naming them is the point — a reader can act on a name — but past a handful the
@@ -374,6 +388,18 @@ export function Colophon({
               </span>
             ))}
             {", whose editors compile and maintain the event calendars this reads from. The schedules are their work; this page only rearranges them."}
+          </p>
+          <p className="mt-2">
+            To{" "}
+            <a
+              href={RESET_CLOCK_CREDIT.url}
+              target="_blank"
+              rel="noreferrer noopener"
+              className={LINK}
+            >
+              {RESET_CLOCK_CREDIT.name}
+            </a>
+            , whose per-server reset times set every daily clock here.
           </p>
           <p className="mt-2">
             And to{" "}

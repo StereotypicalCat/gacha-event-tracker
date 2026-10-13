@@ -12,7 +12,7 @@ import {
 import { eventCaption, YourOwn } from "../src/client/components/YourOwn.tsx";
 import { EventRow } from "../src/client/components/EventRow.tsx";
 import { EventDetail } from "../src/client/components/EventDetail.tsx";
-import { AUTHOR, Colophon, REPO_URL } from "../src/client/components/Colophon.tsx";
+import { AUTHOR, Colophon, REPO_URL, RESET_CLOCK_CREDIT } from "../src/client/components/Colophon.tsx";
 import { GameMetaProvider } from "../src/client/state/gameMeta.tsx";
 import {
   asDisplayEvent,
@@ -501,6 +501,17 @@ describe("Colophon freshness notice (PRD F7)", () => {
     // Unobtrusive is a property of the markup, not a matter of taste: the same
     // muted class as its neighbours, and no ask anywhere in the footer.
     expect(html).not.toMatch(/support me|buy me|donate|tip jar/i);
+  });
+
+  test("thanks Game-Time-Master for the reset clocks, beside the sources", () => {
+    // Every daily reset the app counts down to was checked against it, so it is
+    // credited where the schedules' sources are rather than among the ideas.
+    const html = renderToStaticMarkup(<Colophon sources={[fresh]} now={NOW} />);
+    expect(html).toContain(RESET_CLOCK_CREDIT.url);
+    expect(html).toContain(RESET_CLOCK_CREDIT.name);
+    const credit = html.indexOf(RESET_CLOCK_CREDIT.url);
+    expect(credit).toBeGreaterThan(html.indexOf("With thanks to"));
+    expect(credit).toBeLessThan(html.indexOf("Not affiliated"));
   });
 });
 
