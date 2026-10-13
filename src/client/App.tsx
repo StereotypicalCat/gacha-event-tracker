@@ -32,7 +32,16 @@ import {
   resolveFocus,
 } from "./state/lens.ts";
 import { clockFor, formatRemaining } from "../shared/time.ts";
-import { dailySummary, isDaily, resolveDaily } from "../shared/daily.ts";
+import {
+  dailyDays as runDays,
+  dailySummary,
+  dayKey,
+  isDaily,
+  resolveDaily,
+} from "../shared/daily.ts";
+import { isoWeekday } from "../shared/period.ts";
+import { tasksShown } from "./components/Dailies.tsx";
+import type { StripEditor, StripEvent } from "./components/EditPanel.tsx";
 import { goalStatus, readGoal, type GoalStatus } from "../shared/goal.ts";
 import { taskStatus, type TaskShape } from "../shared/task.ts";
 import {
@@ -253,6 +262,21 @@ export function App() {
 
   const isIgnored = (id: string) => ignored.marks[id] !== undefined;
 
+  /** An event as the strip's Edit panel needs it. */
+  const stripEvent = (row: RowEvent): StripEvent => {
+    const run = runDays(row.clock.startsMs, row.clock.endsMs, prefs.region, row.event.game);
+    return {
+      id: row.event.id,
+      game: row.event.game,
+      title: row.event.title,
+      goal: goalOf(row.event.id),
+      hasStoredGoal: prog.progress[row.event.id]?.goal !== undefined,
+      detected: prefs.detectDaily && isDaily(row.event),
+      defaultWeekStartsOn: isoWeekday(dayKey(row.clock.startsMs, prefs.region, row.event.game)),
+      maxDays: run === null ? null : run.length,
+    };
+  };
+
   const toggleIgnored = (id: string, title: string) => {
     const wasIgnored = isIgnored(id);
     ignored.toggle(id);
@@ -423,6 +447,34 @@ export function App() {
    * them on screen, not keep nagging me about them.
    */
   const todo = outstanding(live, isDone, isIgnored);
+
+  /**
+   * The strip's Edit panel: the same `daily` and `goal` writes the detail sheet
+   * makes, offered where the reader is ticking. What can be added is what the
+   * strip would show if it repeated — running, not done, not ignored.
+   */
+  const stripEditor: StripEditor = {
+    inStrip: todo.filter(repeatsDaily).map(stripEvent),
+    addable: todo.filter((r) => !repeatsDaily(r)).map(stripEvent),
+    onGoal: prog.setGoal,
+    onDaily: prog.setDaily,
+    onOpen: setOpenId,
+    shown: {
+      chores: prefs.showChores,
+      weekly: prefs.showWeeklyTasks,
+      monthly: prefs.showMonthlyTasks,
+    },
+    hasTasks: {
+      weekly: stripTasks.some((t) => t.period.unit === "week"),
+      monthly: stripTasks.some((t) => t.period.unit === "month"),
+    },
+    onShown: (patch) =>
+      update({
+        ...(patch.chores !== undefined ? { showChores: patch.chores } : {}),
+        ...(patch.weekly !== undefined ? { showWeeklyTasks: patch.weekly } : {}),
+        ...(patch.monthly !== undefined ? { showMonthlyTasks: patch.monthly } : {}),
+      }),
+  };
   const headline = nextToExpire(todo, HEADLINE_DEADLINES);
 
   // Counted across every game the reader plays, not just the focused one — a
@@ -620,7 +672,11 @@ export function App() {
               const row = todo.find((r) => r.event.id === id);
               return row === undefined ? undefined : goalStatusOf(row);
             }}
-            tasks={stripTasks}
+            tasks={tasksShown(stripTasks, {
+              weekly: prefs.showWeeklyTasks,
+              monthly: prefs.showMonthlyTasks,
+            })}
+            edit={stripEditor}
             taskStatusFor={taskStatusOf}
             ask={(() => {
               const game = routineToAsk(

@@ -194,6 +194,16 @@ export function goalCaption(s: GoalStatus): string {
   return `${head} · ${s.needed} needed · ${days(s.open)} left${left}`;
 }
 
+/**
+ * What a goal asks for, in a few words — the Edit panel's line for an event
+ * whose goal is not open. Says nothing about progress: that is the chip's job.
+ */
+export function goalSummary(goal: Goal | undefined): string {
+  if (goal === undefined) return "No goal";
+  const what = goal.measure === "days" ? days(goal.required) : `${num(goal.target)} points`;
+  return `${what} ${goal.period === "week" ? "each week" : "across the event"}`;
+}
+
 /** The Dailies chip's short count. */
 export function goalCount(s: GoalStatus): string {
   const unit = s.scope === "week" ? " wk" : s.scope === "month" ? " mo" : "";

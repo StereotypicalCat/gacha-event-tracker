@@ -988,6 +988,11 @@ event's length. It adds **no schema field**, so the feed contract is untouched.
   want five days of seven (`progress.goal`, `src/shared/goal.ts`, PRD F12). A met week stays in the
   strip as done this week without a tick being invented; only the reader marks the event done. A
   goal this build cannot read is kept in storage and treated as none — never stripped on load.
+- **The strip's Edit panel is the sheet's controls, reached from the strip** (`EditPanel.tsx`). It
+  calls the same `setDaily` and `setGoal` with the same `dailyOverride` arguments, so it can never
+  store a combination the sheet would not. Keep it that way: a second way to write `daily` or `goal`
+  with its own rules is two answers to one question. It is a mode of the section, like Catch up —
+  never a control inside a chip.
 
 ## Events the reader entered themselves
 

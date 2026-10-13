@@ -313,6 +313,13 @@ title — and a goal makes an event a daily even with detection off.
   event-wide goal reached offers *Mark event done*; the reader decides.
 - **The target is never lowered.** A short first or last week keeps it and says when too few days
   are left; an unknown end leaves the days left unknown.
+- **Set up from the strip, not just the sheet.** Giving Temper Thyself its goal used to mean finding
+  it in the list, opening it, saying it repeats and then setting the goal. The strip's **Edit** —
+  beside *Catch up*, and like it a mode of the section rather than a control on a chip — lists the
+  strip's events by game with each goal in words; one opens to the sheet's goal control, *Open
+  details* and *Remove from dailies*. Under each game, *Add an event · N* lists its running events
+  that are not in the strip yet; adding one opens its goal at once. It writes exactly what the sheet
+  writes, so nothing about a goal or an override changes meaning.
 
 **F13 — Your own games and your own events.**
 No feasible adapter set covers everyone. Fourteen games were named in the first release thread and
@@ -557,9 +564,12 @@ default) or **reach a number** (a target such as 2,100, with an optional unit).
 
 - **They roll on the game's clock.** A week starts at the game's daily reset on the chosen day, on
   the reader's server — the same clock every daily tick is cut on, so nothing new to get wrong.
-- **They sit with their game's dailies, and are counted apart.** A task follows its game's chore and
-  events in the strip, but the header counts it under *Weekly* or *Monthly*, not "today": a chore
-  due by Sunday is not waiting on anyone every morning, and only today's dailies celebrate.
+- **They sit under the dailies, and are counted apart.** Tasks have a row of their own, *This week &
+  month*, under today's chips — in game order — and the header counts them under *Weekly* or
+  *Monthly*, not "today": a chore due by Sunday is not waiting on anyone every morning, and only
+  today's dailies celebrate. **Each period can be switched off** (`showWeeklyTasks`,
+  `showMonthlyTasks`), in *What you see* and in the strip's Edit panel, offered only once a task of
+  that period exists. Off hides tasks only — an event with a goal stays — and discards nothing.
 - **A number is entered, not ticked.** Its chip opens an editor under the strip — the value as the
   game shows it, not an increment — because a chip is one target. Catch up offers last period's
   number the way it offers yesterday's tick.

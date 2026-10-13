@@ -168,6 +168,18 @@ export interface Prefs {
    * here, so switching back on restores every one of them.
    */
   showChores: boolean;
+  /**
+   * Whether weekly tasks — the reader's own and any built-ins they turned on —
+   * sit in the strip's row under the dailies. `showMonthlyTasks` is the same
+   * for monthly ones.
+   *
+   * On by default, for `showChores`' reason: a reader who set tasks up before
+   * these existed must not find them gone. Off hides only tasks — an event with
+   * a goal is something the reader engaged with and stays either way — and,
+   * like the chores, it discards nothing: ticks and numbers keep their keys.
+   */
+  showWeeklyTasks: boolean;
+  showMonthlyTasks: boolean;
   showCompleted: boolean;
   /** Reveal events the reader has ignored, so they can be restored. */
   showIgnored: boolean;
@@ -236,6 +248,8 @@ export function defaults(): Prefs {
     timelineSplitUpcoming: true,
     detectDaily: false,
     showChores: true,
+    showWeeklyTasks: true,
+    showMonthlyTasks: true,
     showCompleted: true,
     showIgnored: false,
     theme: DEFAULT_THEME_CHOICE,
@@ -400,6 +414,8 @@ export function restorePrefsValue(incoming: unknown): Prefs {
   result.timelineSplitUpcoming = typeof result.timelineSplitUpcoming === "boolean" ? result.timelineSplitUpcoming : base.timelineSplitUpcoming;
   result.detectDaily = typeof result.detectDaily === "boolean" ? result.detectDaily : base.detectDaily;
   result.showChores = typeof result.showChores === "boolean" ? result.showChores : base.showChores;
+  result.showWeeklyTasks = typeof result.showWeeklyTasks === "boolean" ? result.showWeeklyTasks : base.showWeeklyTasks;
+  result.showMonthlyTasks = typeof result.showMonthlyTasks === "boolean" ? result.showMonthlyTasks : base.showMonthlyTasks;
   result.showCompleted = typeof result.showCompleted === "boolean" ? result.showCompleted : base.showCompleted;
   result.showIgnored = typeof result.showIgnored === "boolean" ? result.showIgnored : base.showIgnored;
   result.regionConfirmed = typeof result.regionConfirmed === "boolean" ? result.regionConfirmed : base.regionConfirmed;

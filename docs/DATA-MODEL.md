@@ -221,12 +221,16 @@ Namespaced, versioned, and small. Nothing here ever goes to the server.
                                 //   focusGame, sort, view,
                                 //   timelineDayWidth, timelineGroup, showUpcoming,
                                 //   timelineSplitUpcoming, detectDaily, showChores,
-                                //   showCompleted, showIgnored, theme, regionConfirmed,
+                                //   showWeeklyTasks, showMonthlyTasks, showCompleted, showIgnored, theme, regionConfirmed,
                                 //   onboarded, routineGames?, routinesAsked? }
                                 // routineGames is the games whose built-in weekly tasks
                                 // the reader turned on; routinesAsked the games already
                                 // asked about. Both absent means none — built-ins are
                                 // opt-in for every install. PRD F17.
+                                // showWeeklyTasks / showMonthlyTasks say whether tasks of
+                                // that period sit in the strip's row under the dailies.
+                                // Both default true, so an install from before them keeps
+                                // its tasks on screen; off hides and never deletes.
                                 // changelogSeen is the newest changelog entry id the
                                 // reader dismissed. Absent means unrecorded: first-run
                                 // setup sets it, so absent is an install from before the

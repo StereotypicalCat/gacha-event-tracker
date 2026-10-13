@@ -96,6 +96,13 @@ export function Controls({
   const shown = games.filter((g) => !prefs.hiddenGames.includes(g)).length;
   const ownGames = Object.keys(own.games).length;
   const ownEvents = Object.keys(own.events).length;
+  // Which periods have a task at all — the reader's own, or a built-in they
+  // turned on — so a switch is offered only with something behind it.
+  const periods = [
+    ...(own.tasks ?? []).map((t) => t.period.unit),
+    ...(prefs.routineGames ?? []).flatMap((g) => routinesFor(g).map((r) => r.period.unit)),
+  ];
+  const taskPeriods = { week: periods.includes("week"), month: periods.includes("month") };
 
   return (
     <section
@@ -247,6 +254,26 @@ export function Controls({
               label="Show each game's own daily chores"
               hint="Commissions, resin, daily training and the rest. Nobody publishes these, so the app keeps a fixed list per game. Off, the strip shows only events with a checklist. Your ticks and streaks are kept either way."
             />
+
+            {/* Where weekly and monthly tasks sit: their own row under the
+                dailies. Only offered once there is a task of that period — a
+                switch with nothing behind it is a control that does nothing. */}
+            {taskPeriods.week && (
+              <Check
+                checked={prefs.showWeeklyTasks}
+                onChange={(showWeeklyTasks) => onUpdate({ showWeeklyTasks })}
+                label="Show weekly tasks under the dailies"
+                hint="Your own and any built-ins you turned on. Off hides them from the strip and its counts; your ticks and numbers are kept."
+              />
+            )}
+            {taskPeriods.month && (
+              <Check
+                checked={prefs.showMonthlyTasks}
+                onChange={(showMonthlyTasks) => onUpdate({ showMonthlyTasks })}
+                label="Show monthly tasks under the dailies"
+                hint="Off hides them from the strip and its counts; your ticks and numbers are kept."
+              />
+            )}
 
             {/* Beside the chores rather than on each game's row, which already
                 carries a handle, two arrows and a switch. Opt-in per game: these

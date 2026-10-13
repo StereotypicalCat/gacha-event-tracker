@@ -31,6 +31,8 @@ const PREFS: Prefs = {
   timelineSplitUpcoming: true,
   detectDaily: false,
   showChores: true,
+  showWeeklyTasks: true,
+  showMonthlyTasks: true,
   showCompleted: true,
   showIgnored: false,
   theme: "dark",
@@ -323,5 +325,23 @@ describe("Controls: the Your own summary counts tasks", () => {
     expect(ownState(1, 2, 0)).toBe("1 game · 2 events");
     expect(ownState(1, 0, 2)).toBe("1 game · 0 events · 2 tasks");
     expect(ownState(0, 0, 0)).toBe("none yet");
+  });
+});
+
+describe("Controls: weekly and monthly tasks under the dailies", () => {
+  test("each switch appears once there is a task of its period, and reads its own pref", () => {
+    // ZZZ's built-ins are weekly; there is no monthly task, so no monthly switch.
+    const prefs = { ...PREFS, routineGames: ["zzz"] };
+    const on = render(prefs, 0, ["zzz"]);
+    expect(on).toContain("Show weekly tasks");
+    expect(on).not.toContain("Show monthly tasks");
+    const off = render({ ...prefs, showWeeklyTasks: false }, 0, ["zzz"]);
+    expect(checkboxes(off).filter(Boolean).length).toBe(checkboxes(on).filter(Boolean).length - 1);
+  });
+
+  test("with no tasks at all, neither switch is offered", () => {
+    const html = render(PREFS);
+    expect(html).not.toContain("Show weekly tasks");
+    expect(html).not.toContain("Show monthly tasks");
   });
 });

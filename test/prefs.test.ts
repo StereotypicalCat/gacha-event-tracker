@@ -124,6 +124,23 @@ describe("defaults that a reader would notice losing", () => {
   });
 });
 
+describe("weekly and monthly tasks under the dailies", () => {
+  test("both are shown until someone says otherwise", () => {
+    // A reader who set up tasks before these switches existed must not find
+    // them gone on upgrade.
+    expect(defaults().showWeeklyTasks).toBe(true);
+    expect(defaults().showMonthlyTasks).toBe(true);
+    const stored = { region: "europe", showChores: false } as const;
+    expect({ ...defaults(), ...stored }.showWeeklyTasks).toBe(true);
+  });
+
+  test("a restored value that is not a boolean falls back to shown", () => {
+    const restored = restorePrefsValue({ showWeeklyTasks: "no", showMonthlyTasks: false });
+    expect(restored.showWeeklyTasks).toBe(true);
+    expect(restored.showMonthlyTasks).toBe(false);
+  });
+});
+
 describe("restorePrefsValue", () => {
   test("returns defaults when passed null or non-object", () => {
     expect(restorePrefsValue(null)).toEqual(defaults());
@@ -146,6 +163,8 @@ describe("restorePrefsValue", () => {
       timelineSplitUpcoming: false,
       detectDaily: true,
       showChores: false,
+      showWeeklyTasks: false,
+      showMonthlyTasks: true,
       showCompleted: false,
       showIgnored: true,
       theme: "light" as const,

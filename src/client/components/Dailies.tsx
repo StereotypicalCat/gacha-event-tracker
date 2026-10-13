@@ -18,6 +18,7 @@ import { asOfLabel } from "../../shared/routines.ts";
 import { AmountEditor } from "./AmountEditor.tsx";
 import { formatRemaining } from "../../shared/time.ts";
 import { DayPip } from "./DayPip.tsx";
+import { EditPanel, type StripEditor } from "./EditPanel.tsx";
 import { Fireworks } from "./Fireworks.tsx";
 
 /**
@@ -207,6 +208,31 @@ export function dailyGroups(
   return groups;
 }
 
+/**
+ * Tasks the reader has not switched off, by period. Off hides a task from the
+ * strip and its counts; its ticks and numbers keep their keys untouched.
+ */
+export function tasksShown<T extends Pick<StripTask, "period">>(
+  tasks: readonly T[],
+  shown: { weekly: boolean; monthly: boolean },
+): T[] {
+  return tasks.filter((t) => (t.period.unit === "week" ? shown.weekly : shown.monthly));
+}
+
+/**
+ * Today's row and the one under it. Weekly and monthly items are not due
+ * tonight, so they sit below the dailies rather than among them; an event is
+ * in today's row whatever its goal, because it is ticked a day at a time. Order
+ * inside each row is kept, so a game's things stay together.
+ */
+export function splitByCadence(items: readonly DailyItem[]): {
+  today: DailyItem[];
+  longer: DailyItem[];
+} {
+  const longer = (i: DailyItem) => i.cadence === "week" || i.cadence === "month";
+  return { today: items.filter((i) => !longer(i)), longer: items.filter(longer) };
+}
+
 interface PeriodTally {
   total: number;
   complete: number;
@@ -278,6 +304,7 @@ export function Dailies({
   onSetAmount,
   amountFor,
   ask,
+  edit,
 }: {
   /** Every lane the reader is looking at, in their own order. */
   games: LaneId[];
@@ -314,6 +341,8 @@ export function Dailies({
   onSetAmount?: ((key: string, periodStart: string, value: number) => void) | undefined;
   /** The number recorded for an item's period, if any. */
   amountFor?: ((key: string, periodStart: string) => number | undefined) | undefined;
+  /** What the Edit panel shows and does; without it there is no Edit. */
+  edit?: StripEditor | undefined;
 }) {
   const gameMeta = useGameMeta();
   /**
@@ -324,7 +353,9 @@ export function Dailies({
    * reading — "I did Tuesday, let me say so" — rather than a statement about how
    * the app should work.
    */
-  const [catchUp, setCatchUp] = useState(false);
+  const [panel, setPanel] = useState<"catchUp" | "edit" | null>(null);
+  const catchUp = panel === "catchUp";
+  const editingStrip = panel === "edit" && edit !== undefined;
   /** Which amount chip's editor is open, by item key. One at a time. */
   const [editing, setEditing] = useState<string | null>(null);
 
@@ -372,7 +403,23 @@ export function Dailies({
     return () => clearTimeout(id);
   }, [burst]);
 
-  if (items.length === 0 && ask === undefined) return null;
+  // An empty strip used to vanish. With something running that could be added,
+  // it stays as one line, so the way to add it is where the reader looks.
+  const canAdd = edit !== undefined && edit.addable.length > 0;
+  if (items.length === 0 && ask === undefined && !canAdd) return null;
+
+  /** The Edit switch. Beside Catch up, and like it a mode of the section, never a chip's. */
+  const editToggle = edit !== undefined && (
+    <button
+      type="button"
+      onClick={() => setPanel(editingStrip ? null : "edit")}
+      aria-expanded={editingStrip}
+      className="shrink-0 text-[0.6875rem] text-faint transition-colors hover:text-muted"
+    >
+      {editingStrip ? "Done" : "Edit"}
+    </button>
+  );
+  const editPanel = editingStrip && <EditPanel games={games} editor={edit} />;
 
   const question =
     ask === undefined ? null : (
@@ -402,7 +449,22 @@ export function Dailies({
     );
 
   if (items.length === 0) {
-    return <section className="relative border-b border-hairline px-4 py-3">{question}</section>;
+    return (
+      <section className="relative border-b border-hairline px-4 py-3">
+        {question}
+        {canAdd && (
+          <>
+            {editPanel}
+            <div className={`relative flex items-baseline justify-between gap-3 ${question === null ? "" : "mt-2"}`}>
+              <p className="text-[0.6875rem] text-faint">
+                {editingStrip ? "Add an event to tick it off here each day." : "Nothing to tick today."}
+              </p>
+              {editToggle}
+            </div>
+          </>
+        )}
+      </section>
+    );
   }
 
   // With mixed reset clocks there is no single "resets in", so the header
@@ -410,6 +472,34 @@ export function Dailies({
   const soonest = Math.min(...items.map((i) => i.resetsIn));
   const mixed = new Set(items.map((i) => i.resetsIn)).size > 1;
   const open = items.find((i) => i.key === editing && i.goal?.measure === "amount");
+
+  const { today, longer } = splitByCadence(items);
+  const chip = (item: DailyItem) => (
+    <li key={item.key}>
+      {item.goal?.measure === "amount" ? (
+        <AmountChip
+          label={item.label}
+          hue={gameMeta(item.game).hue}
+          title={item.title}
+          ariaLabel={item.ariaLabel}
+          goal={item.goal}
+          open={editing === item.key}
+          onOpen={() => setEditing(editing === item.key ? null : item.key)}
+        />
+      ) : (
+        <TickChip
+          label={item.label}
+          hue={gameMeta(item.game).hue}
+          title={item.title}
+          ariaLabel={item.ariaLabel}
+          days={daysFor(item.key)}
+          today={item.today}
+          goal={item.goal}
+          onToggle={() => onToggleDay(item.key, item.today)}
+        />
+      )}
+    </li>
+  );
 
   return (
     <section className="relative border-b border-hairline px-4 py-4">
@@ -445,45 +535,36 @@ export function Dailies({
           onSetAmount={onSetAmount}
           amountFor={amountFor}
         />
+      ) : editingStrip ? (
+        editPanel
       ) : (
-        /* One wrapping row, with each game's chore and its events adjacent. No
+        /* Wrapping rows, with each game's chore and its events adjacent. No
            per-game headings here: this is the part of the page answerable in ten
            seconds, and a heading per game would make it the tallest block on it,
            pushing "next to expire" — the answer the reader came for — down the
            page. The hue already says which game a chip belongs to. */
-        <ul className="relative mt-2.5 flex flex-wrap gap-1.5">
-          {items.map((item) => (
-            <li key={item.key}>
-              {item.goal?.measure === "amount" ? (
-                <AmountChip
-                  label={item.label}
-                  hue={gameMeta(item.game).hue}
-                  title={item.title}
-                  ariaLabel={item.ariaLabel}
-                  goal={item.goal}
-                  open={editing === item.key}
-                  onOpen={() => setEditing(editing === item.key ? null : item.key)}
-                />
-              ) : (
-                <TickChip
-                  label={item.label}
-                  hue={gameMeta(item.game).hue}
-                  title={item.title}
-                  ariaLabel={item.ariaLabel}
-                  days={daysFor(item.key)}
-                  today={item.today}
-                  goal={item.goal}
-                  onToggle={() => onToggleDay(item.key, item.today)}
-                />
-              )}
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="relative mt-2.5 flex flex-wrap gap-1.5">
+            {today.map(chip)}
+          </ul>
+          {/* Not due tonight, so under the dailies rather than among them —
+              and switchable, in the Edit panel and in settings. */}
+          {longer.length > 0 && (
+            <>
+              <p className="relative mt-3 text-[0.6875rem] font-medium text-faint">
+                This week &amp; month
+              </p>
+              <ul className="relative mt-1.5 flex flex-wrap gap-1.5">
+                {longer.map(chip)}
+              </ul>
+            </>
+          )}
+        </>
       )}
 
       {/* Under the strip rather than inside the chip: a chip is one target, and
           a field inside it would be a second one waiting to be mis-tapped. */}
-      {!catchUp && open?.goal !== undefined && onSetAmount !== undefined && (
+      {panel === null && open?.goal !== undefined && onSetAmount !== undefined && (
         <AmountEditor
           key={`${open.key}:${open.goal.periodStart}`}
           autoFocus
@@ -501,7 +582,9 @@ export function Dailies({
 
       <div className="relative mt-2 flex items-baseline justify-between gap-3">
         <p className="text-[0.6875rem] leading-relaxed text-faint">
-          {catchUp
+          {editingStrip
+            ? "Add an event, give one a goal, or choose what the strip carries."
+            : catchUp
             ? `Tick a day you did but didn't record. The last ${CATCH_UP_DAYS} days, and nothing later than today.`
             : total === 0
               ? week.complete + month.complete === week.total + month.total
@@ -514,14 +597,17 @@ export function Dailies({
         {/* The way back to a day you already did. It lives on the section rather
             than on each chip because a chip is a single tick target, and a
             second control inside one is a mis-tap that costs a streak. */}
-        <button
-          type="button"
-          onClick={() => setCatchUp((on) => !on)}
-          aria-expanded={catchUp}
-          className="shrink-0 text-[0.6875rem] text-faint transition-colors hover:text-muted"
-        >
-          {catchUp ? "Done" : "Catch up"}
-        </button>
+        <div className="flex shrink-0 gap-3">
+          <button
+            type="button"
+            onClick={() => setPanel(catchUp ? null : "catchUp")}
+            aria-expanded={catchUp}
+            className="shrink-0 text-[0.6875rem] text-faint transition-colors hover:text-muted"
+          >
+            {catchUp ? "Done" : "Catch up"}
+          </button>
+          {editToggle}
+        </div>
       </div>
     </section>
   );

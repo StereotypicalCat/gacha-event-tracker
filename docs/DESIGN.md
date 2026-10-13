@@ -429,6 +429,16 @@ selected tab fills with `raised` and turns ink; unselected tabs are faint and go
   Off / Each week / Across the event — then a small number field and, for weeks, a weekday select,
   both on `ground` with a hairline border like the notes field. Once a goal is set, a smaller
   Days · Points pill pair picks its measure.
+- **This week & month row** (dailies strip): weekly and monthly items leave today's chips and sit
+  under them, after a faint 11px `This week & month` label, in the same pills and game order.
+- **Strip Edit panel** (dailies strip, from a faint **Edit** text button beside **Catch up**, which
+  reads **Done** while open): replaces the chips. A hue-coloured game name per lane; each event in
+  the strip is a full-width row — title in muted, its goal in words (`5 days each week`) in faint
+  — that opens the check-in goal control indented behind a hairline left rule, with **Open
+  details** (muted) and **Remove from dailies** (faint) under it. A faint **Add an event · N** per
+  game opens that game's running events as dashed hairline pills with a drawn plus; one game open
+  at a time, because every game's list at once is a hundred pills. A hairline rule, then small
+  checkboxes for what the strip carries — Daily chores, and Weekly / Monthly tasks when any exist.
 
 ### Event row (signature)
 The unit of the checklist. It is one full-bleed target that opens the event and does nothing else.
