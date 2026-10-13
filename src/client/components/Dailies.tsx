@@ -361,8 +361,15 @@ export function Dailies({
       <div className="relative flex items-baseline justify-between gap-3">
         <h2 className="eyebrow">
           {total > 0 ? <>Today's dailies · {complete}/{total}</> : "Your tasks"}
-          {week.total > 0 && <> · Weekly {week.complete}/{week.total}</>}
-          {month.total > 0 && <> · Monthly {month.complete}/{month.total}</>}
+          {/* A line of their own: in the rail, three counts on one line wrapped
+              the heading and pushed the reset countdown onto two. */}
+          {(week.total > 0 || month.total > 0) && (
+            <span className="mt-0.5 block text-faint">
+              {week.total > 0 && <>Weekly {week.complete}/{week.total}</>}
+              {week.total > 0 && month.total > 0 && " · "}
+              {month.total > 0 && <>Monthly {month.complete}/{month.total}</>}
+            </span>
+          )}
         </h2>
         <p className="tnum text-[0.6875rem] text-faint">
           {mixed ? "next reset in " : "resets in "}
