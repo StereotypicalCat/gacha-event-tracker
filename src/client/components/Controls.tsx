@@ -290,7 +290,7 @@ export function Controls({
           </div>
         </Group>
 
-        <Group name="Your own games and events" state={ownState(ownGames, ownEvents)}>
+        <Group name="Your own games and events" state={ownState(ownGames, ownEvents, own.tasks?.length ?? 0)}>
           <YourOwn {...own} />
         </Group>
 
@@ -387,11 +387,15 @@ function visibilityState(
   return also.length === 0 ? "live deadlines only" : `plus ${also.join(", ")}`;
 }
 
-function ownState(games: number, events: number): string {
-  if (games === 0 && events === 0) return "none yet";
+/** The Your own group's summary line. Exported so its counting is tested directly. */
+export function ownState(games: number, events: number, tasks = 0): string {
+  if (games === 0 && events === 0 && tasks === 0) return "none yet";
   const plural = (n: number, word: string) =>
     `${n} ${word}${n === 1 ? "" : "s"}`;
-  return `${plural(games, "game")} · ${plural(events, "event")}`;
+  const parts =
+    games === 0 && events === 0 ? [] : [plural(games, "game"), plural(events, "event")];
+  if (tasks > 0) parts.push(plural(tasks, "task"));
+  return parts.join(" · ");
 }
 
 /**

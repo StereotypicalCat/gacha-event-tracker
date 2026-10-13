@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import { Controls } from "../src/client/components/Controls.tsx";
+import { Controls, ownState } from "../src/client/components/Controls.tsx";
 import { GameMetaProvider } from "../src/client/state/gameMeta.tsx";
 import { metaFor } from "../src/shared/games.ts";
 import type { Prefs } from "../src/client/state/usePrefs.ts";
@@ -314,5 +314,14 @@ describe("Controls: built-in weekly tasks", () => {
 
   test("no switch when no game on the list has any", () => {
     expect(render(PREFS)).not.toContain("Built-in weekly tasks");
+  });
+});
+
+describe("Controls: the Your own summary counts tasks", () => {
+  test("a reader with only tasks is not told they have none", () => {
+    expect(ownState(0, 0, 1)).toBe("1 task");
+    expect(ownState(1, 2, 0)).toBe("1 game · 2 events");
+    expect(ownState(1, 0, 2)).toBe("1 game · 0 events · 2 tasks");
+    expect(ownState(0, 0, 0)).toBe("none yet");
   });
 });
