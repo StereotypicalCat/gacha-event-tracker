@@ -1,5 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { ROUTINES, RoutineSchema, routinesFor } from "../src/shared/routines.ts";
+import {
+  activeRoutines,
+  ROUTINES,
+  RoutineSchema,
+  routinesFor,
+  routineToAsk,
+} from "../src/shared/routines.ts";
+import { restorePrefsValue } from "../src/client/state/usePrefs.ts";
 import { taskStatus } from "../src/shared/task.ts";
 
 /**
@@ -44,5 +51,35 @@ describe("ROUTINES", () => {
       amounts: { "2026-10-12": { value: 900, at: "2026-10-15T12:00:00.000Z" } },
     });
     expect(s).toMatchObject({ scope: "week", count: 900, required: 1300 });
+  });
+});
+
+describe("which built-ins are on", () => {
+  test("only for games the reader said yes to", () => {
+    expect(activeRoutines(undefined, new Set()).map((r) => r.id)).toEqual([]);
+    expect(activeRoutines(["zzz"], new Set()).map((r) => r.id)).toEqual(["routine:zzz:ridu-weekly"]);
+  });
+
+  test("one the reader made their own is hidden while the copy exists", () => {
+    expect(activeRoutines(["zzz", "endfield"], new Set(["routine:zzz:ridu-weekly"])).map((r) => r.id))
+      .toEqual(["routine:endfield:weekly-routine"]);
+  });
+});
+
+describe("which game to ask about", () => {
+  test("the first game on screen with built-ins, not asked and not on", () => {
+    expect(routineToAsk(["genshin", "zzz", "endfield"], undefined, undefined)).toBe("zzz");
+    expect(routineToAsk(["genshin", "zzz", "endfield"], undefined, ["zzz"])).toBe("endfield");
+    expect(routineToAsk(["zzz"], ["zzz"], undefined)).toBeNull();
+    expect(routineToAsk(["genshin"], undefined, undefined)).toBeNull();
+  });
+});
+
+describe("restoring prefs with the new fields", () => {
+  test("junk in the arrays is sanitised, and absent stays absent", () => {
+    const r = restorePrefsValue({ routineGames: ["zzz", 7], routinesAsked: "zzz" });
+    expect(r.routineGames).toEqual(["zzz"]);
+    expect(r.routinesAsked).toBeUndefined();
+    expect(restorePrefsValue({}).routineGames).toBeUndefined();
   });
 });

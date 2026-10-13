@@ -63,3 +63,35 @@ export const ROUTINES: readonly Routine[] = [
 export function routinesFor(game: string): Routine[] {
   return ROUTINES.filter((r) => r.game === game);
 }
+
+/**
+ * The built-ins on screen: those of games the reader said yes to, less any
+ * they made their own (`Task.from`) — the copy replaces the original while it
+ * exists, and deleting the copy brings the original back.
+ */
+export function activeRoutines(
+  routineGames: readonly string[] | undefined,
+  copiedFrom: ReadonlySet<string>,
+): Routine[] {
+  const on = new Set(routineGames ?? []);
+  return ROUTINES.filter((r) => on.has(r.game) && !copiedFrom.has(r.id));
+}
+
+/**
+ * The one game to ask "track its weekly tasks?" about, or null.
+ *
+ * Only a game on screen — asking about a game the reader switched off or is not
+ * focused on would be asking about something they are not looking at — and
+ * only once: an answer either way is recorded in `asked`.
+ */
+export function routineToAsk(
+  visible: readonly string[],
+  routineGames: readonly string[] | undefined,
+  asked: readonly string[] | undefined,
+): string | null {
+  for (const game of visible) {
+    if (routineGames?.includes(game) || asked?.includes(game)) continue;
+    if (routinesFor(game).length > 0) return game;
+  }
+  return null;
+}

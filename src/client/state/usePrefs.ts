@@ -184,6 +184,14 @@ export interface Prefs {
   regionConfirmed: boolean;
   /** False until the reader has picked their games on first run. */
   onboarded: boolean;
+  /**
+   * Games whose built-in weekly tasks the reader turned on (routines.ts, PRD
+   * F17). Absent means none: built-ins are opt-in, so an install from before
+   * they existed gets none rather than all.
+   */
+  routineGames?: LaneId[] | undefined;
+  /** Games already asked "track its weekly tasks?", so the question is asked once. */
+  routinesAsked?: LaneId[] | undefined;
 }
 
 export function defaults(): Prefs {
@@ -311,6 +319,15 @@ export function restorePrefsValue(incoming: unknown): Prefs {
     } else {
       result.gameOrder = result.gameOrder.filter((g): g is LaneId => typeof g === "string");
     }
+  }
+
+  // Built-in tasks: string arrays, or absent.
+  for (const key of ["routineGames", "routinesAsked"] as const) {
+    const value: unknown = result[key];
+    if (value === undefined) continue;
+    result[key] = Array.isArray(value)
+      ? value.filter((g): g is LaneId => typeof g === "string")
+      : undefined;
   }
 
   // focusGame
