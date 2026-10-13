@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync } from "node:fs";
 import {
   compareUrl,
   ENTRIES,
@@ -31,10 +30,13 @@ describe("the changelog's content", () => {
     expect(sorted(NOTES)).toBe(true);
   });
 
-  test("every entry's note exists, and every note's specs exist on disk", () => {
+  test("every entry's note exists, and every spec path is shaped like one", () => {
     const ids = new Set(NOTES.map((n) => n.id));
     for (const e of ENTRIES) if (e.note !== undefined) expect(ids).toContain(e.note);
-    for (const n of NOTES) for (const p of n.specs ?? []) expect(existsSync(p)).toBe(true);
+    // Shape only: the image build runs this suite without docs/ (.dockerignore),
+    // so whether the file exists is scripts/check-changelog.ts's question, the
+    // same split the refs get for CI's shallow checkout.
+    for (const n of NOTES) for (const p of n.specs ?? []) expect(p).toMatch(/^docs\/[\w./-]+\.md$/);
   });
 });
 
