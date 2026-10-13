@@ -7,6 +7,7 @@ import { KEYS, readJson, writeJson } from "./storage.ts";
 import type { TimelineGroup } from "./lanes.ts";
 import { DEFAULT_THEME_CHOICE, type ThemeChoice } from "./theme.ts";
 import { DEFAULT_DAY_WIDTH, snapDayWidth } from "./zoom.ts";
+import { ENTRIES, newestId } from "../../shared/changelog.ts";
 
 /**
  * Which of the two views the reader is looking at.
@@ -192,6 +193,30 @@ export interface Prefs {
   routineGames?: LaneId[] | undefined;
   /** Games already asked "track its weekly tasks?", so the question is asked once. */
   routinesAsked?: LaneId[] | undefined;
+  /**
+   * The newest changelog entry the reader dismissed (PRD F18). Absent means
+   * unrecorded, not "seen nothing": first-run setup sets it, so an absent value
+   * is an install from before the changelog, shown the launch window once.
+   */
+  changelogSeen?: string | undefined;
+}
+
+/**
+ * What finishing first-run setup writes. A new reader is marked up to date
+ * with the changelog: a list of changes means nothing before you've used the
+ * thing it changes.
+ */
+export function firstRunPrefs(
+  games: readonly LaneId[],
+  chosen: readonly LaneId[],
+  view: View,
+): Partial<Prefs> {
+  return {
+    onboarded: true,
+    hiddenGames: games.filter((g) => !chosen.includes(g)),
+    view,
+    changelogSeen: newestId(ENTRIES),
+  };
 }
 
 export function defaults(): Prefs {
@@ -319,6 +344,10 @@ export function restorePrefsValue(incoming: unknown): Prefs {
     } else {
       result.gameOrder = result.gameOrder.filter((g): g is LaneId => typeof g === "string");
     }
+  }
+
+  if (result.changelogSeen !== undefined && typeof result.changelogSeen !== "string") {
+    result.changelogSeen = undefined;
   }
 
   // Built-in tasks: string arrays, or absent.

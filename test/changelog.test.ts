@@ -63,3 +63,22 @@ describe("what a reader has not seen", () => {
     expect(compareUrl("https://r", "a1b2c3d", "e4f5a6b")).toBe("https://r/compare/a1b2c3d...e4f5a6b");
   });
 });
+
+describe("the seen marker in prefs", () => {
+  test("restore keeps a string and drops anything else", async () => {
+    const { restorePrefsValue } = await import("../src/client/state/usePrefs.ts");
+    expect(restorePrefsValue({ changelogSeen: "check-in-goals" }).changelogSeen).toBe("check-in-goals");
+    expect(restorePrefsValue({ changelogSeen: 7 }).changelogSeen).toBeUndefined();
+    expect(restorePrefsValue({}).changelogSeen).toBeUndefined();
+  });
+
+  test("first-run setup marks everything seen", async () => {
+    const { firstRunPrefs } = await import("../src/client/state/usePrefs.ts");
+    expect(firstRunPrefs(["genshin", "hsr"], ["hsr"], "soon")).toEqual({
+      onboarded: true,
+      hiddenGames: ["genshin"],
+      view: "soon",
+      changelogSeen: newestId(ENTRIES),
+    });
+  });
+});

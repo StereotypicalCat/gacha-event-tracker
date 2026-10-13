@@ -19,7 +19,7 @@ import { useProgress } from "./state/useProgress.ts";
 import { useDailyLog, type DailyLogMap } from "./state/useDailyLog.ts";
 import { useTasks } from "./state/useTasks.ts";
 import { useAmounts } from "./state/useAmounts.ts";
-import { adoptNewLanes, usePrefs, type Prefs } from "./state/usePrefs.ts";
+import { adoptNewLanes, firstRunPrefs, usePrefs, type Prefs } from "./state/usePrefs.ts";
 import { buildExportData, parseImportData, triggerDownload } from "./state/export.ts";
 import { snapDayWidth } from "./state/zoom.ts";
 import { useCustom, type EventDraft } from "./state/useCustom.ts";
@@ -487,11 +487,7 @@ export function App() {
           <Welcome
             available={ordered}
             onConfirm={(chosen, chosenView) =>
-              update({
-                onboarded: true,
-                hiddenGames: games.filter((g) => !chosen.includes(g)),
-                view: chosenView,
-              })
+              update(firstRunPrefs(games, chosen, chosenView))
             }
           />
         </Shell>
