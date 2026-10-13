@@ -397,7 +397,8 @@ already logged, which is the change this table warns about below.
 than a bent offset. It runs a single global server on UTC-5 and resets at **05:00**, so its day rolls
 at 10:00 UTC. `resetOffsets` alone cannot say that: landing 10:00 UTC through the offset would mean
 claiming a UTC-6 server, which is a lie every other reader of `serverOffsetUtc` would inherit. So
-`GameMeta.resetHourLocal` overrides `RESET_HOUR_LOCAL` per game, and is absent — meaning 04:00 — for
+`GameMeta.resetHourLocal` overrides `RESET_HOUR_LOCAL` per region, like `resetOffsets` — a game's
+servers need not agree on the hour any more than on the offset — and is absent — meaning 04:00 — for
 everything else, which is why introducing it moved no existing day key. Both facts come off the
 source: all 154 rows of the wiki's event list state `(UTC-5)`, and every one runs 05:00 → 04:59, an
 event ending one minute before the reset the next one starts on.

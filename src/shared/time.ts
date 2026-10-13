@@ -59,10 +59,11 @@ export function serverOffsetUtc(region: Region, game?: LaneId): number {
 }
 
 /**
- * The hour of its own server day a game rolls over on.
+ * The hour of its own server day a game rolls over on, for the reader's region.
  *
  * Almost always `RESET_HOUR_LOCAL`. A game that resets on a different hour says
- * so in `resetHourLocal` (`games.ts`) — Reverse: 1999 rolls at 05:00 — and that
+ * so in `resetHourLocal` (`games.ts`), per region because a game's servers need
+ * not agree — Reverse: 1999 rolls at 05:00 everywhere — and that
  * cannot be folded into `serverOffsetUtc`: shifting a game's stated offset to
  * land the right reset instant would misreport the server clock to everything
  * else that asks for it.
@@ -70,9 +71,9 @@ export function serverOffsetUtc(region: Region, game?: LaneId): number {
  * A lane the reader invented has no server to know about and takes the default,
  * for the same reason `serverOffsetUtc` does.
  */
-export function resetHourFor(game?: LaneId): number {
+export function resetHourFor(region: Region, game?: LaneId): number {
   const override =
-    game === undefined ? undefined : GAMES[game as GameId]?.resetHourLocal;
+    game === undefined ? undefined : GAMES[game as GameId]?.resetHourLocal?.[region];
   return override ?? RESET_HOUR_LOCAL;
 }
 
@@ -86,7 +87,7 @@ export function resetHourFor(game?: LaneId): number {
  * here as a data change, not a constant.
  */
 export function resetShiftMs(region: Region, game?: LaneId): number {
-  return serverOffsetUtc(region, game) * HOUR - resetHourFor(game) * HOUR;
+  return serverOffsetUtc(region, game) * HOUR - resetHourFor(region, game) * HOUR;
 }
 
 /**

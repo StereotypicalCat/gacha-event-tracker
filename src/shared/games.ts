@@ -40,20 +40,25 @@ export interface GameMeta {
    */
   resetOffsets?: Partial<Record<Region, number>> | undefined;
   /**
-   * The hour of the server's own day this game rolls over on, when it is not
-   * `RESET_HOUR_LOCAL` (04:00).
+   * The hour of the server's own day this game rolls over on, per region, where
+   * it is not `RESET_HOUR_LOCAL` (04:00).
    *
    * Most gacha servers reset at 04:00 local. Reverse: 1999 resets at 05:00, and
    * the difference is not cosmetic: `resetOffsets` alone cannot express it,
    * because bending a game's stated server offset to land the right instant
    * would put every other reader of that offset an hour out.
    *
+   * Per region for the same reason `resetOffsets` is: a game's servers need not
+   * agree on the hour either. Girls' Frontline 2's Asia server rolls at 05:00
+   * UTC+8 while its global server rolls at 21:00 UTC-8, and one number per game
+   * would have to lie about one of them. A region absent here takes 04:00.
+   *
    * Like `resetOffsets` this feeds `dayKey`, which is a **localStorage key**, so
    * the same warning applies — changing it for a game that already has readers
    * re-labels the game-day their logged ticks fall in. Absent means 04:00, which
    * is why adding this field moved no existing game.
    */
-  resetHourLocal?: number | undefined;
+  resetHourLocal?: Partial<Record<Region, number>> | undefined;
 }
 
 export const GAMES: Record<GameId, GameMeta> = {
@@ -86,7 +91,7 @@ export const GAMES: Record<GameId, GameMeta> = {
   // the source rather than from habit: all 154 rows on the wiki's event list
   // state `(UTC-5)`, and every one of them starts at 05:00 and ends at 04:59 —
   // an event ending one minute before the reset that the next one begins on.
-  r1999: { id: "r1999", name: "Reverse: 1999", short: "R1999", hue: "#C9A227" , studio: "Bluepoch", dailyTasks: "Daily missions", resetOffsets: { asia: -5, america: -5, europe: -5 }, resetHourLocal: 5 },
+  r1999: { id: "r1999", name: "Reverse: 1999", short: "R1999", hue: "#C9A227" , studio: "Bluepoch", dailyTasks: "Daily missions", resetOffsets: { asia: -5, america: -5, europe: -5 }, resetHourLocal: { asia: 5, america: 5, europe: 5 } },
   // No `resetOffsets` and no `resetHourLocal`, for the reason p5x has none: the
   // source states no time of day anywhere — every date on bluearchive.wiki's
   // Global schedule is a bare `YYYY-MM-DD`. Blue Archive Global does run one
@@ -149,7 +154,7 @@ export const GAMES: Record<GameId, GameMeta> = {
   // Set in the same commit that ships the game, which costs nothing now and
   // could not be added later without re-labelling day keys readers had already
   // logged ticks under.
-  nikke: { id: "nikke", name: "Goddess of Victory: Nikke", short: "Nikke", hue: "#E4572E", studio: "Shift Up", dailyTasks: "Daily missions, outpost", resetOffsets: { asia: 9, america: 9, europe: 9 }, resetHourLocal: 5 },
+  nikke: { id: "nikke", name: "Goddess of Victory: Nikke", short: "Nikke", hue: "#E4572E", studio: "Shift Up", dailyTasks: "Daily missions, outpost", resetOffsets: { asia: 9, america: 9, europe: 9 }, resetHourLocal: { asia: 5, america: 5, europe: 5 } },
   uma: { id: "uma", name: "Umamusume: Pretty Derby", short: "Umamusume", hue: "#6FBF44", studio: "Cygames", dailyTasks: "Daily races, missions" },
   // No `resetOffsets`, and the source is silent in the strongest sense: every
   // boundary Honkai Impact 3rd has here is a **week bucket**, and every one of

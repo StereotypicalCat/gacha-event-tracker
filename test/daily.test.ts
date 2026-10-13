@@ -393,12 +393,12 @@ describe("a game whose day rolls on a different hour", () => {
   test("resetHourFor defaults to 04:00 for every other game", () => {
     // Adding the field must not have moved a single existing reader's day key,
     // which is why it is an override rather than a per-game table.
-    expect(resetHourFor("r1999")).toBe(5);
+    expect(resetHourFor("europe", "r1999")).toBe(5);
     for (const game of ["genshin", "endfield", "arknights", undefined] as const) {
-      expect(resetHourFor(game)).toBe(RESET_HOUR_LOCAL);
+      expect(resetHourFor("europe", game)).toBe(RESET_HOUR_LOCAL);
     }
     // A lane the reader invented has no server map and takes the default too.
-    expect(resetHourFor("mygame:my-own-game")).toBe(RESET_HOUR_LOCAL);
+    expect(resetHourFor("europe", "mygame:my-own-game")).toBe(RESET_HOUR_LOCAL);
   });
 
   test("an event's checklist counts days on the 05:00 clock", () => {
