@@ -122,16 +122,13 @@ export const GAMES: Record<GameId, GameMeta> = {
   // ticks under the other one. A game whose server clock shifts needs a field
   // that can shift with it — see the note in AGENTS.md § Event IDs.
   fgo: { id: "fgo", name: "Fate/Grand Order", short: "FGO", hue: "#1D3A8F", studio: "Lasengle", dailyTasks: "Daily Quests, AP" },
-  // hololive Dreams runs a single worldwide service on a Japanese clock, and
-  // both halves of that come from the source rather than from habit: every
-  // boundary on holodori.wiki is stated once, in `(JST)`, with no per-region
-  // column anywhere, and the game launched worldwide simultaneously. The reset
-  // hour is evidenced the way Arknights' is — `Training Support Missions` ends
-  // at 3:59AM JST, one minute before a 04:00 local reset — so the default hour
-  // stands and only the offset is overridden. Setting it now costs nothing: no
-  // reader has a day key for a game the app has never shipped, whereas adding
-  // the same override later would re-label ticks they had already logged.
-  holodori: { id: "holodori", name: "hololive Dreams", short: "holodori", hue: "#5FD3F3", studio: "QualiArts / COVER", dailyTasks: "Daily missions, stamina", resetOffsets: { asia: 9, america: 9, europe: 9 } },
+  // hololive Dreams runs a single worldwide service on a Japanese clock that
+  // rolls its day at **05:00**. The zone comes from the source: every boundary
+  // on holodori.wiki is stated once, in `(JST)`, with no per-region column. The
+  // hour is Game-Time-Master's (github.com/cicerakes/Game-Time-Master), and it
+  // overrides an earlier reading of 04:00 off one mission ending at 3:59AM JST —
+  // a single boundary that one mission chose, not the reset itself.
+  holodori: { id: "holodori", name: "hololive Dreams", short: "holodori", hue: "#5FD3F3", studio: "QualiArts / COVER", dailyTasks: "Daily missions, stamina", resetOffsets: { asia: 9, america: 9, europe: 9 }, resetHourLocal: { asia: 5, america: 5, europe: 5 } },
   // Girls' Frontline 2 runs two servers our regions land on, and they disagree
   // on the hour as well as the offset: Haoplay Asia rolls at 05:00 UTC+8
   // (21:00 UTC) and Haoplay Global at 21:00 UTC-8 (05:00 UTC), per
