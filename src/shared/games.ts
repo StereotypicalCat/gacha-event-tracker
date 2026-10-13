@@ -144,10 +144,6 @@ export const GAMES: Record<GameId, GameMeta> = {
   // No `resetOffsets`: the source is Game8, which states day-precision prose
   // and no clock at all — the same silence p5x has, and the same answer.
   czn: { id: "czn", name: "Chaos Zero Nightmare", short: "CZN", hue: "#B84A9C", studio: "Smilegate", dailyTasks: "Daily missions" },
-  // No `resetOffsets`. The source's own column is headed `Availability (UTC)`,
-  // which states the zone the *dates* are in and says nothing about where the
-  // server's day rolls — and every row on it is a bare date anyway, with no
-  // time of day to read a reset out of. Same silence as p5x and czn.
   // Nikke runs one worldwide server on a Japanese clock that rolls its day at
   // **05:00**, not 04:00 — and both halves come from the source rather than
   // from habit. Every schedule column on the wiki is headed `Start(UTC+9)` /
@@ -159,7 +155,13 @@ export const GAMES: Record<GameId, GameMeta> = {
   // could not be added later without re-labelling day keys readers had already
   // logged ticks under.
   nikke: { id: "nikke", name: "Goddess of Victory: Nikke", short: "Nikke", hue: "#E4572E", studio: "Shift Up", dailyTasks: "Daily missions, outpost", resetOffsets: { asia: 9, america: 9, europe: 9 }, resetHourLocal: { asia: 5, america: 5, europe: 5 } },
-  uma: { id: "uma", name: "Umamusume: Pretty Derby", short: "Umamusume", hue: "#6FBF44", studio: "Cygames", dailyTasks: "Daily races, missions" },
+  // Umamusume Global runs one worldwide server whose day rolls at 15:00 UTC —
+  // midnight in Japan — per Game-Time-Master (github.com/cicerakes/Game-Time-Master),
+  // and guides state the same instant as 00:00 JST. Kept on UTC rather than JST
+  // because the source's own column is headed `Availability (UTC)`: its bare
+  // dates are UTC calendar days, and the day key has to name the same day the
+  // source does, or a day-precision end resolves a day early.
+  uma: { id: "uma", name: "Umamusume: Pretty Derby", short: "Umamusume", hue: "#6FBF44", studio: "Cygames", dailyTasks: "Daily races, missions", resetOffsets: { asia: 0, america: 0, europe: 0 }, resetHourLocal: { asia: 15, america: 15, europe: 15 } },
   // No `resetOffsets`, and the source is silent in the strongest sense: every
   // boundary Honkai Impact 3rd has here is a **week bucket**, and every one of
   // those states its time as `0:0:0` — a placeholder the grid needs to draw a
