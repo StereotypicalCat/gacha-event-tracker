@@ -25,7 +25,7 @@ export function chooseGoal(
 ): Goal | undefined | null {
   if (id === (goal?.period ?? "off")) return null;
   if (id === "off") return undefined;
-  const required = goal?.required ?? 5;
+  const required = goal?.measure === "days" ? goal.required : 5;
   if (id === "week") {
     return {
       period: "week",
@@ -103,7 +103,9 @@ export function GoalControl({
 
       {goal !== undefined && (
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
-          <CountField goal={goal} maxDays={maxDays} onChange={onChange} />
+          {goal.measure === "days" && (
+            <CountField goal={goal} maxDays={maxDays} onChange={onChange} />
+          )}
           <span>
             {goal.period === "week" ? "days each week, weeks start" : "days across the event"}
           </span>
@@ -139,7 +141,7 @@ function CountField({
   maxDays,
   onChange,
 }: {
-  goal: Goal;
+  goal: Extract<Goal, { measure: "days" }>;
   maxDays: number | null;
   onChange: (goal: Goal) => void;
 }) {

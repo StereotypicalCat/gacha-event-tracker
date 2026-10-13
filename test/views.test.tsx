@@ -1170,8 +1170,8 @@ describe("goals in the dailies strip", () => {
     sourceUrl: "https://example.test",
   } as never;
   const status = (over: Partial<GoalStatus> = {}): GoalStatus => ({
-    scope: "week", required: 5, count: 3, met: false, needed: 2,
-    open: 4, shortfall: false, ...over,
+    scope: "week", measure: "days", periodStart: "2026-10-12", required: 5, count: 3,
+    met: false, needed: 2, open: 4, shortfall: false, ...over,
   });
   const strip = (goal: GoalStatus) =>
     render(
@@ -1280,7 +1280,8 @@ describe("DailyChecklist with a goal", () => {
         logged={["2026-10-12"]}
         onToggleDay={() => {}}
         goal={{
-          scope: "week", required: 5, count: 1, met: false, needed: 4, open: 4, shortfall: false,
+          scope: "week", measure: "days", periodStart: "2026-10-12", required: 5, count: 1,
+          met: false, needed: 4, open: 4, shortfall: false,
         }}
       />,
     );

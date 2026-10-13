@@ -4,6 +4,7 @@ import {
   goalCaption,
   goalCount,
   goalLabel,
+  goalRequired,
   goalStatus,
   readGoal,
   type Goal,
@@ -31,9 +32,8 @@ describe("readGoal", () => {
   test("absent, malformed or future-shaped is undefined, and never throws", () => {
     expect(readGoal(undefined)).toBeUndefined();
     expect(readGoal({ period: "week", required: 9 })).toBeUndefined();
-    expect(
-      readGoal({ period: "week", measure: "amount", target: 2100, weekStartsOn: 1 }),
-    ).toBeUndefined();
+    // A shape no version yet writes stands in for "newer than this build".
+    expect(readGoal({ period: "fortnight", measure: "streak", required: 3 })).toBeUndefined();
     expect(readGoal("five")).toBeUndefined();
   });
 });
@@ -161,8 +161,8 @@ describe("goalStatus: across the event", () => {
 
 describe("copy", () => {
   const status = (over: Partial<GoalStatus>): GoalStatus => ({
-    scope: "week", required: 5, count: 3, met: false, needed: 2,
-    open: 4, shortfall: false, ...over,
+    scope: "week", measure: "days", periodStart: "2026-10-12", required: 5, count: 3,
+    met: false, needed: 2, open: 4, shortfall: false, ...over,
   });
 
   test("captions", () => {
@@ -199,5 +199,83 @@ describe("clampRequired", () => {
     expect(clampRequired("event", 30, 14)).toBe(14);
     expect(clampRequired("event", 30, null)).toBe(30);
     expect(clampRequired("event", Number.NaN, 14)).toBe(1);
+  });
+});
+
+describe("amount goals", () => {
+  const points: Goal = { period: "week", measure: "amount", target: 2100, weekStartsOn: 1 };
+  const amounts = {
+    "2026-10-05": { value: 2100, at: "2026-10-11T12:00:00.000Z" },
+    "2026-10-12": { value: 1900, at: "2026-10-15T12:00:00.000Z" },
+  };
+
+  test("reads amount shapes, and still refuses one with no target", () => {
+    expect(readGoal(points)).toEqual(points);
+    expect(readGoal({ period: "week", measure: "amount", weekStartsOn: 1 })).toBeUndefined();
+    expect(readGoal({ period: "event", measure: "amount", target: 0 })).toBeUndefined();
+  });
+
+  test("counts this week's stored value, not last week's", () => {
+    const s = goalStatus({ ...base, goal: points, now: noon("2026-10-15"), logged: [], amounts });
+    expect(s).toMatchObject({
+      measure: "amount", scope: "week", periodStart: "2026-10-12",
+      count: 1900, required: 2100, met: false, needed: 200, shortfall: false,
+    });
+  });
+
+  test("a new week starts at nothing", () => {
+    const s = goalStatus({ ...base, goal: points, now: noon("2026-10-19"), logged: [], amounts });
+    expect(s.count).toBe(0);
+    expect(s.periodStart).toBe("2026-10-19");
+  });
+
+  test("met at or above the target", () => {
+    const s = goalStatus({ ...base, goal: points, now: noon("2026-10-11"), logged: [], amounts });
+    expect(s.met).toBe(true);
+  });
+
+  test("an event-wide amount is keyed by the event's first game-day", () => {
+    const s = goalStatus({
+      ...base, goal: { period: "event", measure: "amount", target: 500 },
+      now: noon("2026-10-15"), logged: [],
+      amounts: { "2026-08-10": { value: 600, at: "2026-10-15T12:00:00.000Z" } },
+    });
+    expect(s).toMatchObject({ scope: "event", periodStart: "2026-08-10", count: 600, met: true });
+  });
+
+  test("days goals report their measure and period start too", () => {
+    const s = goalStatus({ ...base, goal: weekly, now: noon("2026-10-15"), logged: [] });
+    expect(s).toMatchObject({ measure: "days", periodStart: "2026-10-12" });
+  });
+});
+
+describe("copy for amounts and months", () => {
+  const status = (over: Partial<GoalStatus>): GoalStatus => ({
+    scope: "week", measure: "amount", periodStart: "2026-10-12", required: 2100,
+    count: 1900, met: false, needed: 200, open: 4, shortfall: false, ...over,
+  });
+
+  test("amount captions, counts and labels group thousands", () => {
+    expect(goalCaption(status({}))).toBe("1,900 of 2,100 this week · 200 to go");
+    expect(goalCaption(status({ count: 2100, met: true, needed: 0 }))).toBe(
+      "2,100 of 2,100 · Done this week",
+    );
+    expect(goalCount(status({}))).toBe("1,900/2,100 wk");
+    expect(goalLabel(status({}))).toBe("1,900 of 2,100 this week");
+  });
+
+  test("month scope", () => {
+    const month = status({ scope: "month", measure: "days", required: 1, count: 0, needed: 1 });
+    expect(goalCount(month)).toBe("0/1 mo");
+    expect(goalLabel(month)).toBe("0 of 1 this month");
+    expect(goalLabel({ ...month, count: 1, met: true, needed: 0 })).toBe("done this month");
+    expect(goalCaption({ ...month, count: 1, met: true, needed: 0 })).toBe(
+      "1 of 1 · Done this month",
+    );
+  });
+
+  test("goalRequired reads either measure", () => {
+    expect(goalRequired(weekly)).toBe(5);
+    expect(goalRequired({ period: "event", measure: "amount", target: 2100 })).toBe(2100);
   });
 });
