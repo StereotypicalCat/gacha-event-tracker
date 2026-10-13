@@ -18,7 +18,10 @@ import { pressure, pressureReason, type Effort } from "../../shared/effort.ts";
 import type { Status } from "../state/useProgress.ts";
 import { ProgressControls } from "./ProgressControls.tsx";
 import { DailyChecklist } from "./DailyChecklist.tsx";
-import { dailyOverride } from "../../shared/daily.ts";
+import { GoalControl } from "./GoalControl.tsx";
+import { dailyDays as runDays, dailyOverride, dayKey } from "../../shared/daily.ts";
+import { goalStatus, type Goal } from "../../shared/goal.ts";
+import { isoWeekday } from "../../shared/period.ts";
 import type { Region } from "../../shared/schema.ts";
 import { Meter, URGENCY_COLOR } from "./Meter.tsx";
 
@@ -34,7 +37,9 @@ export function EventDetail({
   daily,
   detectedDaily,
   dailyDays,
+  goal,
   onDaily,
+  onGoal,
   onToggleDay,
   onIgnore,
   onStatus,
@@ -57,7 +62,10 @@ export function EventDetail({
   detectedDaily: boolean;
   /** Days already ticked off, for events that repeat. */
   dailyDays: string[];
+  /** The reader's check-in goal, already read through `readGoal`. */
+  goal: Goal | undefined;
   onDaily: (id: string, daily: boolean | undefined) => void;
+  onGoal: (id: string, goal: Goal | undefined) => void;
   onToggleDay: (id: string, day: string) => void;
   onIgnore: (id: string) => void;
   onStatus: (id: string, s: Status | undefined) => void;
@@ -83,6 +91,21 @@ export function EventDetail({
   const gameMeta = useGameMeta();
   const [editing, setEditing] = useState(false);
   const { event, clock } = row;
+  // The run's claimable days caps an event-wide goal; null when the end is
+  // unannounced, and then nothing is invented to cap it with.
+  const run = runDays(clock.startsMs, clock.endsMs, region, event.game);
+  const goalState =
+    goal === undefined
+      ? undefined
+      : goalStatus({
+          goal,
+          startsMs: clock.startsMs,
+          endsMs: clock.endsMs,
+          region,
+          game: event.game,
+          now,
+          logged: dailyDays,
+        });
   const game = gameMeta(event.game);
   const heat = URGENCY_COLOR[clock.urgency];
   const risk = status === "done" ? "fine" : pressure(effort, clock.msRemaining);
@@ -201,13 +224,34 @@ export function EventDetail({
               now={now}
               logged={dailyDays}
               onToggleDay={(day) => onToggleDay(event.id, day)}
+              goal={goalState}
             />
+            <GoalControl
+              goal={goal}
+              defaultWeekStartsOn={isoWeekday(dayKey(clock.startsMs, region, event.game))}
+              maxDays={run === null ? null : run.length}
+              onChange={(g) => onGoal(event.id, g)}
+            />
+            {/* Reaching the count may not have claimed the rewards, so the
+                event is never finished on the reader's behalf — this is the
+                way to say it is, offered at the moment it could be true. */}
+            {goalState?.scope === "event" && goalState.met && status !== "done" && (
+              <button
+                type="button"
+                onClick={() => onStatus(event.id, "done")}
+                className="mt-2 rounded-full border border-near/70 bg-near/15 px-3 py-1.5 text-xs font-medium text-near"
+              >
+                Mark event done
+              </button>
+            )}
             <button
               type="button"
               onClick={() => onDaily(event.id, dailyOverride(false, detectedDaily))}
-              className="mt-2 text-xs text-faint transition-colors hover:text-muted"
+              className="mt-2 block text-xs text-faint transition-colors hover:text-muted"
             >
-              This isn't a daily event
+              {goal === undefined
+                ? "This isn't a daily event"
+                : "This isn't a daily event — removes the goal"}
             </button>
           </>
         ) : (

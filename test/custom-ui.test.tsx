@@ -783,7 +783,9 @@ describe("the derived-boundary note", () => {
     daily: false,
     detectedDaily: false,
     dailyDays: [],
+    goal: undefined,
     onDaily: noop,
+    onGoal: noop,
     onToggleDay: noop,
     onIgnore: noop,
     onStatus: noop,
@@ -843,6 +845,29 @@ describe("the derived-boundary note", () => {
       </GameMetaProvider>,
     );
     expect(html).not.toContain("server reset");
+  });
+
+  // Reaching an event-wide check-in count may not have claimed the rewards,
+  // so the sheet offers "Mark event done" and never does it on its own.
+  test("a reached event-wide goal offers to mark the event done, once", () => {
+    const sheet = (status: "done" | undefined) =>
+      renderToStaticMarkup(
+        <GameMetaProvider value={(id) => metaFor(id, GAMES)}>
+          <EventDetail
+            {...detailProps}
+            status={status}
+            daily
+            goal={{ period: "event", measure: "days", required: 5 }}
+            dailyDays={["2026-08-20", "2026-08-21", "2026-08-22", "2026-08-23", "2026-08-24"]}
+            row={{ event: PARSED, clock: clockFor(PARSED, detailProps.region, NOW) }}
+          />
+        </GameMetaProvider>,
+      );
+    const open = sheet(undefined);
+    expect(open).toContain("5 of 5 · Goal reached");
+    expect(open).toContain("Mark event done");
+    expect(open).toContain("This isn&#x27;t a daily event — removes the goal");
+    expect(sheet("done")).not.toContain("Mark event done");
   });
 });
 

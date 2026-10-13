@@ -760,7 +760,9 @@ export function App() {
           daily={repeatsDaily(openRow)}
           detectedDaily={prefs.detectDaily && isDaily(openRow.event)}
           dailyDays={daily.daysFor(openRow.event.id)}
+          goal={goalOf(openRow.event.id)}
           onDaily={prog.setDaily}
+          onGoal={prog.setGoal}
           onToggleDay={daily.toggleDay}
           onStatus={prog.setStatus}
           onEffort={prog.setEffort}

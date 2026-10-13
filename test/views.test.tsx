@@ -17,6 +17,8 @@ import {
 } from "../src/client/components/Dailies.tsx";
 import type { GoalStatus } from "../src/shared/goal.ts";
 import { Welcome } from "../src/client/components/Welcome.tsx";
+import { GoalControl } from "../src/client/components/GoalControl.tsx";
+import { DailyChecklist } from "../src/client/components/DailyChecklist.tsx";
 import { timelineLanes } from "../src/client/state/lanes.ts";
 import { GameMetaProvider } from "../src/client/state/gameMeta.tsx";
 import { metaFor } from "../src/shared/games.ts";
@@ -1224,5 +1226,65 @@ describe("goals in the dailies strip", () => {
     expect(strip(status({ count: 5, met: true, needed: 0 }))).toMatch(
       /dailies · (<!-- -->)?1(<!-- -->)?\/(<!-- -->)?1/,
     );
+  });
+});
+
+describe("GoalControl", () => {
+  test("off shows the three choices with Off pressed", () => {
+    const html = render(
+      <GoalControl goal={undefined} defaultWeekStartsOn={1} maxDays={84} onChange={() => {}} />,
+    );
+    expect(html).toContain("Check-in goal");
+    expect(html).toMatch(/aria-pressed="true"[^>]*>Off</);
+    expect(html).toContain("Each week");
+    expect(html).toContain("Across the event");
+    expect(html).not.toContain('type="number"');
+  });
+
+  test("a weekly goal shows its count and start day", () => {
+    const html = render(
+      <GoalControl
+        goal={{ period: "week", measure: "days", required: 5, weekStartsOn: 1 }}
+        defaultWeekStartsOn={1}
+        maxDays={84}
+        onChange={() => {}}
+      />,
+    );
+    expect(html).toContain('value="5"');
+    expect(html).toMatch(/<option value="1" selected="">Monday<\/option>/);
+  });
+
+  test("an event-wide goal has no weekday", () => {
+    const html = render(
+      <GoalControl
+        goal={{ period: "event", measure: "days", required: 5 }}
+        defaultWeekStartsOn={1}
+        maxDays={7}
+        onChange={() => {}}
+      />,
+    );
+    expect(html).toContain("days across the event");
+    expect(html).not.toContain("<select");
+  });
+});
+
+describe("DailyChecklist with a goal", () => {
+  test("the caption reports the goal, not missed days", () => {
+    const html = render(
+      <DailyChecklist
+        startsMs={Date.parse("2026-10-12T03:00:00Z")}
+        endsMs={Date.parse("2026-11-02T03:00:00Z")}
+        region="europe"
+        game="genshin"
+        now={Date.parse("2026-10-15T12:00:00Z")}
+        logged={["2026-10-12"]}
+        onToggleDay={() => {}}
+        goal={{
+          scope: "week", required: 5, count: 1, met: false, needed: 4, open: 4, shortfall: false,
+        }}
+      />,
+    );
+    expect(html).toContain("1 of 5 this week · 4 needed · 4 days left this week");
+    expect(html).not.toContain("missed");
   });
 });

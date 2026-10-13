@@ -7,6 +7,7 @@ import {
 } from "../../shared/daily.ts";
 import type { LaneId } from "../../shared/custom.ts";
 import { DayPip } from "./DayPip.tsx";
+import { goalCaption, type GoalStatus } from "../../shared/goal.ts";
 import type { Region } from "../../shared/schema.ts";
 import { formatRemaining } from "../../shared/time.ts";
 
@@ -31,6 +32,7 @@ export function DailyChecklist({
   now,
   logged,
   onToggleDay,
+  goal,
 }: {
   startsMs: number;
   endsMs: number | null;
@@ -40,6 +42,12 @@ export function DailyChecklist({
   now: number;
   logged: string[];
   onToggleDay: (day: string) => void;
+  /**
+   * The reader's check-in goal, when set. The caption then counts against it
+   * instead of reporting missed days: an event that never wanted every day has
+   * not been failed on the ones left unticked.
+   */
+  goal?: GoalStatus | undefined;
 }) {
   const summary = dailySummary({ startsMs, endsMs, region, game, now, logged });
   const { days, today, doneToday, todayInWindow } = summary;
@@ -115,6 +123,9 @@ export function DailyChecklist({
               />
             ))}
           </div>
+          {goal !== undefined && (
+            <p className="mt-2.5 text-xs leading-relaxed text-muted">{goalCaption(goal)}</p>
+          )}
           <p className="mt-2.5 text-xs leading-relaxed text-faint">
             The source hasn't announced an end date, so how many days are left is
             unknown. Your ticks are still counted — {summary.logged} so far, and
@@ -136,7 +147,7 @@ export function DailyChecklist({
             ))}
           </div>
           <p className="mt-2.5 text-xs leading-relaxed text-faint">
-            {caption(summary, todayInWindow)}
+            {goal !== undefined ? goalCaption(goal) : caption(summary, todayInWindow)}
           </p>
         </>
       )}
