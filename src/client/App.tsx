@@ -42,6 +42,9 @@ import {
   routineToAsk,
   type Routine,
 } from "../shared/routines.ts";
+import { ENTRIES, NOTES, newestId, unseen } from "../shared/changelog.ts";
+import { ChangelogSheet } from "./components/ChangelogSheet.tsx";
+import { WhatsNew } from "./components/WhatsNew.tsx";
 import { strandedOccurrences } from "../shared/recurrence.ts";
 import { orderGames } from "./state/gameOrder.ts";
 import { GameMetaProvider, type MetaResolver } from "./state/gameMeta.tsx";
@@ -108,6 +111,8 @@ function useNow(intervalMs = 1000): number {
 export function App() {
   const [state, setState] = useState<FeedState>({ status: "loading" });
   const [openId, setOpenId] = useState<string | null>(null);
+  /** Whether the changelog sheet is open. Per-visit, like the detail sheet. */
+  const [changelogOpen, setChangelogOpen] = useState(false);
   // The event most recently ignored, so it can be put back without hunting for
   // a row that just disappeared.
   const [lastIgnored, setLastIgnored] = useState<{ id: string; title: string } | null>(null);
@@ -641,6 +646,13 @@ export function App() {
           </aside>
 
           <div className="min-w-0">
+          {/* What changed since they last looked: above the lists, never in the
+              rail, which holds what the reader has to do. */}
+          <WhatsNew
+            entries={unseen(ENTRIES, prefs.changelogSeen, new Date(now).toISOString().slice(0, 10))}
+            onDismiss={() => update({ changelogSeen: newestId(ENTRIES) })}
+            onSeeAll={() => setChangelogOpen(true)}
+          />
           {live.length > 0 && (
             <Section
               legend
@@ -811,6 +823,7 @@ export function App() {
         now={now}
         hiddenGames={prefs.hiddenGames}
         online={online}
+        onChangelog={() => setChangelogOpen(true)}
         onRefresh={async (): Promise<RefreshOutcome> => {
           // The newest published feed, past the browser's copy. Swapped in only
           // when it carries something new, so a check that found nothing leaves
@@ -838,6 +851,10 @@ export function App() {
           }}
           onDismiss={() => setLastIgnored(null)}
         />
+      )}
+
+      {changelogOpen && (
+        <ChangelogSheet notes={NOTES} entries={ENTRIES} onClose={() => setChangelogOpen(false)} />
       )}
 
       {openRow !== null && (

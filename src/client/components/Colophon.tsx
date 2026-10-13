@@ -177,6 +177,7 @@ export function Colophon({
   hiddenGames = [],
   onRefresh,
   online = true,
+  onChangelog,
 }: {
   sources: SourceHealth[];
   now: number;
@@ -187,6 +188,8 @@ export function Colophon({
   onRefresh?: (() => Promise<RefreshOutcome>) | undefined;
   /** Offline the check cannot reach anything, so it is disabled and says so. */
   online?: boolean;
+  /** Open the changelog sheet. Absent where there is none to open. */
+  onChangelog?: (() => void) | undefined;
   /**
    * Lanes the reader has switched off, so the staleness notice can leave them
    * out. Optional and empty by default: a caller that does not know the
@@ -485,6 +488,17 @@ export function Colophon({
           <GitHubMark />
           Source code
         </a>
+        {/* Beside the source code it summarises: the changelog is the history,
+            told for readers rather than for git. */}
+        {onChangelog !== undefined && (
+          <button
+            type="button"
+            onClick={onChangelog}
+            className="inline-flex items-center gap-1.5 text-muted transition-colors duration-150 hover:text-ink"
+          >
+            Changelog
+          </button>
+        )}
         {/*
           Last in the row of small links, in the row's own muted grey, with no
           accent colour, no button and no sentence asking for anything. This
