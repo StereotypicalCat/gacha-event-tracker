@@ -107,3 +107,22 @@ describe("the age right after a refresh", () => {
     expect(html).not.toContain("ended ago");
   });
 });
+
+describe("review fix: a stored copy is not an answer from the server", () => {
+  const original = globalThis.fetch;
+  afterEach(() => {
+    globalThis.fetch = original;
+  });
+
+  test("asked fresh, the service worker's fallback copy counts as not reaching the server", async () => {
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify(feed()), {
+        status: 200,
+        headers: { "x-served-from": "sw-cache" },
+      })) as unknown as typeof fetch;
+    (globalThis as { document?: unknown }).document ??= { baseURI: "https://example.test/" };
+    await expect(fetchFeed(undefined, { fresh: true })).rejects.toThrow();
+    // An ordinary load still takes it: offline, the stored copy is the point.
+    await expect(fetchFeed()).resolves.toBeDefined();
+  });
+});

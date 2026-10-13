@@ -72,7 +72,7 @@ export const ENTRIES: Entry[] = [
     kind: "feature",
     title: "Built-in weekly tasks for Zenless Zone Zero and Arknights: Endfield",
     body: "Ridu Weekly (1,300 points) and the Weekly Routine (10 points), each dated by the page it comes from. You're asked once per game; Make it mine copies one into your own tasks to edit.",
-    ref: "1c7df63",
+    ref: "624c725",
     note: "weekly-and-monthly-tasks",
   },
   // 2026-10-13 — weekly and monthly tasks

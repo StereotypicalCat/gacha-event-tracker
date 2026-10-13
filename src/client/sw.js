@@ -146,7 +146,14 @@ async function feedFirst(request) {
     return response;
   } catch {
     const cached = await cache.match(request);
-    if (cached !== undefined) return cached;
+    // Marked as the stored copy, so a reader who asked for the newest data
+    // ("Check for new data") is told the server was not reached rather than
+    // that nothing newer was published. An ordinary load ignores the mark.
+    if (cached !== undefined) {
+      const headers = new Headers(cached.headers);
+      headers.set("x-served-from", "sw-cache");
+      return new Response(cached.body, { status: cached.status, headers });
+    }
     // No network and nothing cached: say so in the feed's own shape, so the
     // client renders its error state rather than failing to parse.
     return new Response(

@@ -29,6 +29,11 @@ export async function fetchFeed(
   if (!res.ok) {
     throw new Error(`Feed request failed (${res.status}).`);
   }
+  // Asked for the newest data, a copy the service worker served from its own
+  // store is not an answer from the server: the network failed behind it.
+  if (options.fresh === true && res.headers.get("x-served-from") === "sw-cache") {
+    throw new Error("The server could not be reached; this is the stored copy.");
+  }
 
   const json: unknown = await res.json();
   const version = (json as { schemaVersion?: number }).schemaVersion;

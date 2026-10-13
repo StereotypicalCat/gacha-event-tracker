@@ -88,19 +88,17 @@ launch window rather than replaying everything.
 
 **What's new card** — top of the main column, above the lists; never in the rail, which holds
 instructions. Eyebrow `What's new`, up to five entries (`New` / `Fixed` / `Games & sources` tag,
-title, date), `See all` (opens the changelog) and `Got it`. More than five shows `+ 3 more` inside
-See all. Dismissible, never modal, never shown on first run.
+title, date), `See all` (opens the changelog) and `Got it`. More than five reads `See all (3 more)`. Dismissible, never modal, never shown on first run.
 
-**Changelog sheet** — a `What's new` link in the footer beside the existing credits opens a sheet
+**Changelog sheet** — a `Changelog` link in the footer beside *Source code* opens a sheet
 in the detail sheet's style. Release notes, newest first, each with title, date, summary
 paragraphs, `commits from…to` (compare link) and spec links; the short entries a note covers listed
 under it with commit links. Entries with no note are listed by month at the end.
 
 ## Conventions this adds
 
-AGENTS.md § Conventions gains: **a change a reader can see adds a short entry in the same commit**,
-with the ref filled in by a follow-up `chore(changelog)` commit when the change's own hash cannot
-be known in advance (a commit cannot contain its own hash). A feature that spans several commits
+AGENTS.md § Conventions gains: **a change a reader can see adds a short entry**, in a follow-up
+`chore(changelog)` commit naming the change's commit — a commit cannot contain its own hash. A feature that spans several commits
 gets a release note when it lands, summarising its spec and range.
 
 ## Backfill
