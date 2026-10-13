@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { clampRequired, type Goal } from "../../shared/goal.ts";
+import { parseAmount } from "./AmountEditor.tsx";
 
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -10,6 +11,34 @@ const MODES = [
 ] as const;
 
 type Mode = (typeof MODES)[number]["id"];
+
+const MEASURES = [
+  { id: "days", label: "Days" },
+  { id: "amount", label: "Points" },
+] as const;
+
+/** A points target nobody has typed yet: round, small, and obviously a placeholder. */
+const DEFAULT_TARGET = 100;
+/** A days count nobody has typed yet. */
+const DEFAULT_REQUIRED = 5;
+
+/** The same goal over another period, keeping its measure and its number. */
+function overPeriod(
+  goal: Goal | undefined,
+  period: "week" | "event",
+  weekStartsOn: number,
+  maxDays: number | null,
+): Goal {
+  if (goal?.measure === "amount") {
+    return period === "week"
+      ? { period, measure: "amount", target: goal.target, weekStartsOn }
+      : { period, measure: "amount", target: goal.target };
+  }
+  const required = goal?.measure === "days" ? goal.required : DEFAULT_REQUIRED;
+  return period === "week"
+    ? { period, measure: "days", required: clampRequired("week", required, null), weekStartsOn }
+    : { period, measure: "days", required: clampRequired("event", required, maxDays) };
+}
 
 /**
  * The goal a mode press asks for: a Goal, undefined to clear it, or null for
@@ -25,16 +54,27 @@ export function chooseGoal(
 ): Goal | undefined | null {
   if (id === (goal?.period ?? "off")) return null;
   if (id === "off") return undefined;
-  const required = goal?.measure === "days" ? goal.required : 5;
-  if (id === "week") {
-    return {
-      period: "week",
-      measure: "days",
-      required: clampRequired("week", required, null),
-      weekStartsOn: goal?.period === "week" ? goal.weekStartsOn : defaultWeekStartsOn,
-    };
+  const weekStartsOn = goal?.period === "week" ? goal.weekStartsOn : defaultWeekStartsOn;
+  return overPeriod(goal, id, weekStartsOn, maxDays);
+}
+
+/**
+ * The goal a measure press asks for — days ticked, or a number against a
+ * target — over the same period; null when it is already that measure.
+ */
+export function chooseMeasure(
+  measure: Goal["measure"],
+  goal: Goal,
+  maxDays: number | null,
+): Goal | null {
+  if (measure === goal.measure) return null;
+  const weekStartsOn = goal.period === "week" ? goal.weekStartsOn : 1;
+  if (measure === "amount") {
+    return goal.period === "week"
+      ? { period: "week", measure: "amount", target: DEFAULT_TARGET, weekStartsOn }
+      : { period: "event", measure: "amount", target: DEFAULT_TARGET };
   }
-  return { period: "event", measure: "days", required: clampRequired("event", required, maxDays) };
+  return overPeriod(undefined, goal.period, weekStartsOn, maxDays);
 }
 
 /** A typed count, clamped; null while the field is empty or unreadable — mid-edit, not an answer. */
@@ -102,12 +142,48 @@ export function GoalControl({
       </div>
 
       {goal !== undefined && (
+        // Days ticked, or a number against a target: 2,100 activity points a
+        // week is a goal too, and it is not a count of days.
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {MEASURES.map((m) => {
+            const on = goal.measure === m.id;
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => {
+                  const next = chooseMeasure(m.id, goal, maxDays);
+                  if (next !== null) onChange(next);
+                }}
+                aria-pressed={on}
+                className={`rounded-full border px-2.5 py-1 text-[0.6875rem] font-medium transition-colors duration-150 ${
+                  on
+                    ? "border-near/70 bg-near/15 text-near"
+                    : "border-hairline text-faint hover:text-muted"
+                }`}
+              >
+                {m.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {goal !== undefined && (
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
-          {goal.measure === "days" && (
+          {goal.measure === "days" ? (
             <CountField goal={goal} maxDays={maxDays} onChange={onChange} />
+          ) : (
+            <TargetField goal={goal} onChange={onChange} />
           )}
           <span>
-            {goal.period === "week" ? "days each week, weeks start" : "days across the event"}
+            {goal.measure === "amount"
+              ? goal.period === "week"
+                ? "points each week, weeks start"
+                : "points in total"
+              : goal.period === "week"
+                ? "days each week, weeks start"
+                : "days across the event"}
           </span>
           {goal.period === "week" && (
             <select
@@ -162,6 +238,39 @@ function CountField({
       }}
       onBlur={() => setDraft(String(goal.required))}
       className="tnum w-14 rounded-lg border border-hairline bg-ground px-2 py-1 text-sm text-ink focus:border-faint focus:outline-none"
+    />
+  );
+}
+
+/** The points target, drafted the way the count is, for the same reason. */
+function TargetField({
+  goal,
+  onChange,
+}: {
+  goal: Extract<Goal, { measure: "amount" }>;
+  onChange: (goal: Goal) => void;
+}) {
+  const [draft, setDraft] = useState(String(goal.target));
+  useEffect(() => setDraft(String(goal.target)), [goal.target]);
+
+  return (
+    <input
+      inputMode="numeric"
+      aria-label="Points needed"
+      value={draft}
+      onChange={(e) => {
+        setDraft(e.target.value);
+        const n = parseAmount(e.target.value);
+        // Zero is not a target; leave it as a draft until it is one.
+        // Capped at what the schema reads back: a larger number would be stored
+        // and then read as no goal at all.
+        const target = n === null ? null : Math.min(n, 1_000_000_000);
+        if (target !== null && target > 0 && target !== goal.target) {
+          onChange({ ...goal, target });
+        }
+      }}
+      onBlur={() => setDraft(String(goal.target))}
+      className="tnum w-20 rounded-lg border border-hairline bg-ground px-2 py-1 text-sm text-ink focus:border-faint focus:outline-none"
     />
   );
 }

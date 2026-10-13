@@ -17,7 +17,12 @@ import {
 } from "../src/client/components/Dailies.tsx";
 import type { GoalStatus } from "../src/shared/goal.ts";
 import { Welcome } from "../src/client/components/Welcome.tsx";
-import { chooseGoal, GoalControl, parseDraft } from "../src/client/components/GoalControl.tsx";
+import {
+  chooseGoal,
+  chooseMeasure,
+  GoalControl,
+  parseDraft,
+} from "../src/client/components/GoalControl.tsx";
 import { AmountEditor, parseAmount } from "../src/client/components/AmountEditor.tsx";
 import type { Task } from "../src/shared/task.ts";
 import { DailyChecklist } from "../src/client/components/DailyChecklist.tsx";
@@ -1421,5 +1426,34 @@ describe("AmountEditor", () => {
     expect(parseAmount("")).toBeNull();
     expect(parseAmount("abc")).toBeNull();
     expect(parseAmount("-5")).toBeNull();
+  });
+});
+
+describe("GoalControl with points", () => {
+  const points = { period: "week", measure: "amount", target: 2100, weekStartsOn: 3 } as const;
+
+  test("switching period keeps the measure and the number", () => {
+    expect(chooseGoal("event", points, 1, 84)).toEqual({
+      period: "event", measure: "amount", target: 2100,
+    });
+    expect(chooseGoal("week", { period: "event", measure: "amount", target: 50 }, 2, 84)).toEqual({
+      period: "week", measure: "amount", target: 50, weekStartsOn: 2,
+    });
+  });
+
+  test("switching measure keeps the period", () => {
+    const days = { period: "week", measure: "days", required: 5, weekStartsOn: 3 } as const;
+    expect(chooseMeasure("amount", days, 84)).toEqual({ ...points, target: 100 });
+    expect(chooseMeasure("days", points, 84)).toEqual({ ...days, required: 5 });
+    expect(chooseMeasure("days", days, 84)).toBeNull();
+  });
+
+  test("a points goal shows its target and the measure toggle", () => {
+    const html = render(
+      <GoalControl goal={points} defaultWeekStartsOn={1} maxDays={84} onChange={() => {}} />,
+    );
+    expect(html).toMatch(/aria-pressed="true"[^>]*>Points</);
+    expect(html).toContain('value="2100"');
+    expect(html).toContain("points each week, weeks start");
   });
 });

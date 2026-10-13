@@ -789,6 +789,8 @@ export function App() {
           dailyDays={daily.daysFor(openRow.event.id)}
           goal={goalOf(openRow.event.id)}
           hasStoredGoal={prog.progress[openRow.event.id]?.goal !== undefined}
+          amounts={amounts.amountsFor(openRow.event.id)}
+          onSetAmount={amounts.setAmount}
           onDaily={prog.setDaily}
           onGoal={prog.setGoal}
           onToggleDay={daily.toggleDay}

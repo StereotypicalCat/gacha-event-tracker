@@ -20,7 +20,8 @@ import { ProgressControls } from "./ProgressControls.tsx";
 import { DailyChecklist } from "./DailyChecklist.tsx";
 import { GoalControl } from "./GoalControl.tsx";
 import { dailyDays as runDays, dailyOverride, dayKey } from "../../shared/daily.ts";
-import { goalStatus, type Goal } from "../../shared/goal.ts";
+import { goalStatus, type AmountLog, type Goal } from "../../shared/goal.ts";
+import { AmountEditor } from "./AmountEditor.tsx";
 import { isoWeekday } from "../../shared/period.ts";
 import type { Region } from "../../shared/schema.ts";
 import { Meter, URGENCY_COLOR } from "./Meter.tsx";
@@ -39,6 +40,8 @@ export function EventDetail({
   dailyDays,
   goal,
   hasStoredGoal,
+  amounts,
+  onSetAmount,
   onDaily,
   onGoal,
   onToggleDay,
@@ -71,6 +74,9 @@ export function EventDetail({
    * the warning keys off this rather than off `goal`.
    */
   hasStoredGoal: boolean;
+  /** Numbers entered for this event's points goal, by period start. */
+  amounts: AmountLog;
+  onSetAmount: (id: string, periodStart: string, value: number) => void;
   onDaily: (id: string, daily: boolean | undefined, clearsGoal?: boolean) => void;
   onGoal: (id: string, goal: Goal | undefined) => void;
   onToggleDay: (id: string, day: string) => void;
@@ -112,6 +118,7 @@ export function EventDetail({
           game: event.game,
           now,
           logged: dailyDays,
+          amounts,
         });
   const game = gameMeta(event.game);
   const heat = URGENCY_COLOR[clock.urgency];
@@ -239,6 +246,17 @@ export function EventDetail({
               maxDays={run === null ? null : run.length}
               onChange={(g) => onGoal(event.id, g)}
             />
+            {/* Always open here: the sheet has the room, and a number is the
+                one thing about this goal the reader comes back to change. */}
+            {goalState?.measure === "amount" && (
+              <AmountEditor
+                key={goalState.periodStart}
+                label={goalState.scope === "event" ? "So far:" : "This week:"}
+                value={amounts[goalState.periodStart]?.value}
+                target={goalState.required}
+                onSave={(value) => onSetAmount(event.id, goalState.periodStart, value)}
+              />
+            )}
             {/* Reaching the count may not have claimed the rewards, so the
                 event is never finished on the reader's behalf — this is the
                 way to say it is, offered at the moment it could be true. */}
