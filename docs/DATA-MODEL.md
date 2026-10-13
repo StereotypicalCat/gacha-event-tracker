@@ -227,6 +227,10 @@ Namespaced, versioned, and small. Nothing here ever goes to the server.
                                 // the reader turned on; routinesAsked the games already
                                 // asked about. Both absent means none — built-ins are
                                 // opt-in for every install. PRD F17.
+                                // changelogSeen is the newest changelog entry id the
+                                // reader dismissed. Absent means unrecorded: first-run
+                                // setup sets it, so absent is an install from before the
+                                // changelog, shown the last 14 days once. PRD F18.
                                 // timelineDayWidth is px per day on the board, stored as the
                                 // measurement rather than a step number and read through
                                 // snapDayWidth — so a value from an older ladder still opens

@@ -51,6 +51,14 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "changelog",
+    date: "2026-10-13",
+    kind: "feature",
+    title: "What's new after an update, and a changelog in the footer",
+    body: "A short list of changes appears once after a new version loads. The footer's Changelog has the fuller story: notes summarised from the project's history, each linked to its commits.",
+    ref: "65505e1",
+  },
+  {
     id: "check-for-new-data",
     date: "2026-10-13",
     kind: "feature",

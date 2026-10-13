@@ -415,6 +415,13 @@ selected tab fills with `raised` and turns ink; unselected tabs are faint and go
   label, a small numeric field on `ground`, `/ 2,100 points`, and a near-pill Save. Weekly and
   monthly counts sit on their own faint line under the strip's heading, so the reset countdown
   never wraps.
+- **What's new card** (top of the main column, never the rail): the eyebrow, up to five lines of
+  kind (faint, fixed width) · title (muted) · date (faint, hidden on phones), then a near-pill
+  **Got it** and a faint **See all**. Shown once per batch of changes; never modal.
+- **Changelog sheet** (from the footer's *Changelog*, beside *Source code*): the detail sheet's
+  frame. Each release note is a section — date eyebrow, title, summary paragraphs in muted ink, the
+  short entries it covers with commit links, then a faint line of `commits from…to` and spec links.
+  Entries with no note follow under *Other changes*, by month.
 - **Built-in question** (top of the dailies strip, once per game): one line of muted text —
   `Track Zenless Zone Zero's built-in weekly tasks?` — with a near-coloured **Yes** and a faint **No
   thanks** as plain text buttons. Never a card, never a modal; the strip renders for it alone.

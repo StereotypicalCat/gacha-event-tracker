@@ -1049,6 +1049,13 @@ to an open page). Four things hold it up:
   that says *why* — the reasoning a diff cannot show — rather than listing the files it touched.
   Never reformat code the change did not touch; a formatter the project does not run buries a
   100-line change in a 550-line diff.
+- **A change a reader can see adds a changelog entry** (`src/shared/changelog.ts`, PRD F18): one
+  reader-facing line, its kind, its date and the commit it shipped in. A commit cannot contain its
+  own hash, so the entry lands in a follow-up `chore(changelog)` commit naming the one before it. A
+  feature spanning several commits also gets a release note when it lands — a few paragraphs from
+  its spec, with its `from..to` range and spec paths. Run `bun run scripts/check-changelog.ts`
+  after: tests check a ref's shape only, because CI's checkout is shallow. Data refreshes and
+  changes invisible to readers get no entry.
 - **Zod schemas are the single source of truth for types.** Derive with `z.infer<>`; never
   hand-write an interface that duplicates a schema.
 - Every adapter ships a fixture in `fixtures/<game>/` and a test asserting parsed output. This is

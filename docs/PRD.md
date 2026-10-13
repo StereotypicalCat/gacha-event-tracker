@@ -571,6 +571,21 @@ once, in one line, about a game on screen that has them, and a switch per game i
 governs them after. Built-ins are not edited in place; **Make it mine** copies one into the reader's
 own tasks with its ticks and numbers, and hides the original while the copy exists.
 
+**F18 — What changed.**
+The app now says what changed, in two tiers, both tied to git. **Short entries** — one line each,
+tagged New, Fixed, or Games & sources — appear once as *What's new*, above the lists, after a new
+version loads; *Got it* dismisses them. **Release notes** — a few paragraphs per feature or
+milestone, summarised from the history and the design specs — are in the footer's *Changelog*, each
+linked to the commits it covers and the specs it draws on. Data refreshes are not changes in this
+sense; the footer already states the data's age.
+
+- **After the reload, not before.** The update notice (F14) is the old app, which cannot know what
+  the new one brings, so the news waits for the version that carries it. Nothing is fetched.
+- **A new reader is not shown a history.** First-run setup marks them up to date. A reader from
+  before the changelog existed is shown the last two weeks once, so its arrival is announced.
+- **Written for readers, by a person or an agent, at development time** — never generated at
+  runtime (AGENTS.md constraint 2).
+
 ## Out of scope for v1
 
 Accounts and sync; push notifications; in-game resource or pull tracking; native mobile apps (the

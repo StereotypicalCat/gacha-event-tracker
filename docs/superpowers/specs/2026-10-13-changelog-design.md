@@ -2,7 +2,8 @@
 
 **Date:** 2026-10-13
 
-**Status:** approved; spec 3. Independent of specs 1 and 2, and announces them.
+**Status:** implemented 2026-10-13; spec 3. The card and sheet landed together; three same-day
+fix entries for bugs no reader ever saw were left out of the backfill. Independent of specs 1 and 2, and announces them.
 
 ## Request and intended outcome
 
