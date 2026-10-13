@@ -97,13 +97,12 @@ export const GAMES: Record<GameId, GameMeta> = {
   // state `(UTC-5)`, and every one of them starts at 05:00 and ends at 04:59 —
   // an event ending one minute before the reset that the next one begins on.
   r1999: { id: "r1999", name: "Reverse: 1999", short: "R1999", hue: "#C9A227" , studio: "Bluepoch", dailyTasks: "Daily missions", resetOffsets: { asia: -5, america: -5, europe: -5 }, resetHourLocal: { asia: 5, america: 5, europe: 5 } },
-  // No `resetOffsets` and no `resetHourLocal`, for the reason p5x has none: the
-  // source states no time of day anywhere — every date on bluearchive.wiki's
-  // Global schedule is a bare `YYYY-MM-DD`. Blue Archive Global does run one
-  // worldwide server, so an override is probably owed here eventually, but it
-  // has to come from a source that states the clock. Inventing one moves real
-  // readers' day keys, and a wrong guess ticks the wrong box every night.
-  ba: { id: "ba", name: "Blue Archive", short: "Blue Archive", hue: "#3FCBDD" , studio: "Nexon Games", dailyTasks: "Daily missions, AP" },
+  // Blue Archive Global runs one worldwide server that resets at 04:00 Japan
+  // time — 19:00 UTC — per Game-Time-Master (github.com/cicerakes/Game-Time-Master),
+  // and guides on Sportskeeda and Deltia's Gaming say the same in JST. The
+  // offset is Japan's rather than UTC's so the day key reads as the server's
+  // calendar date, which is what a bare `YYYY-MM-DD` on bluearchive.wiki names.
+  ba: { id: "ba", name: "Blue Archive", short: "Blue Archive", hue: "#3FCBDD" , studio: "Nexon Games", dailyTasks: "Daily missions, AP", resetOffsets: { asia: 9, america: 9, europe: 9 } },
   // No `resetOffsets`, and this one is a gap in the field rather than a gap in
   // the evidence. The English server is a single worldwide machine on US
   // Pacific time — every duration on the wiki's `Event_List_(US)` says so — but
