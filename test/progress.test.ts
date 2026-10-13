@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { buildExportData, parseImportData } from "../src/client/state/export.ts";
 import { restorePrefsValue } from "../src/client/state/usePrefs.ts";
-import { mergeProgress } from "../src/client/state/useProgress.ts";
+import { applyPatch, goalPatch, mergeProgress } from "../src/client/state/useProgress.ts";
 import type { ProgressMap } from "../src/client/state/useProgress.ts";
 
 /**
@@ -175,3 +175,49 @@ describe("parseImportData", () => {
 });
 
 
+describe("goals on progress", () => {
+  const goal = { period: "week", measure: "days", required: 5, weekStartsOn: 1 } as const;
+  const T = "2026-10-13T12:00:00.000Z";
+
+  test("a goal-only record is kept", () => {
+    expect(applyPatch({}, "e", { goal }, T).e).toEqual({ goal, at: T });
+  });
+
+  test("clearing the only field drops the record", () => {
+    expect(applyPatch({ e: { goal, at: T } }, "e", { goal: undefined }, T).e).toBeUndefined();
+  });
+
+  test("setting a goal clears a stored 'not daily', and nothing else", () => {
+    expect(goalPatch({ daily: false, at: T }, goal)).toStrictEqual({ goal, daily: undefined });
+    expect(goalPatch({ daily: true, at: T }, goal)).toStrictEqual({ goal });
+    expect(goalPatch(undefined, undefined)).toStrictEqual({ goal: undefined });
+  });
+
+  test("an unreadable stored goal is left exactly as it was", () => {
+    // A newer shape, as an older cached bundle would meet it.
+    const future = { period: "week", measure: "amount", target: 2100, weekStartsOn: 1 };
+    const next = applyPatch({ e: { goal: future, at: T } }, "e", { note: "hi" }, T);
+    expect(next.e?.goal).toEqual(future);
+  });
+
+  test("goals survive export and import, and the later record wins", () => {
+    const device: ProgressMap = { e: { status: "doing", at: at("10") } };
+    const file = parseImportData(
+      JSON.parse(
+        JSON.stringify(
+          buildExportData({ e: { goal, at: at("11") } }, {}, {}, { games: {}, events: {} }),
+        ),
+      ),
+    );
+    expect(mergeProgress(device, file!.progress!).e).toEqual({ goal, at: at("11") });
+  });
+
+  test("an export from before goals imports unchanged", () => {
+    const old = {
+      format: "gacha-tracker-export",
+      version: 1,
+      progress: { e: { status: "done", at: at("10") } },
+    };
+    expect(parseImportData(old)!.progress).toEqual({ e: { status: "done", at: at("10") } });
+  });
+});

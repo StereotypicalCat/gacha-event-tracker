@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Effort } from "../../shared/effort.ts";
+import type { Goal } from "../../shared/goal.ts";
 import { KEYS, readJson, writeJson } from "./storage.ts";
 import type { Marks } from "./useMarkSet.ts";
 
@@ -17,6 +18,13 @@ export interface Progress {
   daily?: boolean | undefined;
   /** Anything the reader wants to remember about it. */
   note?: string | undefined;
+  /**
+   * A check-in goal (shared/goal.ts), stored as the reader set it and read
+   * through `readGoal`. Typed `unknown` on purpose: this store is never
+   * validated on load, so a goal of a newer shape than this build understands
+   * is kept rather than stripped on the next write.
+   */
+  goal?: unknown;
   at: string;
 }
 
@@ -58,8 +66,39 @@ function isEmpty(p: Progress): boolean {
     p.status === undefined &&
     p.effort === undefined &&
     p.daily === undefined &&
+    p.goal === undefined &&
     (p.note ?? "") === ""
   );
+}
+
+/** One edit to one record, stamped `at`. Pure, so tests reach it directly. */
+export function applyPatch(
+  prev: ProgressMap,
+  id: string,
+  next: Partial<Progress>,
+  at: string,
+): ProgressMap {
+  const merged: Progress = { ...prev[id], ...next, at };
+  // An entry with nothing recorded is not worth keeping; drop it so the
+  // store stays a set of things the reader actually said something about.
+  if (isEmpty(merged)) {
+    const { [id]: _removed, ...rest } = prev;
+    return rest;
+  }
+  return { ...prev, [id]: merged };
+}
+
+/**
+ * Setting a goal makes the event a daily; a stored `daily: false` would
+ * contradict it, so that alone is cleared. Any other `daily` answer stays, so
+ * removing the goal later restores exactly what was there before.
+ */
+export function goalPatch(
+  current: Progress | undefined,
+  goal: Goal | undefined,
+): Partial<Progress> {
+  if (goal === undefined) return { goal: undefined };
+  return current?.daily === false ? { goal, daily: undefined } : { goal };
 }
 
 /**
@@ -114,20 +153,7 @@ export function useProgress() {
   }, [progress]);
 
   const patch = useCallback((id: string, next: Partial<Progress>) => {
-    setProgress((prev) => {
-      const merged: Progress = {
-        ...prev[id],
-        ...next,
-        at: new Date().toISOString(),
-      };
-      // An entry with nothing recorded is not worth keeping; drop it so the
-      // store stays a set of things the reader actually said something about.
-      if (isEmpty(merged)) {
-        const { [id]: _removed, ...rest } = prev;
-        return rest;
-      }
-      return { ...prev, [id]: merged };
-    });
+    setProgress((prev) => applyPatch(prev, id, next, new Date().toISOString()));
   }, []);
 
   const setStatus = useCallback(
@@ -141,10 +167,20 @@ export function useProgress() {
   // the press after "done" cleared the status instead of undoing it. Status is
   // set outright now, by a control per state.
 
+  // "This isn't a daily event" must not leave a goal hidden in storage that
+  // contradicts it, so any daily answer clears the goal in the same write. The
+  // other direction — "it repeats daily" — only ever runs on an event with no
+  // goal, because a goal already makes it daily.
   const setDaily = useCallback(
-    (id: string, daily: boolean | undefined) => patch(id, { daily }),
+    (id: string, daily: boolean | undefined) => patch(id, { daily, goal: undefined }),
     [patch],
   );
+
+  const setGoal = useCallback((id: string, goal: Goal | undefined) => {
+    setProgress((prev) =>
+      applyPatch(prev, id, goalPatch(prev[id], goal), new Date().toISOString()),
+    );
+  }, []);
 
   const setEffort = useCallback(
     (id: string, effort: Effort | undefined) => patch(id, { effort }),
@@ -165,6 +201,7 @@ export function useProgress() {
     patch,
     setStatus,
     setDaily,
+    setGoal,
     setEffort,
     setNote,
     merge,
