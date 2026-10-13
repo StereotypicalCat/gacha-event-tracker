@@ -119,8 +119,16 @@ Monday; monthly to the 1st.
 
 - `src/shared/routines.ts`: per-game templates with the same fields plus `source` (URL)
   and `checked` (date). **Only a task a cited source documents ships**, the bar
-  `dailyTasks` in `games.ts` is held to; the owner's examples (ZZZ weekly activity, 2100;
-  Endfield weekly routine, 10) are the first candidates and are verified, not assumed.
+  `dailyTasks` in `games.ts` is held to. The owner's first figures (ZZZ 2,100, Endfield 10) were
+  checked on 2026-10-13 against sources the owner supplied; the first two built-ins are:
+
+  | Game | Task | Measure | Week | Source (as checked) |
+  |---|---|---|---|---|
+  | ZZZ | Ridu Weekly | 1,300 points (last milestone) | Monday, at reset | game8.co/games/Zenless-Zone-Zero/archives/484723 (updated 2025-12-02) |
+  | Endfield | Weekly Routine | 10 points (last milestone; unlocks at Authority Level 15) | Monday, at reset | endfield.wiki.gg/wiki/Weekly_Routine (edited 2026-04-11) |
+
+  The Game8 page is ten months old; its figure ships with its `checked` date shown, so a stale
+  number is visibly dated rather than presented as current.
 - **Asking.** When a game with built-ins becomes visible — first-run picker, or switched on
   in settings — and is not in `routinesAsked`, a one-line card at the top of the dailies
   strip asks: `Track Zenless Zone Zero's weekly and monthly tasks? Yes · No thanks`. Either
