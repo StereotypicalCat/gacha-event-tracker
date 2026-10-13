@@ -10,6 +10,7 @@ import {
   strandedNotice,
 } from "../src/client/components/CustomForms.tsx";
 import { eventCaption, YourOwn } from "../src/client/components/YourOwn.tsx";
+import { TaskForm, taskDraftFrom } from "../src/client/components/TaskForm.tsx";
 import { EventRow } from "../src/client/components/EventRow.tsx";
 import { EventDetail } from "../src/client/components/EventDetail.tsx";
 import { AUTHOR, Colophon, REPO_URL, RESET_CLOCK_CREDIT } from "../src/client/components/Colophon.tsx";
@@ -1246,5 +1247,67 @@ describe("the index covers events filed under a tracked game", () => {
     );
     expect(html).toContain("Something the wiki missed");
     expect(html).toContain("ended");
+  });
+});
+
+describe("the reader's weekly and monthly tasks in settings", () => {
+  const noop = () => {};
+  const base = {
+    games: GAMES,
+    events: {},
+    lanes: ["zzz", "mygame:limbus-company"],
+    onAddGame: noop,
+    onEditGame: noop,
+    onRemoveGame: () => ({ removed: true, blockedBy: 0 }),
+    onAddEvent: noop,
+    now: Date.parse("2026-10-01T12:00:00.000Z"),
+    onOpen: noop,
+    onAddTask: noop,
+    onEditTask: noop,
+    onRemoveTask: noop,
+  };
+  const task = {
+    id: "mytask:aaaaaa1111", game: "zzz", title: "Activity points",
+    period: { unit: "week" as const, startsOn: 1 },
+    measure: { kind: "amount" as const, target: 2100, unit: "points" },
+    at: AT, updatedAt: AT,
+  };
+
+  test("lists a task with what it asks for", () => {
+    const html = render(<YourOwn {...base} tasks={[task]} />);
+    expect(html).toContain("Activity points");
+    expect(html).toContain("every week from Monday · reach 2,100 points");
+    expect(html).toContain("Add a task");
+  });
+
+  test("with none yet, the way to add one is still there", () => {
+    expect(render(<YourOwn {...base} tasks={[]} />)).toContain("Add a task");
+  });
+
+  test("the form starts weekly, from Monday, ticked off once", () => {
+    const html = render(<TaskForm lanes={["zzz"]} onSave={noop} onCancel={noop} />);
+    expect(html).toMatch(/aria-pressed="true"[^>]*>Every week</);
+    expect(html).toMatch(/<option value="1" selected="">Monday<\/option>/);
+    expect(html).toMatch(/aria-pressed="true"[^>]*>Tick it off</);
+  });
+
+  test("a draft is only valid when the schema would take it", () => {
+    const fields = {
+      game: "zzz", title: "Activity points", unit: "week" as const, weekday: 1, monthDay: 1,
+      kind: "amount" as const, required: "1", target: "2,100", amountUnit: "points",
+    };
+    expect(taskDraftFrom(fields)).toEqual({
+      game: "zzz", title: "Activity points",
+      period: { unit: "week", startsOn: 1 },
+      measure: { kind: "amount", target: 2100, unit: "points" },
+    });
+    expect(taskDraftFrom({ ...fields, title: " " })).toBeNull();
+    expect(taskDraftFrom({ ...fields, target: "" })).toBeNull();
+    expect(taskDraftFrom({ ...fields, kind: "days", required: "9", unit: "month", monthDay: 31 }))
+      .toEqual({
+        game: "zzz", title: "Activity points",
+        period: { unit: "month", startsOn: 31 },
+        measure: { kind: "days", required: 9 },
+      });
   });
 });

@@ -4,6 +4,9 @@ import { formatAbsolute } from "../../shared/time.ts";
 import type { EventDraft } from "../state/useCustom.ts";
 import { useGameMeta } from "../state/gameMeta.tsx";
 import { cadenceLabel, EventForm, GameForm } from "./CustomForms.tsx";
+import { taskCaption, type Task } from "../../shared/task.ts";
+import type { TaskDraft } from "../state/useTasks.ts";
+import { TaskForm } from "./TaskForm.tsx";
 
 /**
  * The reader's own games and events — a group of the settings panel (PRD F13).
@@ -61,6 +64,10 @@ export function YourOwn({
   onAddEvent,
   now,
   onOpen,
+  tasks = [],
+  onAddTask,
+  onEditTask,
+  onRemoveTask,
 }: {
   games: CustomGames;
   events: CustomEvents;
@@ -77,9 +84,15 @@ export function YourOwn({
    * actually show.
    */
   onOpen: (id: string) => void;
+  /** Weekly and monthly tasks (PRD F17). The section shows when it can be edited. */
+  tasks?: Task[] | undefined;
+  onAddTask?: ((draft: TaskDraft) => void) | undefined;
+  onEditTask?: ((id: string, draft: TaskDraft) => void) | undefined;
+  onRemoveTask?: ((id: string) => void) | undefined;
 }) {
   const gameMeta = useGameMeta();
-  const [adding, setAdding] = useState<"game" | "event" | null>(null);
+  const [adding, setAdding] = useState<"game" | "event" | "task" | null>(null);
+  const [editingTask, setEditingTask] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
 
@@ -100,8 +113,8 @@ export function YourOwn({
     // already carries both, and drew a second border under the first one.
     <div>
       <p className="max-w-md text-xs leading-relaxed text-faint">
-        Track something this app doesn't cover, or an event a source missed. Your
-        dates are yours — they're never presented as coming from a wiki, and they
+        Track something this app doesn't cover, an event a source missed, or a
+        weekly or monthly chore. Your dates are yours — they're never presented as coming from a wiki, and they
         travel in your export.
       </p>
 
@@ -250,8 +263,69 @@ export function YourOwn({
         />
       )}
 
+      {/* Tasks are not events — no window, no end — so they get their own list
+          rather than nesting under a game like an event does: the game is
+          already on each row, and a task of a tracked game has no row above. */}
+      {onAddTask !== undefined && tasks.length > 0 && (
+        <>
+          <p className="mt-4 text-xs text-faint">Your weekly and monthly tasks</p>
+          <ul className="mt-1.5 flex flex-col gap-1">
+            {tasks.map((task) => (
+              <li key={task.id}>
+                <div className="flex items-baseline gap-2">
+                  <span className="shrink-0 text-xs text-faint">{gameMeta(task.game).short}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm text-muted">{task.title}</span>
+                  <span className="hidden shrink-0 text-xs text-faint sm:inline">
+                    {taskCaption(task)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setEditingTask(editingTask === task.id ? null : task.id)}
+                    className="shrink-0 text-xs text-faint transition-colors hover:text-ink"
+                  >
+                    Edit
+                  </button>
+                  {/* Deletes the task and nothing else: its ticks and numbers
+                      stay where they are, as every log here does. */}
+                  <button
+                    type="button"
+                    onClick={() => onRemoveTask?.(task.id)}
+                    className="shrink-0 text-xs text-faint transition-colors hover:text-critical"
+                  >
+                    Delete
+                  </button>
+                </div>
+                <p className="text-xs text-faint sm:hidden">{taskCaption(task)}</p>
+                {editingTask === task.id && (
+                  <TaskForm
+                    lanes={lanes.includes(task.game) ? lanes : [task.game, ...lanes]}
+                    initial={task}
+                    onSave={(draft) => {
+                      onEditTask?.(task.id, draft);
+                      setEditingTask(null);
+                    }}
+                    onCancel={() => setEditingTask(null)}
+                  />
+                )}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {adding === "task" && onAddTask !== undefined && (
+        <TaskForm
+          lanes={lanes}
+          onSave={(draft) => {
+            onAddTask(draft);
+            setAdding(null);
+          }}
+          onCancel={() => setAdding(null)}
+        />
+      )}
+
       {adding === null && (
-        <div className="mt-3 flex gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => setAdding("game")}
@@ -267,6 +341,16 @@ export function YourOwn({
           >
             Add an event
           </button>
+          {onAddTask !== undefined && (
+            <button
+              type="button"
+              onClick={() => setAdding("task")}
+              disabled={lanes.length === 0}
+              className="rounded-lg border border-hairline px-3 py-1.5 text-xs text-muted transition-colors hover:text-ink disabled:opacity-40"
+            >
+              Add a task
+            </button>
+          )}
         </div>
       )}
     </div>

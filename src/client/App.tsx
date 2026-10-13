@@ -695,6 +695,10 @@ export function App() {
           onEditGame: custom.editGame,
           onRemoveGame: custom.removeGame,
           onAddEvent: custom.addEvent,
+          tasks: tasks.tasks,
+          onAddTask: tasks.addTask,
+          onEditTask: tasks.editTask,
+          onRemoveTask: tasks.removeTask,
           now,
           // The index lists rules; the sheet opens rows. A repeating rule's
           // own id is never a row — the lists hold its occurrences — so it is
