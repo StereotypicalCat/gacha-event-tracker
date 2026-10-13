@@ -494,3 +494,25 @@ describe("catchUpDays", () => {
     expect(catchUpDays(NOW, "europe", "genshin", null)).toHaveLength(CATCH_UP_DAYS);
   });
 });
+
+describe("reset clocks, per server, as Game-Time-Master states them", () => {
+  // Each row is one game's server for one of our regions: the UTC instant its
+  // day rolls on, and the server's own UTC offset — the day key has to read as
+  // the server's calendar date, because a day-precision boundary resolves
+  // through it (time.ts § boundaryMs). Source for every row:
+  // github.com/cicerakes/Game-Time-Master, game-data.js.
+  const ROWS: [game: string, region: "asia" | "america" | "europe", utc: string, offset: number][] = [
+    ["nikki", "asia", "20:00", 8],
+    ["nikki", "america", "11:00", -7],
+    ["nikki", "europe", "02:00", 2],
+  ];
+
+  for (const [game, region, utc, offset] of ROWS) {
+    test(`${game} ${region} rolls at ${utc} UTC`, () => {
+      const reset = nextResetMs(at("2026-10-13T00:30:00Z"), region, game);
+      expect(new Date(reset).toISOString().slice(11, 16)).toBe(utc);
+      const serverDate = new Date(reset + offset * HOUR).toISOString().slice(0, 10);
+      expect(dayKey(reset, region, game)).toBe(serverDate);
+    });
+  }
+});

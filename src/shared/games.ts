@@ -81,7 +81,12 @@ export const GAMES: Record<GameId, GameMeta> = {
   // and `america` already resolves to -5, so Europe is the only real override.
   endfield: { id: "endfield", name: "Arknights: Endfield", short: "Endfield", hue: "#E8635A" , studio: "Hypergryph", dailyTasks: "Daily missions", resetOffsets: { europe: -5 } },
   nte: { id: "nte", name: "Neverness to Everness", short: "NTE", hue: "#C77DFF" , studio: "Hotta Studio", dailyTasks: "Daily tasks" },
-  nikki: { id: "nikki", name: "Infinity Nikki", short: "Nikki", hue: "#F27BB0" , studio: "Infold Games", dailyTasks: "Daily tasks, Vital Energy" },
+  // Infinity Nikki resets at 04:00 server time on three servers, and two of them
+  // are not on the regional default: America runs UTC-7 and Europe UTC+2, per
+  // Game-Time-Master (github.com/cicerakes/Game-Time-Master). The Fandom wiki's
+  // Daily Wishes page agrees, and America's is fixed rather than Pacific — the
+  // December 2024 maintenance was still announced in UTC-7.
+  nikki: { id: "nikki", name: "Infinity Nikki", short: "Nikki", hue: "#F27BB0" , studio: "Infold Games", dailyTasks: "Daily tasks, Vital Energy", resetOffsets: { america: -7, europe: 2 } },
   // No `resetOffsets`: nothing in the source states a server map that differs
   // from the regional default, and an offset invented here would move real
   // readers' day keys. Add one only against evidence — see games.ts § resetOffsets.
