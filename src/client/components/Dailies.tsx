@@ -11,6 +11,7 @@ import { useGameMeta } from "../state/gameMeta.tsx";
 import { isCustomGameId, type DisplayEvent, type LaneId } from "../../shared/custom.ts";
 import type { GameMeta } from "../../shared/games.ts";
 import type { GameId, Region } from "../../shared/schema.ts";
+import { goalCount, goalLabel, type GoalStatus } from "../../shared/goal.ts";
 import { formatRemaining } from "../../shared/time.ts";
 import { DayPip } from "./DayPip.tsx";
 import { Fireworks } from "./Fireworks.tsx";
@@ -47,6 +48,8 @@ export interface DailyItem {
    * which has no start because it is a routine rather than an event.
    */
   notBefore: number | null;
+  /** The event's check-in goal, when the reader set one. Chores have none. */
+  goal?: GoalStatus | undefined;
 }
 
 /** A game and everything of its that wants ticking today. */
@@ -86,6 +89,7 @@ export function dailyGroups(
   meta: (id: LaneId) => GameMeta,
   startOf: (event: DisplayEvent) => number,
   showChores = true,
+  goalFor: (id: string) => GoalStatus | undefined = () => undefined,
 ): DailyGroup[] {
   // A lane can arrive through an event without being in `games` — an event on a
   // game the reader has since switched off, say — and dropping it here would
@@ -133,12 +137,43 @@ export function dailyGroups(
         today,
         resetsIn,
         notBefore: startOf(event),
+        goal: goalFor(event.id),
       });
     }
 
     if (items.length > 0) groups.push({ game: lane, meta: game, items });
   }
   return groups;
+}
+
+/**
+ * How much of the strip is finished. An item is complete when ticked today or
+ * when its goal is already met — nothing is ticked on its behalf. `tickedToday`
+ * is kept apart because only a real tick celebrates.
+ */
+export function dailyTally(
+  items: readonly DailyItem[],
+  daysFor: (id: string) => string[],
+): { total: number; complete: number; tickedToday: number } {
+  let complete = 0;
+  let tickedToday = 0;
+  for (const i of items) {
+    const ticked = daysFor(i.key).includes(i.today);
+    if (ticked) tickedToday += 1;
+    if (ticked || i.goal?.met === true) complete += 1;
+  }
+  return { total: items.length, complete, tickedToday };
+}
+
+/** The chip's accessible name: today's tick and the goal are separate facts. */
+export function chipLabel(
+  base: string,
+  isDone: boolean,
+  goal: GoalStatus | undefined,
+): string {
+  if (!isDone && goal?.met === true) return `${base}, ${goalLabel(goal)}`;
+  const today = isDone ? "done today" : "not done today";
+  return goal === undefined ? `${base}, ${today}` : `${base}, ${today}, ${goalLabel(goal)}`;
 }
 
 export function Dailies({
@@ -149,6 +184,7 @@ export function Dailies({
   daysFor,
   onToggleDay,
   showChores,
+  goalFor,
 }: {
   /** Every lane the reader is looking at, in their own order. */
   games: LaneId[];
@@ -164,6 +200,11 @@ export function Dailies({
   now: number;
   daysFor: (id: string) => string[];
   onToggleDay: (id: string, day: string) => void;
+  /**
+   * An event's check-in goal status, when the reader set one. A met goal
+   * completes its item for the header without ticking anything.
+   */
+  goalFor?: ((id: string) => GoalStatus | undefined) | undefined;
 }) {
   const gameMeta = useGameMeta();
   /**
@@ -187,28 +228,30 @@ export function Dailies({
     gameMeta,
     (event) => Date.parse(event.startsAt),
     showChores,
+    goalFor,
   );
   const items = groups.flatMap((group) => group.items);
-  const total = items.length;
-  const complete = items.filter((i) => daysFor(i.key).includes(i.today)).length;
+  const { total, complete, tickedToday } = dailyTally(items, daysFor);
   const allDone = total > 0 && complete === total;
 
   const [burst, setBurst] = useState(0);
   // Null until the first render has been seen, so arriving at a page where
   // everything is already ticked is not treated as having just finished it.
-  const previous = useRef<{ total: number; complete: number } | null>(null);
+  const previous = useRef<{ total: number; tickedToday: number } | null>(null);
 
   useEffect(() => {
     const was = previous.current;
-    previous.current = { total, complete };
+    previous.current = { total, tickedToday };
     if (was === null || !allDone) return;
-    // Celebrate finishing the last one, and only that. The list also gets
-    // shorter when the reader focuses a single game or marks a repeating event
-    // done, which can land on "all complete" without them having ticked
-    // anything — a burst there is the app congratulating them for filtering.
-    // Backfilling a past day moves no count here, so it never bursts.
-    if (was.total === total && complete > was.complete) setBurst((n) => n + 1);
-  }, [total, complete, allDone]);
+    // Celebrate a tick today that finished the strip, and only that. The list
+    // also gets shorter when the reader focuses a single game or marks a
+    // repeating event done, which can land on "all complete" without them
+    // having ticked anything — a burst there is the app congratulating them for
+    // filtering. A backfilled day can complete the strip too, by meeting a
+    // week's goal, and that is not something they just did either; so the
+    // count watched is today's ticks, not completion.
+    if (was.total === total && tickedToday > was.tickedToday) setBurst((n) => n + 1);
+  }, [total, tickedToday, allDone]);
 
   useEffect(() => {
     if (burst === 0) return;
@@ -261,6 +304,7 @@ export function Dailies({
                 ariaLabel={item.ariaLabel}
                 days={daysFor(item.key)}
                 today={item.today}
+                goal={item.goal}
                 onToggle={() => onToggleDay(item.key, item.today)}
               />
             </li>
@@ -369,6 +413,11 @@ export function CatchUpPanel({
  * state: it has to say *which game* without competing with the tick, which is
  * the only thing on the chip that answers the question the reader came with.
  * Ticking one should be a visible jump, not a nudge.
+ *
+ * An event with a check-in goal has a third state: nothing ticked today, but
+ * the week's count already met. It takes the done border and a full-strength
+ * check, drawn dashed, and keeps the outstanding ground — only a real tick
+ * earns the wash, so "done this week" never reads as "done today".
  */
 function TickChip({
   label,
@@ -377,6 +426,7 @@ function TickChip({
   ariaLabel,
   days,
   today,
+  goal,
   onToggle,
 }: {
   label: string;
@@ -385,9 +435,11 @@ function TickChip({
   ariaLabel: string;
   days: string[];
   today: string;
+  goal?: GoalStatus | undefined;
   onToggle: () => void;
 }) {
   const isDone = days.includes(today);
+  const met = !isDone && goal?.met === true;
   const streak = streakOf(days, today);
 
   return (
@@ -395,7 +447,7 @@ function TickChip({
       type="button"
       onClick={onToggle}
       aria-pressed={isDone}
-      aria-label={`${ariaLabel}${isDone ? ", done today" : ", not done today"}`}
+      aria-label={chipLabel(ariaLabel, isDone, goal)}
       title={title}
       // `.hue-chip` is the shared hover: the chip's own colours are the game's
       // hue and arrive inline, which no rule can override, so it is drawn from
@@ -404,11 +456,11 @@ function TickChip({
       className="hue-chip flex max-w-[15rem] items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium"
       style={{
         ["--hue" as string]: hue,
-        borderColor: isDone ? hue : `color-mix(in srgb, ${hue} 20%, transparent)`,
+        borderColor: isDone || met ? hue : `color-mix(in srgb, ${hue} 20%, transparent)`,
         // Colour identifies the game; done-ness is carried by the tick, the
         // full-strength border and the wash. Keeping the label readable matters
         // more than saturating it, so an outstanding chip stays on muted ink.
-        color: isDone ? hue : "var(--color-muted)",
+        color: isDone || met ? hue : "var(--color-muted)",
         background: isDone
           ? `color-mix(in srgb, ${hue} 14%, transparent)`
           : `color-mix(in srgb, ${hue} 3%, transparent)`,
@@ -418,16 +470,24 @@ function TickChip({
         <path
           d="M2.5 8.5l3.5 3.5 7.5-8"
           fill="none"
-          stroke={isDone ? "currentColor" : hue}
+          stroke={isDone || met ? "currentColor" : hue}
           strokeWidth="2.2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          opacity={isDone ? 1 : 0.25}
+          strokeDasharray={met ? "2 2.6" : undefined}
+          opacity={isDone || met ? 1 : 0.25}
         />
       </svg>
       <span className="hue-chip-label truncate">{label}</span>
-      {streak > 1 && (
-        <span className="tnum shrink-0 text-[0.625rem] opacity-70">{streak}d</span>
+      {/* One counter per pill. With a goal, its count is the one that answers
+          "is this week done?"; a streak is beside the point when every day was
+          never required. */}
+      {goal !== undefined ? (
+        <span className="tnum shrink-0 text-[0.625rem] opacity-70">{goalCount(goal)}</span>
+      ) : (
+        streak > 1 && (
+          <span className="tnum shrink-0 text-[0.625rem] opacity-70">{streak}d</span>
+        )
       )}
     </button>
   );

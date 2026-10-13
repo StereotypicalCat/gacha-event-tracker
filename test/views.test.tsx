@@ -8,7 +8,14 @@ import {
   startMarkers,
   Timeline,
 } from "../src/client/components/Timeline.tsx";
-import { CatchUpPanel, Dailies, dailyGroups } from "../src/client/components/Dailies.tsx";
+import {
+  CatchUpPanel,
+  chipLabel,
+  Dailies,
+  dailyGroups,
+  dailyTally,
+} from "../src/client/components/Dailies.tsx";
+import type { GoalStatus } from "../src/shared/goal.ts";
 import { Welcome } from "../src/client/components/Welcome.tsx";
 import { timelineLanes } from "../src/client/state/lanes.ts";
 import { GameMetaProvider } from "../src/client/state/gameMeta.tsx";
@@ -1137,5 +1144,85 @@ describe("the chores toggle reaches the screen", () => {
     expect(html).not.toContain("Commissions, resin");
     expect(html).toContain("Lantern Rite login");
     expect(html).toContain("0/1");
+  });
+});
+
+describe("goals in the dailies strip", () => {
+  // A goal lets an event want five days of seven. A met week completes the
+  // item without a tick being invented, and the chip says which it is.
+  const NOW = Date.parse("2026-10-15T12:00:00.000Z");
+  const meta = (id: string) => metaFor(id, {});
+  const startOf = (e: { startsAt: string }) => Date.parse(e.startsAt);
+  const ev = {
+    id: "g1",
+    game: "genshin",
+    title: "To Temper Thyself",
+    type: "other",
+    summary: null,
+    startsAt: "2026-08-10T00:00:00.000Z",
+    startPrecision: "day",
+    endsAt: "2026-11-02T00:00:00.000Z",
+    endPrecision: "day",
+    regionScoped: false,
+    regionEnds: null,
+    sourceUrl: "https://example.test",
+  } as never;
+  const status = (over: Partial<GoalStatus> = {}): GoalStatus => ({
+    scope: "week", required: 5, count: 3, met: false, needed: 2,
+    open: 4, shortfall: false, ...over,
+  });
+  const strip = (goal: GoalStatus) =>
+    render(
+      <Dailies
+        games={["genshin"]}
+        events={[ev]}
+        region="europe"
+        now={NOW}
+        showChores={false}
+        daysFor={() => []}
+        onToggleDay={() => {}}
+        goalFor={() => goal}
+      />,
+    );
+
+  test("an event's item carries its goal status", () => {
+    const [group] = dailyGroups(["genshin"], [ev], NOW, "europe", meta, startOf, false, (id) =>
+      id === "g1" ? status() : undefined,
+    );
+    expect(group!.items[0]!.goal).toEqual(status());
+  });
+
+  test("a met goal completes the item without counting as a tick", () => {
+    const [group] = dailyGroups(["genshin"], [ev], NOW, "europe", meta, startOf, false, () =>
+      status({ count: 5, met: true, needed: 0 }),
+    );
+    expect(dailyTally(group!.items, () => [])).toEqual({
+      total: 1,
+      complete: 1,
+      tickedToday: 0,
+    });
+  });
+
+  test("labels separate done today, done this week and goal reached", () => {
+    expect(chipLabel("X", true, status())).toBe("X, done today, 3 of 5 this week");
+    expect(chipLabel("X", false, status())).toBe("X, not done today, 3 of 5 this week");
+    expect(chipLabel("X", false, status({ met: true }))).toBe("X, done this week");
+    expect(chipLabel("X", false, status({ scope: "event", met: true }))).toBe(
+      "X, goal reached",
+    );
+    expect(chipLabel("X", true, status({ met: true }))).toBe("X, done today, done this week");
+    expect(chipLabel("X", false, undefined)).toBe("X, not done today");
+  });
+
+  test("the chip shows the count, and an unmet week is still waiting", () => {
+    const html = strip(status());
+    expect(html).toContain("3/5 wk");
+    expect(html).toMatch(/dailies · (<!-- -->)?0(<!-- -->)?\/(<!-- -->)?1/);
+  });
+
+  test("a met week counts as complete in the header", () => {
+    expect(strip(status({ count: 5, met: true, needed: 0 }))).toMatch(
+      /dailies · (<!-- -->)?1(<!-- -->)?\/(<!-- -->)?1/,
+    );
   });
 });

@@ -31,6 +31,7 @@ import {
 } from "./state/lens.ts";
 import { clockFor, formatRemaining } from "../shared/time.ts";
 import { dailySummary, isDaily, resolveDaily } from "../shared/daily.ts";
+import { goalStatus, readGoal, type GoalStatus } from "../shared/goal.ts";
 import { strandedOccurrences } from "../shared/recurrence.ts";
 import { orderGames } from "./state/gameOrder.ts";
 import { GameMetaProvider, type MetaResolver } from "./state/gameMeta.tsx";
@@ -152,16 +153,36 @@ export function App() {
     return daily.daysFor(id).length > 0 ? "doing" : "idle";
   };
 
+  /** The reader's check-in goal for an event, if they set a readable one. */
+  const goalOf = (id: string) => readGoal(prog.progress[id]?.goal);
+
   /**
    * Whether an event repeats, the reader's own answer included. Detection reads
-   * the source's wording; they can overrule it either way.
+   * the source's wording; they can overrule it either way. A goal settles it
+   * outright: the reader has told us they come back to this one.
    */
   const repeatsDaily = (row: RowEvent): boolean =>
+    goalOf(row.event.id) !== undefined ||
     resolveDaily(
       row.event,
       prog.progress[row.event.id]?.daily,
       prefs.detectDaily,
     );
+
+  /** Where the reader is against an event's goal, or undefined without one. */
+  const goalStatusOf = (row: RowEvent): GoalStatus | undefined => {
+    const goal = goalOf(row.event.id);
+    if (goal === undefined) return undefined;
+    return goalStatus({
+      goal,
+      startsMs: row.clock.startsMs,
+      endsMs: row.clock.endsMs,
+      region: prefs.region,
+      game: row.event.game,
+      now,
+      logged: daily.daysFor(row.event.id),
+    });
+  };
 
   /** Today's state for a repeating event, or undefined if it does not repeat. */
   const dailyBadge = (row: RowEvent): DailyBadge | undefined => {
@@ -546,6 +567,10 @@ export function App() {
             now={now}
             daysFor={daily.daysFor}
             onToggleDay={daily.toggleDay}
+            goalFor={(id) => {
+              const row = todo.find((r) => r.event.id === id);
+              return row === undefined ? undefined : goalStatusOf(row);
+            }}
           />
             </div>
           </aside>
