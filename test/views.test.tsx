@@ -18,6 +18,8 @@ import {
 import type { GoalStatus } from "../src/shared/goal.ts";
 import { Welcome } from "../src/client/components/Welcome.tsx";
 import { chooseGoal, GoalControl, parseDraft } from "../src/client/components/GoalControl.tsx";
+import { AmountEditor, parseAmount } from "../src/client/components/AmountEditor.tsx";
+import type { Task } from "../src/shared/task.ts";
 import { DailyChecklist } from "../src/client/components/DailyChecklist.tsx";
 import { timelineLanes } from "../src/client/state/lanes.ts";
 import { GameMetaProvider } from "../src/client/state/gameMeta.tsx";
@@ -1198,7 +1200,7 @@ describe("goals in the dailies strip", () => {
     const [group] = dailyGroups(["genshin"], [ev], NOW, "europe", meta, startOf, false, () =>
       status({ count: 5, met: true, needed: 0 }),
     );
-    expect(dailyTally(group!.items, () => [])).toEqual({
+    expect(dailyTally(group!.items, () => [])).toMatchObject({
       total: 1,
       complete: 1,
       tickedToday: 0,
@@ -1318,5 +1320,106 @@ describe("GoalControl decisions", () => {
     expect(parseDraft("abc", "week", null)).toBeNull();
     expect(parseDraft("3", "week", null)).toBe(3);
     expect(parseDraft("53", "week", null)).toBe(7);
+  });
+});
+
+describe("weekly and monthly tasks in the dailies strip", () => {
+  const NOW = Date.parse("2026-10-15T12:00:00.000Z");
+  const meta = (id: string) => metaFor(id, {});
+  const startOf = (e: { startsAt: string }) => Date.parse(e.startsAt);
+  const AT = "2026-10-01T00:00:00.000Z";
+  const points: Task = {
+    id: "mytask:aaaaaa1111", game: "zzz", title: "Activity points",
+    period: { unit: "week", startsOn: 1 },
+    measure: { kind: "amount", target: 2100, unit: "points" }, at: AT, updatedAt: AT,
+  };
+  const monthly: Task = {
+    id: "mytask:bbbbbb2222", game: "zzz", title: "Shop reset",
+    period: { unit: "month", startsOn: 1 }, measure: { kind: "days", required: 1 },
+    at: AT, updatedAt: AT,
+  };
+  const hidden: Task = { ...monthly, id: "mytask:cccccc3333", game: "hsr", title: "Hidden" };
+  const amountStatus: GoalStatus = {
+    scope: "week", measure: "amount", periodStart: "2026-10-12", required: 2100, count: 1900,
+    met: false, needed: 200, open: 4, shortfall: false,
+  };
+  const monthStatus: GoalStatus = {
+    scope: "month", measure: "days", periodStart: "2026-10-01", required: 1, count: 1,
+    met: true, needed: 0, open: 16, shortfall: false,
+  };
+  const statusOf = (t: Task) => (t.measure.kind === "amount" ? amountStatus : monthStatus);
+  const ev = {
+    id: "z1", game: "zzz", title: "Login", type: "login", summary: null,
+    startsAt: "2026-10-01T00:00:00.000Z", startPrecision: "day", endsAt: null,
+    endPrecision: "unknown", regionScoped: false, regionEnds: null, sourceUrl: "https://example.test",
+  } as never;
+
+  test("a game's tasks follow its chore and events, and a hidden game's stay hidden", () => {
+    const groups = dailyGroups(["zzz"], [ev], NOW, "europe", meta, startOf, true, undefined,
+      [points, monthly, hidden], statusOf);
+    expect(groups.map((g) => g.items.map((i) => i.key))).toEqual([
+      ["dailies:zzz", "z1", points.id, monthly.id],
+    ]);
+    expect(groups[0]!.items.map((i) => i.cadence)).toEqual(["day", "day", "week", "month"]);
+  });
+
+  test("tasks are counted apart from today's dailies", () => {
+    const [group] = dailyGroups(["zzz"], [], NOW, "europe", meta, startOf, true, undefined,
+      [points, monthly], statusOf);
+    expect(dailyTally(group!.items, () => [])).toEqual({
+      total: 1, complete: 0, tickedToday: 0,
+      week: { total: 1, complete: 0 }, month: { total: 1, complete: 1 },
+    });
+  });
+
+  test("the header shows the period counts, and an amount chip is not a toggle", () => {
+    const html = render(
+      <Dailies games={["zzz"]} events={[]} region="europe" now={NOW} showChores
+        daysFor={() => []} onToggleDay={() => {}} tasks={[points, monthly]}
+        taskStatusFor={statusOf} onSetAmount={() => {}} amountFor={() => undefined} />,
+    );
+    expect(html).toMatch(/Weekly (<!-- -->)?0(<!-- -->)?\/(<!-- -->)?1/);
+    expect(html).toMatch(/Monthly (<!-- -->)?1(<!-- -->)?\/(<!-- -->)?1/);
+    expect(html).toContain("1,900/2,100 wk");
+    expect(html).toMatch(/aria-label="Activity points \(Zenless Zone Zero\), 1,900 of 2,100 this week"/);
+    const chip = html.match(/<button[^>]*Activity points \(Zenless[^>]*>/)![0];
+    expect(chip).not.toContain("aria-pressed");
+    expect(chip).toContain('aria-expanded="false"');
+  });
+
+  test("a strip of only tasks still renders", () => {
+    const html = render(
+      <Dailies games={["zzz"]} events={[]} region="europe" now={NOW} showChores={false}
+        daysFor={() => []} onToggleDay={() => {}} tasks={[points]} taskStatusFor={statusOf}
+        onSetAmount={() => {}} amountFor={() => undefined} />,
+    );
+    expect(html).toContain("Activity points");
+  });
+
+  test("labels for amounts and months", () => {
+    expect(chipLabel("X", false, amountStatus)).toBe("X, 1,900 of 2,100 this week");
+    expect(chipLabel("X", false, monthStatus)).toBe("X, done this month");
+  });
+});
+
+describe("AmountEditor", () => {
+  test("shows the value against the target", () => {
+    const html = render(
+      <AmountEditor label="Activity points this week" value={1900} target={2100} unit="points"
+        onSave={() => {}} onCancel={() => {}} />,
+    );
+    expect(html).toContain('value="1900"');
+    expect(html).toContain("/ 2,100 points");
+    expect(html).toContain("Save");
+  });
+
+  test("amounts are whole, non-negative numbers; anything else is mid-edit", () => {
+    expect(parseAmount("1900")).toBe(1900);
+    expect(parseAmount("1,900")).toBe(1900);
+    expect(parseAmount(" 2 100 ")).toBe(2100);
+    expect(parseAmount("1900.6")).toBe(1901);
+    expect(parseAmount("")).toBeNull();
+    expect(parseAmount("abc")).toBeNull();
+    expect(parseAmount("-5")).toBeNull();
   });
 });

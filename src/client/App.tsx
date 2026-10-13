@@ -34,6 +34,7 @@ import {
 import { clockFor, formatRemaining } from "../shared/time.ts";
 import { dailySummary, isDaily, resolveDaily } from "../shared/daily.ts";
 import { goalStatus, readGoal, type GoalStatus } from "../shared/goal.ts";
+import { taskStatus, type Task } from "../shared/task.ts";
 import { strandedOccurrences } from "../shared/recurrence.ts";
 import { orderGames } from "./state/gameOrder.ts";
 import { GameMetaProvider, type MetaResolver } from "./state/gameMeta.tsx";
@@ -187,8 +188,18 @@ export function App() {
       game: row.event.game,
       now,
       logged: daily.daysFor(row.event.id),
+      amounts: amounts.amountsFor(row.event.id),
     });
   };
+
+  const taskStatusOf = (task: Task): GoalStatus =>
+    taskStatus({
+      task,
+      region: prefs.region,
+      now,
+      logged: daily.daysFor(task.id),
+      amounts: amounts.amountsFor(task.id),
+    });
 
   /** Today's state for a repeating event, or undefined if it does not repeat. */
   const dailyBadge = (row: RowEvent): DailyBadge | undefined => {
@@ -577,6 +588,10 @@ export function App() {
               const row = todo.find((r) => r.event.id === id);
               return row === undefined ? undefined : goalStatusOf(row);
             }}
+            tasks={tasks.tasks}
+            taskStatusFor={taskStatusOf}
+            onSetAmount={amounts.setAmount}
+            amountFor={(key, period) => amounts.amountsFor(key)[period]?.value}
           />
             </div>
           </aside>

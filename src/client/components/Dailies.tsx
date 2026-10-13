@@ -12,6 +12,9 @@ import { isCustomGameId, type DisplayEvent, type LaneId } from "../../shared/cus
 import type { GameMeta } from "../../shared/games.ts";
 import type { GameId, Region } from "../../shared/schema.ts";
 import { goalCount, goalLabel, type GoalStatus } from "../../shared/goal.ts";
+import { addDays, periodOf, type Period } from "../../shared/period.ts";
+import type { Task } from "../../shared/task.ts";
+import { AmountEditor } from "./AmountEditor.tsx";
 import { formatRemaining } from "../../shared/time.ts";
 import { DayPip } from "./DayPip.tsx";
 import { Fireworks } from "./Fireworks.tsx";
@@ -33,9 +36,12 @@ import { Fireworks } from "./Fireworks.tsx";
  * answerable in ten seconds and expires tonight.
  */
 
-/** One thing to tick: a game's standing chore, or one of its repeating events. */
+/**
+ * One thing to do: a game's standing chore, one of its repeating events, or a
+ * weekly or monthly task the reader set up.
+ */
 export interface DailyItem {
-  /** The day-log key — `dailies:<game>` for a chore, the event id otherwise. */
+  /** The day-log key — `dailies:<game>` for a chore, the event or task id otherwise. */
   key: string;
   game: LaneId;
   label: string;
@@ -48,8 +54,20 @@ export interface DailyItem {
    * which has no start because it is a routine rather than an event.
    */
   notBefore: number | null;
-  /** The event's check-in goal, when the reader set one. Chores have none. */
+  /**
+   * The event's check-in goal or the task's status for its period. Chores have
+   * none. An amount here makes the chip open an editor instead of ticking.
+   */
   goal?: GoalStatus | undefined;
+  /**
+   * How often it is due. Chores and events are daily and make up the header's
+   * "today" count; tasks are counted by their own period beside it.
+   */
+  cadence: "day" | "week" | "month";
+  /** A task's period, for finding the one before it in Catch up. */
+  period?: Period | undefined;
+  /** A task's unit, printed after its target. */
+  unit?: string | undefined;
 }
 
 /** A game and everything of its that wants ticking today. */
@@ -90,6 +108,8 @@ export function dailyGroups(
   startOf: (event: DisplayEvent) => number,
   showChores = true,
   goalFor: (id: string) => GoalStatus | undefined = () => undefined,
+  tasks: readonly Task[] = [],
+  taskStatusFor: (task: Task) => GoalStatus | undefined = () => undefined,
 ): DailyGroup[] {
   // A lane can arrive through an event without being in `games` — an event on a
   // game the reader has since switched off, say — and dropping it here would
@@ -123,6 +143,7 @@ export function dailyGroups(
         today,
         resetsIn,
         notBefore: null,
+        cadence: "day",
       });
     }
 
@@ -138,7 +159,32 @@ export function dailyGroups(
         resetsIn,
         notBefore: startOf(event),
         goal: goalFor(event.id),
+        cadence: "day",
       });
+    }
+
+    // A game's weekly and monthly tasks come last in its group: they are the
+    // least urgent thing in it. Only for lanes the reader is looking at — unlike
+    // an event, a task of a game they switched off is not something they are in
+    // the middle of, and its ticks and numbers wait untouched.
+    if (games.includes(lane)) {
+      for (const task of tasks) {
+        if (task.game !== lane) continue;
+        items.push({
+          key: task.id,
+          game: lane,
+          label: task.title,
+          title: `${game.name} — ${task.title}`,
+          ariaLabel: `${task.title} (${game.name})`,
+          today,
+          resetsIn,
+          notBefore: null,
+          goal: taskStatusFor(task),
+          cadence: task.period.unit,
+          period: task.period,
+          unit: task.measure.kind === "amount" ? task.measure.unit : undefined,
+        });
+      }
     }
 
     if (items.length > 0) groups.push({ game: lane, meta: game, items });
@@ -146,23 +192,47 @@ export function dailyGroups(
   return groups;
 }
 
+interface PeriodTally {
+  total: number;
+  complete: number;
+}
+
 /**
- * How much of the strip is finished. An item is complete when ticked today or
- * when its goal is already met — nothing is ticked on its behalf. `tickedToday`
- * is kept apart because only a real tick celebrates.
+ * How much of the strip is finished. A daily item is complete when ticked today
+ * or when its goal is already met — nothing is ticked on its behalf.
+ * `tickedToday` is kept apart because only a real tick celebrates. Weekly and
+ * monthly tasks are tallied by their own period: a task due by Sunday is not
+ * "still waiting on you today" every morning.
  */
 export function dailyTally(
   items: readonly DailyItem[],
   daysFor: (id: string) => string[],
-): { total: number; complete: number; tickedToday: number } {
+): {
+  total: number;
+  complete: number;
+  tickedToday: number;
+  week: PeriodTally;
+  month: PeriodTally;
+} {
+  let total = 0;
   let complete = 0;
   let tickedToday = 0;
+  const week = { total: 0, complete: 0 };
+  const month = { total: 0, complete: 0 };
   for (const i of items) {
+    const met = i.goal?.met === true;
+    if (i.cadence !== "day") {
+      const tally = i.cadence === "week" ? week : month;
+      tally.total += 1;
+      if (met) tally.complete += 1;
+      continue;
+    }
+    total += 1;
     const ticked = daysFor(i.key).includes(i.today);
     if (ticked) tickedToday += 1;
-    if (ticked || i.goal?.met === true) complete += 1;
+    if (ticked || met) complete += 1;
   }
-  return { total: items.length, complete, tickedToday };
+  return { total, complete, tickedToday, week, month };
 }
 
 /** The chip's accessible name: today's tick and the goal are separate facts. */
@@ -171,6 +241,8 @@ export function chipLabel(
   isDone: boolean,
   goal: GoalStatus | undefined,
 ): string {
+  // A number has no "today": it is wherever the reader last said it was.
+  if (goal?.measure === "amount") return `${base}, ${goalLabel(goal)}`;
   if (!isDone && goal?.met === true) return `${base}, ${goalLabel(goal)}`;
   const today = isDone ? "done today" : "not done today";
   return goal === undefined ? `${base}, ${today}` : `${base}, ${today}, ${goalLabel(goal)}`;
@@ -185,6 +257,10 @@ export function Dailies({
   onToggleDay,
   showChores,
   goalFor,
+  tasks = [],
+  taskStatusFor,
+  onSetAmount,
+  amountFor,
 }: {
   /** Every lane the reader is looking at, in their own order. */
   games: LaneId[];
@@ -205,6 +281,13 @@ export function Dailies({
    * completes its item for the header without ticking anything.
    */
   goalFor?: ((id: string) => GoalStatus | undefined) | undefined;
+  /** The reader's weekly and monthly tasks, all of them; the strip picks its lanes'. */
+  tasks?: readonly Task[] | undefined;
+  taskStatusFor?: ((task: Task) => GoalStatus | undefined) | undefined;
+  /** Record a number for an item's period. */
+  onSetAmount?: ((key: string, periodStart: string, value: number) => void) | undefined;
+  /** The number recorded for an item's period, if any. */
+  amountFor?: ((key: string, periodStart: string) => number | undefined) | undefined;
 }) {
   const gameMeta = useGameMeta();
   /**
@@ -216,6 +299,8 @@ export function Dailies({
    * the app should work.
    */
   const [catchUp, setCatchUp] = useState(false);
+  /** Which amount chip's editor is open, by item key. One at a time. */
+  const [editing, setEditing] = useState<string | null>(null);
 
   // Each game rolls on its own server clock, so "today" is asked per game
   // rather than once for the section — Endfield's European day can still be
@@ -229,9 +314,11 @@ export function Dailies({
     (event) => Date.parse(event.startsAt),
     showChores,
     goalFor,
+    tasks,
+    taskStatusFor,
   );
   const items = groups.flatMap((group) => group.items);
-  const { total, complete, tickedToday } = dailyTally(items, daysFor);
+  const { total, complete, tickedToday, week, month } = dailyTally(items, daysFor);
   const allDone = total > 0 && complete === total;
 
   const [burst, setBurst] = useState(0);
@@ -259,12 +346,13 @@ export function Dailies({
     return () => clearTimeout(id);
   }, [burst]);
 
-  if (total === 0) return null;
+  if (items.length === 0) return null;
 
   // With mixed reset clocks there is no single "resets in", so the header
   // reports the next one to land and says that it is the next one.
   const soonest = Math.min(...items.map((i) => i.resetsIn));
   const mixed = new Set(items.map((i) => i.resetsIn)).size > 1;
+  const open = items.find((i) => i.key === editing && i.goal?.measure === "amount");
 
   return (
     <section className="relative border-b border-hairline px-4 py-4">
@@ -272,7 +360,9 @@ export function Dailies({
 
       <div className="relative flex items-baseline justify-between gap-3">
         <h2 className="eyebrow">
-          Today's dailies · {complete}/{total}
+          {total > 0 ? <>Today's dailies · {complete}/{total}</> : "Your tasks"}
+          {week.total > 0 && <> · Weekly {week.complete}/{week.total}</>}
+          {month.total > 0 && <> · Monthly {month.complete}/{month.total}</>}
         </h2>
         <p className="tnum text-[0.6875rem] text-faint">
           {mixed ? "next reset in " : "resets in "}
@@ -287,6 +377,8 @@ export function Dailies({
           region={region}
           daysFor={daysFor}
           onToggleDay={onToggleDay}
+          onSetAmount={onSetAmount}
+          amountFor={amountFor}
         />
       ) : (
         /* One wrapping row, with each game's chore and its events adjacent. No
@@ -297,28 +389,62 @@ export function Dailies({
         <ul className="relative mt-2.5 flex flex-wrap gap-1.5">
           {items.map((item) => (
             <li key={item.key}>
-              <TickChip
-                label={item.label}
-                hue={gameMeta(item.game).hue}
-                title={item.title}
-                ariaLabel={item.ariaLabel}
-                days={daysFor(item.key)}
-                today={item.today}
-                goal={item.goal}
-                onToggle={() => onToggleDay(item.key, item.today)}
-              />
+              {item.goal?.measure === "amount" ? (
+                <AmountChip
+                  label={item.label}
+                  hue={gameMeta(item.game).hue}
+                  title={item.title}
+                  ariaLabel={item.ariaLabel}
+                  goal={item.goal}
+                  open={editing === item.key}
+                  onOpen={() => setEditing(editing === item.key ? null : item.key)}
+                />
+              ) : (
+                <TickChip
+                  label={item.label}
+                  hue={gameMeta(item.game).hue}
+                  title={item.title}
+                  ariaLabel={item.ariaLabel}
+                  days={daysFor(item.key)}
+                  today={item.today}
+                  goal={item.goal}
+                  onToggle={() => onToggleDay(item.key, item.today)}
+                />
+              )}
             </li>
           ))}
         </ul>
+      )}
+
+      {/* Under the strip rather than inside the chip: a chip is one target, and
+          a field inside it would be a second one waiting to be mis-tapped. */}
+      {!catchUp && open?.goal !== undefined && onSetAmount !== undefined && (
+        <AmountEditor
+          key={`${open.key}:${open.goal.periodStart}`}
+          autoFocus
+          label={`${open.label} this ${open.goal.scope === "event" ? "event" : open.goal.scope}:`}
+          value={amountFor?.(open.key, open.goal.periodStart)}
+          target={open.goal.required}
+          unit={open.unit}
+          onSave={(value) => {
+            onSetAmount(open.key, open.goal!.periodStart, value);
+            setEditing(null);
+          }}
+          onCancel={() => setEditing(null)}
+        />
       )}
 
       <div className="relative mt-2 flex items-baseline justify-between gap-3">
         <p className="text-[0.6875rem] leading-relaxed text-faint">
           {catchUp
             ? `Tick a day you did but didn't record. The last ${CATCH_UP_DAYS} days, and nothing later than today.`
-            : allDone
-              ? "All done. Nothing else expires tonight."
-              : `${waiting(total - complete)} still waiting on you today.`}
+            : total === 0
+              ? week.complete + month.complete === week.total + month.total
+                ? "All done for this week and month."
+                : `${waiting(week.total + month.total - week.complete - month.complete)} still open this week or month.`
+              : allDone
+                ? "All done. Nothing else expires tonight."
+                : `${waiting(total - complete)} still waiting on you today.`}
         </p>
         {/* The way back to a day you already did. It lives on the section rather
             than on each chip because a chip is a single tick target, and a
@@ -358,12 +484,16 @@ export function CatchUpPanel({
   region,
   daysFor,
   onToggleDay,
+  onSetAmount,
+  amountFor,
 }: {
   groups: DailyGroup[];
   now: number;
   region: Region;
   daysFor: (id: string) => string[];
   onToggleDay: (id: string, day: string) => void;
+  onSetAmount?: ((key: string, periodStart: string, value: number) => void) | undefined;
+  amountFor?: ((key: string, periodStart: string) => number | undefined) | undefined;
 }) {
   return (
     <div className="relative mt-3 flex flex-col gap-3">
@@ -375,7 +505,28 @@ export function CatchUpPanel({
           >
             {group.meta.name}
           </p>
-          {group.items.map((item) => (
+          {group.items.map((item) => {
+            // A number is caught up a period at a time: the one just gone is
+            // the one a reader forgets to record. An event's number is edited
+            // in its sheet, where its whole run is.
+            if (item.goal?.measure === "amount") {
+              if (item.period === undefined || onSetAmount === undefined) return null;
+              const previous = periodOf(item.period, addDays(item.goal.periodStart, -1)).start;
+              return (
+                <div key={item.key} className="mt-1.5">
+                  <p className="truncate text-xs text-muted">{item.label}</p>
+                  <AmountEditor
+                    key={previous}
+                    label={`Last ${item.period.unit}:`}
+                    value={amountFor?.(item.key, previous)}
+                    target={item.goal.required}
+                    unit={item.unit}
+                    onSave={(value) => onSetAmount(item.key, previous, value)}
+                  />
+                </div>
+              );
+            }
+            return (
             <div key={item.key} className="mt-1.5">
               <p className="truncate text-xs text-muted">{item.label}</p>
               <div className="mt-1 flex flex-wrap gap-1">
@@ -390,10 +541,64 @@ export function CatchUpPanel({
                 ))}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       ))}
     </div>
+  );
+}
+
+/**
+ * A number against a target: `1,900/2,100 wk`, with a hairline under it filling
+ * to the same fraction.
+ *
+ * Not a toggle — there is nothing to tick — so no `aria-pressed`; it opens the
+ * editor under the strip and says so with `aria-expanded`. Met, it takes the
+ * goal-met look a tick chip has: full hue, no wash, since a wash means "done
+ * today" and a number is never that.
+ */
+function AmountChip({
+  label,
+  hue,
+  title,
+  ariaLabel,
+  goal,
+  open,
+  onOpen,
+}: {
+  label: string;
+  hue: string;
+  title: string;
+  ariaLabel: string;
+  goal: GoalStatus;
+  open: boolean;
+  onOpen: () => void;
+}) {
+  const share = Math.min(1, goal.required === 0 ? 0 : goal.count / goal.required);
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-expanded={open}
+      aria-label={chipLabel(ariaLabel, false, goal)}
+      title={title}
+      className="hue-chip relative flex max-w-[15rem] items-center gap-2 overflow-hidden rounded-full border px-3 py-1.5 text-xs font-medium"
+      style={{
+        ["--hue" as string]: hue,
+        borderColor: goal.met ? hue : `color-mix(in srgb, ${hue} 20%, transparent)`,
+        color: goal.met ? hue : "var(--color-muted)",
+        background: `color-mix(in srgb, ${hue} 3%, transparent)`,
+      }}
+    >
+      <span className="hue-chip-label truncate">{label}</span>
+      <span className="tnum shrink-0 text-[0.625rem] opacity-70">{goalCount(goal)}</span>
+      <span
+        aria-hidden
+        className="absolute bottom-0 left-0 h-[2px]"
+        style={{ width: `${share * 100}%`, background: hue, opacity: goal.met ? 1 : 0.6 }}
+      />
+    </button>
   );
 }
 
