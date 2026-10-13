@@ -29,6 +29,10 @@ Two rules that follow from that:
 - **The docs are part of the change.** A change that makes a sentence in `docs/` false is not
   finished until that sentence is fixed. They are the only record of *why*, so drift costs the next
   agent the whole reasoning, not just a detail.
+- **What is not written in the repo does not exist.** An agent's private memory, a chat
+  transcript or a session's notes reach no other agent and no other person. A lesson learned the
+  hard way — why a build failed, how a remote behaves, a trap in the tooling — is recorded here or
+  in `docs/` in the same change that fixes it, or the next agent pays for it again.
 - **When this file and a doc disagree, that is a bug — say so.** Neither one silently wins. This
   file summarises; the doc holds the argument, so fix whichever is actually wrong rather than
   reconciling them in your head and moving on.
@@ -1018,6 +1022,18 @@ to an open page). Four things hold it up:
 
 - **Commit straight to `main`.** This is a solo repo and its history is a single line; do not open a
   branch for a change unless asked for one. Committing still waits to be asked.
+- **Push to `origin` (Gitea) only.** Gitea push-mirrors to the `github` remote by itself — a push
+  on 2026-10-13 reached `github/main` within two minutes — so never push to `github` by hand. The
+  GitHub copy matters because the app links into it: `REPO_URL` (`Colophon.tsx`) is the GitHub
+  URL, and the changelog's commit and compare links resolve only once the mirror has the commits.
+- **The image build runs the suite without the docs.** The Dockerfile's gate is
+  `bun run typecheck && bun test`, but `.dockerignore` excludes `docs/`, `README.md`, `AGENTS.md`,
+  `CLAUDE.md` and `.git`, and only src, scripts, fixtures, snapshots, test, `.github` and `.gitea`
+  are copied. A test that reads any of those — or asks git anything — passes locally and fails the
+  image (it did, on 2026-10-13: a changelog test asserting a spec file existed). Check shape in the
+  test and existence in a script run from a full checkout, as `scripts/check-changelog.ts` does.
+  To see what the image sees, copy the Dockerfile's `COPY` list into a scratch directory, link
+  `node_modules`, and run the suite there.
 - **Only ever commit your own work.** Stage the files you changed, by path, and nothing else. The
   working tree may already hold edits, untracked fixtures or a half-finished experiment that someone
   else — the user, or another agent — put there and has not decided about yet; `git add -A`, `git
