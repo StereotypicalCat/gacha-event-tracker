@@ -538,6 +538,28 @@ placed. It also arrives switched off (F8), so settings is where they meet it, wh
 would move it anyway. **A game's dailies stay together** — a repeating event the reader marked sits
 with the standing chore of the game it came from, because the reader thinks in games and not in kinds.
 
+**F17 — Weekly and monthly tasks.**
+Some chores roll weekly or monthly rather than daily — earning ZZZ's weekly activity points,
+finishing Endfield's weekly routine — and no source publishes them, so they were nowhere in the app.
+A reader can now set them up per game in *Your own*: a title, every week (from a weekday they pick)
+or every month (from a day of the month), and either **tick it off** (N days in the period, one by
+default) or **reach a number** (a target such as 2,100, with an optional unit).
+
+- **They roll on the game's clock.** A week starts at the game's daily reset on the chosen day, on
+  the reader's server — the same clock every daily tick is cut on, so nothing new to get wrong.
+- **They sit with their game's dailies, and are counted apart.** A task follows its game's chore and
+  events in the strip, but the header counts it under *Weekly* or *Monthly*, not "today": a chore
+  due by Sunday is not waiting on anyone every morning, and only today's dailies celebrate.
+- **A number is entered, not ticked.** Its chip opens an editor under the strip — the value as the
+  game shows it, not an increment — because a chip is one target. Catch up offers last period's
+  number the way it offers yesterday's tick.
+- **An event's check-in goal (F12) can be a number too**, entered in its detail sheet.
+- **Theirs, kept and exported.** Deleting a task removes the task only; its ticks and numbers stay.
+  Both travel in the export, and import never rolls a newer week back.
+
+Built-in tasks per game, offered when a game is switched on, are specified as the next phase
+(`docs/superpowers/specs/2026-10-13-periodic-tasks-design.md` § Phase 2b) and are not built yet.
+
 ## Out of scope for v1
 
 Accounts and sync; push notifications; in-game resource or pull tracking; native mobile apps (the

@@ -305,6 +305,10 @@ Open questions to settle before starting, not now:
 
 ## Phase C — battle passes and weekly task lists
 
+*The reader's side of weekly task lists is specified and built in
+`2026-10-13-periodic-tasks-design.md` (reader-authored tasks; built-in ones are its phase 2b). Battle
+passes remain here.*
+
 Deliberately last. Both are recurrences whose *content* changes each cycle even though the window
 does not, and this app is explicitly "not a wiki" (`docs/PRD.md` § What this app is not) — it says
 that something exists and when it ends, not what is in it. So the window is in scope and the reward

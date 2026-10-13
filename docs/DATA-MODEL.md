@@ -472,6 +472,8 @@ ID spaces, and the reason is the one this document keeps making:
 ```
 mygame:<slug>        a game the reader defined      "mygame:limbus-company"
 myevent:<random>     an event the reader entered    "myevent:k3f9qa2m"
+mytask:<random>      a weekly or monthly task       "mytask:p0q8n3x2ab"
+routine:<game>:<slug>  a built-in task (held for phase 2b; nothing writes it yet)
 ```
 
 **A reader's event is never minted as `${game}:${slug}:${date}`.** That space is derived from source
@@ -485,8 +487,8 @@ ID.** A feed event's ID follows its source title, so a wiki renaming an event mi
 reconciliation has to recognise the near-match to preserve marks. A reader's event has no source to
 follow, so its ID is assigned once at creation and never derived from anything they can edit.
 
-Three first segments are now reserved and **none of them may ever become a `GameId`**: `dailies`,
-`mygame`, `myevent`. A test asserts this against `GameId.options`, because the day that stops being
+Five first segments are now reserved and **none of them may ever become a `GameId`**: `dailies`,
+`mygame`, `myevent`, `mytask`, `routine`. A test asserts this against `GameId.options`, because the day that stops being
 true is the day two key spaces merge silently.
 
 ```ts
@@ -494,7 +496,22 @@ true is the day two key spaces merge silently.
 "gacha-tracker:v1:customEvents"  // { [id]: { id, game, title, type, summary,
                                  //           startsAt, startPrecision,
                                  //           endsAt, endPrecision, at, updatedAt } }
+"gacha-tracker:v1:tasks"         // { [mytask id]: { id, game, title,
+                                 //   period: { unit: "week", startsOn: 1–7 } | { unit: "month", startsOn: 1–31 },
+                                 //   measure: { kind: "days", required } | { kind: "amount", target, unit? },
+                                 //   from?, at, updatedAt } }
+"gacha-tracker:v1:amounts"       // { [itemKey]: { [periodStartKey]: { value, at } } }
 ```
+
+**Tasks (PRD F17) are kept as stored and validated where they are shown.** Unlike `customEvents`,
+whose load filter drops a record that fails its schema and so deletes it on the next write, the task
+store keeps every record and `visibleTasks` filters for display: the likeliest unreadable task is
+one a newer version wrote, and opening an older tab must not erase it. `amounts` is the same —
+`readableAmounts` skips a malformed entry when reading and leaves it on disk. A task's ticks live in
+`daily` under its id; its numbers live in `amounts` under its id and the start key of the period
+(`periodOf`, `src/shared/period.ts`), so a new week starts with no value and old weeks are never
+pruned. An event's points goal stores its numbers the same way, under the event id. Deleting a task
+removes the task record only.
 
 Reader-authored events reuse `progress`, `daily` and `ignored` unchanged, keyed by their `myevent:`
 id — everything the reader can say about a scraped event they can say about their own, with no
@@ -615,7 +632,11 @@ restoring a backup taken before an evening's work would roll that evening back, 
 file onto a device with newer progress would roll the device back. Taking the maximum of the two
 timestamps keeps the merge order-independent and idempotent either way, and removes nothing.
 `mergeProgress` is pure and `test/progress.test.ts` pins it. Check-in goals ride `progress`, so they need no export key of their own
-and merge with the record they belong to. An export written before daily checklists existed
+and merge with the record they belong to. `tasks` and `amounts` are additive export keys like
+`customGames`: a file without them is from a device that had none. Tasks merge by id with the later
+`updatedAt` winning (`mergeTasks`), incoming records validated and current ones kept as stored;
+amounts merge per item **and per period** with the later `at` winning (`mergeAmounts`), so restoring
+an old backup cannot roll this week's number back, and a week only one side has survives. An export written before daily checklists existed
 simply has no `daily` key, which is not an error. Losing a user's marks to a bad import is unrecoverable, so the merge is
 deliberately one-directional. A file whose `format` is unrecognised is refused outright rather than
 partly applied.

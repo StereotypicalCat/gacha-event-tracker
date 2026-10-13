@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-13
 
-**Status:** approved; spec 2 of 2. Builds on `2026-10-03-check-in-goals-design.md` (the
+**Status:** phase 2a implemented 2026-10-13; phase 2b not started. Spec 2 of 2. Builds on `2026-10-03-check-in-goals-design.md` (the
 period engine and goals) and ships after it, in two phases.
 
 ## Request and intended outcome

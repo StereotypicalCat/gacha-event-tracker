@@ -408,9 +408,17 @@ selected tab fills with `raised` and turns ink; unselected tabs are faint and go
   border, label and check — the check drawn dashed — on the *outstanding* ground, with no wash. The
   wash belongs to a real tick only, so "done this week" never reads as "done today". A goal chip's
   count is the goal's (`3/5 wk`) and replaces the streak; one counter per pill.
+- **Amount chip** (a weekly or monthly task, or an event goal, that is a number): the tick chip's
+  pill with no check — `1,900/2,100 wk` in the count slot and a 2px hue line along the bottom
+  filling to the same fraction (60% opacity, full when met). It is not a toggle: no
+  `aria-pressed`, `aria-expanded` instead, and it opens the **amount editor** under the strip — a
+  label, a small numeric field on `ground`, `/ 2,100 points`, and a near-pill Save. Weekly and
+  monthly counts sit on their own faint line under the strip's heading, so the reset countdown
+  never wraps.
 - **Check-in goal control** (detail sheet, under the daily checklist): the status pills' style —
   Off / Each week / Across the event — then a small number field and, for weeks, a weekday select,
-  both on `ground` with a hairline border like the notes field.
+  both on `ground` with a hairline border like the notes field. Once a goal is set, a smaller
+  Days · Points pill pair picks its measure.
 
 ### Event row (signature)
 The unit of the checklist. It is one full-bleed target that opens the event and does nothing else.

@@ -15,7 +15,7 @@ between repairing a rule and rediscovering it the expensive way.
 
 | Doc | What it settles | Read it before |
 |---|---|---|
-| `docs/PRD.md` | What the product is for, feature by feature (F1–F14), and the quality bar for dates | Changing behaviour a reader can see, or arguing something is out of scope |
+| `docs/PRD.md` | What the product is for, feature by feature (F1–F17), and the quality bar for dates | Changing behaviour a reader can see, or arguing something is out of scope |
 | `docs/DATA-MODEL.md` | `GachaEvent`, the SQLite tables, every `localStorage` key space, the export format | Touching `src/shared/schema.ts`, an ID scheme, a stored key, or the game/reset table |
 | `docs/INGESTION.md` | The six pipeline stages, the parser/adapter/merge layering, date formats, the review gate | Adding a source, writing or repairing a parser, or changing the fetch runner |
 | `docs/ARCHITECTURE.md` | Process shape, file layout, request paths, offline and update mechanics | Moving files, adding a route, or changing the service worker |
@@ -975,6 +975,10 @@ timeline, sort, filters, progress, ignore and daily stores as scraped events. Fo
   the same reason the parsers are forbidden from guessing one.
 - **They are in the export.** These exist in one browser and nowhere else, so an export without them
   is a lossy backup. Import merges by id and never removes.
+- **Weekly and monthly tasks are theirs too** (`mytask:`, `src/shared/task.ts`, PRD F17), and their
+  store is the one that does *not* filter on load: `useTasks` and `useAmounts` keep what is on disk
+  and validate where they read, so a task a newer version wrote survives an older tab. Copy that
+  pattern for any new reader store rather than `useCustom`'s `readValid`.
 
 A lane may now be a game the reader invented, so `gameMeta` is a context resolver (`metaFor`, pure
 and total) rather than a direct lookup — a lane can outlive its game when an import carries an event
