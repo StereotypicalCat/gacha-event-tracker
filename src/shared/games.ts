@@ -80,7 +80,12 @@ export const GAMES: Record<GameId, GameMeta> = {
   // after the HoYo/Kuro pattern above. Asia has its own server and is unchanged,
   // and `america` already resolves to -5, so Europe is the only real override.
   endfield: { id: "endfield", name: "Arknights: Endfield", short: "Endfield", hue: "#E8635A" , studio: "Hypergryph", dailyTasks: "Daily missions", resetOffsets: { europe: -5 } },
-  nte: { id: "nte", name: "Neverness to Everness", short: "NTE", hue: "#C77DFF" , studio: "Hotta Studio", dailyTasks: "Daily tasks" },
+  // Neverness to Everness resets at 05:00 server time, not 04:00, on all three
+  // servers, and its America server runs UTC-4 rather than the regional UTC-5,
+  // per Game-Time-Master (github.com/cicerakes/Game-Time-Master). The 05:00 hour
+  // is corroborated by neverness.gg and vpesports; the America offset is the one
+  // guides disagree on, and Game-Time-Master's is the one taken.
+  nte: { id: "nte", name: "Neverness to Everness", short: "NTE", hue: "#C77DFF" , studio: "Hotta Studio", dailyTasks: "Daily tasks", resetOffsets: { america: -4 }, resetHourLocal: { asia: 5, america: 5, europe: 5 } },
   // Infinity Nikki resets at 04:00 server time on three servers, and two of them
   // are not on the regional default: America runs UTC-7 and Europe UTC+2, per
   // Game-Time-Master (github.com/cicerakes/Game-Time-Master). The Fandom wiki's
