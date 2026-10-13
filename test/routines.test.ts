@@ -6,6 +6,7 @@ import {
   routinesFor,
   routineToAsk,
   mineFrom,
+  copyRoutineState,
 } from "../src/shared/routines.ts";
 import { restorePrefsValue } from "../src/client/state/usePrefs.ts";
 import { taskStatus } from "../src/shared/task.ts";
@@ -91,6 +92,24 @@ describe("making a built-in your own", () => {
     expect(mineFrom(ridu)).toEqual({
       game: "zzz", title: "Ridu Weekly", period: { unit: "week", startsOn: 1 },
       measure: { kind: "amount", target: 1300, unit: "points" }, from: "routine:zzz:ridu-weekly",
+    });
+  });
+});
+
+describe("copying a built-in's record to the reader's copy", () => {
+  const logs = { "routine:zzz:ridu-weekly": { days: ["2026-10-12"], at: "2026-10-12T10:00:00.000Z" } };
+  const amounts = { "routine:zzz:ridu-weekly": { "2026-10-12": { value: 900, at: "2026-10-13T10:00:00.000Z" } } };
+
+  test("ticks and numbers land under the new id; the original's are not touched", () => {
+    const copy = copyRoutineState(logs, amounts, "routine:zzz:ridu-weekly", "mytask:abcdef1234");
+    expect(copy.daily).toEqual({ "mytask:abcdef1234": logs["routine:zzz:ridu-weekly"] });
+    expect(copy.amounts).toEqual({ "mytask:abcdef1234": amounts["routine:zzz:ridu-weekly"] });
+    expect(Object.keys(copy.daily)).not.toContain("routine:zzz:ridu-weekly");
+  });
+
+  test("nothing recorded, nothing copied", () => {
+    expect(copyRoutineState({}, {}, "routine:zzz:ridu-weekly", "mytask:abcdef1234")).toEqual({
+      daily: {}, amounts: {},
     });
   });
 });

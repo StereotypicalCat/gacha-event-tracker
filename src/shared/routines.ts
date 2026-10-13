@@ -123,3 +123,23 @@ export function mineFrom(routine: Routine): {
     from: routine.id,
   };
 }
+
+/**
+ * What *Make it mine* hands the day log and the amounts store: the built-in's
+ * record, filed under the copy's id. Pure, and only ever merged in — the
+ * originals stay under the routine's id, so deleting the copy shows the
+ * built-in exactly as it was.
+ */
+export function copyRoutineState<L, A>(
+  logs: Readonly<Record<string, L>>,
+  amounts: Readonly<Record<string, A>>,
+  fromId: string,
+  toId: string,
+): { daily: Record<string, L>; amounts: Record<string, A> } {
+  const log = logs[fromId];
+  const numbers = amounts[fromId];
+  return {
+    daily: log === undefined ? {} : { [toId]: log },
+    amounts: numbers === undefined ? {} : { [toId]: numbers },
+  };
+}

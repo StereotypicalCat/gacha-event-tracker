@@ -384,6 +384,7 @@ export function Dailies({
           <button
             type="button"
             onClick={() => ask.onAnswer(true)}
+            aria-label={`Yes, track ${gameMeta(ask.game).name}'s built-in weekly tasks`}
             className="font-medium text-near transition-colors hover:text-ink"
           >
             Yes
@@ -391,6 +392,7 @@ export function Dailies({
           <button
             type="button"
             onClick={() => ask.onAnswer(false)}
+            aria-label={`No thanks to ${gameMeta(ask.game).name}'s built-in weekly tasks`}
             className="text-faint transition-colors hover:text-muted"
           >
             No thanks

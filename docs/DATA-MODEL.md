@@ -222,7 +222,11 @@ Namespaced, versioned, and small. Nothing here ever goes to the server.
                                 //   timelineDayWidth, timelineGroup, showUpcoming,
                                 //   timelineSplitUpcoming, detectDaily, showChores,
                                 //   showCompleted, showIgnored, theme, regionConfirmed,
-                                //   onboarded }
+                                //   onboarded, routineGames?, routinesAsked? }
+                                // routineGames is the games whose built-in weekly tasks
+                                // the reader turned on; routinesAsked the games already
+                                // asked about. Both absent means none — built-ins are
+                                // opt-in for every install. PRD F17.
                                 // timelineDayWidth is px per day on the board, stored as the
                                 // measurement rather than a step number and read through
                                 // snapDayWidth — so a value from an older ladder still opens

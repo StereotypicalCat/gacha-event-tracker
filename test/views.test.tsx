@@ -1507,6 +1507,9 @@ describe("built-in weekly tasks in the strip", () => {
     expect(html).toContain("Track Zenless Zone Zero");
     expect(html).toContain("weekly tasks?");
     expect(html).toContain("No thanks");
+    // Heard out of context, "Yes" has to say what it agrees to.
+    expect(html).toContain(`aria-label="Yes, track Zenless Zone Zero's built-in weekly tasks"`.replace("'", "&#x27;"));
+    expect(html).toContain(`aria-label="No thanks to Zenless Zone Zero's built-in weekly tasks"`.replace("'", "&#x27;"));
   });
 
   test("with nothing to show and nothing to ask, the strip is absent", () => {

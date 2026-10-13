@@ -35,7 +35,13 @@ import { clockFor, formatRemaining } from "../shared/time.ts";
 import { dailySummary, isDaily, resolveDaily } from "../shared/daily.ts";
 import { goalStatus, readGoal, type GoalStatus } from "../shared/goal.ts";
 import { taskStatus, type TaskShape } from "../shared/task.ts";
-import { activeRoutines, mineFrom, routineToAsk, type Routine } from "../shared/routines.ts";
+import {
+  activeRoutines,
+  copyRoutineState,
+  mineFrom,
+  routineToAsk,
+  type Routine,
+} from "../shared/routines.ts";
 import { strandedOccurrences } from "../shared/recurrence.ts";
 import { orderGames } from "./state/gameOrder.ts";
 import { GameMetaProvider, type MetaResolver } from "./state/gameMeta.tsx";
@@ -212,10 +218,9 @@ export function App() {
   const makeItMine = (routine: Routine) => {
     if (tasks.tasks.some((t) => t.from === routine.id)) return;
     const id = tasks.addTask(mineFrom(routine));
-    const log = daily.logs[routine.id];
-    if (log !== undefined) daily.merge({ [id]: log });
-    const numbers = amounts.amounts[routine.id];
-    if (numbers !== undefined) amounts.merge({ [id]: numbers });
+    const copy = copyRoutineState(daily.logs, amounts.amounts, routine.id, id);
+    daily.merge(copy.daily);
+    amounts.merge(copy.amounts);
   };
 
   const taskStatusOf = (task: TaskShape): GoalStatus =>

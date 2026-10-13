@@ -133,12 +133,14 @@ Monday; monthly to the 1st.
   number is visibly dated rather than presented as current.
 - **Asking.** When a game with built-ins becomes visible — first-run picker, or switched on
   in settings — and is not in `routinesAsked`, a one-line card at the top of the dailies
-  strip asks: `Track Zenless Zone Zero's weekly and monthly tasks? Yes · No thanks`. Either
+  strip asks: `Track Zenless Zone Zero's built-in weekly tasks? Yes · No thanks`. Either
   answer records the game in `routinesAsked`; Yes also adds it to `routineGames`. Never a
   modal, and never asked twice.
-- **Toggle.** The games settings group shows a “Weekly tasks” switch on each game that has
-  built-ins, writing `routineGames`. Off hides the chips; their ticks and amounts stay.
-- **Make it mine.** From a built-in chip's editor or the settings list: copies the template
+- **Toggle.** *What you see* shows a “Built-in weekly tasks for <game>” switch, beside the daily
+  chores switch, for each game that has built-ins, writing `routineGames` (and answering the
+  strip's question). Off hides the chips; their ticks and amounts stay. Each built-in shows the
+  date its source gives (`asOf`), not the date we read it.
+- **Make it mine.** From the settings list: copies the template
   into a `mytask:` record with `from` set, and copies the built-in's ticks and amounts to
   the new id (additive; the originals stay). A built-in whose id is some task's `from` is
   hidden; deleting that copy brings it back.
