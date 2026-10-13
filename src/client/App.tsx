@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { fetchFeed, type FeedState } from "./api.ts";
+import { fetchFeed, refreshOutcome, type FeedState, type RefreshOutcome } from "./api.ts";
 import { Controls } from "./components/Controls.tsx";
 import { Dailies } from "./components/Dailies.tsx";
 import { GameFocus } from "./components/GameFocus.tsx";
@@ -809,6 +809,22 @@ export function App() {
         sources={state.feed.sources}
         now={now}
         hiddenGames={prefs.hiddenGames}
+        online={online}
+        onRefresh={async (): Promise<RefreshOutcome> => {
+          // The newest published feed, past the browser's copy. Swapped in only
+          // when it carries something new, so a check that found nothing leaves
+          // the page exactly as it was. Never reloads: the reader may be
+          // halfway through typing an event in.
+          const before = state.feed;
+          try {
+            const next = await fetchFeed(undefined, { fresh: true });
+            const outcome = refreshOutcome(before, next);
+            if (outcome === "updated") setState({ status: "ready", feed: next });
+            return outcome;
+          } catch (err) {
+            return refreshOutcome(before, err instanceof Error ? err : new Error(String(err)));
+          }
+        }}
       />
 
       {lastIgnored !== null && (

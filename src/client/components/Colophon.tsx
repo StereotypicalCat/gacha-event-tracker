@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { useGameMeta } from "../state/gameMeta.tsx";
+import type { RefreshOutcome } from "../api.ts";
 import type { LaneId } from "../../shared/custom.ts";
 import { freshness, STALE_AFTER_MS, type SourceHealth, type StaleGame } from "../../shared/feed.ts";
 import { formatAbsolute, formatRemaining } from "../../shared/time.ts";
@@ -173,9 +175,18 @@ export function Colophon({
   sources,
   now,
   hiddenGames = [],
+  onRefresh,
+  online = true,
 }: {
   sources: SourceHealth[];
   now: number;
+  /**
+   * Ask the server for the newest published feed, past the browser's cache.
+   * Absent where nothing can refresh (a test, a static render): no button.
+   */
+  onRefresh?: (() => Promise<RefreshOutcome>) | undefined;
+  /** Offline the check cannot reach anything, so it is disabled and says so. */
+  online?: boolean;
   /**
    * Lanes the reader has switched off, so the staleness notice can leave them
    * out. Optional and empty by default: a caller that does not know the
@@ -215,10 +226,14 @@ export function Colophon({
 
   // Built once so the sentence a reader reads and the value the bug form is
   // prefilled with cannot drift apart.
+  // Floored at zero: the page's `now` ticks coarsely, and a feed fetched this
+  // second ("Check for new data") can carry an instant a moment ahead of it,
+  // which would otherwise read as "ended ago".
+  const elapsed = refreshedAt === null ? null : now - Date.parse(refreshedAt);
   const ago =
-    refreshedAt === null ? null : formatRemaining(now - Date.parse(refreshedAt));
+    elapsed === null ? null : elapsed < 60_000 ? "just now" : `${formatRemaining(elapsed)} ago`;
   const refreshedLine =
-    refreshedAt === null ? null : `${formatAbsolute(refreshedAt, true)} — ${ago} ago`;
+    refreshedAt === null ? null : `${formatAbsolute(refreshedAt, true)} — ${ago}`;
 
   const sites = [...new Map(sources.map((s) => {
     const site = siteFor(s.url);
@@ -256,8 +271,11 @@ export function Colophon({
                 <time dateTime={refreshedAt} className="text-muted">
                   {formatAbsolute(refreshedAt, true)}
                 </time>
-                {` — ${ago} ago.`}
+                {` — ${ago}.`}
               </>
+            )}
+            {onRefresh !== undefined && (
+              <RefreshCheck onRefresh={onRefresh} online={online} />
             )}
           </p>
 
@@ -534,5 +552,62 @@ export function Colophon({
         {"."}
       </p>
     </footer>
+  );
+}
+
+const OUTCOME: Record<RefreshOutcome, string> = {
+  updated: "Updated — newer data is on screen.",
+  same: "Nothing newer published yet. Sources are read about twice a day.",
+  failed: "Couldn't reach the server, so this is still the copy stored here.",
+};
+
+/**
+ * "Check for new data", beside the age it would change.
+ *
+ * A reload is not enough: the browser may keep the feed for minutes, so this
+ * asks the server outright and says what came back. It fetches what has been
+ * *published* — it cannot make the sources be read sooner, and the copy says
+ * so rather than letting "nothing newer" read as the button failing.
+ */
+function RefreshCheck({
+  onRefresh,
+  online,
+}: {
+  onRefresh: () => Promise<RefreshOutcome>;
+  online: boolean;
+}) {
+  const [checking, setChecking] = useState(false);
+  const [outcome, setOutcome] = useState<RefreshOutcome | null>(null);
+
+  return (
+    <>
+      {" "}
+      <button
+        type="button"
+        disabled={!online || checking}
+        onClick={() => {
+          setChecking(true);
+          setOutcome(null);
+          void onRefresh()
+            .catch((): RefreshOutcome => "failed")
+            .then((result) => {
+              setOutcome(result);
+              setChecking(false);
+            });
+        }}
+        className="text-muted underline decoration-hairline underline-offset-2 transition-colors hover:text-ink disabled:no-underline disabled:opacity-50"
+      >
+        Check for new data
+      </button>
+      <span role="status" className="ml-1.5">
+        {!online
+          ? "(offline)"
+          : checking
+            ? "Checking…"
+            : outcome !== null
+              ? OUTCOME[outcome]
+              : ""}
+      </span>
+    </>
   );
 }

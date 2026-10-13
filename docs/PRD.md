@@ -461,6 +461,13 @@ The footer shows when the feed was last updated, per game. If a game's data is m
 stale, its lane carries a warning badge. Never present stale data as current — the whole value
 proposition is trust in the dates.
 
+**The reader can ask for the newest data.** A reload is not enough — the browser may keep the feed
+for minutes — so *Check for new data* beside the age asks the server past that copy and swaps a newer
+feed in without a reload. It says what happened: updated, nothing newer published yet (sources are
+read about twice a day, and the button cannot make that sooner), or the server could not be reached.
+"Newer" is judged on events and source health, never on the build stamp. Disabled offline; nothing
+polls on its own.
+
 **The staleness notice names only the games the reader has switched on, and says that it does.**
 The headline age is about the feed and stays whole; the notice under it is an *instruction*, and the
 only remedy it offers is "go and check that game's source page" — which a reader cannot act on for a
