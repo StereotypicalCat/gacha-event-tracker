@@ -98,12 +98,14 @@ export const GAMES: Record<GameId, GameMeta> = {
   // model gets the shared server's clock. The source is Game8 prose with no
   // clock of its own, so the zone is taken as Game-Time-Master states it.
   p5x: { id: "p5x", name: "Persona 5: The Phantom X", short: "P5X", hue: "#D62246" , studio: "Perfect World", dailyTasks: "Daily missions, stamina", resetOffsets: { asia: 0, america: 0, europe: 0 }, resetHourLocal: { asia: 20, america: 20, europe: 20 } },
-  // Reverse: 1999 runs one global server on a fixed UTC-5 and rolls its day at
-  // **05:00**, not the 04:00 every other game here uses. Both facts come from
-  // the source rather than from habit: all 154 rows on the wiki's event list
-  // state `(UTC-5)`, and every one of them starts at 05:00 and ends at 04:59 —
-  // an event ending one minute before the reset that the next one begins on.
-  r1999: { id: "r1999", name: "Reverse: 1999", short: "R1999", hue: "#C9A227" , studio: "Bluepoch", dailyTasks: "Daily missions", resetOffsets: { asia: -5, america: -5, europe: -5 }, resetHourLocal: { asia: 5, america: 5, europe: 5 } },
+  // Reverse: 1999 rolls its day at **05:00**, not 04:00, on two servers: Global
+  // on a fixed UTC-5 for America and Europe, and Asia on UTC+8. The Global half
+  // comes from the source: all 154 rows on the wiki's event list state
+  // `(UTC-5)`, and every one of them starts at 05:00 and ends at 04:59 — an
+  // event ending one minute before the reset that the next one begins on. The
+  // Asia server is Game-Time-Master's (github.com/cicerakes/Game-Time-Master);
+  // the wiki only ever describes Global.
+  r1999: { id: "r1999", name: "Reverse: 1999", short: "R1999", hue: "#C9A227" , studio: "Bluepoch", dailyTasks: "Daily missions", resetOffsets: { america: -5, europe: -5 }, resetHourLocal: { asia: 5, america: 5, europe: 5 } },
   // Blue Archive Global runs one worldwide server that resets at 04:00 Japan
   // time — 19:00 UTC — per Game-Time-Master (github.com/cicerakes/Game-Time-Master),
   // and guides on Sportskeeda and Deltia's Gaming say the same in JST. The

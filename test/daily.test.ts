@@ -367,8 +367,8 @@ describe("dailiesId", () => {
 });
 
 describe("a game whose day rolls on a different hour", () => {
-  // Reverse: 1999 runs one global server on UTC-5 and resets at 05:00 rather
-  // than 04:00, so its day rolls at 10:00 UTC. Both facts are read off the
+  // Reverse: 1999's Global server runs UTC-5 and resets at 05:00 rather than
+  // 04:00, so its day rolls at 10:00 UTC. Both facts are read off the
   // source: every row of its event list states (UTC-5) and runs 05:00 → 04:59.
   test("rolls on 10:00 UTC, not the 09:00 a UTC-5 game would", () => {
     expect(dayKey(at("2026-08-16T09:59:59Z"), "europe", "r1999")).toBe(
@@ -382,12 +382,12 @@ describe("a game whose day rolls on a different hour", () => {
     );
   });
 
-  test("every region gets the same answer, because there is one server", () => {
+  test("America and Europe share the Global server's answer", () => {
+    // Asia has its own UTC+8 server, so only the two regions on Global must agree.
     const instant = at("2026-08-16T09:30:00Z");
-    const keys = (["asia", "america", "europe"] as const).map((r) =>
-      dayKey(instant, r, "r1999"),
+    expect(dayKey(instant, "america", "r1999")).toBe(
+      dayKey(instant, "europe", "r1999"),
     );
-    expect(new Set(keys).size).toBe(1);
   });
 
   test("resetHourFor defaults to 04:00 for every other game", () => {
@@ -529,6 +529,9 @@ describe("reset clocks, per server, as Game-Time-Master states them", () => {
     ["gfl2", "asia", "21:00", 8],
     ["gfl2", "america", "05:00", -8],
     ["gfl2", "europe", "05:00", -8],
+    ["r1999", "asia", "21:00", 8],
+    ["r1999", "america", "10:00", -5],
+    ["r1999", "europe", "10:00", -5],
   ];
 
   for (const [game, region, utc, offset] of ROWS) {
