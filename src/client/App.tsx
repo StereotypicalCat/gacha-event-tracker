@@ -17,6 +17,8 @@ import { useAppUpdate } from "./state/useAppUpdate.ts";
 import { useMarkSet } from "./state/useMarkSet.ts";
 import { useProgress } from "./state/useProgress.ts";
 import { useDailyLog, type DailyLogMap } from "./state/useDailyLog.ts";
+import { useTasks } from "./state/useTasks.ts";
+import { useAmounts } from "./state/useAmounts.ts";
 import { adoptNewLanes, usePrefs, type Prefs } from "./state/usePrefs.ts";
 import { buildExportData, parseImportData, triggerDownload } from "./state/export.ts";
 import { snapDayWidth } from "./state/zoom.ts";
@@ -39,8 +41,6 @@ import { metaOnTheme, useTheme } from "./state/theme.ts";
 import {
   displayEventFor,
   recordFor,
-  type CustomEvents,
-  type CustomGames,
   type LaneId,
 } from "../shared/custom.ts";
 import { metaFor } from "../shared/games.ts";
@@ -113,6 +113,12 @@ export function App() {
   const ignored = useMarkSet(KEYS.ignored);
   const prog = useProgress();
   const daily = useDailyLog();
+  const tasks = useTasks();
+  const amounts = useAmounts();
+  const mergeExtra = (incomingTasks: unknown, incomingAmounts: unknown) => {
+    tasks.merge(incomingTasks);
+    amounts.merge(incomingAmounts);
+  };
   const custom = useCustom(now);
   // Colour only: which ground the page is drawn on, written to the document by
   // the hook. Nothing else in the app asks what it is — the tokens in
@@ -687,6 +693,8 @@ export function App() {
           exportProgress(prog.progress, daily.logs, ignored.marks, {
             games: custom.games,
             events: custom.events,
+            tasks: tasks.raw,
+            amounts: amounts.amounts,
           })
         }
         onImport={(file) =>
@@ -696,12 +704,15 @@ export function App() {
             daily.merge,
             ignored.merge,
             custom.merge,
+            mergeExtra,
           )
         }
         onExportAll={() =>
           exportAll(prog.progress, daily.logs, ignored.marks, prefs, {
             games: custom.games,
             events: custom.events,
+            tasks: tasks.raw,
+            amounts: amounts.amounts,
           })
         }
         onImportAll={(file) =>
@@ -711,6 +722,7 @@ export function App() {
             daily.merge,
             ignored.merge,
             custom.merge,
+            mergeExtra,
             restorePrefs,
           )
         }
@@ -942,7 +954,7 @@ function exportProgress(
   progress: Record<string, unknown>,
   daily: DailyLogMap,
   ignored: Record<string, { at: string }>,
-  own: { games: CustomGames; events: CustomEvents },
+  own: Own,
 ) {
   const data = buildExportData(progress, daily, ignored, own);
   triggerDownload(
@@ -956,7 +968,7 @@ function exportAll(
   daily: DailyLogMap,
   ignored: Record<string, { at: string }>,
   prefs: Prefs,
-  own: { games: CustomGames; events: CustomEvents },
+  own: Own,
 ) {
   const data = buildExportData(progress, daily, ignored, own, prefs);
   triggerDownload(
@@ -965,12 +977,16 @@ function exportAll(
   );
 }
 
+/** Everything reader-authored that travels in an export beside progress. */
+type Own = Parameters<typeof buildExportData>[3];
+
 async function importProgress(
   file: File,
   mergeProgress: (c: Record<string, { at: string }>) => void,
   mergeDaily: (c: DailyLogMap) => void,
   mergeIgnored: (c: Record<string, { at: string }>) => void,
   mergeCustom: (games: unknown, events: unknown) => void,
+  mergeExtra: (tasks: unknown, amounts: unknown) => void,
   restorePrefs?: ((prefs: unknown) => void) | undefined,
 ) {
   try {
@@ -984,6 +1000,7 @@ async function importProgress(
     if (data.daily !== null) mergeDaily(data.daily);
     if (data.ignored !== null) mergeIgnored(data.ignored);
     mergeCustom(data.customGames, data.customEvents);
+    mergeExtra(data.tasks, data.amounts);
 
     if (restorePrefs !== undefined) {
       if (data.prefs !== null) {

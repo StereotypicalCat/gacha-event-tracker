@@ -12,6 +12,10 @@ export interface ExportData {
   ignored: Record<string, { at: string }>;
   customGames: CustomGames;
   customEvents: CustomEvents;
+  /** Weekly and monthly tasks, as stored — readable to this build or not. */
+  tasks?: Record<string, unknown> | undefined;
+  /** Numbers entered against targets, per item per period. */
+  amounts?: Record<string, Record<string, unknown>> | undefined;
   prefs?: Prefs | undefined;
 }
 
@@ -21,6 +25,9 @@ export interface ParsedImport {
   ignored: Record<string, { at: string }> | null;
   customGames: unknown;
   customEvents: unknown;
+  /** Validated by the task and amount stores' own merges, not here. */
+  tasks: unknown;
+  amounts: unknown;
   prefs: unknown | null;
 }
 
@@ -33,7 +40,12 @@ export function buildExportData(
   progress: Record<string, unknown>,
   daily: DailyLogMap,
   ignored: Record<string, { at: string }>,
-  own: { games: CustomGames; events: CustomEvents },
+  own: {
+    games: CustomGames;
+    events: CustomEvents;
+    tasks?: Record<string, unknown> | undefined;
+    amounts?: Record<string, Record<string, unknown>> | undefined;
+  },
   prefs?: Prefs | undefined,
 ): ExportData {
   return {
@@ -45,6 +57,10 @@ export function buildExportData(
     ignored,
     customGames: own.games,
     customEvents: own.events,
+    // Additive keys, like customGames was: a file without them is simply from
+    // a device that had none.
+    ...(own.tasks !== undefined ? { tasks: own.tasks } : {}),
+    ...(own.amounts !== undefined ? { amounts: own.amounts } : {}),
     ...(prefs !== undefined ? { prefs } : {}),
   };
 }
@@ -63,6 +79,8 @@ export function parseImportData(parsed: unknown): ParsedImport | null {
     ignored?: unknown;
     customGames?: unknown;
     customEvents?: unknown;
+    tasks?: unknown;
+    amounts?: unknown;
     prefs?: unknown;
   };
   if (data.format !== "gacha-tracker-export") return null;
@@ -98,6 +116,8 @@ export function parseImportData(parsed: unknown): ParsedImport | null {
     ignored,
     customGames: data.customGames,
     customEvents: data.customEvents,
+    tasks: data.tasks,
+    amounts: data.amounts,
     prefs,
   };
 }

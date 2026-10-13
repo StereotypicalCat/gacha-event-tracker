@@ -234,3 +234,27 @@ describe("a goal this build cannot read is never cleared by accident", () => {
     expect(dailyPatch(false, true)).toStrictEqual({ daily: false, goal: undefined });
   });
 });
+
+describe("tasks and amounts in the export", () => {
+  const T = "2026-10-13T12:00:00.000Z";
+  const tasks = {
+    "mytask:aaaaaa1111": { id: "mytask:aaaaaa1111", game: "zzz", title: "Activity" },
+    // Unreadable to this build, and carried anyway: the export is a backup.
+    "mytask:cccccc3333": { id: "mytask:cccccc3333", measure: { kind: "streak" } },
+  };
+  const amounts = { "mytask:aaaaaa1111": { "2026-10-12": { value: 1900, at: T } } };
+
+  test("a round trip carries both, readable or not", () => {
+    const data = buildExportData({}, {}, {}, { games: {}, events: {}, tasks, amounts });
+    const parsed = parseImportData(JSON.parse(JSON.stringify(data)))!;
+    expect(parsed.tasks).toEqual(tasks);
+    expect(parsed.amounts).toEqual(amounts);
+  });
+
+  test("an export from before tasks has neither, and is still valid", () => {
+    const parsed = parseImportData({ format: "gacha-tracker-export", version: 1, progress: {} })!;
+    expect(parsed).not.toBeNull();
+    expect(parsed.tasks).toBeUndefined();
+    expect(parsed.amounts).toBeUndefined();
+  });
+});
