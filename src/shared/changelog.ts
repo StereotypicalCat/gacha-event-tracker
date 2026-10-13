@@ -51,6 +51,14 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "edit-dailies-in-place",
+    date: "2026-10-14",
+    kind: "feature",
+    title: "Edit Today's dailies in place, with weekly and monthly tasks in a row below",
+    body: "Edit, beside Catch up, adds a running event to the strip and sets its check-in goal without opening it. Weekly and monthly tasks sit under the dailies, and each can be switched off.",
+    ref: "9477ac5",
+  },
+  {
     id: "upcoming-shown-to-new-readers",
     date: "2026-10-13",
     kind: "feature",
