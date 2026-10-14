@@ -4,9 +4,10 @@
   (for example, five check-ins per week). Keep unfinished events in Dailies, show progress
   against the required count, and distinguish finishing a week from finishing the event.
   Shipped 2026-10-13 — see the [spec](docs/superpowers/specs/2026-10-03-check-in-goals-design.md).
-- [ ] Rework how the *What you see* settings group handles its toggles, so that the daily chores
+- [x] Rework how the *What you see* settings group handles its toggles, so that the daily chores
   and the built-in weekly tasks can each be switched **globally and per game**, without adding a
   new checkbox for every game.
+  Shipped 2026-10-14 — see the [spec](docs/superpowers/specs/2026-10-14-per-game-switches-design.md).
   - Today the two are inconsistent: the daily chores have one global switch
     (`prefs.showChores`) and no per-game control, while the built-in weekly tasks have only
     per-game switches (`prefs.routineGames`), one checkbox per game that has any. With more

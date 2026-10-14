@@ -580,8 +580,10 @@ default) or **reach a number** (a target such as 2,100, with an optional unit).
 **Some games' weekly tasks are built in** — ZZZ's Ridu Weekly (1,300 points) and Endfield's Weekly
 Routine (10 points) so far, each from a cited page and shown with the date that page gives, so a
 figure from an old guide is visibly old. They are **off until the reader says yes**: the strip asks
-once, in one line, about a game on screen that has them, and a switch per game in *What you see*
-governs them after. Built-ins are not edited in place; **Make it mine** copies one into the reader's
+once, in one line, about a game on screen that has them — until the reader answers for every game —
+and *What you see* governs them after: one switch for all of them, and *Choose games* for the games
+that differ. The standing daily chores take the same shape, so a reader who wants Genshin's chore
+and not Star Rail's can say so without losing either game's events. Built-ins are not edited in place; **Make it mine** copies one into the reader's
 own tasks with its ticks and numbers, and hides the original while the copy exists.
 
 **F18 — What changed.**

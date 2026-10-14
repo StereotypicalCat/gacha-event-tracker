@@ -425,6 +425,11 @@ selected tab fills with `raised` and turns ink; unselected tabs are faint and go
 - **Built-in question** (top of the dailies strip, once per game): one line of muted text —
   `Track Zenless Zone Zero's built-in weekly tasks?` — with a near-coloured **Yes** and a faint **No
   thanks** as plain text buttons. Never a card, never a modal; the strip renders for it alone.
+- **Per-game switch** (*What you see*, under the chores and built-in switches): a faint 12px line
+  stating the exceptions — `Every game`, `All but Genshin Impact`, `Only 3 games` — then a muted,
+  underlined **Choose games** text button (**Done** while open). Open, a wrap of game chips in the
+  game-focus chip style: the game's hue with a 12% wash when on, a 30% hue border and muted ink when off,
+  `aria-pressed`, in the reader's game order. Closed every visit; never a checkbox per game.
 - **Check-in goal control** (detail sheet, under the daily checklist): the status pills' style —
   Off / Each week / Across the event — then a small number field and, for weeks, a weekday select,
   both on `ground` with a hairline border like the notes field. Once a goal is set, a smaller

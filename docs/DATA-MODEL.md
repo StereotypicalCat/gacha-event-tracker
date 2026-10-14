@@ -221,11 +221,21 @@ Namespaced, versioned, and small. Nothing here ever goes to the server.
                                 //   focusGame, sort, view,
                                 //   timelineDayWidth, timelineGroup, showUpcoming,
                                 //   timelineSplitUpcoming, detectDaily, showChores,
+                                //   choresOn?, choresOff?,
                                 //   showWeeklyTasks, showMonthlyTasks, showCompleted, showIgnored, theme, regionConfirmed,
-                                //   onboarded, routineGames?, routinesAsked? }
-                                // routineGames is the games whose built-in weekly tasks
-                                // the reader turned on; routinesAsked the games already
-                                // asked about. Both absent means none — built-ins are
+                                //   onboarded, showRoutines?, routineGames?, routinesOff?,
+                                //   routinesAsked? }
+                                // Chores and built-in weekly tasks are each one global
+                                // answer plus the games that differ (src/shared/perGame.ts):
+                                // an on-list wins, then an off-list, then the global answer.
+                                // showChores is the chores' global answer (default true);
+                                // choresOn / choresOff the exceptions. showRoutines is the
+                                // built-ins' — absent means never answered, read as off,
+                                // and while absent the strip may ask about one game.
+                                // routineGames is the games whose built-ins are on (the
+                                // on-list, unchanged from before showRoutines existed),
+                                // routinesOff the off-list, routinesAsked the games already
+                                // asked about. Every list absent means none — built-ins are
                                 // opt-in for every install. PRD F17.
                                 // showWeeklyTasks / showMonthlyTasks say whether tasks of
                                 // that period sit in the strip's row under the dailies.
@@ -529,9 +539,12 @@ removes the task record only.
 
 **Built-in tasks** (`src/shared/routines.ts`) are not stored: they ship in the bundle, each with a
 `source` URL and the `asOf` date that page gives, and their ticks and numbers are stored under their
-`routine:` id exactly as a reader's task's are. Two prefs govern them: `routineGames` (games whose
-built-ins are on) and `routinesAsked` (games already asked), both **absent meaning none** so they
-are opt-in for every install. *Make it mine* adds a `mytask:` with `from: <routine id>` and copies
+`routine:` id exactly as a reader's task's are. Four prefs govern them: `showRoutines` (the answer
+for every game; **absent means never answered**, read as off), `routineGames` and `routinesOff`
+(games that differ from it, on and off), and `routinesAsked` (games the strip already asked about).
+The lists are **absent meaning none**, so built-ins are opt-in for every install. `routineGames`
+predates `showRoutines` and kept its meaning when it became the on-list — nothing was migrated, and
+a tab still running an older shell reads it the same way. *Make it mine* adds a `mytask:` with `from: <routine id>` and copies
 the routine's day log and amounts to it — additively, so deleting the copy shows the original
 with its own numbers again.
 

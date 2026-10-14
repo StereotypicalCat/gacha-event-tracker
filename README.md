@@ -197,7 +197,8 @@ No wiki publishes those, so they are a fixed list in the app rather than scraped
 the only thing on the page that expires tonight rather than next patch.
 
 Because nobody publishes them, they are the app's guess at your routine rather than anything you
-asked for — so **Show each game's own daily chores** in the settings turns them off. Only the
+asked for — so **Show each game's own daily chores** in the settings turns them off, for every game
+or, under *Choose games*, for only the ones you pick. Only the
 invented chores go: anything with a checklist is something you engaged with, including events you
 added yourself and marked daily, and those stay where they are. Nothing is discarded, so every tick
 and streak is waiting if you turn it back on.
