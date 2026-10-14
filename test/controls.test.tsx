@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import { Controls, ownState } from "../src/client/components/Controls.tsx";
+import { Controls, ownState, PerGameChips } from "../src/client/components/Controls.tsx";
 import { GameMetaProvider } from "../src/client/state/gameMeta.tsx";
 import { metaFor } from "../src/shared/games.ts";
 import type { Prefs } from "../src/client/state/usePrefs.ts";
@@ -305,17 +305,69 @@ describe("Controls: backup and export actions", () => {
 
 
 describe("Controls: built-in weekly tasks", () => {
-  test("a switch per game that has them, reflecting the reader's answer", () => {
-    const off = render(PREFS, 0, ["genshin", "zzz"]);
-    expect(off).toContain("Built-in weekly tasks for Zenless Zone Zero");
-    expect(off).not.toContain("for Genshin Impact");
-    const on = render({ ...PREFS, routineGames: ["zzz"] }, 0, ["genshin", "zzz"]);
-    const box = on.match(/<input type="checkbox"[^>]*>(?=[^<]*<span>Built-in weekly tasks for Zenless)/);
-    expect(box?.[0]).toContain('checked=""');
+  test("one global switch, not a checkbox per game", () => {
+    const html = render(PREFS, 0, ["genshin", "zzz", "endfield"]);
+    expect(html).toContain("Show built-in weekly tasks");
+    expect(html).not.toContain("Built-in weekly tasks for");
+  });
+
+  test("it reads showRoutines, and an unanswered one is off", () => {
+    const games = ["genshin", "zzz"];
+    const box = (html: string) =>
+      html.match(/<input type="checkbox"[^>]*>(?=[^<]*<span>Show built-in weekly tasks)/)?.[0];
+    expect(box(render(PREFS, 0, games))).not.toContain('checked=""');
+    expect(box(render({ ...PREFS, showRoutines: true }, 0, games))).toContain('checked=""');
+  });
+
+  test("a reader who said yes to one game before is told so", () => {
+    const html = render({ ...PREFS, routineGames: ["zzz"] }, 0, ["genshin", "zzz", "endfield"]);
+    expect(html).toContain("Only Zenless Zone Zero");
   });
 
   test("no switch when no game on the list has any", () => {
-    expect(render(PREFS)).not.toContain("Built-in weekly tasks");
+    expect(render(PREFS)).not.toContain("built-in weekly tasks");
+  });
+});
+
+describe("Controls: daily chores per game", () => {
+  test("the line under the switch states the exceptions", () => {
+    expect(render(PREFS)).toContain("Every game");
+    expect(render({ ...PREFS, choresOff: ["hsr"] })).toContain("All but Honkai: Star Rail");
+    expect(render({ ...PREFS, showChores: false, choresOn: ["genshin", "hsr"] })).toContain("Only 2 games");
+  });
+
+  test("the games are behind Choose games, closed until asked for", () => {
+    const html = render(PREFS);
+    expect(html).toMatch(/<button[^>]*aria-expanded="false"[^>]*>Choose games<\/button>/);
+    expect(html).not.toContain('aria-label="Daily chores per game"');
+  });
+
+  test("a game switched off for the reader is not offered, nor counted", () => {
+    // Its chore is not drawn anyway; a chip for it would be a control that does nothing.
+    expect(render({ ...PREFS, hiddenGames: ["hsr"], choresOff: ["hsr"] })).toContain("Every game");
+  });
+
+  test("each chip says whether that game's are on", () => {
+    const html = renderToStaticMarkup(
+      <GameMetaProvider value={(id) => metaFor(id, {})}>
+        <PerGameChips games={["genshin", "hsr"]} rule={{ all: true, off: ["hsr"] }} label="chores" onSet={() => {}} />
+      </GameMetaProvider>,
+    );
+    expect(html).toMatch(/aria-pressed="true"[^>]*><span[^>]*>Genshin Impact/);
+    expect(html).toMatch(/aria-pressed="false"[^>]*><span[^>]*>Honkai: Star Rail/);
+  });
+
+  test("an off chip stays readable, in the focus chip's colours", () => {
+    // Faint ink was about 2.7:1 on the dark surface — below the bar for a
+    // control. The game-focus chip's muted ink and \`.hue-chip\` hover are the house answer.
+    const html = renderToStaticMarkup(
+      <GameMetaProvider value={(id) => metaFor(id, {})}>
+        <PerGameChips games={["hsr"]} rule={{ all: false }} label="chores" onSet={() => {}} />
+      </GameMetaProvider>,
+    );
+    expect(html).toContain("hue-chip");
+    expect(html).toContain("color:var(--color-muted)");
+    expect(html).not.toContain("color:var(--color-faint)");
   });
 });
 
@@ -329,6 +381,13 @@ describe("Controls: the Your own summary counts tasks", () => {
 });
 
 describe("Controls: weekly and monthly tasks under the dailies", () => {
+  test("built-ins switched on globally count as a weekly task", () => {
+    expect(render({ ...PREFS, showRoutines: true }, 0, ["zzz"])).toContain("Show weekly tasks");
+    expect(render({ ...PREFS, showRoutines: true, routinesOff: ["zzz"] }, 0, ["zzz"])).not.toContain(
+      "Show weekly tasks",
+    );
+  });
+
   test("each switch appears once there is a task of its period, and reads its own pref", () => {
     // ZZZ's built-ins are weekly; there is no monthly task, so no monthly switch.
     const prefs = { ...PREFS, routineGames: ["zzz"] };

@@ -5,8 +5,10 @@ import { REGION_LABEL } from "../../shared/time.ts";
 import { useGameMeta } from "../state/gameMeta.tsx";
 import { moveGame } from "../state/gameOrder.ts";
 import type { ThemeChoice } from "../state/theme.ts";
-import type { Prefs } from "../state/usePrefs.ts";
+import { choreRule, routineRule, type Prefs } from "../state/usePrefs.ts";
 import { YourOwn } from "./YourOwn.tsx";
+import { isCustomGameId } from "../../shared/custom.ts";
+import { exceptionLine, setFor, shownFor, type PerGame } from "../../shared/perGame.ts";
 import { asOfLabel, routinesFor } from "../../shared/routines.ts";
 
 const REGIONS: Array<{ id: Region; label: string }> = (
@@ -92,15 +94,22 @@ export function Controls({
   /** Everything the reader entered themselves, and the ways to change it. */
   own: React.ComponentProps<typeof YourOwn>;
 }) {
-  const gameMeta = useGameMeta();
   const shown = games.filter((g) => !prefs.hiddenGames.includes(g)).length;
   const ownGames = Object.keys(own.games).length;
   const ownEvents = Object.keys(own.events).length;
+  const chores = choreRule(prefs);
+  const routines = routineRule(prefs);
+  // A hidden game draws no chore, and a reader's own game never had one, so
+  // neither is offered — a chip for it would be a control that does nothing.
+  const choreGames = games.filter((g) => !prefs.hiddenGames.includes(g) && !isCustomGameId(g));
+  const routineGames = games.filter((g) => routinesFor(g).length > 0);
   // Which periods have a task at all — the reader's own, or a built-in they
   // turned on — so a switch is offered only with something behind it.
   const periods = [
     ...(own.tasks ?? []).map((t) => t.period.unit),
-    ...(prefs.routineGames ?? []).flatMap((g) => routinesFor(g).map((r) => r.period.unit)),
+    ...routineGames
+      .filter((g) => shownFor(routines, g))
+      .flatMap((g) => routinesFor(g).map((r) => r.period.unit)),
   ];
   const taskPeriods = { week: periods.includes("week"), month: periods.includes("month") };
 
@@ -247,13 +256,54 @@ export function Controls({
                 "Commissions, resin" — and they were the one part of the strip
                 with no way out. Named for what it removes rather than for
                 "dailies", which would read as broken while the strip stayed on
-                screen showing the reader's own events. */}
-            <Check
+                screen showing the reader's own events. One answer for every
+                game, and the games that differ behind *Choose games*. */}
+            <PerGameSwitch
               checked={prefs.showChores}
               onChange={(showChores) => onUpdate({ showChores })}
               label="Show each game's own daily chores"
               hint="Commissions, resin, daily training and the rest. Nobody publishes these, so the app keeps a fixed list per game. Off, the strip shows only events with a checklist. Your ticks and streaks are kept either way."
+              rule={chores}
+              games={choreGames}
+              chipsLabel="Daily chores per game"
+              onSet={(game, value) => {
+                const { on, off } = setFor(chores, game, value);
+                onUpdate({ choresOn: on, choresOff: off });
+              }}
             />
+
+            {/* Opt-in: these are someone else's figures, each dated by its
+                source, so an unanswered switch is off. One answer for every
+                game that has them, and the games that differ behind *Choose
+                games* — where the per-game checkboxes used to be, one per game
+                and growing with every built-in we add. */}
+            {routineGames.length > 0 && (
+              <PerGameSwitch
+                checked={routines.all}
+                onChange={(showRoutines) => onUpdate({ showRoutines })}
+                label="Show built-in weekly tasks"
+                hint="Weekly tasks the app knows for some games, each from a cited page and dated by it. Off hides them; your ticks and numbers are kept."
+                rule={routines}
+                games={routineGames}
+                chipsLabel="Built-in weekly tasks per game"
+                titleFor={(game) => {
+                  const list = routinesFor(game);
+                  return `${list.map((r) => r.title).join(", ")} — from a source as of ${asOfLabel(list[0]!.asOf)}`;
+                }}
+                onSet={(game, value) => {
+                  const { on, off } = setFor(routines, game, value);
+                  onUpdate({
+                    routineGames: on,
+                    routinesOff: off,
+                    // Answering here answers the strip's question too.
+                    routinesAsked: [
+                      ...(prefs.routinesAsked ?? []).filter((g) => g !== game),
+                      game,
+                    ],
+                  });
+                }}
+              />
+            )}
 
             {/* Where weekly and monthly tasks sit: their own row under the
                 dailies. Only offered once there is a task of that period — a
@@ -274,36 +324,6 @@ export function Controls({
                 hint="Off hides them from the strip and its counts; your ticks and numbers are kept."
               />
             )}
-
-            {/* Beside the chores rather than on each game's row, which already
-                carries a handle, two arrows and a switch. Opt-in per game: these
-                are someone else's figures, each dated by its source. */}
-            {games
-              .filter((game) => routinesFor(game).length > 0)
-              .map((game) => {
-                const on = prefs.routineGames?.includes(game) ?? false;
-                const list = routinesFor(game);
-                return (
-                  <Check
-                    key={game}
-                    checked={on}
-                    onChange={(checked) =>
-                      onUpdate({
-                        routineGames: checked
-                          ? [...(prefs.routineGames ?? []), game]
-                          : (prefs.routineGames ?? []).filter((g) => g !== game),
-                        // Answering here answers the strip's question too.
-                        routinesAsked: [
-                          ...(prefs.routinesAsked ?? []).filter((g) => g !== game),
-                          game,
-                        ],
-                      })
-                    }
-                    label={`Built-in weekly tasks for ${gameMeta(game).name}`}
-                    hint={`${list.map((r) => r.title).join(", ")} — from a source as of ${asOfLabel(list[0]!.asOf)}. Off hides them; your numbers are kept.`}
-                  />
-                );
-              })}
 
             {ignoredCount > 0 && (
               <Check
@@ -393,6 +413,120 @@ function themeLabel(theme: ThemeChoice): string {
 function gamesState(total: number, shown: number, ordered: boolean): string {
   if (total === 0) return "none yet";
   return `${shown} of ${total} on · ${ordered ? "your order" : "A–Z"}`;
+}
+
+/**
+ * A switch the app answers per game: one checkbox for every game, a line naming
+ * the games that differ, and *Choose games* to change them.
+ *
+ * The games sit behind a disclosure rather than as a checkbox each, because
+ * that list grows with every game we add and every built-in we ship, and most
+ * readers answer once for all of them. Closed is per-visit state, like *show
+ * all N*: nothing about it is a preference.
+ */
+function PerGameSwitch({
+  checked,
+  onChange,
+  label,
+  hint,
+  rule,
+  games,
+  chipsLabel,
+  titleFor,
+  onSet,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label: string;
+  hint: string;
+  rule: PerGame;
+  games: readonly LaneId[];
+  chipsLabel: string;
+  titleFor?: (game: LaneId) => string;
+  onSet: (game: LaneId, value: boolean) => void;
+}) {
+  const gameMeta = useGameMeta();
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <Check checked={checked} onChange={onChange} label={label} hint={hint} />
+      {games.length > 0 && (
+        <div className="ml-6 mt-1.5">
+          <p className="text-xs text-faint">
+            {exceptionLine(rule, games, (g) => gameMeta(g).name)}
+            {" · "}
+            <button
+              type="button"
+              aria-expanded={open}
+              onClick={() => setOpen(!open)}
+              className="text-muted underline decoration-hairline underline-offset-2 transition-colors hover:text-ink"
+            >
+              {open ? "Done" : "Choose games"}
+            </button>
+          </p>
+          {open && (
+            <PerGameChips
+              games={games}
+              rule={rule}
+              label={chipsLabel}
+              onSet={onSet}
+              {...(titleFor !== undefined ? { titleFor } : {})}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * One chip per game, pressed when that game's are shown. The game-focus chip's
+ * look — its hue when on, faint when off — so it reads as the same kind of
+ * answer. Exported so its states are tested without a click.
+ */
+export function PerGameChips({
+  games,
+  rule,
+  label,
+  titleFor,
+  onSet,
+}: {
+  games: readonly LaneId[];
+  rule: PerGame;
+  label: string;
+  titleFor?: (game: LaneId) => string;
+  onSet: (game: LaneId, value: boolean) => void;
+}) {
+  const gameMeta = useGameMeta();
+  return (
+    <div role="group" aria-label={label} className="mt-2 flex max-w-2xl flex-wrap gap-1.5">
+      {games.map((id) => {
+        const game = gameMeta(id);
+        const on = shownFor(rule, id);
+        return (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={on}
+            onClick={() => onSet(id, !on)}
+            {...(titleFor !== undefined ? { title: titleFor(id) } : {})}
+            // `.hue-chip` gives the focus chip's hover off `--hue` and
+            // `aria-pressed`; off is muted ink, not faint, which was too dim
+            // to read as a control on the dark ground.
+            className="hue-chip rounded-full border px-2.5 py-1 text-xs font-medium"
+            style={{
+              ["--hue" as string]: game.hue,
+              borderColor: on ? game.hue : `color-mix(in srgb, ${game.hue} 30%, transparent)`,
+              color: on ? game.hue : "var(--color-muted)",
+              background: on ? `color-mix(in srgb, ${game.hue} 12%, transparent)` : "transparent",
+            }}
+          >
+            <span className="hue-chip-label">{game.name}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 /**
