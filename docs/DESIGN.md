@@ -415,6 +415,10 @@ selected tab fills with `raised` and turns ink; unselected tabs are faint and go
   label, a small numeric field on `ground`, `/ 2,100 points`, and a near-pill Save. Weekly and
   monthly counts sit on their own faint line under the strip's heading, so the reset countdown
   never wraps.
+- **Example row** (top of *Add an event* and *Add a task*, never on an edit): a label-type "Start
+  from an example", then neutral pills — `near` border and wash when pressed, the form's own pill
+  rather than a game chip, because an example belongs to no game — and the pressed example's
+  one-line hint in faint. The form's choices (how often, repeat, done when) use the same pill.
 - **What's new card** (top of the main column, never the rail): the eyebrow, up to five lines of
   kind (faint, fixed width) · title (muted) · date (faint, hidden on phones), then a near-pill
   **Got it** and a faint **See all**. Shown once per batch of changes; never modal.

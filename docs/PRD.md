@@ -355,8 +355,10 @@ Four constraints, each protecting something that already exists:
   no server to restore from.
 
 A reader's event may also state how it comes round again. The form asks that
-directly after **Kind**, before it asks for any date, because the answer
-decides which dates are even questions:
+(**How often**) directly after the name, before it asks for any date, because
+the answer decides which dates are even questions. Its five answers read *Once ·
+Every day · Every week · Every month · On its own cycle* on screen; the table
+names them by what is stored:
 
 | Cadence | What it asks for | What it stores |
 |---|---|---|
@@ -378,6 +380,17 @@ round before it ends; a hand-stated cycle length can, and is refused.
 Which of the five a saved event opens in is derived from the rule itself, so an
 event made before this control existed, or one that arrived by import, opens in
 whichever answer actually describes it.
+
+**Examples to start from.** Readers who knew what they wanted could not see which answers produced
+it, so *Add an event* and *Add a task* open with a row of examples — a banner with a known end, a
+login event, a monthly shop reset, a recurring endgame cycle, maintenance; a weekly points target, a
+few days each week, a monthly shop buy-out, a monthly target (`src/shared/templates.ts`). One tap
+sets the form's **shape** — kind, how often, how it repeats, how it is measured — and nothing else:
+never a name (the example's text is only a placeholder), a date, a time, a target or a game, and no
+date is guessed, not even today. A figure the reader did not type would read as one we sourced, the
+bar built-in tasks are held to. Save stays disabled until every date and figure the shape needs is
+typed, and says what is still needed rather than greying out in silence. Editing never shows the
+examples.
 
 The rule is stored; its occurrences are derived, and each one is an ordinary
 event everywhere in the app: its own countdown, its own completion, its own
@@ -560,7 +573,8 @@ Some chores roll weekly or monthly rather than daily — earning ZZZ's weekly ac
 finishing Endfield's weekly routine — and no source publishes them, so they were nowhere in the app.
 A reader can now set them up per game in *Your own*: a title, every week (from a weekday they pick)
 or every month (from a day of the month), and either **tick it off** (N days in the period, one by
-default) or **reach a number** (a target such as 2,100, with an optional unit).
+default) or **reach a number** (a target such as 2,100, with an optional unit). The form opens with
+examples to start from, held to the same bar as the event form's (F13, *Examples to start from*).
 
 - **They roll on the game's clock.** A week starts at the game's daily reset on the chosen day, on
   the reader's server — the same clock every daily tick is cut on, so nothing new to get wrong.

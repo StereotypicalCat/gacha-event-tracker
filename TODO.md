@@ -45,7 +45,9 @@
     `src/ingest/parsers/holodori.ts` against a new fixture, keeping the old one. The wiki stopped
     being maintained (`holodori.wiki` is a Miraheze wiki) → find another source; assess it in
     `docs/SOURCES.md` as the others are.
-- [ ] Give *Add an event* and *Add a task* easy-to-use templates, and give both forms a UI/UX pass.
+- [x] Give *Add an event* and *Add a task* easy-to-use templates, and give both forms a UI/UX pass.
+  Done 2026-10-14 as *examples to start from* — see PRD F13 and
+  `docs/superpowers/specs/2026-10-14-form-examples-design.md`.
   - Templates: one tap fills the common shapes so the reader only adjusts the details — for
     example a weekly points task, a monthly shop reset, a login event, a banner with a known end.
     A template only pre-fills fields; nothing is saved until the reader saves, and no figure is
