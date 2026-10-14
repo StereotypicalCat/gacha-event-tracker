@@ -115,6 +115,20 @@ completion mark every user has ever made, silently, with no error and no way to 
 server-side (the server never had the data). If the scheme must change, ship a client-side
 migration that reads the old keys and remaps them, and keep that migration for at least a year.
 
+**A parser fix can move IDs too, and gets the same treatment.** `src/client/state/retiredIds.ts`
+holds an explicit table of IDs the feed stopped publishing and what each became. On every load and
+every import, `progress`, `daily` and `ignored` entries under a retired ID **move** to the new one:
+
+- **A move inside the same storage key, not a copy, and not a deleted key.** The mark survives under
+  the ID the feed now uses. A copy left under the old ID would be carried forward again on each load
+  and bring back a mark the reader had since cleared.
+- **When both IDs hold an entry**, each store's import merge decides — days are unioned, the earlier
+  ignore stands — except that progress keeps the later record's fields *and* any field only the other
+  held, because both rows were the reader's own.
+- **An unreadable entry is left where it is.** These run in `useState` initialisers, where a throw is
+  a blank screen.
+- **A table, never a pattern**, and each entry kept for at least a year.
+
 The date suffix disambiguates reruns of the same event. Title is slugified from the *source's*
 title, so a wiki renaming an event creates a new ID — reconciliation detects this as a near-match
 (same game, overlapping dates, high title similarity) and treats it as an update rather than a new

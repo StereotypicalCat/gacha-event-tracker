@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { carryMarks } from "./retiredIds.ts";
 import { readJson, writeJson } from "./storage.ts";
 
 export interface Mark {
@@ -17,7 +18,7 @@ export type Marks = Record<string, Mark>;
  */
 export function useMarkSet(storageKey: string) {
   const [marks, setMarks] = useState<Marks>(() =>
-    readJson<Marks>(storageKey, {}),
+    carryMarks(readJson<Marks>(storageKey, {})),
   );
 
   useEffect(() => {
@@ -36,21 +37,23 @@ export function useMarkSet(storageKey: string) {
 
   const clear = useCallback(() => setMarks({}), []);
 
-  /**
-   * Union merge, keeping the earlier mark. Never removes: nothing else holds a
-   * copy of these, so a silent deletion would be unrecoverable.
-   */
   const merge = useCallback((incoming: Marks) => {
-    setMarks((prev) => {
-      const next = { ...prev };
-      for (const [id, value] of Object.entries(incoming)) {
-        const existing = next[id];
-        next[id] =
-          existing === undefined || value.at < existing.at ? value : existing;
-      }
-      return next;
-    });
+    setMarks((prev) => mergeMarks(prev, incoming));
   }, []);
 
   return { marks, toggle, merge, clear };
+}
+
+/**
+ * Union merge, keeping the earlier mark. Never removes: nothing else holds a
+ * copy of these, so a silent deletion would be unrecoverable.
+ */
+export function mergeMarks(current: Marks, incoming: Marks): Marks {
+  const next = { ...current };
+  for (const [id, value] of Object.entries(incoming)) {
+    const existing = next[id];
+    next[id] =
+      existing === undefined || value.at < existing.at ? value : existing;
+  }
+  return next;
 }

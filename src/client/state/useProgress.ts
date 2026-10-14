@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Effort } from "../../shared/effort.ts";
 import type { Goal } from "../../shared/goal.ts";
+import { carryProgress } from "./retiredIds.ts";
 import { KEYS, readJson, writeJson } from "./storage.ts";
 import type { Marks } from "./useMarkSet.ts";
 
@@ -46,14 +47,14 @@ export type ProgressMap = Record<string, Progress>;
  */
 function load(): ProgressMap {
   const stored = readJson<ProgressMap>(KEYS.progress, {});
-  if (Object.keys(stored).length > 0) return stored;
+  if (Object.keys(stored).length > 0) return carryProgress(stored);
 
   const legacy = readJson<Marks>(KEYS.completions, {});
   const seeded: ProgressMap = {};
   for (const [id, mark] of Object.entries(legacy)) {
     seeded[id] = { status: "done", at: mark.at };
   }
-  return seeded;
+  return carryProgress(seeded);
 }
 
 /**

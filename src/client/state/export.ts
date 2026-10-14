@@ -1,4 +1,5 @@
 import type { CustomEvents, CustomGames } from "../../shared/custom.ts";
+import { carryDaily, carryMarks, carryProgress } from "./retiredIds.ts";
 import type { DailyLogMap } from "./useDailyLog.ts";
 import type { Prefs } from "./usePrefs.ts";
 import type { ProgressMap } from "./useProgress.ts";
@@ -110,10 +111,11 @@ export function parseImportData(parsed: unknown): ParsedImport | null {
   const prefs =
     typeof data.prefs === "object" && data.prefs !== null ? data.prefs : null;
 
+  // A file exported before an event id moved still names the old one.
   return {
-    progress,
-    daily,
-    ignored,
+    progress: progress === null ? null : carryProgress(progress),
+    daily: daily === null ? null : carryDaily(daily),
+    ignored: ignored === null ? null : carryMarks(ignored),
     customGames: data.customGames,
     customEvents: data.customEvents,
     tasks: data.tasks,

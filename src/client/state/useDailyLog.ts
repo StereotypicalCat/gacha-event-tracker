@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { carryDaily } from "./retiredIds.ts";
 import { KEYS, readJson, writeJson } from "./storage.ts";
 
 export interface DailyLog {
@@ -22,7 +23,7 @@ export type DailyLogMap = Record<string, DailyLog>;
  */
 export function useDailyLog() {
   const [logs, setLogs] = useState<DailyLogMap>(() =>
-    readJson<DailyLogMap>(KEYS.daily, {}),
+    carryDaily(readJson<DailyLogMap>(KEYS.daily, {})),
   );
 
   useEffect(() => {
@@ -48,31 +49,36 @@ export function useDailyLog() {
     [logs],
   );
 
-  /**
-   * Union merge on import: every day either side recorded is a day the reader
-   * actually played, so keeping both is the only answer that cannot lose one.
-   */
   const merge = useCallback((incoming: DailyLogMap) => {
-    setLogs((prev) => {
-      const next = { ...prev };
-      for (const [id, log] of Object.entries(incoming)) {
-        // An imported file is untrusted input; a malformed entry is skipped
-        // rather than allowed to take the store down with it.
-        if (!Array.isArray(log?.days)) continue;
-        const days = log.days.filter((d): d is string => typeof d === "string");
-        if (days.length === 0) continue;
-        const union = [...new Set([...(next[id]?.days ?? []), ...days])].sort();
-        const at = next[id]?.at;
-        const incomingAt =
-          typeof log.at === "string" ? log.at : new Date().toISOString();
-        next[id] = {
-          days: union,
-          at: at === undefined || incomingAt > at ? incomingAt : at,
-        };
-      }
-      return next;
-    });
+    setLogs((prev) => mergeDailyLogs(prev, incoming));
   }, []);
 
   return { logs, toggleDay, daysFor, merge };
+}
+
+/**
+ * Union merge on import: every day either side recorded is a day the reader
+ * actually played, so keeping both is the only answer that cannot lose one.
+ */
+export function mergeDailyLogs(
+  current: DailyLogMap,
+  incoming: DailyLogMap,
+): DailyLogMap {
+  const next = { ...current };
+  for (const [id, log] of Object.entries(incoming)) {
+    // An imported file is untrusted input; a malformed entry is skipped
+    // rather than allowed to take the store down with it.
+    if (!Array.isArray(log?.days)) continue;
+    const days = log.days.filter((d): d is string => typeof d === "string");
+    if (days.length === 0) continue;
+    const union = [...new Set([...(next[id]?.days ?? []), ...days])].sort();
+    const at = next[id]?.at;
+    const incomingAt =
+      typeof log.at === "string" ? log.at : new Date().toISOString();
+    next[id] = {
+      days: union,
+      at: at === undefined || incomingAt > at ? incomingAt : at,
+    };
+  }
+  return next;
 }
