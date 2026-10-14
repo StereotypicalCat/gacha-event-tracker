@@ -555,7 +555,7 @@ describe("stating a repeat", () => {
       />,
     );
     expect(html).toContain("Repeat");
-    expect(html).toContain("with a delay");
+    expect(html).toContain("Comes back after a wait");
   });
 
   test("a rule that reopens as it closes shows its cadence rather than a control", () => {
@@ -940,10 +940,11 @@ describe("the cadence control", () => {
 
   test("a fresh form offers all five answers and opens on one-off", () => {
     const html = render();
-    expect(html).toContain("Cadence");
-    for (const answer of ["one-off", "daily", "weekly", "monthly", "custom"]) {
+    expect(html).toContain("How often");
+    for (const answer of ["Once", "Every day", "Every week", "Every month", "On its own cycle"]) {
       expect(html).toContain(answer);
     }
+    expect(html).toMatch(/aria-pressed="true"[^>]*>Once</);
     // A one-off is what the form was before any of this, so it still asks for
     // an end and still lets the reader say they do not know it.
     expect(html).toContain("Ends");
@@ -971,25 +972,25 @@ describe("the cadence control", () => {
     const daily = render(
       event({ endsAt: null, endPrecision: "unknown", repeat: { unit: "days", interval: 1, until: null } }),
     );
-    expect(daily).toContain('value="daily" selected=""');
+    expect(daily).toMatch(/aria-pressed="true"[^>]*>Every day</);
     const monthly = render(
       event({ endsAt: null, endPrecision: "unknown", repeat: { unit: "months", interval: 1, until: null } }),
     );
-    expect(monthly).toContain('value="monthly" selected=""');
+    expect(monthly).toMatch(/aria-pressed="true"[^>]*>Every month</);
   });
 
   test("a dated recurring event reopens as a custom, with its window intact", () => {
     // Presets carry no window, so anything that states one has to land here —
     // and the end date it stated has to still be on screen.
     const html = render(event({ repeat: { unit: "days", interval: 26, until: null } }));
-    expect(html).toContain('value="custom" selected=""');
+    expect(html).toMatch(/aria-pressed="true"[^>]*>On its own cycle</);
     expect(html).toContain("Ends");
     expect(html).toContain("Repeat");
   });
 
   test("a one-off shows no repeat machinery at all", () => {
     const html = render(event());
-    expect(html).toContain('value="one-off" selected=""');
+    expect(html).toMatch(/aria-pressed="true"[^>]*>Once</);
     expect(html).not.toContain("Cycle length");
     expect(html).not.toContain("Wait");
     expect(html).not.toContain("worked out from your dates");

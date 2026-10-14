@@ -21,6 +21,8 @@ import {
 import { EventType } from "../../shared/schema.ts";
 import { useGameMeta } from "../state/gameMeta.tsx";
 import { readerInstant, type EventDraft } from "../state/useCustom.ts";
+import { EVENT_TEMPLATES, type EventTemplate } from "../../shared/templates.ts";
+import { ExampleRow, field, pill, StillNeeded } from "./formParts.tsx";
 
 /**
  * Entering a game and an event yourself (PRD F13).
@@ -275,7 +277,7 @@ function labelClass(): string {
 }
 
 function inputClass(): string {
-  return "mt-1 w-full rounded-lg border border-hairline bg-ground px-3 py-2 text-sm text-ink outline-none focus:border-faint";
+  return `mt-1 w-full ${field}`;
 }
 
 export function GameForm({
@@ -359,6 +361,242 @@ function fields(iso: string | null): { date: string; time: string } {
   };
 }
 
+/** The kinds, in the words a reader uses. What is stored stays the enum value. */
+const KIND_LABEL: Record<EventType, string> = {
+  banner: "Banner",
+  story: "Story",
+  rerun: "Rerun",
+  challenge: "Challenge / endgame",
+  login: "Login rewards",
+  shop: "Shop",
+  maintenance: "Maintenance",
+  other: "Other",
+};
+
+const CADENCES: readonly { value: Cadence; label: string }[] = [
+  { value: "one-off", label: "Once" },
+  { value: "daily", label: "Every day" },
+  { value: "weekly", label: "Every week" },
+  { value: "monthly", label: "Every month" },
+  { value: "custom", label: "On its own cycle" },
+];
+
+const REPEAT_MODES: readonly { value: RepeatMode; label: string }[] = [
+  { value: "never", label: "Doesn't repeat" },
+  { value: "forever", label: "Comes back as it ends" },
+  { value: "delay", label: "Comes back after a wait" },
+];
+
+/**
+ * The answers that decide which questions the event form asks — what an
+ * example sets (`src/shared/templates.ts`), plus whether the reader has taken
+ * the cycle length over from the measured one.
+ */
+export interface EventShape {
+  type: EventType;
+  cadence: Cadence;
+  repeatMode: RepeatMode;
+  endKnown: boolean;
+  ownCadence: boolean;
+}
+
+/** Everything the event form holds, as typed. */
+export interface EventFormValues extends EventShape {
+  game: LaneId;
+  title: string;
+  summary: string;
+  startDate: string;
+  startTime: string;
+  endDate: string;
+  endTime: string;
+  cadenceUnit: RepeatUnit;
+  cadenceAmount: string;
+}
+
+/**
+ * A shape with an example applied. Only the shape: the name, the dates, the
+ * note and the game are the reader's and stay as typed. A cycle length they
+ * took over by hand goes back to the measured one, because it was stated for
+ * whatever they had before, not for this.
+ */
+export function withEventTemplate(shape: EventShape, t: EventTemplate): EventShape {
+  return { ...shape, ...t.sets, ownCadence: false };
+}
+
+/**
+ * A shape with a new "how often". Choosing *On its own cycle* while the repeat
+ * says *Doesn't repeat* moves it to *Comes back as it ends*: a cycle that never
+ * comes back is a contradiction on screen, and the plain one-off is already
+ * *Once*. Any other answer the reader gave is kept.
+ */
+export function withCadence(shape: EventShape, cadence: Cadence): EventShape {
+  return {
+    ...shape,
+    cadence,
+    repeatMode: cadence === "custom" && shape.repeatMode === "never" ? "forever" : shape.repeatMode,
+  };
+}
+
+/**
+ * What the event still lacks before it can be saved, in the order the form
+ * asks. Mistakes — dates the wrong way round, a cycle that comes round early —
+ * are not in it: those are said in critical beside their field.
+ */
+export function eventStillNeeded(s: {
+  title: string;
+  startDate: string;
+  datedWindow: boolean;
+  endKnown: boolean;
+  endDate: string;
+  delayNeedsEnd: boolean;
+  needsCycle: boolean;
+  needsWait?: boolean;
+}): string[] {
+  const needs: string[] = [];
+  if (s.title.trim() === "") needs.push("a name");
+  if (s.startDate === "") needs.push("a start date");
+  if ((s.datedWindow && s.endKnown && s.endDate === "") || s.delayNeedsEnd) {
+    needs.push("an end date");
+  }
+  if (s.needsCycle) needs.push("a cycle length");
+  if (s.needsWait) needs.push("a wait");
+  return needs;
+}
+
+/**
+ * Everything the event form works out from what is typed — the instants, the
+ * rule, each mistake, what is still needed, and the draft a save would write.
+ *
+ * One pure function rather than a block inside the render, so the examples
+ * can be proved to complete into a saveable event without a click, and so the
+ * still-needed line and Save's disabled state read the same answer.
+ */
+export function eventFormState(v: EventFormValues, existingUntil: string | null) {
+  // A preset's period is its window, so it has no end to state. The end the
+  // reader may have typed under a different cadence is kept in state rather
+  // than cleared — hiding a field and quietly discarding what is in it is how
+  // a form loses somebody's work when they change their mind back.
+  const preset = v.cadence === "daily" || v.cadence === "weekly" || v.cadence === "monthly";
+  const datedWindow = v.cadence === "one-off" || v.cadence === "custom";
+
+  const startsAt = v.startDate === "" ? null : readerInstant(v.startDate, v.startTime, "start");
+  const endsAt =
+    !datedWindow || !v.endKnown || v.endDate === ""
+      ? null
+      : readerInstant(v.endDate, v.endTime, "end");
+
+  const endMissing = datedWindow && v.endKnown && v.endDate !== "" && endsAt === null;
+  const backwards = startsAt !== null && endsAt !== null && endsAt <= startsAt;
+
+  const startMs = startsAt === null ? null : Date.parse(startsAt);
+  const endMs = endsAt === null ? null : Date.parse(endsAt);
+
+  const amount = Number(v.cadenceAmount);
+  const amountValid = Number.isInteger(amount) && amount >= 1 && amount <= 365;
+
+  // What the dates already say, when they say anything. Null covers both "no
+  // end given yet" and a window that is no whole number of any unit — two
+  // exact times a few hours apart — where rounding would move a boundary the
+  // reader chose, so the form asks instead.
+  const contiguousMs = endMs === null ? null : contiguousOpening(endMs, v.endTime !== "");
+  const measured =
+    startMs === null || contiguousMs === null ? null : repeatSpanning(startMs, contiguousMs);
+  const measuring = v.repeatMode === "forever" && !v.ownCadence && measured !== null;
+
+  // A delay is measured from the end, so it has nothing to work with until one
+  // is given. Forever still does: the reader states the cadence and each
+  // occurrence runs until the next opens.
+  const delayNeedsEnd = v.cadence === "custom" && v.repeatMode === "delay" && endMs === null;
+
+  const repeat = repeatOf({
+    cadence: v.cadence,
+    mode: v.repeatMode,
+    measuring,
+    measured,
+    startMs,
+    contiguousMs,
+    unit: v.cadenceUnit,
+    amount,
+    until: existingUntil,
+  });
+
+  // Only `custom` can be incomplete. A preset is one unit with no window and
+  // is therefore always sayable, and a one-off has no repeat to get wrong.
+  const needsCycle =
+    v.cadence === "custom" && v.repeatMode === "forever" && !measuring && !amountValid;
+  const needsWait = v.cadence === "custom" && v.repeatMode === "delay" && !amountValid;
+  // A wait that is given, against an end that is given, and still lands on no
+  // whole unit from the start: unstatable rather than unstated, so it is a
+  // mistake said beside the wait, not a gap in the still-needed line.
+  const unstatableWait =
+    v.cadence === "custom" && v.repeatMode === "delay" && !delayNeedsEnd && amountValid &&
+    repeat === null;
+  const repeatIncomplete =
+    needsCycle ||
+    (v.cadence === "custom" && v.repeatMode === "delay" && (delayNeedsEnd || repeat === null));
+
+  // The same predicate the schema refines on, so the form cannot start
+  // refusing saves the schema would accept or promising ones it will reject.
+  const earlyReturn =
+    startsAt !== null &&
+    comesRoundEarly(Date.parse(startsAt), endsAt === null ? null : Date.parse(endsAt), repeat);
+
+  const needs = eventStillNeeded({
+    title: v.title,
+    startDate: v.startDate,
+    datedWindow,
+    endKnown: v.endKnown,
+    endDate: v.endDate,
+    delayNeedsEnd,
+    needsCycle,
+    needsWait,
+  });
+
+  const valid =
+    needs.length === 0 &&
+    v.game !== "" &&
+    startsAt !== null &&
+    !backwards &&
+    !endMissing &&
+    endStated(datedWindow, v.endKnown, v.endDate) &&
+    !earlyReturn &&
+    !repeatIncomplete;
+
+  const draft: EventDraft | null =
+    startsAt === null
+      ? null
+      : {
+          game: v.game,
+          title: v.title,
+          type: v.type,
+          summary: v.summary === "" ? null : v.summary,
+          startsAt,
+          startHasTime: v.startTime !== "",
+          endsAt,
+          endHasTime: v.endTime !== "",
+          repeat,
+        };
+
+  return {
+    preset,
+    datedWindow,
+    startsAt,
+    endsAt,
+    endMs,
+    measured,
+    measuring,
+    delayNeedsEnd,
+    repeat,
+    backwards,
+    endMissing,
+    earlyReturn,
+    unstatableWait,
+    needs,
+    valid,
+    draft,
+  };
+}
+
 export function EventForm({
   lanes,
   customGames,
@@ -383,26 +621,6 @@ export function EventForm({
   strandedBy?: ((draft: EventDraft) => number) | undefined;
 }) {
   const gameMeta = useGameMeta();
-  const start = fields(initial?.startsAt ?? null);
-  const end = fields(initial?.endsAt ?? null);
-
-  // Round-tripped through the same fields-then-readerInstant path the live
-  // form uses, rather than read straight off the record. The two disagree: a
-  // day-precision end is stored as whatever instant it was written at, and the
-  // form re-resolves it to the end of the reader's own day. Deriving the
-  // opening state from the stored value and everything after it from the
-  // re-resolved one is how the control opens saying "with a delay" about a
-  // rule that has no gap at all.
-  const initialStartTime = initial?.startPrecision === "exact" ? start.time : "";
-  const initialEndTime = initial?.endPrecision === "exact" ? end.time : "";
-  const initialStartsAt =
-    start.date === ""
-      ? null
-      : (readerInstant(start.date, initialStartTime, "start") ?? null);
-  const initialEndsAt =
-    initial?.endsAt == null || end.date === ""
-      ? null
-      : (readerInstant(end.date, initialEndTime, "end") ?? null);
 
   // The reader's own games first, and so the default too. Someone filling this
   // in by hand is usually doing it *because* the game isn't tracked; making
@@ -412,139 +630,72 @@ export function EventForm({
     (a, b) => Number(isCustomGameId(b)) - Number(isCustomGameId(a)),
   );
 
-  const [game, setGame] = useState<LaneId>(
-    initial?.game ?? ordered[0] ?? Object.keys(customGames)[0] ?? "",
-  );
-  const [title, setTitle] = useState(initial?.title ?? "");
-  const [type, setType] = useState<EventType>(initial?.type ?? "other");
-  const [summary, setSummary] = useState(initial?.summary ?? "");
-  const [startDate, setStartDate] = useState(start.date);
-  const [startTime, setStartTime] = useState(
-    initialStartTime,
-  );
-  // Separate from an empty end date so "I don't know" is a thing the reader
-  // states, not a field they leave blank and hope about.
-  const [endKnown, setEndKnown] = useState(initial ? initial.endsAt !== null : true);
-  // Asked before the dates, because it decides which of them are even
-  // questions: a preset's period is its window, so there is no end to type.
-  const [cadence, setCadence] = useState<Cadence>(() =>
-    cadenceOf(initial?.endsAt ?? null, initial?.repeat ?? null),
-  );
-  const [endDate, setEndDate] = useState(end.date);
-  const [endTime, setEndTime] = useState(
-    initialEndTime,
-  );
-  // Three answers rather than a unit and a number, because "how often" is
-  // rarely the question a reader actually has. They know it comes back the
-  // moment it ends, or that it comes back after a wait; the cadence follows
-  // from that and from dates they have already typed.
-  const [repeatMode, setRepeatMode] = useState<RepeatMode>(() =>
-    initial === undefined
-      ? "never"
-      : repeatModeOf(
-          Date.parse(initialStartsAt ?? initial.startsAt),
-          initialEndsAt === null
-            ? null
-            : contiguousOpening(Date.parse(initialEndsAt), initialEndTime !== ""),
-          initial.repeat,
-        ),
-  );
-  // Measuring is the convenience, not a cage: an irregular rotation still has
-  // to be sayable when the first window does not describe it.
-  const [ownCadence, setOwnCadence] = useState(false);
-  const opening = openingControls(initialStartsAt, initialEndsAt, initialEndTime !== "", initial?.repeat ?? null);
-  const [cadenceUnit, setCadenceUnit] = useState<RepeatUnit>(opening.unit);
-  const [cadenceAmount, setCadenceAmount] = useState(String(opening.amount));
-
-  // A preset's period is its window, so it has no end to state. The end the
-  // reader may have typed under a different cadence is kept in state rather
-  // than cleared — hiding a field and quietly discarding what is in it is how
-  // a form loses somebody's work when they change their mind back.
-  const preset = cadence === "daily" || cadence === "weekly" || cadence === "monthly";
-  const datedWindow = cadence === "one-off" || cadence === "custom";
-
-  const startsAt = startDate === "" ? null : readerInstant(startDate, startTime, "start");
-  const endsAt =
-    !datedWindow || !endKnown || endDate === ""
-      ? null
-      : readerInstant(endDate, endTime, "end");
-
-  const endMissing = datedWindow && endKnown && endDate !== "" && endsAt === null;
-  const backwards = startsAt !== null && endsAt !== null && endsAt <= startsAt;
-
-  const startMs = startsAt === null ? null : Date.parse(startsAt);
-  const endMs = endsAt === null ? null : Date.parse(endsAt);
-
-  const amount = Number(cadenceAmount);
-  const amountValid = Number.isInteger(amount) && amount >= 1 && amount <= 365;
-  const existingUntil = initial?.repeat?.until ?? null;
-
-  // What the dates already say, when they say anything. Null covers both "no
-  // end given yet" and a window that is no whole number of any unit — two
-  // exact times a few hours apart — where rounding would move a boundary the
-  // reader chose, so the form asks instead.
-  const contiguousMs =
-    endMs === null ? null : contiguousOpening(endMs, endTime !== "");
-  const measured =
-    startMs === null || contiguousMs === null
-      ? null
-      : repeatSpanning(startMs, contiguousMs);
-  const measuring = repeatMode === "forever" && !ownCadence && measured !== null;
-
-  // A delay is measured from the end, so it has nothing to work with until one
-  // is given. Forever still does: the reader states the cadence and each
-  // occurrence runs until the next opens.
-  const delayNeedsEnd = repeatMode === "delay" && endMs === null;
-
-  const repeat = repeatOf({
-          cadence,
-          mode: repeatMode,
-          measuring,
-          measured,
-          startMs,
-          contiguousMs,
-          unit: cadenceUnit,
-          amount,
-          until: existingUntil,
-        });
-
-  // Only `custom` can be incomplete. A preset is one unit with no window and
-  // is therefore always sayable, and a one-off has no repeat to get wrong.
-  const repeatIncomplete =
-    cadence === "custom" &&
-    ((repeatMode === "forever" && !measuring && !amountValid) ||
-      (repeatMode === "delay" && (delayNeedsEnd || repeat === null)));
-
-  // The same predicate the schema refines on, so the form cannot start
-  // refusing saves the schema would accept or promising ones it will reject.
-  const earlyReturn =
-    startsAt !== null &&
-    comesRoundEarly(
-      Date.parse(startsAt),
-      endsAt === null ? null : Date.parse(endsAt),
-      repeat,
+  const [v, setV] = useState<EventFormValues>(() => {
+    const start = fields(initial?.startsAt ?? null);
+    const end = fields(initial?.endsAt ?? null);
+    // Round-tripped through the same fields-then-readerInstant path the live
+    // form uses, rather than read straight off the record. The two disagree: a
+    // day-precision end is stored as whatever instant it was written at, and
+    // the form re-resolves it to the end of the reader's own day. Deriving the
+    // opening state from the stored value and everything after it from the
+    // re-resolved one is how the control opens saying "with a delay" about a
+    // rule that has no gap at all.
+    const startTime = initial?.startPrecision === "exact" ? start.time : "";
+    const endTime = initial?.endPrecision === "exact" ? end.time : "";
+    const initialStartsAt =
+      start.date === "" ? null : (readerInstant(start.date, startTime, "start") ?? null);
+    const initialEndsAt =
+      initial?.endsAt == null || end.date === ""
+        ? null
+        : (readerInstant(end.date, endTime, "end") ?? null);
+    const opening = openingControls(
+      initialStartsAt,
+      initialEndsAt,
+      endTime !== "",
+      initial?.repeat ?? null,
     );
+    return {
+      game: initial?.game ?? ordered[0] ?? Object.keys(customGames)[0] ?? "",
+      title: initial?.title ?? "",
+      type: initial?.type ?? "other",
+      summary: initial?.summary ?? "",
+      startDate: start.date,
+      startTime,
+      // Separate from an empty end date so "I don't know" is a thing the
+      // reader states, not a field they leave blank and hope about.
+      endKnown: initial ? initial.endsAt !== null : true,
+      // Asked before the dates, because it decides which of them are even
+      // questions: a preset's period is its window, so there is no end to type.
+      cadence: cadenceOf(initial?.endsAt ?? null, initial?.repeat ?? null),
+      endDate: end.date,
+      endTime,
+      // Three answers rather than a unit and a number, because "how often" is
+      // rarely the question a reader actually has. They know it comes back the
+      // moment it ends, or that it comes back after a wait; the cadence follows
+      // from that and from dates they have already typed.
+      repeatMode:
+        initial === undefined
+          ? "never"
+          : repeatModeOf(
+              Date.parse(initialStartsAt ?? initial.startsAt),
+              initialEndsAt === null
+                ? null
+                : contiguousOpening(Date.parse(initialEndsAt), endTime !== ""),
+              initial.repeat,
+            ),
+      // Measuring is the convenience, not a cage: an irregular rotation still
+      // has to be sayable when the first window does not describe it.
+      ownCadence: false,
+      cadenceUnit: opening.unit,
+      cadenceAmount: String(opening.amount),
+    };
+  });
+  const set = (patch: Partial<EventFormValues>) => setV((prev) => ({ ...prev, ...patch }));
+  const [chosen, setChosen] = useState<EventTemplate | null>(null);
 
-  const valid =
-    title.trim().length > 0 &&
-    game !== "" &&
-    startsAt !== null &&
-    !backwards &&
-    !endMissing &&
-    endStated(datedWindow, endKnown, endDate) &&
-    !earlyReturn &&
-    !repeatIncomplete;
+  const s = eventFormState(v, initial?.repeat?.until ?? null);
+  const { preset, datedWindow, endMs, measured, measuring, repeat, draft } = s;
 
-  const draft: EventDraft | null =
-    startsAt === null
-      ? null
-      : {
-          game, title, type,
-          summary: summary === "" ? null : summary,
-          startsAt, startHasTime: startTime !== "",
-          endsAt, endHasTime: endTime !== "",
-          repeat,
-        };
   // Only a schedule change re-keys anything. Renaming does not — the token is
   // random precisely so fixing a typo never costs the marks attached to it.
   const stranded =
@@ -554,20 +705,48 @@ export function EventForm({
       : 0;
   const notice = strandedNotice(stranded);
 
+  const unitSelect = (
+    <label className={labelClass()}>
+      <span className="invisible">Unit</span>
+      <select
+        value={v.cadenceUnit}
+        onChange={(e) => set({ cadenceUnit: e.target.value as RepeatUnit })}
+        className={inputClass()}
+      >
+        {RepeatUnit.options.map((u) => (
+          <option key={u} value={u}>
+            {u}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+
   return (
     <form
       className="mt-3 rounded-xl border border-hairline p-3"
       onSubmit={(e) => {
         e.preventDefault();
-        if (!valid || draft === null) return;
+        if (!s.valid || draft === null) return;
         onSave(draft);
       }}
     >
+      {initial === undefined && (
+        <ExampleRow
+          examples={EVENT_TEMPLATES}
+          chosen={chosen?.id ?? null}
+          onChoose={(t) => {
+            setChosen(t);
+            setV((prev) => ({ ...prev, ...withEventTemplate(prev, t) }));
+          }}
+        />
+      )}
+
       <label className={labelClass()}>
         Game
         <select
-          value={game}
-          onChange={(e) => setGame(e.target.value)}
+          value={v.game}
+          onChange={(e) => set({ game: e.target.value })}
           className={inputClass()}
         >
           {ordered.map((id) => (
@@ -590,49 +769,35 @@ export function EventForm({
       )}
 
       <label className={`${labelClass()} mt-3`}>
-        What is it
+        Name
         <input
-          value={title}
+          value={v.title}
           maxLength={200}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Walpurgisnacht"
+          onChange={(e) => set({ title: e.target.value })}
+          placeholder={chosen?.placeholder ?? "Walpurgisnacht"}
           className={inputClass()}
         />
-      </label>
-
-      <label className={`${labelClass()} mt-3`}>
-        Kind
-        <select
-          value={type}
-          onChange={(e) => setType(e.target.value as EventType)}
-          className={inputClass()}
-        >
-          {TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
       </label>
 
       {/* Asked before the dates because it decides which of them are even
           questions. A weekly chore has no end date worth typing — the week is
           the window — and a form that asks anyway is asking something with no
-          honest answer. */}
-      <label className={`${labelClass()} mt-3`}>
-        Cadence
-        <select
-          value={cadence}
-          onChange={(e) => setCadence(e.target.value as Cadence)}
-          className={inputClass()}
-        >
-          <option value="one-off">one-off</option>
-          <option value="daily">daily</option>
-          <option value="weekly">weekly</option>
-          <option value="monthly">monthly</option>
-          <option value="custom">custom</option>
-        </select>
-      </label>
+          honest answer. Pills rather than a select, so every answer is in view:
+          not seeing which answer produced what they wanted was the confusion. */}
+      <p className={`${labelClass()} mt-3`}>How often</p>
+      <div className="mt-1.5 flex flex-wrap gap-1.5">
+        {CADENCES.map((c) => (
+          <button
+            key={c.value}
+            type="button"
+            aria-pressed={v.cadence === c.value}
+            onClick={() => setV((prev) => ({ ...prev, ...withCadence(prev, c.value) }))}
+            className={pill(v.cadence === c.value)}
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
 
       {preset && (
         <p className="mt-1.5 text-xs leading-relaxed text-faint">
@@ -645,8 +810,8 @@ export function EventForm({
           Starts
           <input
             type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
+            value={v.startDate}
+            onChange={(e) => set({ startDate: e.target.value })}
             className={inputClass()}
           />
         </label>
@@ -654,12 +819,18 @@ export function EventForm({
           Time (optional)
           <input
             type="time"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
+            value={v.startTime}
+            onChange={(e) => set({ startTime: e.target.value })}
             className={inputClass()}
           />
         </label>
       </div>
+      {v.startTime === "" && v.startDate !== "" && (
+        <p className="mt-1.5 text-xs leading-relaxed text-faint">
+          No time given, so this counts from the start of the day where you are —
+          and to the end of the day it finishes on.
+        </p>
+      )}
 
       {/* Only a cadence that carries its own window asks about an end. The end
           is allowed to be unknown there, and says so out loud: making it
@@ -670,21 +841,24 @@ export function EventForm({
           <label className="mt-3 flex cursor-pointer select-none items-center gap-2 text-xs text-muted">
             <input
               type="checkbox"
-              checked={!endKnown}
-              onChange={(e) => setEndKnown(!e.target.checked)}
+              checked={!v.endKnown}
+              onChange={(e) => set({ endKnown: !e.target.checked })}
               className="size-4 accent-[var(--color-near)]"
             />
             I don't know when it ends
           </label>
+          {!v.endKnown && (
+            <p className="mt-1.5 text-xs leading-relaxed text-faint">{unknownEndNote(repeat)}</p>
+          )}
 
-          {endKnown && (
+          {v.endKnown && (
             <div className="mt-2 grid grid-cols-2 gap-2">
               <label className={labelClass()}>
                 Ends
                 <input
                   type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                  value={v.endDate}
+                  onChange={(e) => set({ endDate: e.target.value })}
                   className={inputClass()}
                 />
               </label>
@@ -692,205 +866,183 @@ export function EventForm({
                 Time (optional)
                 <input
                   type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
+                  value={v.endTime}
+                  onChange={(e) => set({ endTime: e.target.value })}
                   className={inputClass()}
                 />
               </label>
             </div>
+          )}
+          {s.backwards && (
+            <p className="mt-1.5 text-xs text-critical">That ends before it starts.</p>
+          )}
+          {s.endMissing && (
+            <p className="mt-1.5 text-xs text-critical">That end date isn't a real date.</p>
           )}
         </>
       )}
 
       {/* Only a custom cadence needs any of this: a preset answers it by
           construction, and a one-off has nothing to answer. */}
-      {cadence === "custom" && (
+      {v.cadence === "custom" && (
         <>
-        <label className={`${labelClass()} mt-3`}>
-          Repeat
-          <select
-            value={repeatMode}
-            onChange={(e) => setRepeatMode(e.target.value as RepeatMode)}
-            className={inputClass()}
-          >
-            <option value="never">never</option>
-            <option value="forever">forever</option>
-            <option value="delay" disabled={endMs === null}>
-              with a delay
-            </option>
-          </select>
-        </label>
-
-        {repeatMode !== "never" && endMs === null && (
-          <p className="mt-1.5 text-xs leading-relaxed text-faint">
-            A delay needs an end date to be measured from. With none, each one
-            just runs until the next opens.
-          </p>
-        )}
-
-        {/* Measured, and said out loud — a cadence the form worked out silently
-            would be a date the reader never agreed to, which is the one thing
-            this product does not do. */}
-        {measuring && measured !== null && (
-          <p className="mt-2 text-xs leading-relaxed text-faint">
-            {cadenceLabel(measured)} · worked out from your dates.{" "}
-            <button
-              type="button"
-              onClick={() => setOwnCadence(true)}
-              className="underline transition-colors hover:text-ink"
-            >
-              state it myself
-            </button>
-          </p>
-        )}
-
-        {repeatMode === "forever" && !measuring && (
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <label className={labelClass()}>
-              Cycle length
-              <input
-                type="number"
-                min={1}
-                max={365}
-                value={cadenceAmount}
-                onChange={(e) => setCadenceAmount(e.target.value)}
-                className={inputClass()}
-              />
-            </label>
-            <label className={labelClass()}>
-              <span className="invisible">Unit</span>
-              <select
-                value={cadenceUnit}
-                onChange={(e) => setCadenceUnit(e.target.value as RepeatUnit)}
-                className={inputClass()}
+          <p className={`${labelClass()} mt-3`}>Repeat</p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {REPEAT_MODES.map((m) => (
+              <button
+                key={m.value}
+                type="button"
+                aria-pressed={v.repeatMode === m.value}
+                disabled={m.value === "delay" && endMs === null}
+                onClick={() => set({ repeatMode: m.value })}
+                className={pill(v.repeatMode === m.value)}
               >
-                {RepeatUnit.options.map((u) => (
-                  <option key={u} value={u}>
-                    {u}
-                  </option>
-                ))}
-              </select>
-            </label>
+                {m.label}
+              </button>
+            ))}
           </div>
-        )}
 
-        {/* The way back. Taking the cadence over is meant to be a decision the
-            reader can undo, and without this it was a one-way door: nothing
-            else ever cleared `ownCadence`, so the measured reading could not
-            be recovered without abandoning the form. Only offered when there
-            is something to go back to. */}
-        {repeatMode === "forever" && ownCadence && measured !== null && (
-          <p className="mt-1.5 text-xs leading-relaxed text-faint">
-            <button
-              type="button"
-              onClick={() => setOwnCadence(false)}
-              className="underline transition-colors hover:text-ink"
-            >
-              use my dates instead
-            </button>{" "}
-            · {cadenceLabel(measured)}
-          </p>
-        )}
+          {v.repeatMode !== "never" && endMs === null && (
+            <p className="mt-1.5 text-xs leading-relaxed text-faint">
+              A delay needs an end date to be measured from. With none, each one
+              just runs until the next opens.
+            </p>
+          )}
 
-        {repeatMode === "delay" && (
-          <>
+          {/* Measured, and said out loud — a cadence the form worked out silently
+              would be a date the reader never agreed to, which is the one thing
+              this product does not do. */}
+          {measuring && measured !== null && (
+            <p className="mt-2 text-xs leading-relaxed text-faint">
+              {cadenceLabel(measured)} · worked out from your dates.{" "}
+              <button
+                type="button"
+                onClick={() => set({ ownCadence: true })}
+                className="underline transition-colors hover:text-ink"
+              >
+                state it myself
+              </button>
+            </p>
+          )}
+
+          {v.repeatMode === "forever" && !measuring && (
             <div className="mt-2 grid grid-cols-2 gap-2">
               <label className={labelClass()}>
-                Wait
+                Cycle length
                 <input
                   type="number"
                   min={1}
                   max={365}
-                  value={cadenceAmount}
-                  onChange={(e) => setCadenceAmount(e.target.value)}
+                  value={v.cadenceAmount}
+                  onChange={(e) => set({ cadenceAmount: e.target.value })}
                   className={inputClass()}
                 />
               </label>
-              <label className={labelClass()}>
-                <span className="invisible">Unit</span>
-                <select
-                  value={cadenceUnit}
-                  onChange={(e) => setCadenceUnit(e.target.value as RepeatUnit)}
-                  className={inputClass()}
-                >
-                  {RepeatUnit.options.map((u) => (
-                    <option key={u} value={u}>
-                      {u}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {unitSelect}
             </div>
-            {/* Both readings, so the reader can check one against the other: a
-                week's wait after a week's window is a fortnightly rule, and
-                seeing that spelled out is how they catch a wrong number. */}
+          )}
+
+          {/* The way back. Taking the cadence over is meant to be a decision the
+              reader can undo, and without this it was a one-way door: nothing
+              else ever cleared `ownCadence`, so the measured reading could not
+              be recovered without abandoning the form. Only offered when there
+              is something to go back to. */}
+          {v.repeatMode === "forever" && v.ownCadence && measured !== null && (
             <p className="mt-1.5 text-xs leading-relaxed text-faint">
-              after it ends
-              {repeat !== null ? ` · ${cadenceLabel(repeat)}` : ""}
+              <button
+                type="button"
+                onClick={() => set({ ownCadence: false })}
+                className="underline transition-colors hover:text-ink"
+              >
+                use my dates instead
+              </button>{" "}
+              · {cadenceLabel(measured)}
             </p>
-            {/* Every occurrence is anchored to the start, so the wait has to
-                land a whole number of units from it. It never can when one
-                boundary has a time of day and the other does not — nothing
-                steps from 10:00 to a midnight — and that is unstatable rather
-                than merely unstated, so it says so instead of leaving Save
-                disabled with no reason given. */}
-            {repeat === null && !delayNeedsEnd && (
-              <p className="mt-2 text-xs text-critical">
-                Give the start and the end both a time, or neither — a wait has
-                to land a whole number of days from the start, and these don't
-                line up.
+          )}
+
+          {v.repeatMode === "delay" && (
+            <>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <label className={labelClass()}>
+                  Wait
+                  <input
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={v.cadenceAmount}
+                    onChange={(e) => set({ cadenceAmount: e.target.value })}
+                    className={inputClass()}
+                  />
+                </label>
+                {unitSelect}
+              </div>
+              {/* Both readings, so the reader can check one against the other: a
+                  week's wait after a week's window is a fortnightly rule, and
+                  seeing that spelled out is how they catch a wrong number. */}
+              <p className="mt-1.5 text-xs leading-relaxed text-faint">
+                after it ends
+                {repeat !== null ? ` · ${cadenceLabel(repeat)}` : ""}
               </p>
-            )}
-          </>
-        )}
+              {/* Every occurrence is anchored to the start, so the wait has to
+                  land a whole number of units from it. It never can when one
+                  boundary has a time of day and the other does not — nothing
+                  steps from 10:00 to a midnight — and that is unstatable rather
+                  than merely unstated, so it says so instead of leaving Save
+                  disabled with no reason given. */}
+              {s.unstatableWait && (
+                <p className="mt-2 text-xs text-critical">
+                  Give the start and the end both a time, or neither — a wait has
+                  to land a whole number of days from the start, and these don't
+                  line up.
+                </p>
+              )}
+            </>
+          )}
         </>
       )}
 
-      {earlyReturn && (
+      {s.earlyReturn && (
         <p className="mt-2 text-xs text-critical">
           That comes round before it ends.
         </p>
       )}
 
+      {/* A label rather than a question that changes the form, so it follows
+          the questions that do. An example sets it already. */}
+      <label className={`${labelClass()} mt-3`}>
+        Kind
+        <select
+          value={v.type}
+          onChange={(e) => set({ type: e.target.value as EventType })}
+          className={inputClass()}
+        >
+          {TYPES.map((t) => (
+            <option key={t} value={t}>
+              {KIND_LABEL[t]}
+            </option>
+          ))}
+        </select>
+      </label>
+
       <label className={`${labelClass()} mt-3`}>
         Note (optional)
         <input
-          value={summary}
+          value={v.summary}
           maxLength={500}
-          onChange={(e) => setSummary(e.target.value)}
+          onChange={(e) => set({ summary: e.target.value })}
           placeholder="What you want to remember about it"
           className={inputClass()}
         />
       </label>
 
-      {datedWindow && !endKnown && (
-        <p className="mt-2 text-xs leading-relaxed text-faint">
-          {unknownEndNote(repeat)}
-        </p>
-      )}
-      {backwards && (
-        <p className="mt-2 text-xs text-critical">
-          That ends before it starts.
-        </p>
-      )}
-      {endMissing && (
-        <p className="mt-2 text-xs text-critical">That end date isn't a real date.</p>
-      )}
-      {startTime === "" && startDate !== "" && (
-        <p className="mt-2 text-xs leading-relaxed text-faint">
-          No time given, so this counts from the start of the day where you are —
-          and to the end of the day it finishes on.
-        </p>
-      )}
-
       {notice !== null && (
         <p className="mt-2 text-xs leading-relaxed text-muted">{notice}</p>
       )}
 
-      <div className="mt-4 flex gap-2">
+      <div className="mt-4 flex flex-wrap gap-2">
         <button
           type="submit"
-          disabled={!valid}
+          disabled={!s.valid}
           className="rounded-lg border border-transparent bg-ink px-3 py-1.5 text-xs font-medium text-ground transition-colors disabled:opacity-40"
         >
           {initial === undefined ? "Add event" : "Save changes"}
@@ -902,6 +1054,7 @@ export function EventForm({
         >
           Cancel
         </button>
+        <StillNeeded needs={s.needs} />
       </div>
     </form>
   );
