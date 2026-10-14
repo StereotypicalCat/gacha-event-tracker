@@ -51,6 +51,14 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "form-examples",
+    date: "2026-10-14",
+    kind: "feature",
+    title: "Start an event or a task of your own from an example",
+    body: "Add an event and Add a task open with examples such as a banner with a known end or a weekly points target. You fill in the name, dates and numbers, and Save says what it still needs.",
+    ref: "6c66b81",
+  },
+  {
     id: "per-game-switches",
     date: "2026-10-14",
     kind: "feature",
