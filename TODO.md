@@ -21,7 +21,14 @@
     built-ins should keep answering the same setting.
   - Code: `src/client/components/Controls.tsx` (*What you see*), `src/client/state/usePrefs.ts`,
     `src/shared/routines.ts` (`activeRoutines`, `routineToAsk`), `src/client/components/Dailies.tsx`.
-- [ ] hololive Dreams has not refreshed in three weeks — find out why, or find it a new source.
+- [x] hololive Dreams has not refreshed in three weeks — find out why, or find it a new source.
+  Resolved 2026-10-14: the wiki lapsed after 19 Sep (still answering, still parsing, nothing
+  current), and no replacement can be fetched. The source is recorded as `lapsed` — see
+  `docs/SOURCES.md` § 16.
+  - Still open: run 317 reported `last confirmed never` for it, while the committed meta says
+    2026-09-22. The CI state in the Actions cache appears to have lost that date, perhaps by
+    restoring from a chain that never held it. It is cosmetic (the message only), but worth a
+    look if another source shows it.
   The footer says (2026-10-13): *"Of the games you have switched on, this one has not refreshed in
   over two days, so some end dates may have moved: hololive Dreams (21d 7h ago)."*
   - What the repo shows: `snapshots/holodori-holodoriwiki-events.meta.json` was last confirmed

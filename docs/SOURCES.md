@@ -71,6 +71,7 @@ Two things this method cannot tell you, and both matter:
 | Silver Palace | Unreleased |
 | Honkai Impact 3rd | **Built** (2026-08-27) on `arustats.com`, and the only lane here whose dates are **estimates** — see § 14 |
 | Genshin Impact (Fandom) | **Built** (2026-09-12) on `genshin-impact.fandom.com`, second source for a blind lane — see § 15 |
+| hololive Dreams | Built (2026-08-18) on `holodori.wiki`, which **lapsed** after 19 Sep 2026; no fetchable replacement exists — see § 16 |
 
 ## Summary of findings
 
@@ -87,6 +88,7 @@ Two things this method cannot tell you, and both matter:
 | Aether Gazer | — | — | — | **Do not build. The game is shutting down.** |
 | Silver Palace | — | — | — | Unreleased; beta only |
 | Genshin Impact (Fandom) | `genshin-impact.fandom.com/api.php?…page=Event` | `fandom`, fifth template | yes (via `api.php`) | **BUILT** 2026-09-12 — adds 11 events Game8 missed; Game8 priority preserves localStorage IDs |
+| hololive Dreams | `holodori.wiki/wiki/Events` (still) | `holodoriwiki` | yes, but nothing new to fetch | **LAPSED** 2026-10-14 — NamuWiki is behind a Cloudflare challenge, the official site posts no events, Game8 has no page |
 
 ---
 
@@ -809,6 +811,48 @@ note is what stops the next person re-deriving the reason it does not.
 - **Currency:** `latestBoundaryMs` is checked for day-precision boundaries so events aren't retired before all server regions roll.
 - **Priority & IDs:** Game8 is assigned `priority: 10` while Fandom is default/0. Two live events differ slightly in naming (`To Temper Thyself and Journey Far` vs `… Cycle 5`, and `Stygian Onslaught` vs `…: Battle of the Starburst`). Game8's higher priority breaks near-match ties in `merge.ts`, ensuring existing localStorage event IDs survive and reader completion marks remain intact. Fandom contributes 11 net-new events Game8 missed, 0 date conflicts occur, and overlapping events gain corroboration bonuses.
 - **336-day event:** Genshin's anniversary 5-star selection runs 336 days (`2025-10-22` → `2026-09-23`), prompting the test duration ceiling to be raised from 180 to 365 days across the test suite and ingestion specs.
+
+## 16. hololive Dreams — the wiki lapsed (2026-10-14); nothing else can be fetched
+
+> **Outcome: kept, and recorded as lapsed.** `holodori.wiki` answers every cycle and the parser
+> still reads it, but its editors stopped adding events after 19 Sep 2026. No replacement passes
+> § Method. The source stays registered with `lapsed` set (`src/ingest/adapters/index.ts`), so the
+> refresh reports it as a warning rather than failing every run, and it recovers by itself if the
+> editors return. Readers still see the lane's age in the staleness footer, which is the honest
+> signal here.
+
+**How it showed up.** The footer said *"hololive Dreams (21d 7h ago)"*, and refresh run 317
+(2026-10-13) logged `rejected — kept previous snapshot; new body yielded 0 events (had 1)` then
+`broken` after 21 failing cycles with `last status 200`. So the source was answering, not blocked.
+
+**What the page shows.** One request on 2026-10-14 (our User-Agent, about 7h after the last CI
+fetch; kept as `fixtures/holodori/holodoriwiki-events-2026-10-14.html`):
+
+- **Same template.** `canParse` passes and the two-heading layout is unchanged. The parser is
+  reading the page correctly.
+- **Nothing current.** `Current Events` holds only `Beginner Mission`, which has no start date and
+  is skipped by design (AGENTS.md § hololive Dreams). The newest row anywhere is
+  `A Dreamy Summer Escape`, 09/19–09/25 JST, under `Past Events`.
+- **The game did not pause; the page did.** Rows had been added every week or two from 7 Aug to
+  19 Sep. The game's X account then ran a score challenge from 7 to 13 Oct and announced a
+  "Neon Sunshine Festival". Neither is on the page.
+
+**Candidates assessed:**
+
+| Candidate | Finding | Verdict |
+|---|---|---|
+| NamuWiki `hololive Dreams/이벤트` | Lists the 7–13 Oct event with times. `robots.txt` allows `/w/` for `*`, but the page answers our client `403` with `cf-mitigated: challenge` (Cloudflare's JavaScript check) | **Decline.** That is an access control; § Method and AGENTS.md § Scraping conduct rule out working around it |
+| `www.hololive-dreams.com/news` (official) | No `robots.txt` (404), so nothing is disallowed. But the news list has four posts in all: launch, system requirements, and two on 29 Sep (Ver.1.2.0, the Soda Pop Lagoon area). The site posts no events | **Decline** — no event data |
+| Game8 | No hololive Dreams events page found, only a launch news article | **Decline** — nothing to read |
+| X (`@holo_dreams_en`), press releases | X has no fetchable surface for us. Press releases (CyberAgent, syndicated) are prose about single events, not a schedule | **Decline** |
+
+**Worth doing instead.** `holodori.wiki` is a CC BY-SA wiki, so adding the missing events there
+fixes it for every reader of that wiki, and refresh picks them up with no code change. When the
+page lists events again, the refresh warns that the source is listing events again and that
+`lapsed` should come out of its registry entry. Do that, and update this section.
+
+**Re-check:** `bun run refresh --only holodori-holodoriwiki-events` once the six-hour floor has
+passed. A `fetched` with more than zero events means the wiki is back.
 
 ## What every one of these costs, beyond the source
 

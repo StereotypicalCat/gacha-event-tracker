@@ -416,6 +416,24 @@ section, `README.md` § Status, `docs/SOURCES.md` § Method and `docs/FEEDBACK.m
 A single manual `--only` dispatch is enough to answer it for one source; note that `--dry-run`
 cannot, because it makes no requests at all by design.
 
+**A source that has lapsed is recorded, not repaired.** A wiki can keep answering `200` with an
+intact page whose editors simply stopped, and then every cycle parses to zero and is rejected. That is
+correct, because a zero is never published, but after three cycles it fails the workflow over
+something no code here can fix. When a person has looked, found the page unchanged in shape and
+merely stale, and found no fetchable replacement, they set `lapsed: { recorded, reason }` on the
+registry entry. Refresh then reports that source's empty answers as a warning instead of `broken`.
+Three limits keep this honest:
+
+- It excuses only a source that answers `200`. A lapsed source that starts answering `403` or `5xx`
+  is broken like any other.
+- It changes nothing a reader sees. The held snapshot keeps ageing, and the staleness footer goes
+  on saying so.
+- It asks to be removed. The first cycle that lists events again warns that `lapsed` should come out
+  of the entry.
+
+Never set it from code or on a guess. hololive Dreams carries it since 2026-10-14
+(docs/SOURCES.md § 16).
+
 A source whose ToS forbids automated access does not get an adapter. Flag it and ask.
 
 **Sources assessed and declined** (2026-08-17, extended 2026-08-19), so these are not
@@ -844,6 +862,11 @@ is the quality of what is there, and three things are worth knowing:
   links to `?action=edit&redlink=1` — a create-page form, and a `?action=` URL this wiki's
   robots.txt disallows. The parser refuses a href with a query and falls back to the events page;
   when the articles exist, they get linked with no change.
+
+**The wiki lapsed after 19 Sep 2026** and the source carries `lapsed` (§ Scraping conduct;
+docs/SOURCES.md § 16). The page still parses: an empty `Current Events` here means the editors
+stopped, not that the parser broke. `fixtures/holodori/holodoriwiki-events-2026-10-14.html` pins
+that.
 
 Two rows on the page are not events and are meant to be missing. `Beginner Mission` runs
 `Game Launch` → `Unknown`: no start means no event ID, and a permanent tutorial chore is not what a

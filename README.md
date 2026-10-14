@@ -137,7 +137,7 @@ date makes you miss content. Given the choice, this ships nothing rather than a 
 | Goddess of Victory: Nikke | Fandom |
 | Infinity Nikki | Fandom |
 | Girls' Frontline 2 | IOP Wiki |
-| hololive Dreams | holodori.wiki |
+| hololive Dreams | holodori.wiki (lapsed since 19 Sep 2026; see docs/SOURCES.md § 16) |
 | Stella Sora | stellasora.miraheze.org |
 | Honkai Impact 3rd | arustats.com |
 
