@@ -51,6 +51,15 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "genshin-duplicates",
+    date: "2026-10-14",
+    kind: "fix",
+    title: "Genshin's battle pass and anniversary selectors are listed once, not twice",
+    body: "Our two Genshin sources name these differently, and each showed up twice. Anything you ticked, noted or hid on the extra row now sits on the one that stays.",
+    ref: "16c277b",
+    note: "genshin-duplicates",
+  },
+  {
     id: "form-examples",
     date: "2026-10-14",
     kind: "feature",
@@ -465,6 +474,19 @@ export const ENTRIES: Entry[] = [
 ];
 
 export const NOTES: Note[] = [
+  {
+    id: "genshin-duplicates",
+    date: "2026-10-14",
+    title: "One row per Genshin event, from two sources",
+    summary: [
+      "Genshin's calendar is built from two wikis, and they do not always agree on a name. One prints \"Battle Pass - Moontrace\" where the other prints \"Moontrace\"; one calls a selector \"Free Limited 5-Star Anniversary Selector\" where the other uses the event's own name. Each of these was on the calendar twice, and every battle pass since September had been.",
+      "Both now appear once. The selectors are paired because one wiki's description names the other's event, which is the same evidence a person would use, so next year's selectors should pair without anyone stepping in. Matching dates alone never pair two events: a new version starts about twenty on the same day.",
+      "When two rows become one, anything you ticked, noted or hid on the row that goes is carried to the row that stays, including from an export file made before the change.",
+    ],
+    from: "7c8fa7f",
+    to: "16c277b",
+    specs: ["docs/superpowers/specs/2026-10-14-genshin-duplicates-design.md"],
+  },
   {
     id: "per-game-switches",
     date: "2026-10-14",
