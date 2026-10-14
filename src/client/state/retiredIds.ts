@@ -6,7 +6,7 @@ import { mergeProgress, type ProgressMap } from "./useProgress.ts";
 export type CarryTable = Readonly<Record<string, string>>;
 
 /**
- * Event ids the feed no longer publishes, and the id each one became.
+ * Event ids a *parser* change stopped publishing, and the id each one became.
  *
  * An event id is a localStorage key (AGENTS.md § Event IDs are localStorage
  * keys), so an id that moves takes the reader's marks with it unless they are
@@ -14,6 +14,11 @@ export type CarryTable = Readonly<Record<string, string>>;
  * keeping `Battle Pass -` in front of Genshin's pass names: Fandom had always
  * published the bare name, and the two ids put every pass on the calendar
  * twice (docs/superpowers/specs/2026-10-14-genshin-duplicates-design.md).
+ *
+ * Only a parser change belongs here. An id that *merge* folds into another is
+ * named by the feed itself (`GachaEvent.mergedIds`) and carried by
+ * `aliasesFrom` with nobody editing anything; a parser change cannot be,
+ * because the old id is never produced again for any feed to mention.
  *
  * An explicit table, never a pattern: the battle passes are the only two such
  * ids that ever shipped (git history of snapshots/ and fixtures/), and a
@@ -25,6 +30,29 @@ export const RETIRED_IDS: CarryTable = {
   "genshin:battle-pass-frostfarer:2026-08-12": "genshin:frostfarer:2026-08-12",
   "genshin:battle-pass-moontrace:2026-09-23": "genshin:moontrace:2026-09-23",
 };
+
+/**
+ * What the feed says merge absorbed, as a carry table.
+ *
+ * Every id an event lists in `mergedIds` was another source's copy of it, and
+ * may already hold a reader's marks from a day it was published alone. Two
+ * exclusions: an id the feed still publishes as its own row — should a later
+ * feed split a pair again, each row keeps its own marks — and an event naming
+ * itself, which would be a no-op at best.
+ */
+export function aliasesFrom(
+  events: ReadonlyArray<{ id: string; mergedIds?: readonly string[] | undefined }>,
+): CarryTable {
+  const published = new Set(events.map((e) => e.id));
+  const table: Record<string, string> = {};
+  for (const event of events) {
+    for (const from of event.mergedIds ?? []) {
+      if (from === event.id || published.has(from)) continue;
+      table[from] = event.id;
+    }
+  }
+  return table;
+}
 
 /**
  * Move each entry under an old id in `table` to its replacement.

@@ -76,6 +76,15 @@ export const GachaEvent = z
     version: z.number().int().positive(),
     firstSeenAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
+
+    /**
+     * Ids of other sources' copies merge folded into this one. They may already
+     * be readers' localStorage keys, so the client moves marks from them to
+     * `id` (docs/DATA-MODEL.md § ID stability). Optional: absent on every
+     * single-source event and on any feed built before 2026-10-14, and an older
+     * client's non-strict parse drops it unread.
+     */
+    mergedIds: z.array(z.string()).optional(),
   })
   // These invariants are cheap here and prevent a whole class of wrong-date bugs
   // reaching the feed. See docs/INGESTION.md § Stage 4.

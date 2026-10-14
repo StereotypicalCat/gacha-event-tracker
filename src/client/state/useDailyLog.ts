@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { carryDaily } from "./retiredIds.ts";
+import { carryDaily, type CarryTable } from "./retiredIds.ts";
 import { KEYS, readJson, writeJson } from "./storage.ts";
 
 export interface DailyLog {
@@ -53,7 +53,12 @@ export function useDailyLog() {
     setLogs((prev) => mergeDailyLogs(prev, incoming));
   }, []);
 
-  return { logs, toggleDay, daysFor, merge };
+  /** Move logs off ids the feed says were folded into others. */
+  const carry = useCallback((table: CarryTable) => {
+    setLogs((prev) => carryDaily(prev, table));
+  }, []);
+
+  return { logs, toggleDay, daysFor, merge, carry };
 }
 
 /**

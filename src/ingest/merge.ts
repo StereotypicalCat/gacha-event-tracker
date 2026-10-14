@@ -83,10 +83,11 @@ export function mergeEvents(
     if (existing === undefined) continue;
 
     const conflict = findConflict(existing, incoming, toleranceHours);
-    const [winner, loser] =
+    const [ranked, loser] =
       incoming.confidence > existing.confidence
         ? ([incoming, existing] as const)
         : ([existing, incoming] as const);
+    const winner = absorb(ranked, loser);
 
     if (conflict !== null) {
       // Independent sources disagree on when this ends. Do not average, do not
@@ -114,6 +115,24 @@ export function mergeEvents(
   );
 
   return { events: kept, conflicts };
+}
+
+/**
+ * The winner, carrying every id the fusion took off the calendar.
+ *
+ * An id merge drops may already be on readers' devices as a localStorage key —
+ * the copy fused today may have been published alone yesterday, before a rule
+ * learned to pair it. The feed says which ids were folded into which, and the
+ * client moves marks across on its own (`src/client/state/retiredIds.ts`), so a
+ * new fusion never needs a hand-edited table to keep a reader's ticks.
+ */
+function absorb(winner: GachaEvent, loser: GachaEvent): GachaEvent {
+  const ids = [
+    ...(winner.mergedIds ?? []),
+    ...(loser.id === winner.id ? [] : [loser.id]),
+    ...(loser.mergedIds ?? []),
+  ].filter((id, i, all) => id !== winner.id && all.indexOf(id) === i);
+  return ids.length === 0 ? winner : { ...winner, mergedIds: ids };
 }
 
 function isSameEvent(

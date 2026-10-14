@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { carryMarks } from "./retiredIds.ts";
+import { carryMarks, type CarryTable } from "./retiredIds.ts";
 import { readJson, writeJson } from "./storage.ts";
 
 export interface Mark {
@@ -41,7 +41,12 @@ export function useMarkSet(storageKey: string) {
     setMarks((prev) => mergeMarks(prev, incoming));
   }, []);
 
-  return { marks, toggle, merge, clear };
+  /** Move marks off ids the feed says were folded into others. */
+  const carry = useCallback((table: CarryTable) => {
+    setMarks((prev) => carryMarks(prev, table));
+  }, []);
+
+  return { marks, toggle, merge, clear, carry };
 }
 
 /**

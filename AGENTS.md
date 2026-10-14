@@ -789,6 +789,11 @@ source CI can refresh. Four things to know about it:
   label so both sources mint one ID, and `src/client/state/retiredIds.ts` moves readers' marks off
   the two IDs that changed. The general lesson: **a second source needs its whole overlap with the
   first read row by row, not counted** — a duplicate looks exactly like a net-new event in a tally.
+- **A fusion carries readers' ticks with it, unaided.** Merge lists every id it absorbed on the
+  survivor (`mergedIds`), the feed ships it, and the client moves marks off those ids when a feed
+  arrives (`aliasesFrom`, `retiredIds.ts`). So a new merge rule, or a copy that starts matching
+  next week, needs no hand-edited table. `RETIRED_IDS` is only for an id a *parser* change moved —
+  the old id is never produced again, so no feed can name it.
 - **The 336-day event raised the duration ceiling to 365 days.** Genshin's anniversary 5-star selection
   runs 336 days (`2025-10-22` → `2026-09-23`), correctly dated on this wiki. This motivated raising the
   sanity ceiling in `test/adapters/game8.test.ts` and `docs/INGESTION.md` from 180 to 365 days.

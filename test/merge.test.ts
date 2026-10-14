@@ -190,6 +190,30 @@ describe("merging two sources for one game", () => {
     expect(conflicts).toHaveLength(1);
     expect(conflicts[0]?.field).toBe("endsAt");
   });
+
+  test("the survivor lists every id it absorbed", () => {
+    const a = event({ id: "genshin:stygian-onslaught:2026-08-12", title: "Stygian Onslaught", sourceId: "s-a" });
+    const b = event({ id: "genshin:stygian-onslaught-event:2026-08-12", title: "Stygian Onslaught Event", sourceId: "s-b" });
+    const c = event({ id: "genshin:stygian-onslaught-trial:2026-08-12", title: "Stygian Onslaught Trial", sourceId: "s-c" });
+    const { events } = mergeEvents([[a], [b], [c]]);
+    expect(events).toHaveLength(1);
+    expect(events[0]?.mergedIds).toEqual([b.id, c.id]);
+  });
+
+  test("a higher-confidence newcomer inherits what the old copy absorbed", () => {
+    const a = event({ id: "genshin:x-y:2026-08-12", title: "X Y", sourceId: "s-a", confidence: 0.8 });
+    const b = event({ id: "genshin:x-y-z:2026-08-12", title: "X Y Z", sourceId: "s-b", confidence: 0.8 });
+    const c = event({ id: "genshin:x-y-w:2026-08-12", title: "X Y W", sourceId: "s-c", confidence: 0.95 });
+    const { events } = mergeEvents([[a], [b], [c]]);
+    expect(events.map((e) => e.id)).toEqual([c.id]);
+    expect([...(events[0]?.mergedIds ?? [])].sort()).toEqual([a.id, b.id].sort());
+  });
+
+  test("an id seen twice is not an absorbed id", () => {
+    const a = event({ sourceId: "s-a" });
+    const { events } = mergeEvents([[a], [{ ...a, sourceId: "s-b" }]]);
+    expect(events[0]?.mergedIds).toBeUndefined();
+  });
 });
 
 describe("near matches within one source", () => {

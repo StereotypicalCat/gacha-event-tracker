@@ -8,7 +8,11 @@ import {
   SourceHealth,
 } from "../src/shared/feed.ts";
 import { sourceHealth } from "../src/ingest/health.ts";
-import type { GachaEvent, GameId } from "../src/shared/schema.ts";
+import {
+  GachaEvent as GachaEventSchema,
+  type GachaEvent,
+  type GameId,
+} from "../src/shared/schema.ts";
 
 /**
  * Freshness disclosure (PRD F7).
@@ -428,5 +432,30 @@ describe("recording a source's health at build time", () => {
       contentChangedAt: NEW_CONTENT,
     });
     expect(health.lastConfirmedAt).toBe(NEW_CONTENT);
+  });
+});
+
+describe("mergedIds in the feed", () => {
+  // The service worker serves the last feed it downloaded, and an open tab may
+  // run a bundle from before this field existed — both directions must parse.
+  const sample = async () =>
+    (
+      (await Bun.file(
+        "fixtures/genshin/game8-events-2026-08-14.expected.json",
+      ).json()) as unknown[]
+    )[0] as Record<string, unknown>;
+
+  test("an event without it still validates", async () => {
+    expect(GachaEventSchema.safeParse(await sample()).success).toBe(true);
+  });
+
+  test("an event with it keeps it", async () => {
+    const parsed = GachaEventSchema.safeParse({
+      ...(await sample()),
+      mergedIds: ["genshin:other:2026-08-12"],
+    });
+    expect(parsed.success && parsed.data.mergedIds).toEqual([
+      "genshin:other:2026-08-12",
+    ]);
   });
 });

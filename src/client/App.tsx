@@ -12,10 +12,16 @@ import { Colophon } from "./components/Colophon.tsx";
 import { Legend } from "./components/Legend.tsx";
 import { Toast } from "./components/Toast.tsx";
 import { UpdateNotice } from "./components/UpdateNotice.tsx";
+import {
+  aliasesFrom,
+  carryDaily,
+  carryMarks,
+  carryProgress,
+} from "./state/retiredIds.ts";
 import { KEYS } from "./state/storage.ts";
 import { useAppUpdate } from "./state/useAppUpdate.ts";
-import { useMarkSet } from "./state/useMarkSet.ts";
-import { useProgress } from "./state/useProgress.ts";
+import { useMarkSet, type Marks } from "./state/useMarkSet.ts";
+import { useProgress, type ProgressMap } from "./state/useProgress.ts";
 import { useDailyLog, type DailyLogMap } from "./state/useDailyLog.ts";
 import { useTasks } from "./state/useTasks.ts";
 import { useAmounts } from "./state/useAmounts.ts";
@@ -297,6 +303,31 @@ export function App() {
       });
     return () => ac.abort();
   }, []);
+
+  // Merge may have folded another source's copy into a row since this reader
+  // last looked, and that copy's id may hold their ticks. The feed names every
+  // id it absorbed, so the marks follow with nobody editing a table
+  // (docs/DATA-MODEL.md § ID stability).
+  const feedEvents = state.status === "ready" ? state.feed.events : null;
+  const feedCarry = useMemo(
+    () => (feedEvents === null ? {} : aliasesFrom(feedEvents)),
+    [feedEvents],
+  );
+  const carryProgressIds = prog.carry;
+  const carryDailyIds = daily.carry;
+  const carryIgnoredIds = ignored.carry;
+  useEffect(() => {
+    if (Object.keys(feedCarry).length === 0) return;
+    carryProgressIds(feedCarry);
+    carryDailyIds(feedCarry);
+    carryIgnoredIds(feedCarry);
+  }, [feedCarry, carryProgressIds, carryDailyIds, carryIgnoredIds]);
+  // An export written before a fusion still names the absorbed id, and the
+  // effect above has already run for this feed — so an import takes the same
+  // table on its way in.
+  const importProgressMerge = (c: ProgressMap) => prog.merge(carryProgress(c, feedCarry));
+  const importDailyMerge = (c: DailyLogMap) => daily.merge(carryDaily(c, feedCarry));
+  const importIgnoredMerge = (c: Marks) => ignored.merge(carryMarks(c, feedCarry));
 
   const allRows = useMemo<RowEvent[]>(() => {
     if (state.status !== "ready") return [];
@@ -840,9 +871,9 @@ export function App() {
         onImport={(file) =>
           void importProgress(
             file,
-            prog.merge,
-            daily.merge,
-            ignored.merge,
+            importProgressMerge,
+            importDailyMerge,
+            importIgnoredMerge,
             custom.merge,
             mergeExtra,
           )
@@ -858,9 +889,9 @@ export function App() {
         onImportAll={(file) =>
           void importProgress(
             file,
-            prog.merge,
-            daily.merge,
-            ignored.merge,
+            importProgressMerge,
+            importDailyMerge,
+            importIgnoredMerge,
             custom.merge,
             mergeExtra,
             restorePrefs,

@@ -486,6 +486,10 @@ Only meaningful when a game has more than one source; a single-source game passe
    across sources — an identical id is the same row seen twice, whatever it is called.
 2. **Near match** — **different sources**, same game, title similarity ≥ 0.80, starts within 24h —
    → same event under different titles; keep the higher-confidence copy.
+
+   **The survivor lists what it absorbed** in `mergedIds`, and the client moves readers' marks off
+   those ids when the feed arrives — so a rule that starts fusing two published ids costs nobody a
+   tick, with no table to edit (`docs/DATA-MODEL.md` § ID stability).
 3. **Otherwise** → distinct events; keep both.
 
 Title similarity alone would merge a rerun with its original, since reruns reuse the name. The

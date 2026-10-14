@@ -60,6 +60,10 @@ export const GachaEvent = z.object({
   version: z.number().int().positive(),
   firstSeenAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+
+  // Other sources' copies merge folded into this one; the client moves marks
+  // off them. Optional — see § ID stability.
+  mergedIds: z.array(z.string()).optional(),
 });
 
 export type GachaEvent = z.infer<typeof GachaEvent>;
@@ -119,7 +123,15 @@ migration that reads the old keys and remaps them, and keep that migration for a
 holds an explicit table of IDs the feed stopped publishing and what each became — first used on
 2026-10-14, when Game8's Genshin parser stopped keeping `Battle Pass -` in front of a pass's name
 (the label had put every pass on the calendar twice beside Fandom's bare name). On every load and
-every import, `progress`, `daily` and `ignored` entries under a retired ID **move** to the new one:
+every import, `progress`, `daily` and `ignored` entries under a retired ID **move** to the new one.
+
+**A merge that starts fusing two published IDs retires one of them too — and the feed says so.**
+`GachaEvent.mergedIds` lists every other source's copy merge folded into an event. When a feed
+arrives, `aliasesFrom` turns those into the same kind of move, skipping any id the feed still
+publishes as its own row (a pair split again keeps each row's marks), so no table is edited by hand.
+`RETIRED_IDS` stays only for parser changes, whose old ids no feed will ever name again. The field is
+optional: an older cached feed lacks it and validates, and an older bundle's non-strict parse drops
+it unread. Both paths follow the same rules:
 
 - **A move inside the same storage key, not a copy, and not a deleted key.** The mark survives under
   the ID the feed now uses. A copy left under the old ID would be carried forward again on each load
@@ -129,7 +141,14 @@ every import, `progress`, `daily` and `ignored` entries under a retired ID **mov
   held, because both rows were the reader's own.
 - **An unreadable entry is left where it is.** These run in `useState` initialisers, where a throw is
   a blank screen.
-- **A table, never a pattern**, and kept until at least 2027-10-14.
+- **A table, never a pattern**, and kept until at least 2027-10-14 — for `RETIRED_IDS`; the feed's
+  table is rebuilt from every feed.
+- **A wrong fusion takes the tick with it, and nothing undoes that.** A move keeps no record of
+  where a mark began, so if merge ever fuses two different events, the absorbed row's tick lands on
+  the survivor and stays there if a later rule splits them again (reviewed 2026-10-14, accepted as
+  the price of not resurrecting cleared marks). The only defence is that merge rules stay strict —
+  which is why dates alone never pair two events (`docs/INGESTION.md` § Stage 3). An import is
+  carried through the same two tables on its way in.
 
 The date suffix disambiguates reruns of the same event. Title is slugified from the *source's*
 title, so a wiki renaming an event creates a new ID — reconciliation detects this as a near-match

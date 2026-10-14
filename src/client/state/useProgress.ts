@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Effort } from "../../shared/effort.ts";
 import type { Goal } from "../../shared/goal.ts";
-import { carryProgress } from "./retiredIds.ts";
+import { carryProgress, type CarryTable } from "./retiredIds.ts";
 import { KEYS, readJson, writeJson } from "./storage.ts";
 import type { Marks } from "./useMarkSet.ts";
 
@@ -211,6 +211,11 @@ export function useProgress() {
     setProgress((prev) => mergeProgress(prev, incoming));
   }, []);
 
+  /** Move records off ids the feed says were folded into others. */
+  const carry = useCallback((table: CarryTable) => {
+    setProgress((prev) => carryProgress(prev, table));
+  }, []);
+
   return {
     progress,
     patch,
@@ -220,5 +225,6 @@ export function useProgress() {
     setEffort,
     setNote,
     merge,
+    carry,
   };
 }
