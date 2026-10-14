@@ -1,4 +1,5 @@
 import type { GachaEvent } from "../shared/schema.ts";
+import { recordedSame } from "./aliases.ts";
 
 /**
  * Combine events for one game from several sources.
@@ -67,11 +68,12 @@ export function mergeEvents(
   const kept: GachaEvent[] = [];
   const conflicts: MergeResult["conflicts"] = [];
 
-  for (const incoming of groups.flat()) {
+  const all = groups.flat();
+  for (const incoming of all) {
     const matchIndex = kept.findIndex(
       (existing) =>
         existing.game === incoming.game &&
-        isSameEvent(existing, incoming, titleThreshold, toleranceHours),
+        isSameEvent(existing, incoming, titleThreshold, toleranceHours, all),
     );
 
     if (matchIndex === -1) {
@@ -140,6 +142,7 @@ function isSameEvent(
   b: GachaEvent,
   titleThreshold: number,
   toleranceHours: number,
+  all: readonly GachaEvent[],
 ): boolean {
   if (a.id === b.id) return true;
 
@@ -158,14 +161,30 @@ function isSameEvent(
   // Overlap alone misses a source that appends a qualifier: "Bedazzling
   // Dawnstar" vs "Bedazzling Dawnstar Sign-In" scores 0.67, well under any
   // safe threshold, yet is plainly one event.
-  const similar =
-    titleSimilarity(a.title, b.title) >= titleThreshold ||
-    titleExtends(a.title, b.title);
-  if (!similar) return false;
-
   // Similar titles are not enough — reruns reuse names. Require the start dates
   // to be close before treating two entries as one event.
-  return hoursBetween(a.startsAt, b.startsAt) <= toleranceHours;
+  if (hoursBetween(a.startsAt, b.startsAt) > toleranceHours) return false;
+
+  const titled = (x: GachaEvent, y: GachaEvent) =>
+    titleSimilarity(x.title, y.title) >= titleThreshold ||
+    titleExtends(x.title, y.title);
+  if (titled(a, b) || recordedSame(a.id, b.id)) return true;
+  if (!namesTheOther(a, b, toleranceHours)) return false;
+
+  // A blurb may name a *different* event that runs the same window — a
+  // festival's shop naming the festival. If either copy already has a twin by
+  // title in the other source, the mention is about that other event, and
+  // fusing on it would take a real row off the calendar.
+  const twinIn = (x: GachaEvent, source: string, skip: GachaEvent) =>
+    all.some(
+      (c) =>
+        c !== skip &&
+        c.sourceId === source &&
+        c.game === x.game &&
+        hoursBetween(c.startsAt, x.startsAt) <= toleranceHours &&
+        titled(x, c),
+    );
+  return !twinIn(a, b.sourceId, b) && !twinIn(b, a.sourceId, a);
 }
 
 /**
@@ -189,6 +208,49 @@ export function titleExtends(a: string, b: string): boolean {
     small.every((word, i) => large[i] === word) ||
     small.every((word, i) => large[offset + i] === word)
   );
+}
+
+/**
+ * True when one copy's summary names the other's whole title, and the two run
+ * the same window.
+ *
+ * Some pairs share no word at all. Game8 calls Genshin's anniversary selectors
+ * by what they are (`Free Limited 5-Star Anniversary Selector`) and Fandom by
+ * the event's name (`Tabletop Troupe: A Gathering on Adventure's Eve`), and the
+ * dates cannot tell the two selectors apart. But Game8's blurb says "…limited
+ * 5-star selector, Tabletop Troupe: A Gathering on Adventure's Eve!" — the page
+ * itself linking the two, which is exactly what a person read to pair them.
+ *
+ * Narrower than it looks, on purpose. A blurb may mention *another* event
+ * ("clear X to unlock this"), so both boundaries must agree, not only the
+ * start — a mentioned event that runs a different window is a different event.
+ * And the title must be at least two words, matched as a contiguous run: a
+ * one-word name turns up in prose by accident. `isSameEvent` adds the last
+ * guard, which needs the whole batch: a mention never pairs a copy that already
+ * has a twin by title in the other source, because then the blurb is naming a
+ * neighbour — a festival's shop naming the festival. Measured on every two-source page
+ * held (2026-10-14), it fired on the two selector pairs and otherwise only on
+ * pairs already matched by title.
+ */
+function namesTheOther(
+  a: GachaEvent,
+  b: GachaEvent,
+  toleranceHours: number,
+): boolean {
+  if (a.endsAt === null || b.endsAt === null) return false;
+  if (hoursBetween(a.endsAt, b.endsAt) > toleranceHours) return false;
+  return mentions(a.summary, b.title) || mentions(b.summary, a.title);
+}
+
+function mentions(summary: string | null, title: string): boolean {
+  if (summary === null) return false;
+  const needle = tokenList(title);
+  if (needle.length < 2) return false;
+  const hay = tokenList(summary);
+  for (let i = 0; i + needle.length <= hay.length; i += 1) {
+    if (needle.every((word, j) => hay[i + j] === word)) return true;
+  }
+  return false;
 }
 
 function findConflict(

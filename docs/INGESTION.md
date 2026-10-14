@@ -490,7 +490,16 @@ Only meaningful when a game has more than one source; a single-source game passe
    qualifier scores badly on overlap: `Bedazzling Dawnstar` / `… Sign-In` is 0.67. It reads both
    ends since 2026-10-14 — a qualifier can be a category label in front, as Game8's
    `Battle Pass - …` was — and both ends keep the two-word floor, because a one-word base would
-   fuse half of a patch day.
+   fuse half of a patch day. A third way in is **one copy's summary naming the other's whole title**
+   (two words or more, contiguous) with **both** boundaries within 24h — the page linking the copies
+   itself, as Game8's selector blurbs name Fandom's events. Both ends must agree because a blurb may
+   mention a *different* event ("clear X to unlock this"), and a mention never pairs a copy that
+   already has a twin by title in the other source — then the blurb is naming a neighbour, such as a
+   festival's shop naming the festival, and fusing would drop a real row. Measured on every two-source page held
+   (2026-10-14), it fired on the two selector pairs and otherwise only where titles already matched.
+   The last resort is a pair a person recorded by event ID (`src/ingest/aliases.ts`, empty today).
+   **Dates alone never pair two events**: patch day puts about twenty different Genshin events on one
+   window.
 
    **The survivor lists what it absorbed** in `mergedIds`, and the client moves readers' marks off
    those ids when the feed arrives — so a rule that starts fusing two published ids costs nobody a

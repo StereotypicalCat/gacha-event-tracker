@@ -4,6 +4,7 @@ import {
   titleExtends,
   titleSimilarity,
 } from "../src/ingest/merge.ts";
+import { recordedSame } from "../src/ingest/aliases.ts";
 import type { GachaEvent } from "../src/shared/schema.ts";
 
 const NOW = "2026-08-14T00:00:00.000Z";
@@ -207,6 +208,122 @@ describe("merging two sources for one game", () => {
     expect(conflicts[0]?.field).toBe("endsAt");
   });
 
+  test("fuses a pair when one summary names the other's title", () => {
+    // Game8 and Fandom name Genshin's anniversary selectors with no word in
+    // common, and Game8's own blurb names the Fandom event. That is the page
+    // saying they are one, which is what a person read to establish it.
+    const g8 = event({
+      id: "genshin:free-limited-5-star-anniversary-selector:2026-09-23",
+      title: "Free Limited 5-Star Anniversary Selector",
+      summary:
+        "Choose a 5-Star event-exclusive character for free in the new, annual, limited 5-star selector, Tabletop Troupe: A Gathering on Adventure's Eve!",
+      startsAt: "2026-09-23T00:00:00.000Z",
+      endsAt: "2026-11-03T00:00:00.000Z",
+      sourceId: "genshin-game8-events",
+      confidence: 0.85,
+    });
+    const fandom = event({
+      id: "genshin:tabletop-troupe-a-gathering-on-adventures-eve:2026-09-23",
+      title: "Tabletop Troupe: A Gathering on Adventure's Eve",
+      startsAt: "2026-09-23T00:00:00.000Z",
+      endsAt: "2026-11-03T00:00:00.000Z",
+      sourceId: "genshin-fandom-events",
+      confidence: 0.85,
+    });
+    const fused = mergeEvents([[g8], [fandom]]);
+    expect(fused.events.map((e) => e.id)).toEqual([g8.id]);
+    expect(fused.events[0]?.confidence).toBeCloseTo(0.95, 5);
+
+    // Same blurb, but the named event runs a different window: a summary may
+    // mention another event ("complete X to unlock this"), so both boundaries
+    // must agree before a mention counts.
+    const laterEnd = { ...fandom, endsAt: "2026-10-20T00:00:00.000Z" };
+    expect(mergeEvents([[g8], [laterEnd]]).events).toHaveLength(2);
+
+    // A summary that names nothing of the other's title is not evidence.
+    const standardFandom = {
+      ...fandom,
+      id: "genshin:across-the-frozen-wilds-honing-ones-edge:2026-09-23",
+      title: "Across the Frozen Wilds, Honing One's Edge",
+    };
+    expect(mergeEvents([[g8], [standardFandom]]).events).toHaveLength(2);
+  });
+
+  test("a blurb naming a parent event does not fuse the sub-event into it", () => {
+    // Both sources list the festival and its shop over one window, and Game8's
+    // shop blurb names the festival. The shop already has its own twin on
+    // Fandom, so the mention is about another event, not about itself.
+    const window = { startsAt: "2026-09-23T00:00:00.000Z", endsAt: "2026-11-03T00:00:00.000Z" };
+    const g8Shop = event({
+      ...window,
+      id: "genshin:festival-shop:2026-09-23",
+      title: "Festival Shop",
+      summary: "Spend tokens from Starlit Gala Festival in the Festival Shop.",
+      sourceId: "genshin-game8-events",
+    });
+    const fandomFestival = event({
+      ...window,
+      id: "genshin:starlit-gala-festival:2026-09-23",
+      title: "Starlit Gala Festival",
+      sourceId: "genshin-fandom-events",
+    });
+    const fandomShop = event({
+      ...window,
+      id: "genshin:festival-shop:2026-09-23",
+      title: "Festival Shop",
+      sourceId: "genshin-fandom-events",
+    });
+    const { events } = mergeEvents([[g8Shop], [fandomFestival, fandomShop]]);
+    expect(events.map((e) => e.id).sort()).toEqual(
+      [fandomFestival.id, g8Shop.id].sort(),
+    );
+  });
+
+  test("a one-word title in a summary is not a mention", () => {
+    const g8 = event({
+      id: "genshin:free-selector:2026-09-23",
+      title: "Free Selector",
+      summary: "Pick a character before Moontrace ends.",
+      sourceId: "genshin-game8-events",
+    });
+    const fandom = event({
+      id: "genshin:moontrace:2026-08-12",
+      title: "Moontrace",
+      sourceId: "genshin-fandom-events",
+    });
+    expect(mergeEvents([[g8], [fandom]]).events).toHaveLength(2);
+  });
+
+  test("the survivor lists every id it absorbed", () => {
+    const a = event({ id: "genshin:stygian-onslaught:2026-08-12", title: "Stygian Onslaught", sourceId: "s-a" });
+    const b = event({ id: "genshin:stygian-onslaught-event:2026-08-12", title: "Stygian Onslaught Event", sourceId: "s-b" });
+    const c = event({ id: "genshin:stygian-onslaught-trial:2026-08-12", title: "Stygian Onslaught Trial", sourceId: "s-c" });
+    const { events } = mergeEvents([[a], [b], [c]]);
+    expect(events).toHaveLength(1);
+    expect(events[0]?.mergedIds).toEqual([b.id, c.id]);
+  });
+
+  test("a higher-confidence newcomer inherits what the old copy absorbed", () => {
+    const a = event({ id: "genshin:x-y:2026-08-12", title: "X Y", sourceId: "s-a", confidence: 0.8 });
+    const b = event({ id: "genshin:x-y-z:2026-08-12", title: "X Y Z", sourceId: "s-b", confidence: 0.8 });
+    const c = event({ id: "genshin:x-y-w:2026-08-12", title: "X Y W", sourceId: "s-c", confidence: 0.95 });
+    const { events } = mergeEvents([[a], [b], [c]]);
+    expect(events.map((e) => e.id)).toEqual([c.id]);
+    expect([...(events[0]?.mergedIds ?? [])].sort()).toEqual([a.id, b.id].sort());
+  });
+
+  test("a recorded pair matches in either order, and only itself", () => {
+    const table = [{ ids: ["g:a:2026-01-01", "g:b:2026-01-01"] as const, evidence: "test" }];
+    expect(recordedSame("g:b:2026-01-01", "g:a:2026-01-01", table)).toBe(true);
+    expect(recordedSame("g:a:2026-01-01", "g:c:2026-01-01", table)).toBe(false);
+  });
+
+  test("an id seen twice is not an absorbed id", () => {
+    const a = event({ sourceId: "s-a" });
+    const { events } = mergeEvents([[a], [{ ...a, sourceId: "s-b" }]]);
+    expect(events[0]?.mergedIds).toBeUndefined();
+  });
+
   test("collapses a leading-label duplicate and keeps the first copy's id", () => {
     const g8 = event({
       id: "genshin:battle-pass-frozen-wilds:2026-09-23",
@@ -228,30 +345,6 @@ describe("merging two sources for one game", () => {
     expect(events).toHaveLength(1);
     expect(events[0]?.id).toBe(g8.id);
     expect(conflicts).toHaveLength(0);
-  });
-
-  test("the survivor lists every id it absorbed", () => {
-    const a = event({ id: "genshin:stygian-onslaught:2026-08-12", title: "Stygian Onslaught", sourceId: "s-a" });
-    const b = event({ id: "genshin:stygian-onslaught-event:2026-08-12", title: "Stygian Onslaught Event", sourceId: "s-b" });
-    const c = event({ id: "genshin:stygian-onslaught-trial:2026-08-12", title: "Stygian Onslaught Trial", sourceId: "s-c" });
-    const { events } = mergeEvents([[a], [b], [c]]);
-    expect(events).toHaveLength(1);
-    expect(events[0]?.mergedIds).toEqual([b.id, c.id]);
-  });
-
-  test("a higher-confidence newcomer inherits what the old copy absorbed", () => {
-    const a = event({ id: "genshin:x-y:2026-08-12", title: "X Y", sourceId: "s-a", confidence: 0.8 });
-    const b = event({ id: "genshin:x-y-z:2026-08-12", title: "X Y Z", sourceId: "s-b", confidence: 0.8 });
-    const c = event({ id: "genshin:x-y-w:2026-08-12", title: "X Y W", sourceId: "s-c", confidence: 0.95 });
-    const { events } = mergeEvents([[a], [b], [c]]);
-    expect(events.map((e) => e.id)).toEqual([c.id]);
-    expect([...(events[0]?.mergedIds ?? [])].sort()).toEqual([a.id, b.id].sort());
-  });
-
-  test("an id seen twice is not an absorbed id", () => {
-    const a = event({ sourceId: "s-a" });
-    const { events } = mergeEvents([[a], [{ ...a, sourceId: "s-b" }]]);
-    expect(events[0]?.mergedIds).toBeUndefined();
   });
 });
 

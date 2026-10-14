@@ -789,6 +789,17 @@ source CI can refresh. Four things to know about it:
   label so both sources mint one ID, and `src/client/state/retiredIds.ts` moves readers' marks off
   the two IDs that changed. The general lesson: **a second source needs its whole overlap with the
   first read row by row, not counted** — a duplicate looks exactly like a net-new event in a tally.
+- **The anniversary selectors were listed twice, and the pages themselves pair them.** Fandom names
+  them as events (`Tabletop Troupe: A Gathering on Adventure's Eve`, `Across the Frozen Wilds,
+  Honing One's Edge`, both typed `Anniversary 5-Star Character Selection`); Game8 calls them
+  `Free Limited/Standard 5-Star Anniversary Selector`. Same dates and no shared words. The owner
+  settled it on 2026-10-14 by reading Game8's summaries, which name the Fandom event — so merge now
+  reads them the same way: **a summary naming the other copy's whole title, over the same window, is
+  one event** (`namesTheOther`, `merge.ts`). Next anniversary pairs itself if Game8 keeps writing
+  its blurbs this way. **Dates alone are never enough**: patch day puts about twenty different
+  Genshin events on one window, so a same-dates rule would fuse the selector with the battle pass.
+  A pair no page links goes in `src/ingest/aliases.ts` by event ID, with its evidence — the
+  fallback, empty today.
 - **A fusion carries readers' ticks with it, unaided.** Merge lists every id it absorbed on the
   survivor (`mergedIds`), the feed ships it, and the client moves marks off those ids when a feed
   arrives (`aliasesFrom`, `retiredIds.ts`). So a new merge rule, or a copy that starts matching
