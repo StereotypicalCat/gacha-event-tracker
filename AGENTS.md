@@ -22,7 +22,7 @@ between repairing a rule and rediscovering it the expensive way.
 | `docs/FEEDBACK.md` | What readers actually said about the first release, and the work it argues for | Deciding what to build next |
 | `docs/SOURCES.md` | Which sites publish a usable schedule for the games we still do not cover, and what is wrong with the ones that do not | Picking the next game to add, or assessing a source request |
 | `docs/PRODUCT.md` | Who the product is for, its positioning, voice, brand commitments and the evidence on hand — the condensed product record design tooling reads | Design or copy work, or anything that claims something about users or the product |
-| `docs/DESIGN.md` | The shipped visual system: both themes' tokens, the two colour axes, type roles, layout, depth, and the signature components. `.impeccable/design.json` is its generated sidecar | Changing anything a reader sees — colour, type, spacing, a component's look or motion |
+| `docs/DESIGN.md` | The shipped visual system: both themes' tokens, the two colour axes, type roles, layout, depth, and the signature components. It is the only design reference: the Impeccable sidecar (`.impeccable/design.json`) was dropped on 2026-10-14 because nothing here reads it and it drifted; `/impeccable document` regenerates it if the live panel is ever wanted | Changing anything a reader sees — colour, type, spacing, a component's look or motion |
 
 Two rules that follow from that:
 
@@ -173,7 +173,7 @@ src/client/       React app, service worker, manifest
                   theme.ts — dark or light, and what a game hue reads as on each
 scripts/          build-feed.ts, build-static.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
 serve.ts          static server + /api/health
-test/             1,099 tests
+test/             `bun test` — one file per module or feature; no count here, it only goes stale
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
 snapshots/        current page per source, rewritten by refresh — see its README
 ```

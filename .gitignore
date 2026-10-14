@@ -133,6 +133,6 @@ snapshots/*.state.json
 # otherwise pin a truncated page in git forever.
 snapshots/*.tmp-*
 
-# Impeccable design tooling. The sidecar (design.json) is tracked; the local
-# config only records this machine's hook consent.
+# Impeccable design tooling. The local config only records this machine's hook
+# consent. (The design.json sidecar was dropped; see AGENTS.md, docs/DESIGN.md row.)
 .impeccable/config.local.json
