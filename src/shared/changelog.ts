@@ -51,6 +51,15 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "per-game-switches",
+    date: "2026-10-14",
+    kind: "feature",
+    title: "Turn daily chores and built-in weekly tasks on or off per game",
+    body: "In Settings, under What you see, each has one switch for every game and Choose games for the ones that differ.",
+    ref: "a39c6a8",
+    note: "per-game-switches",
+  },
+  {
     id: "edit-dailies-in-place",
     date: "2026-10-14",
     kind: "feature",
@@ -448,6 +457,19 @@ export const ENTRIES: Entry[] = [
 ];
 
 export const NOTES: Note[] = [
+  {
+    id: "per-game-switches",
+    date: "2026-10-14",
+    title: "Daily chores and built-in tasks, per game",
+    summary: [
+      "Each game's daily chores could only be switched off for every game at once, and built-in weekly tasks had a checkbox per game that grew with every game added. Both now work the same way: one switch for every game, and the games that differ.",
+      "Under each switch a line says where it stands, such as All but Honkai: Star Rail or Only Zenless Zone Zero. Choose games opens a row of game chips to change it.",
+      "Your earlier answers are kept as they were. Built-ins stay off until you say yes, and the strip stops asking about one game once you have answered for all of them. Nothing you ticked or entered is removed by any of these switches.",
+    ],
+    from: "47c3953",
+    to: "094e67d",
+    specs: ["docs/superpowers/specs/2026-10-14-per-game-switches-design.md"],
+  },
   {
     id: "weekly-and-monthly-tasks",
     date: "2026-10-13",
