@@ -164,9 +164,21 @@ describe("genshin fixture specifics", () => {
 
     // Sourced from a one-cell "Availability Period" range rather than
     // Start/End rows — the other table shape on the same page.
-    expect(byTitle.get("Battle Pass - Frostfarer")?.endsAt).toBe(
+    expect(byTitle.get("Frostfarer")?.endsAt).toBe(
       "2026-09-21T00:00:00.000Z",
     );
+  });
+
+  test("a leading Battle Pass label is not part of the name", async () => {
+    // Fandom lists the same pass as plain `Frostfarer` and puts the category in
+    // its Type(s) column. Keeping Game8's label minted a second ID for one
+    // event, and the calendar showed every battle pass twice.
+    const events = await runAdapter(
+      genshinGame8,
+      "fixtures/genshin/game8-events-2026-08-14",
+    );
+    expect(events.some((e) => /^battle pass/i.test(e.title))).toBe(false);
+    expect(events.map((e) => e.id)).toContain("genshin:frostfarer:2026-08-12");
   });
 
   test("year-less summary rows produce no events", async () => {
@@ -1967,12 +1979,15 @@ describe("Genshin Impact wiki (the fifth Fandom template)", () => {
       expect(result.events.map((e) => e.id)).toContain(expected.id);
     }
 
-    // Fandom contributes net-new events Game8 did not list (total 20 merged events)
-    expect(result.events.length).toBe(20);
+    // Fandom contributes net-new events Game8 did not list (total 19 merged
+    // events). This read 20 until 2026-10-14, and the twentieth was the battle
+    // pass listed twice — `Battle Pass - Frostfarer` beside `Frostfarer`.
+    expect(result.events.length).toBe(19);
+    expect(result.events.filter((e) => /frostfarer/i.test(e.title))).toHaveLength(1);
     expect(result.conflicts).toHaveLength(0);
 
     // Corroboration bonus applies to overlapping events (0.85 -> 0.95)
     const corroborated = result.events.filter((e) => e.confidence > 0.85);
-    expect(corroborated.length).toBe(5);
+    expect(corroborated.length).toBe(6);
   });
 });

@@ -452,6 +452,19 @@ export function inferType(title: string): EventType {
   return "other";
 }
 
+/**
+ * The event's name without a category label in front of it.
+ *
+ * Genshin's page heads its pass `Battle Pass - Moontrace`; the Fandom wiki
+ * lists the same event as `Moontrace` and files the category in a column. The
+ * label is not the name, and keeping it minted a second ID for one event, so
+ * the calendar showed every battle pass twice. Stripping it moved this
+ * source's battle-pass IDs, which is why `retiredIds.ts` exists.
+ */
+export function eventName(title: string): string {
+  return title.replace(/^battle pass\s*[-–—:]\s*(?=\S)/i, "");
+}
+
 function toEvent(c: Candidate, ctx: ParseContext): GachaEvent {
   // Confidence reflects how much the source actually pinned down. Day precision
   // and unknown ends are legitimate and common, but they are weaker evidence
@@ -461,11 +474,12 @@ function toEvent(c: Candidate, ctx: ParseContext): GachaEvent {
   if (c.end === null) confidence -= 0.15;
   else if (c.end.precision === "day") confidence -= 0.05;
 
+  const title = eventName(c.title);
   return {
-    id: eventId(ctx.game, c.title, c.start.iso),
+    id: eventId(ctx.game, title, c.start.iso),
     game: ctx.game,
-    title: c.title,
-    type: inferType(c.title),
+    title,
+    type: inferType(title),
     summary: c.summary,
     startsAt: c.start.iso,
     startPrecision: c.start.precision,

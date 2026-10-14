@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { parseImportData } from "../src/client/state/export.ts";
 import {
+  RETIRED_IDS,
   carryForward,
   carryDaily,
   carryMarks,
@@ -92,5 +94,50 @@ describe("when the reader marked both rows", () => {
       T,
     );
     expect(out).toEqual({ [NEW]: { at: "2026-09-24T00:00:00.000Z" } });
+  });
+});
+
+const PASS = "genshin:battle-pass-moontrace:2026-09-23";
+const BARE = "genshin:moontrace:2026-09-23";
+
+describe("RETIRED_IDS", () => {
+  test("names the two battle passes Game8 minted with their label", () => {
+    expect(RETIRED_IDS[PASS]).toBe(BARE);
+    expect(RETIRED_IDS["genshin:battle-pass-frostfarer:2026-08-12"]).toBe(
+      "genshin:frostfarer:2026-08-12",
+    );
+  });
+
+  test("never retires an id onto another retired id", () => {
+    for (const to of Object.values(RETIRED_IDS)) {
+      expect(RETIRED_IDS[to]).toBeUndefined();
+    }
+  });
+
+  test("is the table a load uses when none is given", () => {
+    const out = carryMarks({ [PASS]: { at: "2026-09-24T00:00:00.000Z" } });
+    expect(Object.keys(out)).toEqual([BARE]);
+  });
+});
+
+describe("an export made before the ids moved", () => {
+  test("imports onto the new ids", () => {
+    const data = parseImportData({
+      format: "gacha-tracker-export",
+      progress: { [PASS]: { status: "done", at: "2026-10-01T00:00:00.000Z" } },
+      daily: { [PASS]: { days: ["2026-09-24"], at: "2026-09-24T00:00:00.000Z" } },
+      ignored: { [PASS]: { at: "2026-09-24T00:00:00.000Z" } },
+    });
+    expect(Object.keys(data?.progress ?? {})).toEqual([BARE]);
+    expect(Object.keys(data?.daily ?? {})).toEqual([BARE]);
+    expect(Object.keys(data?.ignored ?? {})).toEqual([BARE]);
+  });
+
+  test("so does one from before progress existed", () => {
+    const data = parseImportData({
+      format: "gacha-tracker-export",
+      completions: { [PASS]: { at: "2026-10-01T00:00:00.000Z" } },
+    });
+    expect(data?.progress?.[BARE]?.status).toBe("done");
   });
 });

@@ -116,7 +116,9 @@ server-side (the server never had the data). If the scheme must change, ship a c
 migration that reads the old keys and remaps them, and keep that migration for at least a year.
 
 **A parser fix can move IDs too, and gets the same treatment.** `src/client/state/retiredIds.ts`
-holds an explicit table of IDs the feed stopped publishing and what each became. On every load and
+holds an explicit table of IDs the feed stopped publishing and what each became — first used on
+2026-10-14, when Game8's Genshin parser stopped keeping `Battle Pass -` in front of a pass's name
+(the label had put every pass on the calendar twice beside Fandom's bare name). On every load and
 every import, `progress`, `daily` and `ignored` entries under a retired ID **move** to the new one:
 
 - **A move inside the same storage key, not a copy, and not a deleted key.** The mark survives under
@@ -127,7 +129,7 @@ every import, `progress`, `daily` and `ignored` entries under a retired ID **mov
   held, because both rows were the reader's own.
 - **An unreadable entry is left where it is.** These run in `useState` initialisers, where a throw is
   a blank screen.
-- **A table, never a pattern**, and each entry kept for at least a year.
+- **A table, never a pattern**, and kept until at least 2027-10-14.
 
 The date suffix disambiguates reruns of the same event. Title is slugified from the *source's*
 title, so a wiki renaming an event creates a new ID — reconciliation detects this as a near-match

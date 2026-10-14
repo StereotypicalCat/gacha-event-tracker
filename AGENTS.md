@@ -778,8 +778,17 @@ source CI can refresh. Four things to know about it:
   (`To Temper Thyself and Journey Far` vs `… Cycle 5`, and `Stygian Onslaught` vs
   `…: Battle of the Starburst`). In `merge.ts`, higher priority breaks ties when confidence is equal
   (0.85). If Fandom won those near-matches, the event IDs would change and readers' localStorage
-  completion marks would silently orphan. With Game8 prioritized: 0 IDs lost, 11 net-new events added,
-  0 conflicts, and 5 corroborated events earning confidence bonuses.
+  completion marks would silently orphan. With Game8 prioritized: 0 IDs lost, 10 net-new events added,
+  0 conflicts, and 6 corroborated events earning confidence bonuses. (This read 11 and 5 until
+  2026-10-14: the eleventh "new" event was the battle pass, listed twice — next bullet.)
+- **Game8 labels a battle pass; Fandom does not, and that put every pass on the calendar twice.**
+  Game8 heads it `Battle Pass - Moontrace`, Fandom lists `Moontrace` and files the category under
+  `Type(s)`, so the two minted different IDs and no merge rule could pair them — overlap scores 0.5,
+  and a one-word base is under `titleExtends`' floor. Reported by a reader on 2026-10-14; the pinned
+  fixtures show it from the day this source landed. `eventName` (`parsers/game8.ts`) now drops the
+  label so both sources mint one ID, and `src/client/state/retiredIds.ts` moves readers' marks off
+  the two IDs that changed. The general lesson: **a second source needs its whole overlap with the
+  first read row by row, not counted** — a duplicate looks exactly like a net-new event in a tally.
 - **The 336-day event raised the duration ceiling to 365 days.** Genshin's anniversary 5-star selection
   runs 336 days (`2025-10-22` → `2026-09-23`), correctly dated on this wiki. This motivated raising the
   sanity ceiling in `test/adapters/game8.test.ts` and `docs/INGESTION.md` from 180 to 365 days.

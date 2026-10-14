@@ -10,14 +10,21 @@ export type CarryTable = Readonly<Record<string, string>>;
  *
  * An event id is a localStorage key (AGENTS.md § Event IDs are localStorage
  * keys), so an id that moves takes the reader's marks with it unless they are
- * carried across. A change that moves ids — a parser fix that renames a title
- * is the usual one — lands its entries here, in the same commit.
+ * carried across. These moved on 2026-10-14, when the Game8 parser stopped
+ * keeping `Battle Pass -` in front of Genshin's pass names: Fandom had always
+ * published the bare name, and the two ids put every pass on the calendar
+ * twice (docs/superpowers/specs/2026-10-14-genshin-duplicates-design.md).
  *
- * An explicit table, never a pattern: a pattern would also catch an id nobody
- * retired. Keep each entry for at least a year — a reader who has not opened
- * the app since still has marks under the old id.
+ * An explicit table, never a pattern: the battle passes are the only two such
+ * ids that ever shipped (git history of snapshots/ and fixtures/), and a
+ * pattern would also catch an id nobody retired. Keep it until at least
+ * 2027-10-14 — a reader who has not opened the app since still has marks under
+ * the old ids.
  */
-export const RETIRED_IDS: CarryTable = {};
+export const RETIRED_IDS: CarryTable = {
+  "genshin:battle-pass-frostfarer:2026-08-12": "genshin:frostfarer:2026-08-12",
+  "genshin:battle-pass-moontrace:2026-09-23": "genshin:moontrace:2026-09-23",
+};
 
 /**
  * Move each entry under an old id in `table` to its replacement.
