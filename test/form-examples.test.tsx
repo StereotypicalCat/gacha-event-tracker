@@ -259,7 +259,7 @@ describe("what an event still needs", () => {
     expect(eventStillNeeded({ ...base, endDate: "", endKnown: false })).toEqual([]);
     expect(eventStillNeeded({ ...base, endDate: "", datedWindow: false })).toEqual([]);
     expect(eventStillNeeded({ ...base, endKnown: false, delayNeedsEnd: true })).toEqual([
-      "an end date",
+      "an end date (a wait counts from it) or another repeat",
     ]);
     expect(eventStillNeeded({ ...base, needsCycle: true })).toEqual(["a cycle length"]);
   });
@@ -336,5 +336,24 @@ describe("review fixes: Save never sits disabled without a reason", () => {
     const filled = eventFormState({ ...v, cadenceAmount: "1" }, null);
     expect(filled.valid).toBe(true);
     expect(filled.needs).toEqual([]);
+  });
+});
+
+describe("follow-up: a wait with the end set to unknown", () => {
+  test("names the way out instead of asking for a field it hides", () => {
+    const v: EventFormValues = {
+      ...blankEvent,
+      title: "x",
+      cadence: "custom",
+      repeatMode: "delay",
+      endKnown: false,
+      startDate: "2026-10-01",
+      endDate: "",
+    };
+    expect(eventFormState(v, null).needs).toEqual([
+      "an end date (a wait counts from it) or another repeat",
+    ]);
+    // With the end field on screen, the plain words are enough.
+    expect(eventFormState({ ...v, endKnown: true }, null).needs).toEqual(["an end date"]);
   });
 });

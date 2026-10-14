@@ -455,7 +455,11 @@ export function eventStillNeeded(s: {
   const needs: string[] = [];
   if (s.title.trim() === "") needs.push("a name");
   if (s.startDate === "") needs.push("a start date");
-  if ((s.datedWindow && s.endKnown && s.endDate === "") || s.delayNeedsEnd) {
+  if (s.delayNeedsEnd && !s.endKnown) {
+    // The end field is hidden behind "I don't know when it ends", so a bare
+    // "an end date" would ask for something not on screen.
+    needs.push("an end date (a wait counts from it) or another repeat");
+  } else if ((s.datedWindow && s.endKnown && s.endDate === "") || s.delayNeedsEnd) {
     needs.push("an end date");
   }
   if (s.needsCycle) needs.push("a cycle length");
