@@ -160,6 +160,22 @@ describe("titleExtends", () => {
   test("refuses two titles of equal length", () => {
     expect(titleExtends("Gold Clash", "Gold Rush")).toBe(false);
   });
+
+  test("matches a title with a category label in front", () => {
+    // Game8 heads Genshin's pass `Battle Pass - Moontrace` where Fandom says
+    // `Moontrace`: the same qualifier, written at the other end.
+    expect(titleExtends("Frozen Wilds", "Battle Pass - Frozen Wilds")).toBe(true);
+  });
+
+  test("refuses a one-word title under a label, as at the end", () => {
+    // The floor holds in both directions. `Moontrace` itself is made one ID by
+    // the Game8 parser dropping the label, not by loosening this.
+    expect(titleExtends("Moontrace", "Battle Pass - Moontrace")).toBe(false);
+  });
+
+  test("refuses shared words in the middle", () => {
+    expect(titleExtends("Gold Clash", "Royal Gold Clash Rush")).toBe(false);
+  });
 });
 
 describe("merging two sources for one game", () => {
@@ -189,6 +205,29 @@ describe("merging two sources for one game", () => {
     expect(events[0]?.sourceId).toBe("endfield-wikigg-events");
     expect(conflicts).toHaveLength(1);
     expect(conflicts[0]?.field).toBe("endsAt");
+  });
+
+  test("collapses a leading-label duplicate and keeps the first copy's id", () => {
+    const g8 = event({
+      id: "genshin:battle-pass-frozen-wilds:2026-09-23",
+      title: "Battle Pass - Frozen Wilds",
+      startsAt: "2026-09-23T00:00:00.000Z",
+      endsAt: "2026-11-02T00:00:00.000Z",
+      sourceId: "genshin-game8-events",
+      confidence: 0.85,
+    });
+    const fandom = event({
+      id: "genshin:frozen-wilds:2026-09-23",
+      title: "Frozen Wilds",
+      startsAt: "2026-09-23T00:00:00.000Z",
+      endsAt: "2026-11-02T00:00:00.000Z",
+      sourceId: "genshin-fandom-events",
+      confidence: 0.85,
+    });
+    const { events, conflicts } = mergeEvents([[g8], [fandom]]);
+    expect(events).toHaveLength(1);
+    expect(events[0]?.id).toBe(g8.id);
+    expect(conflicts).toHaveLength(0);
   });
 
   test("the survivor lists every id it absorbed", () => {

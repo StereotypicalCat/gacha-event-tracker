@@ -484,8 +484,13 @@ Only meaningful when a game has more than one source; a single-source game passe
 
 1. **Same ID** → same event; keep the higher-confidence copy. Applies within a source as well as
    across sources — an identical id is the same row seen twice, whatever it is called.
-2. **Near match** — **different sources**, same game, title similarity ≥ 0.80, starts within 24h —
-   → same event under different titles; keep the higher-confidence copy.
+2. **Near match** — **different sources**, same game, starts within 24h, and either title similarity
+   ≥ 0.80 or one title is the other with words added at one end (`titleExtends`) — → same event
+   under different titles; keep the higher-confidence copy. The second test exists because a source
+   qualifier scores badly on overlap: `Bedazzling Dawnstar` / `… Sign-In` is 0.67. It reads both
+   ends since 2026-10-14 — a qualifier can be a category label in front, as Game8's
+   `Battle Pass - …` was — and both ends keep the two-word floor, because a one-word base would
+   fuse half of a patch day.
 
    **The survivor lists what it absorbed** in `mergedIds`, and the client moves readers' marks off
    those ids when the feed arrives — so a rule that starts fusing two published ids costs nobody a

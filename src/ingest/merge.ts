@@ -169,19 +169,26 @@ function isSameEvent(
 }
 
 /**
- * True when one title is the other with words appended — the shape a source
- * qualifier actually takes ("Bedazzling Dawnstar" → "… Sign-In").
+ * True when one title is the other with words added at either end — the shape
+ * a source qualifier actually takes. Appended: "Bedazzling Dawnstar" → "…
+ * Sign-In". Prepended: Game8's "Battle Pass - Moontrace" beside Fandom's
+ * "Moontrace", where the other source files the category in a column instead.
  *
- * Deliberately a prefix test, not a subset test. Subset matching would also
+ * Deliberately an edge test, not a subset test. Subset matching would also
  * fuse "Gold Clash" with "Gold Rush Clash Royale", which are different events.
- * Two words is the floor: a one-word title would swallow half the calendar.
+ * Two words is the floor at both ends: a one-word title would swallow half the
+ * calendar.
  */
 export function titleExtends(a: string, b: string): boolean {
   const ta = tokenList(a);
   const tb = tokenList(b);
   const [small, large] = ta.length <= tb.length ? [ta, tb] : [tb, ta];
   if (small.length < 2 || small.length === large.length) return false;
-  return small.every((word, i) => large[i] === word);
+  const offset = large.length - small.length;
+  return (
+    small.every((word, i) => large[i] === word) ||
+    small.every((word, i) => large[offset + i] === word)
+  );
 }
 
 function findConflict(
