@@ -247,6 +247,14 @@ export async function runRefresh(
       summary.warnings.push(`${adapter.id}: ${outcome.note}`);
     }
 
+    // A record that outlives its reason would excuse the next real failure, so
+    // the first cycle that lists events again asks for it to be taken out.
+    if (adapter.lapsed && outcome.result === "fetched" && (outcome.eventCount ?? 0) > 0) {
+      summary.warnings.push(
+        `${adapter.id} is listing events again; remove \`lapsed\` from its registry entry`,
+      );
+    }
+
     options.log(
       `  ${adapter.id.padEnd(24)} ${outcome.result.padEnd(17)} ${outcome.note}`,
     );
@@ -257,7 +265,19 @@ export async function runRefresh(
     // this reports a standing condition, not one bad afternoon.
     if (!options.dryRun) {
       const health = await options.store.readState(adapter.id);
-      if (health.consecutiveFailures >= BROKEN_AFTER_FAILURES) {
+      // A source recorded as lapsed is excused only while it keeps answering:
+      // its 200s are a page with nothing current, which a person has already
+      // looked at. Any other status is a new failure and is reported as one.
+      if (
+        health.consecutiveFailures >= BROKEN_AFTER_FAILURES &&
+        adapter.lapsed &&
+        health.lastStatus === 200
+      ) {
+        summary.warnings.push(
+          `${adapter.id}: lapsed (recorded ${adapter.lapsed.recorded}, ${adapter.lapsed.reason}); ` +
+            `${health.consecutiveFailures} cycles with nothing current, not counted as broken`,
+        );
+      } else if (health.consecutiveFailures >= BROKEN_AFTER_FAILURES) {
         summary.broken.push({
           sourceId: adapter.id,
           consecutiveFailures: health.consecutiveFailures,

@@ -41,6 +41,23 @@ export interface Adapter {
    * `SourceParser.statesNoEvents`.
    */
   statesNoEvents?(html: string): boolean;
+
+  /**
+   * A person's record that this source still answers but its editors have
+   * stopped adding events, and that no other source can stand in for it.
+   * `scripts/refresh-sources.ts` then reports an empty answer from it as a
+   * warning rather than a broken source — and only an answer: one that stops
+   * answering is broken as before. Never inferred; see AGENTS.md § Scraping
+   * conduct, *A source that has lapsed*.
+   */
+  lapsed?: Lapsed;
+}
+
+export interface Lapsed {
+  /** The day a person looked and wrote this down, `YYYY-MM-DD`. */
+  recorded: string;
+  /** What they saw, in a few words. */
+  reason: string;
 }
 
 export const SIX_HOURS_MS = 6 * 60 * 60 * 1000;

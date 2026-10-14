@@ -2,7 +2,7 @@ import type { GachaEvent, GameId } from "../../shared/schema.ts";
 import { mergeEvents, type MergeResult } from "../merge.ts";
 import { parserById } from "../parsers/index.ts";
 import { sanitizeEvents } from "../sanitize.ts";
-import { SIX_HOURS_MS, type Adapter, type ParseContext } from "./types.ts";
+import { SIX_HOURS_MS, type Adapter, type Lapsed, type ParseContext } from "./types.ts";
 
 /**
  * The source registry.
@@ -18,6 +18,7 @@ interface SourceSpec {
   parserId: string;
   priority?: number;
   minIntervalMs?: number;
+  lapsed?: Lapsed;
 }
 
 const SOURCES: SourceSpec[] = [
@@ -153,6 +154,11 @@ const SOURCES: SourceSpec[] = [
     // closed routes here and `/wiki/` is the one `*` is allowed.
     url: "https://holodori.wiki/wiki/Events",
     parserId: "holodoriwiki",
+    // Read on 2026-10-14: the page answers and parses, but nothing has been
+    // added since 19 Sep while the game kept running events, and none of the
+    // alternatives can be fetched (docs/SOURCES.md § 16). Kept registered so it
+    // recovers by itself; refresh says when it lists events again.
+    lapsed: { recorded: "2026-10-14", reason: "no event added since 19 Sep" },
   },
   {
     id: "gfl2-iopwiki-events",
@@ -274,6 +280,7 @@ function toAdapter(spec: SourceSpec): Adapter {
     parserId: spec.parserId,
     minIntervalMs: spec.minIntervalMs ?? SIX_HOURS_MS,
     priority: spec.priority ?? 0,
+    ...(spec.lapsed === undefined ? {} : { lapsed: spec.lapsed }),
     statesNoEvents(html: string): boolean {
       return parser.statesNoEvents?.(html) ?? false;
     },

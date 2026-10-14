@@ -1068,6 +1068,25 @@ describe("hololive Dreams wiki", () => {
     expect(events[0]?.sourceUrl).toBe("https://holodori.wiki/wiki/Ultimate_Summer");
   });
 
+  test("the page as of 2026-10-14 is the same template with nothing current — lapsed, not redesigned", async () => {
+    // The zero CI rejected for three weeks. The template still matches, so the
+    // parser is reading the page; what changed is that its editors stopped:
+    // the newest row is 19 Sep, under Past Events, while the game ran a score
+    // challenge 7–13 Oct that the page never listed. Current Events holds only
+    // `Beginner Mission`, which has no start and is skipped by design.
+    const html = await Bun.file("fixtures/holodori/holodoriwiki-events-2026-10-14.html").text();
+    expect(holodoriWikiParser.canParse(html)).toBe(true);
+    expect(
+      holo.parse(html, {
+        now: "2026-10-14T00:23:07.000Z",
+        sourceUrl: holo.url,
+        sourceId: holo.id,
+        game: holo.game,
+      }),
+    ).toEqual([]);
+    expect(holo.lapsed?.recorded).toBe("2026-10-14");
+  });
+
   test("reports one global end rather than inventing per-region ones", async () => {
     // One worldwide service on a Japanese clock: the page states each boundary
     // once, in JST, with no per-region column anywhere.

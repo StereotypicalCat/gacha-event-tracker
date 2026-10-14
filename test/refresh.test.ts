@@ -900,6 +900,65 @@ describe("a source that has stopped answering", () => {
   });
 });
 
+describe("a source recorded as lapsed", () => {
+  // hololive Dreams, 2026-10-14: holodori.wiki answers 200 every cycle with an
+  // intact page whose editors stopped adding events, and no other source can
+  // be fetched. A person recorded that; the run should say so without turning
+  // red every cycle over something nobody here can fix.
+  const LAPSED = { recorded: "2026-10-14", reason: "editors stopped adding events" };
+
+  async function emptyCycles(lapsedAdapter: Adapter, body: string, status = 200) {
+    await seed("<html><event></event></html>", NOW.toISOString(), 1);
+    let summary = await runRefresh(
+      options({ adapters: [lapsedAdapter], responder: () => new Response(body, { status }) }).opts,
+    );
+    for (let i = 1; i <= BROKEN_AFTER_FAILURES; i += 1) {
+      const later = new Date(NOW.getTime() + i * SIX_HOURS_MS);
+      summary = await runRefresh({
+        ...options({
+          adapters: [lapsedAdapter],
+          responder: () => new Response(body, { status }),
+        }).opts,
+        now: () => later,
+      });
+    }
+    return summary;
+  }
+
+  test("an empty page it keeps answering with is a warning, not broken", async () => {
+    const summary = await emptyCycles(adapter({ lapsed: LAPSED }), "<html></html>");
+
+    expect(summary.outcomes[0]?.result).toBe("rejected");
+    expect(summary.broken).toEqual([]);
+    expect(summary.warnings.join("\n")).toInclude(
+      "genshin-game8-events: lapsed (recorded 2026-10-14, editors stopped adding events)",
+    );
+  });
+
+  test("it is still broken when it stops answering", async () => {
+    const summary = await emptyCycles(adapter({ lapsed: LAPSED }), "denied", 403);
+    expect(summary.broken).toHaveLength(1);
+  });
+
+  test("a source with no such record is broken as before", async () => {
+    const summary = await emptyCycles(adapter(), "<html></html>");
+    expect(summary.broken).toHaveLength(1);
+  });
+
+  test("events coming back say the record is out of date", async () => {
+    const { opts } = options({
+      adapters: [adapter({ lapsed: LAPSED })],
+      responder: () => new Response("<html><event></event><event></event></html>"),
+    });
+    const summary = await runRefresh(opts);
+
+    expect(summary.outcomes[0]?.result).toBe("fetched");
+    expect(summary.warnings.join("\n")).toInclude(
+      "genshin-game8-events is listing events again; remove `lapsed` from its registry entry",
+    );
+  });
+});
+
 describe("what the runner reports to the runner", () => {
   // Warnings on stdout are invisible unless someone opens the log, which is how
   // six of seven sources failed every cycle for three days under a green tick.
