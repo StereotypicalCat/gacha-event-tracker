@@ -19,7 +19,7 @@ import { useProgress } from "./state/useProgress.ts";
 import { useDailyLog, type DailyLogMap } from "./state/useDailyLog.ts";
 import { useTasks } from "./state/useTasks.ts";
 import { useAmounts } from "./state/useAmounts.ts";
-import { adoptNewLanes, firstRunPrefs, usePrefs, type Prefs } from "./state/usePrefs.ts";
+import { adoptNewLanes, choreRule, firstRunPrefs, routineRule, usePrefs, type Prefs } from "./state/usePrefs.ts";
 import { buildExportData, parseImportData, triggerDownload } from "./state/export.ts";
 import { snapDayWidth } from "./state/zoom.ts";
 import { useCustom, type EventDraft } from "./state/useCustom.ts";
@@ -51,6 +51,7 @@ import {
   routineToAsk,
   type Routine,
 } from "../shared/routines.ts";
+import { setFor, shownFor } from "../shared/perGame.ts";
 import { ENTRIES, NOTES, newestId, unseen } from "../shared/changelog.ts";
 import { ChangelogSheet } from "./components/ChangelogSheet.tsx";
 import { WhatsNew } from "./components/WhatsNew.tsx";
@@ -220,7 +221,7 @@ export function App() {
   const copiedFrom = new Set(
     tasks.tasks.flatMap((t) => (t.from === undefined ? [] : [t.from])),
   );
-  const routines = activeRoutines(prefs.routineGames, copiedFrom);
+  const routines = activeRoutines(routineRule(prefs), copiedFrom);
   const stripTasks = [...tasks.tasks, ...routines];
 
   /**
@@ -661,7 +662,7 @@ export function App() {
               the lanes out here would also cost a reader's own game its place in
               the order their repeating events are grouped under. */}
           <Dailies
-            showChores={prefs.showChores}
+            showChores={(lane) => shownFor(choreRule(prefs), lane)}
             games={focus === null ? enabled : [focus]}
             events={todo.filter(repeatsDaily).map((r) => r.event)}
             region={prefs.region}
@@ -679,20 +680,26 @@ export function App() {
             edit={stripEditor}
             taskStatusFor={taskStatusOf}
             ask={(() => {
+              const rule = routineRule(prefs);
               const game = routineToAsk(
                 focus === null ? enabled : [focus],
-                prefs.routineGames,
+                rule,
                 prefs.routinesAsked,
+                prefs.showRoutines !== undefined,
               );
               if (game === null) return undefined;
               return {
                 game,
-                // Either answer is recorded, so the question is asked once.
-                onAnswer: (yes: boolean) =>
+                // Either answer is recorded, so the question is asked once. Yes
+                // is the same per-game answer the settings chip gives — with
+                // the global switch unanswered, that lands in `routineGames`.
+                onAnswer: (yes: boolean) => {
+                  const lists = setFor(rule, game, true);
                   update({
                     routinesAsked: [...(prefs.routinesAsked ?? []), game],
-                    ...(yes ? { routineGames: [...(prefs.routineGames ?? []), game] } : {}),
-                  }),
+                    ...(yes ? { routineGames: lists.on, routinesOff: lists.off } : {}),
+                  });
+                },
               };
             })()}
             onSetAmount={amounts.setAmount}

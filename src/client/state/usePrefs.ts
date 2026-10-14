@@ -8,6 +8,7 @@ import type { TimelineGroup } from "./lanes.ts";
 import { DEFAULT_THEME_CHOICE, type ThemeChoice } from "./theme.ts";
 import { DEFAULT_DAY_WIDTH, snapDayWidth } from "./zoom.ts";
 import { ENTRIES, newestId } from "../../shared/changelog.ts";
+import type { PerGame } from "../../shared/perGame.ts";
 
 /**
  * Which of the two views the reader is looking at.
@@ -169,6 +170,13 @@ export interface Prefs {
    */
   showChores: boolean;
   /**
+   * Games whose chore differs from `showChores` — shown although it is off, or
+   * hidden although it is on (`src/shared/perGame.ts`). Absent means none, so
+   * every install from before these existed reads exactly as it did.
+   */
+  choresOn?: LaneId[] | undefined;
+  choresOff?: LaneId[] | undefined;
+  /**
    * Whether weekly tasks — the reader's own and any built-ins they turned on —
    * sit in the strip's row under the dailies. `showMonthlyTasks` is the same
    * for monthly ones.
@@ -198,11 +206,20 @@ export interface Prefs {
   /** False until the reader has picked their games on first run. */
   onboarded: boolean;
   /**
-   * Games whose built-in weekly tasks the reader turned on (routines.ts, PRD
-   * F17). Absent means none: built-ins are opt-in, so an install from before
-   * they existed gets none rather than all.
+   * The global answer for built-in weekly tasks (routines.ts, PRD F17). Absent
+   * means *never answered*, read as off — built-ins are opt-in — and is what
+   * lets the strip still ask about one game at a time.
+   */
+  showRoutines?: boolean | undefined;
+  /**
+   * Games whose built-in weekly tasks the reader turned on — the on-exceptions
+   * to `showRoutines`, and the same list it was before the global answer
+   * existed, so nothing was migrated. Absent means none: built-ins are opt-in,
+   * so an install from before they existed gets none rather than all.
    */
   routineGames?: LaneId[] | undefined;
+  /** Games whose built-ins stay off although `showRoutines` is on. */
+  routinesOff?: LaneId[] | undefined;
   /** Games already asked "track its weekly tasks?", so the question is asked once. */
   routinesAsked?: LaneId[] | undefined;
   /**
@@ -233,6 +250,16 @@ export function firstRunPrefs(
     changelogSeen: newestId(ENTRIES),
     showUpcoming: true,
   };
+}
+
+/** Whose standing chore the strip carries. */
+export function choreRule(p: Prefs): PerGame {
+  return { all: p.showChores, on: p.choresOn, off: p.choresOff };
+}
+
+/** Whose built-in weekly tasks are on. An unanswered global switch is off. */
+export function routineRule(p: Prefs): PerGame {
+  return { all: p.showRoutines ?? false, on: p.routineGames, off: p.routinesOff };
 }
 
 export function defaults(): Prefs {
@@ -368,13 +395,17 @@ export function restorePrefsValue(incoming: unknown): Prefs {
     result.changelogSeen = undefined;
   }
 
-  // Built-in tasks: string arrays, or absent.
-  for (const key of ["routineGames", "routinesAsked"] as const) {
+  // Per-game exceptions and built-in tasks: string arrays, or absent.
+  for (const key of ["routineGames", "routinesAsked", "routinesOff", "choresOn", "choresOff"] as const) {
     const value: unknown = result[key];
     if (value === undefined) continue;
     result[key] = Array.isArray(value)
       ? value.filter((g): g is LaneId => typeof g === "string")
       : undefined;
+  }
+
+  if (result.showRoutines !== undefined && typeof result.showRoutines !== "boolean") {
+    result.showRoutines = undefined;
   }
 
   // focusGame

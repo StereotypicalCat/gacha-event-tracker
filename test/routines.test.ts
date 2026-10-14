@@ -8,7 +8,8 @@ import {
   mineFrom,
   copyRoutineState,
 } from "../src/shared/routines.ts";
-import { restorePrefsValue } from "../src/client/state/usePrefs.ts";
+import { choreRule, defaults, restorePrefsValue, routineRule } from "../src/client/state/usePrefs.ts";
+import { shownFor } from "../src/shared/perGame.ts";
 import { taskStatus } from "../src/shared/task.ts";
 
 /**
@@ -57,23 +58,65 @@ describe("ROUTINES", () => {
 });
 
 describe("which built-ins are on", () => {
+  const off = { all: false };
   test("only for games the reader said yes to", () => {
-    expect(activeRoutines(undefined, new Set()).map((r) => r.id)).toEqual([]);
-    expect(activeRoutines(["zzz"], new Set()).map((r) => r.id)).toEqual(["routine:zzz:ridu-weekly"]);
+    expect(activeRoutines(off, new Set()).map((r) => r.id)).toEqual([]);
+    expect(activeRoutines({ all: false, on: ["zzz"] }, new Set()).map((r) => r.id)).toEqual(["routine:zzz:ridu-weekly"]);
   });
 
   test("one the reader made their own is hidden while the copy exists", () => {
-    expect(activeRoutines(["zzz", "endfield"], new Set(["routine:zzz:ridu-weekly"])).map((r) => r.id))
+    expect(activeRoutines({ all: false, on: ["zzz", "endfield"] }, new Set(["routine:zzz:ridu-weekly"])).map((r) => r.id))
+      .toEqual(["routine:endfield:weekly-routine"]);
+  });
+
+  test("switched on globally, every game's — less the ones switched off", () => {
+    expect(activeRoutines({ all: true }, new Set()).map((r) => r.id))
+      .toEqual(["routine:zzz:ridu-weekly", "routine:endfield:weekly-routine"]);
+    expect(activeRoutines({ all: true, off: ["zzz"] }, new Set()).map((r) => r.id))
       .toEqual(["routine:endfield:weekly-routine"]);
   });
 });
 
+describe("a reader's answers from before the global switch carry over", () => {
+  // Nothing is migrated: `routineGames` is the built-ins' on-list as it stands,
+  // and an absent `showRoutines` is the opt-in it always was.
+  test("routineGames alone still means exactly those games", () => {
+    const rule = routineRule({ ...defaults(), routineGames: ["zzz"] });
+    expect(activeRoutines(rule, new Set()).map((r) => r.id)).toEqual(["routine:zzz:ridu-weekly"]);
+  });
+
+  test("an install that never answered gets none", () => {
+    expect(activeRoutines(routineRule(defaults()), new Set())).toEqual([]);
+  });
+
+  test("showRoutines and routinesOff are read", () => {
+    const rule = routineRule({ ...defaults(), showRoutines: true, routinesOff: ["zzz"] });
+    expect(activeRoutines(rule, new Set()).map((r) => r.id)).toEqual(["routine:endfield:weekly-routine"]);
+  });
+
+  test("showChores alone still means every game's chore, and choresOff narrows it", () => {
+    expect(shownFor(choreRule(defaults()), "genshin")).toBe(true);
+    expect(shownFor(choreRule({ ...defaults(), showChores: false }), "genshin")).toBe(false);
+    const rule = choreRule({ ...defaults(), choresOff: ["hsr"] });
+    expect([shownFor(rule, "genshin"), shownFor(rule, "hsr")]).toEqual([true, false]);
+    expect(shownFor(choreRule({ ...defaults(), showChores: false, choresOn: ["hsr"] }), "hsr")).toBe(true);
+  });
+});
+
 describe("which game to ask about", () => {
+  const off = { all: false };
   test("the first game on screen with built-ins, not asked and not on", () => {
-    expect(routineToAsk(["genshin", "zzz", "endfield"], undefined, undefined)).toBe("zzz");
-    expect(routineToAsk(["genshin", "zzz", "endfield"], undefined, ["zzz"])).toBe("endfield");
-    expect(routineToAsk(["zzz"], ["zzz"], undefined)).toBeNull();
-    expect(routineToAsk(["genshin"], undefined, undefined)).toBeNull();
+    expect(routineToAsk(["genshin", "zzz", "endfield"], off, undefined, false)).toBe("zzz");
+    expect(routineToAsk(["genshin", "zzz", "endfield"], off, ["zzz"], false)).toBe("endfield");
+    expect(routineToAsk(["zzz"], { all: false, on: ["zzz"] }, undefined, false)).toBeNull();
+    expect(routineToAsk(["genshin"], off, undefined, false)).toBeNull();
+  });
+
+  test("never once the reader has answered the global switch", () => {
+    // Either answer covers every game at once, so asking about one is asking
+    // a question they already answered.
+    expect(routineToAsk(["zzz"], off, undefined, true)).toBeNull();
+    expect(routineToAsk(["zzz"], { all: true, off: ["zzz"] }, undefined, true)).toBeNull();
   });
 });
 
@@ -83,6 +126,19 @@ describe("restoring prefs with the new fields", () => {
     expect(r.routineGames).toEqual(["zzz"]);
     expect(r.routinesAsked).toBeUndefined();
     expect(restorePrefsValue({}).routineGames).toBeUndefined();
+  });
+
+  test("the exception lists and the global built-ins answer are sanitised too", () => {
+    const r = restorePrefsValue({ choresOn: ["hsr", null], choresOff: "x", routinesOff: [3, "zzz"], showRoutines: 1 });
+    expect(r.choresOn).toEqual(["hsr"]);
+    expect(r.choresOff).toBeUndefined();
+    expect(r.routinesOff).toEqual(["zzz"]);
+    expect(r.showRoutines).toBeUndefined();
+    expect(restorePrefsValue({ showRoutines: false }).showRoutines).toBe(false);
+    const empty = restorePrefsValue({});
+    expect([empty.choresOn, empty.choresOff, empty.routinesOff, empty.showRoutines]).toEqual([
+      undefined, undefined, undefined, undefined,
+    ]);
   });
 });
 

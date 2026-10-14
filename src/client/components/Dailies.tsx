@@ -116,7 +116,7 @@ export function dailyGroups(
   region: Region,
   meta: (id: LaneId) => GameMeta,
   startOf: (event: DisplayEvent) => number,
-  showChores = true,
+  showChores: boolean | ((lane: LaneId) => boolean) = true,
   goalFor: (id: string) => GoalStatus | undefined = () => undefined,
   tasks: readonly StripTask[] = [],
   taskStatusFor: (task: StripTask) => GoalStatus | undefined = () => undefined,
@@ -143,7 +143,9 @@ export function dailyGroups(
     // or writes its ticks here, so `dailies:<game>` keeps every day the reader
     // ever logged and switching back on restores the lot. A game the reader
     // invented never had one to begin with.
-    if (showChores && !isCustomGameId(lane)) {
+    // Per game where the reader has said so (`choreRule`, perGame.ts).
+    const chore = typeof showChores === "function" ? showChores(lane) : showChores;
+    if (chore && !isCustomGameId(lane)) {
       items.push({
         key: dailiesId(lane as GameId),
         game: lane,
@@ -315,8 +317,8 @@ export function Dailies({
    */
   events: DisplayEvent[];
   region: Region;
-  /** Whether to carry each game's standing chore — `prefs.showChores`. */
-  showChores: boolean;
+  /** Whether to carry a game's standing chore — `choreRule(prefs)`, or one answer for all. */
+  showChores: boolean | ((lane: LaneId) => boolean);
   now: number;
   daysFor: (id: string) => string[];
   onToggleDay: (id: string, day: string) => void;

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { PeriodSchema } from "./period.ts";
 import { GameId } from "./schema.ts";
+import { shownFor, type PerGame } from "./perGame.ts";
 import { MeasureSchema, type TaskShape } from "./task.ts";
 
 /**
@@ -13,7 +14,8 @@ import { MeasureSchema, type TaskShape } from "./task.ts";
  * then visibly ten months old rather than presented as current. Nothing here is
  * inferred; add one only when a page states it.
  *
- * Off unless the reader says yes, per game (`prefs.routineGames`). Its id is in
+ * Off unless the reader says yes — for every game (`prefs.showRoutines`) or for
+ * one (`prefs.routineGames`, `prefs.routinesOff`; see `perGame.ts`). Its id is in
  * the reserved `routine:` space, and its ticks and numbers are stored under that
  * id exactly as a reader's task's are.
  */
@@ -65,16 +67,12 @@ export function routinesFor(game: string): Routine[] {
 }
 
 /**
- * The built-ins on screen: those of games the reader said yes to, less any
- * they made their own (`Task.from`) — the copy replaces the original while it
+ * The built-ins on screen: those of games the rule shows, less any the reader
+ * made their own (`Task.from`) — the copy replaces the original while it
  * exists, and deleting the copy brings the original back.
  */
-export function activeRoutines(
-  routineGames: readonly string[] | undefined,
-  copiedFrom: ReadonlySet<string>,
-): Routine[] {
-  const on = new Set(routineGames ?? []);
-  return ROUTINES.filter((r) => on.has(r.game) && !copiedFrom.has(r.id));
+export function activeRoutines(rule: PerGame, copiedFrom: ReadonlySet<string>): Routine[] {
+  return ROUTINES.filter((r) => shownFor(rule, r.game) && !copiedFrom.has(r.id));
 }
 
 /**
@@ -82,15 +80,18 @@ export function activeRoutines(
  *
  * Only a game on screen — asking about a game the reader switched off or is not
  * focused on would be asking about something they are not looking at — and
- * only once: an answer either way is recorded in `asked`.
+ * only once: an answer either way is recorded in `asked`. Never once the reader
+ * has `answered` the global switch: that answer covers every game at once.
  */
 export function routineToAsk(
   visible: readonly string[],
-  routineGames: readonly string[] | undefined,
+  rule: PerGame,
   asked: readonly string[] | undefined,
+  answered: boolean,
 ): string | null {
+  if (answered) return null;
   for (const game of visible) {
-    if (routineGames?.includes(game) || asked?.includes(game)) continue;
+    if (shownFor(rule, game) || asked?.includes(game)) continue;
     if (routinesFor(game).length > 0) return game;
   }
   return null;

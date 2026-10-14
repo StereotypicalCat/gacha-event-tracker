@@ -1106,6 +1106,17 @@ describe("dailyGroups with the chores switched off", () => {
   });
 });
 
+describe("dailyGroups with the chores switched per game", () => {
+  const NOW = Date.parse("2026-08-17T12:00:00.000Z");
+  const meta = (id: string) => metaFor(id, {});
+  const startOf = (e: { startsAt: string }) => Date.parse(e.startsAt);
+
+  test("a game the rule hides loses its chore, and its neighbour keeps one", () => {
+    const groups = dailyGroups(["genshin", "hsr"], [], NOW, "europe", meta, startOf, (lane) => lane === "genshin");
+    expect(groups.map((g) => g.items.map((i) => i.key))).toEqual([["dailies:genshin"]]);
+  });
+});
+
 describe("the chores toggle reaches the screen", () => {
   // `dailyGroups` is pure and well covered, but nothing tied `prefs.showChores`
   // to what renders. Review proved four plausible breaks shipped green —
