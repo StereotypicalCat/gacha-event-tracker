@@ -1150,6 +1150,13 @@ to an open page). Four things hold it up:
   that says *why* — the reasoning a diff cannot show — rather than listing the files it touched.
   Never reformat code the change did not touch; a formatter the project does not run buries a
   100-line change in a 550-line diff.
+  **The number of commits is never the thing to minimise** (repository owner, 2026-10-14). A fix that
+  is really four changes — a client migration, a parser fix, a merge rule, a feed field — is four
+  commits, each one reading on its own and passing on its own. Do not squash them to keep the
+  changelog to one line: a change spanning several commits gets one entry naming the range, as the
+  bullet below already allows, so the changelog's length is not an argument about the history.
+  Order them so every one is safe to ship alone — a migration that protects readers' keys lands
+  *before* the change that moves the keys.
 - **A change a reader can see adds a changelog entry** (`src/shared/changelog.ts`, PRD F18): one
   reader-facing line, its kind, its date and the commit it shipped in. A commit cannot contain its
   own hash, so the entry lands in a follow-up `chore(changelog)` commit naming the one before it. A
