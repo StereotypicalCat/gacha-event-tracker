@@ -276,6 +276,43 @@ export const ROUTINES: readonly Routine[] = [
     checked: "2026-10-14",
     note: "Unlocks after Aberrant Exploration III.",
   },
+
+  // Wuthering Waves. Game8 is the fresher source here: the wiki's per-season
+  // pages stop in early 2026.
+  {
+    id: "routine:wuwa:weekly-challenge",
+    game: "wuwa",
+    title: "Weekly Challenge",
+    period: { unit: "week", startsOn: 1 },
+    measure: { kind: "amount", target: 3, unit: "claims" },
+    source: "https://game8.co/games/Wuthering-Waves/archives/453471",
+    asOf: "2026-09-30",
+    checked: "2026-10-14",
+    note: "Confirmed in game, 2026-10-16.",
+  },
+  {
+    id: "routine:wuwa:pioneer-podcast-exp",
+    game: "wuwa",
+    title: "Pioneer Podcast weekly EXP",
+    period: { unit: "week", startsOn: 1 },
+    measure: { kind: "amount", target: 12000, unit: "EXP" },
+    source: "https://wutheringwaves.fandom.com/wiki/Pioneer_Podcast/2026-02-05",
+    asOf: "2026-07-03",
+    checked: "2026-10-14",
+    note: "The wiki's newest season page (v3.1) says 10,000; the game now shows 12,000. Confirmed in game, 2026-10-16.",
+  },
+  {
+    id: "routine:wuwa:weekly-activities",
+    game: "wuwa",
+    title: "Weekly Activities",
+    period: { unit: "week", startsOn: 1 },
+    // The last milestone; every reward is claimed by then.
+    measure: { kind: "amount", target: 6000, unit: "points" },
+    source: "https://game8.co/games/Wuthering-Waves/archives/605757",
+    asOf: "2026-06-18",
+    checked: "2026-10-14",
+    note: "Fantasies of the Thousand Gateways or Phantasma Dreamland Rhapsoda, whichever you play. Confirmed in game, 2026-10-16."
+  },
 ];
 
 /** A game's built-ins, in the order listed. */

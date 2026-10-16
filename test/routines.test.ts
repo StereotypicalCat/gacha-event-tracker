@@ -80,7 +80,11 @@ describe("ROUTINES", () => {
       ["Weekly Routine", week, { kind: "amount", target: 10, unit: "points" }],
       ["Etchspace Salvage: Focus Commissions", week, { kind: "amount", target: 3, unit: "commissions" }],
     ]);
-    expect(shape("wuwa")).toEqual([]);
+    expect(shape("wuwa")).toEqual([
+      ["Weekly Challenge", week, { kind: "amount", target: 3, unit: "claims" }],
+      ["Pioneer Podcast weekly EXP", week, { kind: "amount", target: 12000, unit: "EXP" }],
+      ["Weekly Activities", week, { kind: "amount", target: 6000, unit: "points" }],
+    ]);
     expect(shape("nte")).toEqual([]);
     expect(shape("nikki")).toEqual([]);
   });
