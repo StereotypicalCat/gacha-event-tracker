@@ -43,7 +43,7 @@ A web app that aggregates live and upcoming events across popular gacha games, p
 calendar, sorts them by end date or by what the reader is partway through, tracks day-by-day
 progress on events that repeat daily, and lets a user mark events completed.
 
-**Status: working app, refreshing itself on a schedule.** Schema, ten parsers, twenty-two sources across
+**Status: working app, refreshing itself on a schedule.** Schema, twelve parsers, twenty-six sources across
 twenty games, the full interface, offline support, a static server, a Docker image and CI all exist and
 are tested. The refresh runner (`bun run refresh`) fetches, caches raw snapshots and rebuilds the
 feed; `.gitea/workflows/refresh.yml` runs it twice a day and commits only when a page actually
@@ -241,7 +241,9 @@ These come from how gacha games actually schedule things, and they cause most bu
   `wikigg`, `akwiki`, `bawiki`, `holodoriwiki`, `iopwiki`, `stellasorawiki` and `arustats` serve one
   each — `wikigg` and `akwiki` share a host family and have entirely different templates, and
   `bawiki`, `holodoriwiki` and `stellasorawiki` are all Miraheze wikis whose page templates have
-  nothing in common. `arustats` is the odd one out and the only parser here that does not read
+  nothing in common. Two Fandom templates that are not event pages have parsers of their own:
+  `fandomtable` reads a pass's dated history table (two sources) and `fandomversion` a version
+  table that stands in for a pass where the link is stated (one). `arustats` is the odd one out and the only parser here that does not read
   markup at all: that site server-renders its schedule into a Next.js `__NEXT_DATA__` blob, so the
   parser reads JSON and the rendered grid is ignored. Adding a source for a known site is one
   `SOURCES` entry; a new site is a parser module.

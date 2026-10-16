@@ -75,6 +75,27 @@ nothing invented ("Protocol Pass", "Mira Journey"). Event IDs are game + title +
 period is its own event and no existing ID moves. None of these titles occurs in the live feed
 today, so `mergeEvents` has nothing to pair them with.
 
+## Outcome (2026-10-16)
+
+Three of the five shipped: `hsr-fandom-nameless-honor` and `zzz-fandom-city-fund` (parser
+`fandomtable`) and `nikki-fandom-mira-journey` (parser `fandomversion`). Two did not:
+
+- **Genshin's Miliastra Pass was already in the feed.** Fandom's Event page, an existing source,
+  lists "Silvery Moonlight Chronicle" with the same window, and `mergeEvents` folded the new copy
+  into it. The feed was unchanged, so the source was reverted rather than kept as a second copy —
+  the same reason Genshin's Battle Pass got no new source. This section's claim that no title
+  occurred in the live feed was wrong for this one.
+- **Endfield's Protocol Pass has no stable dated page.** endfield.wiki.gg's robots disallow
+  `/api.php` for `*` (a second `User-agent: *` group), so only `/wiki/` pages are open. On
+  2026-10-16 `/wiki/Version` stopped at Dreamscape (ended 2026-10-14), the main page gave only
+  Asia's start for Sanctuary of Ink, and the per-version page changes URL every patch. A start-only
+  event cannot say when the pass ends, which is this feature's whole point, so it waits (TODO.md).
+  The Protocol Pass page's own words are "Protocol Pass: Ink Scroll is now available until the end
+  of this version" (its changelog), not the wording quoted above.
+
+The ZZZ wiki's `robots.txt` answers our client with Fandom's challenge; the owner read it in a
+browser on 2026-10-16 (standard Fandom file), recorded in the source's comment.
+
 ## Shape in code
 
 Parsers are keyed by site template (AGENTS.md § Working on parsers). Two new templates:

@@ -71,7 +71,7 @@
   Asia's clock for every reader (`clock: "asia"`, sub-project 2). A timer read from the America
   server (and one from Asia, to be sure) settles it; if America rolls on its own reset, the
   clock is per server and the entry needs changing.
-- [ ] **Sub-project 3: dated battle pass and shop windows as feed events.** Source and parser work
+- [x] **Sub-project 3: dated battle pass and shop windows as feed events.** Source and parser work
   (AGENTS.md § the ingest pipeline; the `adapter-author` agent and `add-game-source` skill), not
   built-ins. **Check the feed first**: Genshin's battle pass is already a feed event (`Battle Pass
   - Moontrace`, de-duplicated against Fandom's `Moontrace` on 2026-10-14), so a new source must not
@@ -84,6 +84,19 @@
     Oscillated Coral shop (resets each version, 11 Nov ~10–11 UTC), ZZZ City Fund season (19 Oct
     03:00 UTC), Infinity Nikki Mira Journey (29 Oct ~20:00 UTC). Never invent a date: an event is
     built only from a source that states it; these readings are for checking a parser.
+  Shipped 2026-10-16 — see the [pass windows spec](docs/superpowers/specs/2026-10-16-pass-windows-design.md):
+  Star Rail's Nameless Honor and ZZZ's New Eridu City Fund from their Fandom history tables, and
+  Infinity Nikki's Mira Journey from its version, on the owner's in-game confirmation. Genshin's
+  Battle Pass and Miliastra Pass were already in the feed.
+- [ ] Endfield's *Protocol Pass* window. The wiki says the pass runs "until the end of this version",
+  but on 2026-10-16 no stable page dated the current version: `/wiki/Version` stopped at
+  Dreamscape (ended 2026-10-14), the main page gave only Asia's start, and the per-version page
+  (`Sanctuary_of_Ink`) changes URL every patch. endfield.wiki.gg's robots disallow `/api.php` for
+  `*`, so only `/wiki/` pages are open. Re-check `/wiki/Version`; once it dates the current version,
+  build `endfield-wikigg-protocol-pass` as the spec describes.
+- [ ] Wuthering Waves' Pioneer Podcast and Oscillated Coral, and NTE's Circle Bounty, as pass/shop
+  windows: no page dated them on 2026-10-16 (the [pass windows spec](docs/superpowers/specs/2026-10-16-pass-windows-design.md)
+  § Not shipped has what was found).
 - [ ] Give Genshin's *To Temper Thyself and Journey Far* a check-in goal by default, so a reader
   need not set it by hand. The owner asked on 2026-10-16 to "mark it as a 4/5 wk event"; earlier
   the same day they described it as five days out of seven, and the [check-in goals spec](docs/superpowers/specs/2026-10-03-check-in-goals-design.md)
