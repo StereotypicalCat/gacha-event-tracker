@@ -124,4 +124,11 @@ describe("periodOf: cycles", () => {
     expect(PeriodSchema.safeParse(cycle(367, "2026-01-01")).success).toBe(false);
     expect(PeriodSchema.safeParse(cycle(14, "16 Oct")).success).toBe(false);
   });
+
+  test("a start that is not a real date is refused, not rolled over or thrown on later", () => {
+    // A corrupt import is stored verbatim; the schema is what keeps it off screen.
+    expect(PeriodSchema.safeParse(cycle(14, "2026-13-01")).success).toBe(false);
+    expect(PeriodSchema.safeParse(cycle(14, "2026-02-30")).success).toBe(false);
+    expect(PeriodSchema.safeParse(cycle(14, "2028-02-29")).success).toBe(true);
+  });
 });

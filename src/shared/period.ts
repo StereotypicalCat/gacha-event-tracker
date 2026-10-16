@@ -17,7 +17,18 @@ import { DAY } from "./time.ts";
 /** ISO weekday: Monday is 1, Sunday is 7. */
 export const WeekdaySchema = z.number().int().min(1).max(7);
 
-const DayKey = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+/**
+ * A real calendar date. The round trip refuses "2026-13-01", which would throw
+ * in `periodOf`, and "2026-02-30", which would roll into March and move the
+ * cycle — a corrupt import is stored verbatim, so the schema is the guard.
+ */
+const DayKey = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine((s) => {
+    const ms = Date.parse(`${s}T00:00:00Z`);
+    return Number.isFinite(ms) && new Date(ms).toISOString().slice(0, 10) === s;
+  });
 
 export const PeriodSchema = z.union([
   z.object({ unit: z.literal("week"), startsOn: WeekdaySchema }),
