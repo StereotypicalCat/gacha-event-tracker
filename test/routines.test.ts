@@ -92,7 +92,11 @@ describe("ROUTINES", () => {
       ["Realm of Greed", week, { kind: "days", required: 1 }],
       ["Special City Commission", week, { kind: "days", required: 1 }],
     ]);
-    expect(shape("nikki")).toEqual([]);
+    expect(shape("nikki")).toEqual([
+      ["Mira Journey weekly EXP", week, { kind: "amount", target: 8000, unit: "Journey EXP" }],
+      ["Realm of Breakthrough", week, { kind: "amount", target: 2, unit: "trials" }],
+      ["Resonance Store: Revelation Crystals", { unit: "month", startsOn: 1 }, { kind: "amount", target: 5, unit: "crystals" }],
+    ]);
   });
 
   test("a routine has a status like any task", () => {

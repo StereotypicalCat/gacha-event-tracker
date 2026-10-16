@@ -314,6 +314,45 @@ export const ROUTINES: readonly Routine[] = [
     note: "Fantasies of the Thousand Gateways or Phantasma Dreamland Rhapsoda, whichever you play. Confirmed in game, 2026-10-16."
   },
 
+  // Infinity Nikki. The wiki's Reset page puts the weekly reset on Monday at
+  // 04:00 server time and lists both of these among what it renews.
+  {
+    id: "routine:nikki:mira-journey-exp",
+    game: "nikki",
+    title: "Mira Journey weekly EXP",
+    period: { unit: "week", startsOn: 1 },
+    measure: { kind: "amount", target: 8000, unit: "Journey EXP" },
+    source: "https://infinity-nikki.fandom.com/wiki/Mira_Journey",
+    asOf: "2026-09-24",
+    checked: "2026-10-16",
+    note: "The battle pass's weekly cap, from weekly and phase tasks. Confirmed in game, 2026-10-16.",
+  },
+  {
+    id: "routine:nikki:realm-of-breakthrough",
+    game: "nikki",
+    title: "Realm of Breakthrough",
+    // Two Phantom Trials, each once a week.
+    period: { unit: "week", startsOn: 1 },
+    measure: { kind: "amount", target: 2, unit: "trials" },
+    source: "https://infinity-nikki.fandom.com/wiki/Realm_of_Breakthrough",
+    asOf: "2026-01-01",
+    checked: "2026-10-16",
+    note: "Wish Master Chigda and Guardian Beast Whirls, once a week each, for Evolution materials.",
+  },
+  {
+    id: "routine:nikki:resonance-revelation",
+    game: "nikki",
+    title: "Resonance Store: Revelation Crystals",
+    // The wiki marks the Tranquility Droplet stock monthly; the 1st is the
+    // owner's in-game timer on 2026-10-16, which ends at the reset on 1 Nov.
+    period: { unit: "month", startsOn: 1 },
+    measure: { kind: "amount", target: 5, unit: "crystals" },
+    source: "https://infinity-nikki.fandom.com/wiki/Tranquility_Droplet",
+    asOf: "2025-12-26",
+    checked: "2026-10-16",
+    note: "Bought with Tranquility Droplets, 5 a month. The 1st is ours. Confirmed in game, 2026-10-16.",
+  },
+
   // Neverness to Everness.
   {
     id: "routine:nte:season-pass-exp",
