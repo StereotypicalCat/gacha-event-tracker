@@ -253,7 +253,7 @@ Looked for on 2026-10-14 and not shipped. Each is a candidate the owner may know
 | Wuwa | Oscillated Coral exchange (gacha pulls) | Resets with each version update, not a week or month — the owner confirmed this in game, 2026-10-16. A dated window → sub-project 3 (§ Scope) |
 | Wuwa | Afterglow Coral exchange, Souvenir Stores, Tactical Hologram shops | No limit, or no stated reset |
 | Wuwa | Simulation Training, Forgery | Cost Waveplates; no weekly cap |
-| Wuwa | Tower of Adversity Hazard Zone (28 days), Whimpering Wastes | Multi-week → sub-project 2; the owner's in-game dates for both are in § Scope |
+| Wuwa | Tower of Adversity Hazard Zone (28 days), Whimpering Wastes | Multi-week → sub-project 2; the owner's in-game dates for both are in § Scope. **Tower of Adversity shipped 2026-10-16** as a 28-day cycle; Whimpering Wastes has no fixed length and stays unshipped ([cycle routines spec](2026-10-16-cycle-routines-design.md) § Not shipped) |
 | NTE | Tycoon Incentive Fund (Pink Paws Heist, Volley Star weekly match, Display Case idle earnings) | A 14-day cycle by the game's own guide, not a week → sub-project 2 (§ Scope). The guide this branch cites calls Pink Paws' cap weekly; the game disagrees. The cap also differs per player (Puka Membership Program) |
 | NTE | Lost Exchange | Single launch-era source; nothing to count |
 | NTE | Beyond the Rails | 14-day cycle → sub-project 2; the owner's in-game date is in § Scope |

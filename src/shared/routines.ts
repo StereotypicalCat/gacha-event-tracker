@@ -444,6 +444,18 @@ export const ROUTINES: readonly Routine[] = [
     checked: "2026-10-14",
     note: "Fantasies of the Thousand Gateways or Phantasma Dreamland Rhapsoda, whichever you play. Confirmed in game, 2026-10-16."
   },
+  {
+    id: "routine:wuwa:tower-of-adversity",
+    game: "wuwa",
+    title: "Tower of Adversity",
+    // Anchored on the reset the owner read in game (2026-10-16).
+    period: { unit: "cycle", days: 28, from: "2026-11-09" },
+    measure: { kind: "days", required: 1 },
+    source: "https://gamemarket.gg/news/wuthering-waves/wuthering-waves-tower-of-adversity-guide-zones-vigor-rewards",
+    asOf: "2026-08-25",
+    checked: "2026-10-16",
+    note: "The Hazard Zone; the source says roughly 28 days.",
+  },
 
   // Infinity Nikki. The wiki's Reset page puts the weekly reset on Monday at
   // 04:00 server time and lists both of these among what it renews.

@@ -94,6 +94,7 @@ describe("ROUTINES", () => {
       ["Weekly Challenge", week, { kind: "amount", target: 3, unit: "claims" }],
       ["Pioneer Podcast weekly EXP", week, { kind: "amount", target: 12000, unit: "EXP" }],
       ["Weekly Activities", week, { kind: "amount", target: 6000, unit: "points" }],
+      ["Tower of Adversity", { unit: "cycle", days: 28, from: "2026-11-09" }, { kind: "days", required: 1 }],
     ]);
     expect(shape("nte")).toEqual([
       ["Season Pass weekly EXP", week, { kind: "amount", target: 12000, unit: "EXP" }],
