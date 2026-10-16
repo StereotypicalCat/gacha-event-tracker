@@ -1,0 +1,23 @@
+[
+  {
+    "id": "zzz:new-eridu-city-fund:2026-09-09",
+    "game": "zzz",
+    "title": "New Eridu City Fund",
+    "type": "other",
+    "summary": null,
+    "startsAt": "2026-09-09T00:00:00.000Z",
+    "startPrecision": "day",
+    "endsAt": "2026-10-19T00:00:00.000Z",
+    "endPrecision": "day",
+    "regionScoped": false,
+    "regionEnds": null,
+    "sourceUrl": "https://zenless-zone-zero.fandom.com/wiki/New_Eridu_City_Fund/2026-09-09",
+    "sourceId": "zzz-fandom-city-fund",
+    "status": "published",
+    "confidence": 0.85,
+    "extractionMethod": "parser",
+    "version": 1,
+    "firstSeenAt": "2026-10-16T00:00:00.000Z",
+    "updatedAt": "2026-10-16T00:00:00.000Z"
+  }
+]

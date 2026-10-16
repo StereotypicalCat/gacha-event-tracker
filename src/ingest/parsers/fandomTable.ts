@@ -58,6 +58,11 @@ export const PASS_SOURCES: Readonly<Record<string, PassSource>> = {
     pass: "Miliastra Pass",
     title: (rowName) => `Miliastra Pass: ${rowName}`,
   },
+  "zzz-fandom-city-fund": {
+    // One fund, one name; the Name cell is the run's own label, so a constant.
+    pass: "New Eridu City Fund",
+    title: () => "New Eridu City Fund",
+  },
 };
 
 /** The columns a pass table is recognised by, as normalised heading text. */

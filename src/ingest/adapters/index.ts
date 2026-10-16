@@ -159,6 +159,32 @@ const SOURCES: SourceSpec[] = [
     parserId: "fandomtable",
   },
   {
+    id: "zzz-fandom-city-fund",
+    game: "zzz",
+    // The API, as every Fandom source (AGENTS.md § Fandom). This host's
+    // robots.txt answers our client (`RobotsCache`, the real User-Agent) with
+    // 403, the interstitial challenge. The repository owner read
+    // https://zenless-zone-zero.fandom.com/robots.txt in a browser on
+    // 2026-10-16: the `User-agent: *` group has `Allow: /api.php?`,
+    // `Allow: /api.php?action=` and `Allow: /api.php?*&action=`, then
+    // `Disallow:` only for /wiki/Special:, /wiki/User_talk:, /wiki/Template:,
+    // /wiki/Template_talk:, /wiki/Help:, /wiki/User: and /wiki/UserProfile:
+    // (and their language variants); no `Disallow: /` for `*`. `Disallow: /`
+    // applies only to named crawlers (SemrushBot, serpstatbot, GPTBot,
+    // ImagesiftBot, CCBot, OAI-SearchBot, ClaudeBot, GrokBot, xAI-SearchBot,
+    // xAI-Grok, GrokApp, xAI-Bot), none of which we are; `ias_crawler` has
+    // `Crawl-delay: 1`. That reading and the standing `--assume-robots-on-403`
+    // decision (scripts/refresh-sources.ts, AGENTS.md § Scraping conduct) are
+    // what cover this source. The API path answered 200 to the real
+    // User-Agent for the single fixture fetch; no browser-shaped headers.
+    //
+    // A pass history: the `fandomtable` reader finds the `Name | Start | End |
+    // Version` table by heading; the constant title comes from `PASS_SOURCES`
+    // in `parsers/fandomTable.ts`, keyed by this id.
+    url: "https://zenless-zone-zero.fandom.com/api.php?action=parse&page=New_Eridu_City_Fund&prop=text&formatversion=2&format=json",
+    parserId: "fandomtable",
+  },
+  {
     id: "r1999-fandom-events",
     game: "r1999",
     // The MediaWiki API, not `/wiki/Events`. The rendered page answers a
