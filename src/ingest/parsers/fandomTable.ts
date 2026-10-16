@@ -52,6 +52,12 @@ export const PASS_SOURCES: Readonly<Record<string, PassSource>> = {
     pass: "Nameless Honor",
     title: () => "Nameless Honor",
   },
+  "genshin-fandom-miliastra-pass": {
+    // The Name cell is the run's own chronicle name (`Silvery Moonlight
+    // Chronicle`), a new one each version, so the title carries it.
+    pass: "Miliastra Pass",
+    title: (rowName) => `Miliastra Pass: ${rowName}`,
+  },
 };
 
 /** The columns a pass table is recognised by, as normalised heading text. */

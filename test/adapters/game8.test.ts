@@ -73,6 +73,8 @@ const CASES: Array<{ adapter: Adapter; fixture: string; now?: string }> = [
   // Pinned at the capture day, not NOW: the page is a history, so which rows
   // survive depends on the clock, and at capture exactly one does (4.6).
   { adapter: adapter("hsr-fandom-nameless-honor"), fixture: "fixtures/hsr/fandom-nameless-honor-2026-10-16", now: "2026-10-16T00:00:00.000Z" },
+  // Genshin's Miliastra Pass history (same reader).
+  { adapter: adapter("genshin-fandom-miliastra-pass"), fixture: "fixtures/genshin/fandom-miliastra-pass-2026-10-16", now: "2026-10-16T00:00:00.000Z" },
 ];
 
 async function runAdapter(adapter: Adapter, fixture: string, now: string = NOW) {

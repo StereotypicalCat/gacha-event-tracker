@@ -138,6 +138,27 @@ const SOURCES: SourceSpec[] = [
     parserId: "fandomtable",
   },
   {
+    id: "genshin-fandom-miliastra-pass",
+    game: "genshin",
+    // The API, as every Fandom source (AGENTS.md § Fandom). This host's
+    // robots.txt is the one a person recorded for `genshin-fandom-events`
+    // above (standard Fandom file: `Allow: /api.php?action=` for
+    // `User-agent: *`, no `Disallow: /` for `*`). Re-checked with the runner's
+    // own client (`RobotsCache`, the real User-Agent) on 2026-10-16: it
+    // answered 403 (the interstitial challenge), so that person-recorded
+    // reading and the standing `--assume-robots-on-403` decision
+    // (AGENTS.md § Scraping conduct) are what cover this source, as they do
+    // the other Fandom sources. The API path itself answered 200 to the real
+    // User-Agent for the single fixture fetch; no browser-shaped headers.
+    //
+    // A pass history, not an event page: the same `Name | Start | End |
+    // Version` table as Nameless Honor, day precision, one row per run. Read by
+    // the `fandomtable` parser; the title (`Miliastra Pass: <name>`) comes from
+    // `PASS_SOURCES` in `parsers/fandomTable.ts`, keyed by this id.
+    url: "https://genshin-impact.fandom.com/api.php?action=parse&page=Miliastra_Pass&prop=text&formatversion=2&format=json",
+    parserId: "fandomtable",
+  },
+  {
     id: "r1999-fandom-events",
     game: "r1999",
     // The MediaWiki API, not `/wiki/Events`. The rendered page answers a

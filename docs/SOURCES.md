@@ -89,6 +89,7 @@ Two things this method cannot tell you, and both matter:
 | Silver Palace | — | — | — | Unreleased; beta only |
 | Genshin Impact (Fandom) | `genshin-impact.fandom.com/api.php?…page=Event` | `fandom`, fifth template | yes (via `api.php`) | **BUILT** 2026-09-12 — adds 11 events Game8 missed; Game8 priority preserves localStorage IDs |
 | Star Rail — Nameless Honor | `honkai-star-rail.fandom.com/api.php?…page=Nameless_Honor` | new (`fandomtable`) | yes (via `api.php`) | **BUILT** 2026-10-16 — the pass window as one `other` event, day precision |
+| Genshin — Miliastra Pass | `genshin-impact.fandom.com/api.php?…page=Miliastra_Pass` | existing (`fandomtable`) | yes (via `api.php`) | **BUILT** 2026-10-16 — the live pass run as one `other` event, day precision |
 | hololive Dreams | `holodori.wiki/wiki/Events` (still) | `holodoriwiki` | yes, but nothing new to fetch | **LAPSED** 2026-10-14 — NamuWiki is behind a Cloudflare challenge, the official site posts no events, Game8 has no page |
 
 ---
@@ -868,6 +869,14 @@ passed. A `fetched` with more than zero events means the wiki is back.
 **Precision:** day, start and end. Nothing is inferred: no clock, no region, no end for a row without one (skipped). At capture one row is live, 2026-09-28 to 2026-11-09 (4.6); each row ends on the day the next one starts. The Name cell reads `Nameless Honor <start date>`, so the title is constant and the start is the only thing that tells runs apart in the ID.
 
 **Reuse:** the parser is `fandomtable` (`src/ingest/parsers/fandomTable.ts`). The next pass pages (ZZZ `New_Eridu_City_Fund`, Genshin `Miliastra_Pass`) are one `PASS_SOURCES` entry each (title as a function of the row's Name cell) plus a `SOURCES` entry; columns are found by heading. A table headed with `Duration` is deliberately not this template (it is a version table).
+
+## 18. Genshin — Miliastra Pass window (Fandom) — BUILT 2026-10-16
+
+**Source:** `https://genshin-impact.fandom.com/api.php?action=parse&page=Miliastra_Pass&prop=text&formatversion=2&format=json` (page `https://genshin-impact.fandom.com/wiki/Miliastra_Pass`), source id `genshin-fandom-miliastra-pass`. Second pass-window source; no parser change.
+
+**What it is:** the first table on the page, `Image | Name | Start | End | Version`, 9 rows (Awakening Chronicle, 2025-10-22, to Silvery Moonlight Chronicle, 2026-09-23 to 2026-11-02; counted independently of the parser). Each row not ended by `ctx.now` becomes one `other` event titled `Miliastra Pass: <name>`, day precision. At capture one is live.
+
+**Conduct:** the `RobotsCache` with the real User-Agent got `403` (the interstitial challenge) for `robots.txt` on 2026-10-16, so this host rests on the person-recorded reading for `genshin-fandom-events` and the standing `--assume-robots-on-403` decision. The API answered `200` to the real User-Agent for the single fixture fetch.
 
 ## What every one of these costs, beyond the source
 

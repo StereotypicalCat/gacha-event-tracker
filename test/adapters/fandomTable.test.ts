@@ -111,17 +111,25 @@ describe("fandomtable canParse across every fixture", () => {
     expect(files.length).toBeGreaterThan(20);
   });
 
-  test("true on the Nameless Honor fixture only", async () => {
+  test("true on the two pass-history fixtures only", async () => {
     const accepted: string[] = [];
     for (const f of files) {
       if (fandomTableParser.canParse(await Bun.file(f).text())) accepted.push(f);
     }
-    expect(accepted).toEqual([FIXTURE]);
+    expect(accepted).toEqual([
+      "fixtures/genshin/fandom-miliastra-pass-2026-10-16.html",
+      FIXTURE,
+    ]);
   });
 
-  test("no other parser claims the Nameless Honor fixture", async () => {
-    const text = await Bun.file(FIXTURE).text();
-    const claimants = PARSERS.filter((p) => p.canParse(text)).map((p) => p.id);
-    expect(claimants).toEqual(["fandomtable"]);
+  test("no other parser claims a pass-history fixture", async () => {
+    for (const f of [
+      FIXTURE,
+      "fixtures/genshin/fandom-miliastra-pass-2026-10-16.html",
+    ]) {
+      const text = await Bun.file(f).text();
+      const claimants = PARSERS.filter((p) => p.canParse(text)).map((p) => p.id);
+      expect(claimants).toEqual(["fandomtable"]);
+    }
   });
 });
