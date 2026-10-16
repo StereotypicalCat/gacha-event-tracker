@@ -243,8 +243,8 @@ Looked for on 2026-10-14 and not shipped. Each is a candidate the owner may know
 | Game | Item | Why |
 |---|---|---|
 | Genshin | Stygian Onslaught | Tied to version releases, not a week or month |
-| Star Rail | Forgotten Hall (Memory of Chaos), Pure Fiction, Apocalyptic Shadow | Six-week rotations, not weeks or months → sub-project 2; the owner's in-game end dates are in § Scope |
-| Star Rail | Divergent Universe / Currency Wars points | A two-week period, not a week → sub-project 2. Owner, in game, 2026-10-14: the two modes share one cap of 18,000 points per period, and the current period ends Monday 2026-10-19 at Star Rail's EU reset (05:00 CEST) |
+| Star Rail | Forgotten Hall (Memory of Chaos), Pure Fiction, Apocalyptic Shadow | Six-week rotations, not weeks or months → sub-project 2; the owner's in-game end dates are in § Scope. **Shipped 2026-10-16** as cycle built-ins ([cycle routines spec](2026-10-16-cycle-routines-design.md)) |
+| Star Rail | Divergent Universe / Currency Wars points | **Shipped 2026-10-16 as a weekly built-in**: the pool has been weekly since 4.2, and the "two weeks" was left over from 3.7 ([cycle routines spec](2026-10-16-cycle-routines-design.md), decision 7). Originally read as a two-week period, not a week → sub-project 2. Owner, in game, 2026-10-14: the two modes share one cap of 18,000 points per period, and the current period ends Monday 2026-10-19 at Star Rail's EU reset (05:00 CEST) |
 | Endfield | Stock Redistribution | "Some items may also refresh weekly" — no figure |
 | Endfield | Protocol Pass weekly missions | Missions change every week; no fixed target or EXP cap stated, and the owner found none in game (2026-10-14) |
 | Endfield | Algorithmic Memories, Credit Store, Arsenal Exchange | No figure; Beta-era; daily store; a shop rotation, not a chore |

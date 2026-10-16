@@ -217,6 +217,54 @@ export const ROUTINES: readonly Routine[] = [
     checked: "2026-10-16",
     note: "The standard-banner line beside the Special Pass, bought with Undying Embers.",
   },
+  {
+    id: "routine:hsr:points",
+    game: "hsr",
+    title: "Divergent Universe & Currency Wars points",
+    // One pool for both modes since 4.2, rolling with the Monday reset the
+    // Simulated Universe page states.
+    period: { unit: "week", startsOn: 1 },
+    measure: { kind: "amount", target: 18000, unit: "points" },
+    source: "https://honkai-star-rail.fandom.com/wiki/Version/4.2",
+    asOf: "2026-09-07",
+    checked: "2026-10-16",
+    note: "One cap shared by both modes, weekly since 4.2. Confirmed in game, 2026-10-14.",
+  },
+  // The three endgame modes: each refreshes every six weeks, two weeks apart.
+  // Each anchor is the day after the end the owner read in game (2026-10-14).
+  {
+    id: "routine:hsr:pure-fiction",
+    game: "hsr",
+    title: "Pure Fiction",
+    period: { unit: "cycle", days: 42, from: "2026-10-19" },
+    measure: { kind: "days", required: 1 },
+    source: "https://honkai-star-rail.fandom.com/wiki/Interastral_Peace_Guide/Treasures_Lightward",
+    asOf: "2026-08-15",
+    checked: "2026-10-16",
+    note: "Six-week rotation, one mode every two weeks.",
+  },
+  {
+    id: "routine:hsr:memory-of-chaos",
+    game: "hsr",
+    title: "Memory of Chaos",
+    period: { unit: "cycle", days: 42, from: "2026-11-02" },
+    measure: { kind: "days", required: 1 },
+    source: "https://honkai-star-rail.fandom.com/wiki/Interastral_Peace_Guide/Treasures_Lightward",
+    asOf: "2026-08-15",
+    checked: "2026-10-16",
+    note: "Forgotten Hall. Six-week rotation, one mode every two weeks.",
+  },
+  {
+    id: "routine:hsr:apocalyptic-shadow",
+    game: "hsr",
+    title: "Apocalyptic Shadow",
+    period: { unit: "cycle", days: 42, from: "2026-11-16" },
+    measure: { kind: "days", required: 1 },
+    source: "https://honkai-star-rail.fandom.com/wiki/Interastral_Peace_Guide/Treasures_Lightward",
+    asOf: "2026-08-15",
+    checked: "2026-10-16",
+    note: "Six-week rotation, one mode every two weeks.",
+  },
 
   // Zenless Zone Zero.
   {

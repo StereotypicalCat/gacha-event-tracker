@@ -70,6 +70,10 @@ describe("ROUTINES", () => {
       ["Nameless Honor weekly EXP", week, { kind: "amount", target: 8000, unit: "EXP" }],
       ["Embers Exchange: Star Rail Special Pass", { unit: "month", startsOn: 1 }, { kind: "amount", target: 5, unit: "passes" }],
       ["Embers Exchange: Star Rail Pass", { unit: "month", startsOn: 1 }, { kind: "amount", target: 5, unit: "passes" }],
+      ["Divergent Universe & Currency Wars points", week, { kind: "amount", target: 18000, unit: "points" }],
+      ["Pure Fiction", { unit: "cycle", days: 42, from: "2026-10-19" }, { kind: "days", required: 1 }],
+      ["Memory of Chaos", { unit: "cycle", days: 42, from: "2026-11-02" }, { kind: "days", required: 1 }],
+      ["Apocalyptic Shadow", { unit: "cycle", days: 42, from: "2026-11-16" }, { kind: "days", required: 1 }],
     ]);
     expect(shape("zzz")).toEqual([
       ["Ridu Weekly", week, { kind: "amount", target: 2100, unit: "points" }],
