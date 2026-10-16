@@ -279,3 +279,15 @@ describe("copy for amounts and months", () => {
     expect(goalRequired({ period: "event", measure: "amount", target: 2100 })).toBe(2100);
   });
 });
+
+describe("a cycle's labels", () => {
+  test("it reads 'this cycle', and its short count is the days left", () => {
+    const s: GoalStatus = {
+      scope: "cycle", measure: "days", periodStart: "2026-10-16", required: 1, count: 0,
+      met: false, needed: 1, open: 9, shortfall: false,
+    };
+    expect(goalCount(s)).toBe("0/1 · 9d");
+    expect(goalLabel(s)).toBe("0 of 1 this cycle");
+    expect(goalLabel({ ...s, count: 1, met: true, needed: 0 })).toBe("done this cycle");
+  });
+});

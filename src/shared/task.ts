@@ -6,7 +6,7 @@ import { periodOf, PeriodSchema } from "./period.ts";
 import type { Region } from "./schema.ts";
 
 /**
- * Weekly and monthly chores the reader sets up per game — ZZZ's weekly
+ * Weekly, monthly and every-N-days chores the reader sets up per game — ZZZ's weekly
  * activity points, Endfield's weekly routine.
  *
  * Not events: no window, no end, no done or ignored. A task is a period that
@@ -110,12 +110,22 @@ function ordinal(n: number): string {
   return `${n}${["th", "st", "nd", "rd"][n % 10] ?? "th"}`;
 }
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** `2025-12-02` → `2 Dec 2025`: the same in every locale, so it reads the same wherever it is quoted. */
+export function asOfLabel(day: string): string {
+  const [y, m, d] = day.split("-").map(Number);
+  return `${d} ${MONTHS[(m ?? 1) - 1]} ${y}`;
+}
+
 /** One line saying when it rolls and what it wants. */
 export function taskCaption(task: Pick<Task, "period" | "measure">): string {
   const when =
     task.period.unit === "week"
       ? `every week from ${WEEKDAYS[task.period.startsOn - 1]}`
-      : `every month from the ${ordinal(task.period.startsOn)}`;
+      : task.period.unit === "month"
+        ? `every month from the ${ordinal(task.period.startsOn)}`
+        : `every ${task.period.days} days from ${asOfLabel(task.period.from)}`;
   const m = task.measure;
   const what =
     m.kind === "amount"

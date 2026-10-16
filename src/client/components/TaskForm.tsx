@@ -122,7 +122,7 @@ export function TaskForm({
   const [f, setF] = useState<TaskFields>(() => ({
     game: initial?.game ?? lanes[0] ?? "",
     title: initial?.title ?? "",
-    unit: initial?.period.unit ?? "week",
+    unit: initial?.period.unit === "month" ? "month" : "week",
     weekday: initial?.period.unit === "week" ? initial.period.startsOn : 1,
     monthDay: String(initial?.period.unit === "month" ? initial.period.startsOn : 1),
     kind: initial?.measure.kind ?? "days",

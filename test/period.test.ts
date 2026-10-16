@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { dayKey, nextResetMs } from "../src/shared/daily.ts";
-import { addDays, isoWeekday, periodOf } from "../src/shared/period.ts";
+import { addDays, isoWeekday, periodOf, PeriodSchema } from "../src/shared/period.ts";
 
 describe("isoWeekday", () => {
   test("Monday is 1 and Sunday is 7", () => {
@@ -90,5 +90,38 @@ describe("periodOf: months", () => {
     expect(periodOf(month(31), "2026-09-29").start).toBe("2026-08-31");
     expect(periodOf(month(31), "2026-10-05").days[0]).toBe("2026-09-30");
     expect(periodOf(month(30), "2027-02-28").start).toBe("2027-02-28");
+  });
+});
+
+describe("periodOf: cycles", () => {
+  const cycle = (days: number, from: string) => ({ unit: "cycle" as const, days, from });
+
+  test("the anchor starts its own cycle, which holds `days` keys", () => {
+    const p = periodOf(cycle(14, "2026-10-16"), "2026-10-16");
+    expect(p.start).toBe("2026-10-16");
+    expect(p.days.length).toBe(14);
+    expect(p.days.at(-1)).toBe("2026-10-29");
+  });
+
+  test("the last day is in it; the day after starts the next", () => {
+    expect(periodOf(cycle(14, "2026-10-16"), "2026-10-29").start).toBe("2026-10-16");
+    expect(periodOf(cycle(14, "2026-10-16"), "2026-10-30").start).toBe("2026-10-30");
+  });
+
+  test("a day before the anchor is in the cycle before it, not the anchor's", () => {
+    expect(periodOf(cycle(42, "2026-11-16"), "2026-10-16").start).toBe("2026-10-05");
+    expect(periodOf(cycle(14, "2026-10-16"), "2026-10-15").start).toBe("2026-10-02");
+  });
+
+  test("lengths 2 and 366", () => {
+    expect(periodOf(cycle(2, "2026-01-01"), "2026-01-04").days).toEqual(["2026-01-03", "2026-01-04"]);
+    expect(periodOf(cycle(366, "2026-01-01"), "2027-01-01").days.length).toBe(366);
+  });
+
+  test("the schema bounds", () => {
+    expect(PeriodSchema.safeParse(cycle(14, "2026-10-16")).success).toBe(true);
+    expect(PeriodSchema.safeParse(cycle(1, "2026-01-01")).success).toBe(false);
+    expect(PeriodSchema.safeParse(cycle(367, "2026-01-01")).success).toBe(false);
+    expect(PeriodSchema.safeParse(cycle(14, "16 Oct")).success).toBe(false);
   });
 });

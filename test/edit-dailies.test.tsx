@@ -74,8 +74,8 @@ function editor(over: Partial<StripEditor> = {}): StripEditor {
     onGoal: () => {},
     onDaily: () => {},
     onOpen: () => {},
-    shown: { chores: true, weekly: true, monthly: true },
-    hasTasks: { weekly: true, monthly: false },
+    shown: { chores: true, weekly: true, monthly: true, cycle: true },
+    hasTasks: { weekly: true, monthly: false, cycle: false },
     onShown: () => {},
     standing: [],
     onTrack: () => {},
@@ -135,10 +135,11 @@ describe("tasksShown", () => {
 
   test("each switch hides its own period and nothing else", () => {
     const all = [weekly, monthly];
-    expect(tasksShown(all, { weekly: true, monthly: true })).toEqual(all);
-    expect(tasksShown(all, { weekly: false, monthly: true })).toEqual([monthly]);
-    expect(tasksShown(all, { weekly: true, monthly: false })).toEqual([weekly]);
-    expect(tasksShown(all, { weekly: false, monthly: false })).toEqual([]);
+    const on = { cycle: true };
+    expect(tasksShown(all, { weekly: true, monthly: true, ...on })).toEqual(all);
+    expect(tasksShown(all, { weekly: false, monthly: true, ...on })).toEqual([monthly]);
+    expect(tasksShown(all, { weekly: true, monthly: false, ...on })).toEqual([weekly]);
+    expect(tasksShown(all, { weekly: false, monthly: false, ...on })).toEqual([]);
   });
 });
 
@@ -205,6 +206,15 @@ describe("EditPanel", () => {
     expect(html).toContain("Daily chores");
     expect(html).toContain("Weekly tasks");
     expect(html).not.toContain("Monthly tasks");
+    expect(html).not.toContain("Cycle tasks");
+  });
+
+  test("a cycle task brings the cycle switch", () => {
+    const html = render(
+      <EditPanel games={["genshin"]} editor={editor({ hasTasks: { weekly: false, monthly: false, cycle: true } })} />,
+    );
+    expect(html).toContain("Cycle tasks");
+    expect(html).not.toContain("Weekly tasks");
   });
 
   test("with nothing to add, it says where events come from", () => {
@@ -285,7 +295,8 @@ describe("the strip with an editor", () => {
         daysFor={() => []} onToggleDay={() => {}} tasks={[weekly]}
         taskStatusFor={() => status} onSetAmount={() => {}} amountFor={() => undefined} />,
     );
-    const heading = html.indexOf("This week &amp; month");
+    // The heading names the periods the row holds: only a week here.
+    const heading = html.indexOf(">This week<");
     expect(heading).toBeGreaterThan(-1);
     expect(html.indexOf("ZZZ")).toBeLessThan(heading);
     expect(html.indexOf("Activity points")).toBeGreaterThan(heading);
@@ -296,7 +307,7 @@ describe("the strip with an editor", () => {
       <Dailies games={["zzz"]} events={[]} region="europe" now={NOW} showChores
         daysFor={() => []} onToggleDay={() => {}} />,
     );
-    expect(html).not.toContain("This week &amp; month");
+    expect(html).not.toContain(">This week");
   });
 
   test("an empty strip still offers a way to add an event", () => {
@@ -311,7 +322,7 @@ describe("the strip with an editor", () => {
     const html = render(
       <Dailies games={["genshin"]} events={[]} region="europe" now={NOW} showChores={false}
         daysFor={() => []} onToggleDay={() => {}}
-        edit={editor({ inStrip: [], addable: [], shown: { chores: false, weekly: true, monthly: true } })} />,
+        edit={editor({ inStrip: [], addable: [], shown: { chores: false, weekly: true, monthly: true, cycle: true } })} />,
     );
     expect(html).toBe("");
   });

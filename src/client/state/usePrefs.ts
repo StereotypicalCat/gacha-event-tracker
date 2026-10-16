@@ -189,6 +189,8 @@ export interface Prefs {
    */
   showWeeklyTasks: boolean;
   showMonthlyTasks: boolean;
+  /** The same for tasks that repeat every N days (`period.ts`), on by default likewise. */
+  showCycleTasks: boolean;
   showCompleted: boolean;
   /** Reveal events the reader has ignored, so they can be restored. */
   showIgnored: boolean;
@@ -317,6 +319,7 @@ export function defaults(): Prefs {
     showChores: true,
     showWeeklyTasks: true,
     showMonthlyTasks: true,
+    showCycleTasks: true,
     showCompleted: true,
     showIgnored: false,
     theme: DEFAULT_THEME_CHOICE,
@@ -490,6 +493,7 @@ export function restorePrefsValue(incoming: unknown): Prefs {
   result.showChores = typeof result.showChores === "boolean" ? result.showChores : base.showChores;
   result.showWeeklyTasks = typeof result.showWeeklyTasks === "boolean" ? result.showWeeklyTasks : base.showWeeklyTasks;
   result.showMonthlyTasks = typeof result.showMonthlyTasks === "boolean" ? result.showMonthlyTasks : base.showMonthlyTasks;
+  result.showCycleTasks = typeof result.showCycleTasks === "boolean" ? result.showCycleTasks : base.showCycleTasks;
   result.showCompleted = typeof result.showCompleted === "boolean" ? result.showCompleted : base.showCompleted;
   result.showIgnored = typeof result.showIgnored === "boolean" ? result.showIgnored : base.showIgnored;
   result.regionConfirmed = typeof result.regionConfirmed === "boolean" ? result.regionConfirmed : base.regionConfirmed;

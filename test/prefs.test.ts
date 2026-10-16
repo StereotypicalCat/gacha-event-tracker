@@ -139,6 +139,14 @@ describe("weekly and monthly tasks under the dailies", () => {
     expect(restored.showWeeklyTasks).toBe(true);
     expect(restored.showMonthlyTasks).toBe(false);
   });
+
+  test("cycle tasks are shown when the pref is absent or unreadable", () => {
+    expect(defaults().showCycleTasks).toBe(true);
+    expect({ ...defaults(), ...{ region: "europe" } }.showCycleTasks).toBe(true);
+    expect(restorePrefsValue({}).showCycleTasks).toBe(true);
+    expect(restorePrefsValue({ showCycleTasks: "no" }).showCycleTasks).toBe(true);
+    expect(restorePrefsValue({ showCycleTasks: false }).showCycleTasks).toBe(false);
+  });
 });
 
 describe("restorePrefsValue", () => {
@@ -165,6 +173,7 @@ describe("restorePrefsValue", () => {
       showChores: false,
       showWeeklyTasks: false,
       showMonthlyTasks: true,
+      showCycleTasks: false,
       showCompleted: false,
       showIgnored: true,
       theme: "light" as const,

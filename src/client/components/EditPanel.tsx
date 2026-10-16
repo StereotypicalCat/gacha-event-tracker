@@ -54,6 +54,7 @@ export interface StripShown {
   chores: boolean;
   weekly: boolean;
   monthly: boolean;
+  cycle: boolean;
 }
 
 /** Everything the strip needs to be edited in place. Built by App. */
@@ -68,8 +69,8 @@ export interface StripEditor {
   /** Open the event's detail sheet. */
   onOpen: (id: string) => void;
   shown: StripShown;
-  /** Whether there is any weekly or monthly task to switch: a switch with nothing behind it is not offered. */
-  hasTasks: { weekly: boolean; monthly: boolean };
+  /** Whether there is any task of each period to switch: a switch with nothing behind it is not offered. */
+  hasTasks: { weekly: boolean; monthly: boolean; cycle: boolean };
   onShown: (patch: Partial<StripShown>) => void;
   /** Chores and built-ins of the strip's games, tracked or not; chore first in each game. */
   standing: StripStanding[];
@@ -280,6 +281,13 @@ export function EditPanel({
             label="Monthly tasks"
             checked={shown.monthly}
             onChange={(monthly) => editor.onShown({ monthly })}
+          />
+        )}
+        {hasTasks.cycle && (
+          <Switch
+            label="Cycle tasks"
+            checked={shown.cycle}
+            onChange={(cycle) => editor.onShown({ cycle })}
           />
         )}
       </div>

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import type { Task } from "../src/shared/task.ts";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Controls, ownState, PerGameChips } from "../src/client/components/Controls.tsx";
 import { GameMetaProvider } from "../src/client/state/gameMeta.tsx";
@@ -33,6 +34,7 @@ const PREFS: Prefs = {
   showChores: true,
   showWeeklyTasks: true,
   showMonthlyTasks: true,
+  showCycleTasks: true,
   showCompleted: true,
   showIgnored: false,
   theme: "dark",
@@ -40,7 +42,12 @@ const PREFS: Prefs = {
   onboarded: true,
 };
 
-function render(prefs: Prefs, ignoredCount = 0, games = ["genshin", "hsr"]): string {
+function render(
+  prefs: Prefs,
+  ignoredCount = 0,
+  games = ["genshin", "hsr"],
+  tasks?: Task[],
+): string {
   return renderToStaticMarkup(
     <GameMetaProvider value={(id) => metaFor(id, {})}>
       <Controls
@@ -63,6 +70,7 @@ function render(prefs: Prefs, ignoredCount = 0, games = ["genshin", "hsr"]): str
           onEditGame: () => {},
           onRemoveGame: () => ({ removed: true, blockedBy: 0 }),
           onAddEvent: () => {},
+          ...(tasks === undefined ? {} : { tasks }),
         }}
       />
     </GameMetaProvider>,
@@ -415,9 +423,24 @@ describe("Controls: weekly and monthly tasks under the dailies", () => {
     expect(checkboxes(off).filter(Boolean).length).toBe(checkboxes(on).filter(Boolean).length - 1);
   });
 
+  test("a cycle task brings its own switch, which reads showCycleTasks", () => {
+    const AT = "2026-10-01T00:00:00.000Z";
+    const shiyu: Task = {
+      id: "mytask:dddddd4444", game: "hsr", title: "Shiyu Defense",
+      period: { unit: "cycle", days: 14, from: "2026-10-16" }, measure: { kind: "days", required: 1 },
+      at: AT, updatedAt: AT,
+    };
+    const on = render(PREFS, 0, undefined, [shiyu]);
+    expect(on).toContain("Show cycle tasks");
+    expect(on).not.toContain("Show weekly tasks");
+    const off = render({ ...PREFS, showCycleTasks: false }, 0, undefined, [shiyu]);
+    expect(checkboxes(off).filter(Boolean).length).toBe(checkboxes(on).filter(Boolean).length - 1);
+  });
+
   test("with no tasks at all, neither switch is offered", () => {
     const html = render(PREFS);
     expect(html).not.toContain("Show weekly tasks");
     expect(html).not.toContain("Show monthly tasks");
+    expect(html).not.toContain("Show cycle tasks");
   });
 });

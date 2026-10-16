@@ -2,7 +2,8 @@ import { z } from "zod";
 import { DAY } from "./time.ts";
 
 /**
- * Periods longer than a day — a week, a month — in day-key space.
+ * Periods longer than a day — a week, a month, a cycle of N days — in day-key
+ * space.
  *
  * Every key here is a `YYYY-MM-DD` game-day that `dayKey` already cut on a
  * game's own reset clock for the reader's region. Working on keys rather than
@@ -16,10 +17,18 @@ import { DAY } from "./time.ts";
 /** ISO weekday: Monday is 1, Sunday is 7. */
 export const WeekdaySchema = z.number().int().min(1).max(7);
 
+const DayKey = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
 export const PeriodSchema = z.union([
   z.object({ unit: z.literal("week"), startsOn: WeekdaySchema }),
   /** Day of month; 31 means "the last day" in a shorter month. */
   z.object({ unit: z.literal("month"), startsOn: z.number().int().min(1).max(31) }),
+  /**
+   * Every `days` game-days, counted from `from`, a game-day on which a cycle
+   * began — any one, not necessarily the first: cycles run both ways from it,
+   * so an anchor read off this cycle's timer stays right for the ones before.
+   */
+  z.object({ unit: z.literal("cycle"), days: z.number().int().min(2).max(366), from: DayKey }),
 ]);
 export type Period = z.infer<typeof PeriodSchema>;
 
@@ -56,6 +65,10 @@ export function periodOf(
   if (period.unit === "week") {
     start = addDays(today, -((isoWeekday(today) - period.startsOn + 7) % 7));
     next = addDays(start, 7);
+  } else if (period.unit === "cycle") {
+    const since = Math.round((msOf(today) - msOf(period.from)) / DAY);
+    start = addDays(period.from, Math.floor(since / period.days) * period.days);
+    next = addDays(start, period.days);
   } else {
     const t = new Date(msOf(today));
     const y = t.getUTCFullYear();

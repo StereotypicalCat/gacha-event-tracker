@@ -14,6 +14,8 @@ import {
   Dailies,
   dailyGroups,
   dailyTally,
+  longerHeading,
+  tasksShown,
 } from "../src/client/components/Dailies.tsx";
 import type { GoalStatus } from "../src/shared/goal.ts";
 import { Welcome } from "../src/client/components/Welcome.tsx";
@@ -1387,6 +1389,7 @@ describe("weekly and monthly tasks in the dailies strip", () => {
     expect(dailyTally(group!.items, () => [])).toEqual({
       total: 1, complete: 0, tickedToday: 0,
       week: { total: 1, complete: 0 }, month: { total: 1, complete: 1 },
+      cycle: { total: 0, complete: 0 },
     });
   });
 
@@ -1417,6 +1420,50 @@ describe("weekly and monthly tasks in the dailies strip", () => {
   test("labels for amounts and months", () => {
     expect(chipLabel("X", false, amountStatus)).toBe("X, 1,900 of 2,100 this week");
     expect(chipLabel("X", false, monthStatus)).toBe("X, done this month");
+  });
+
+  const shiyu: Task = {
+    id: "mytask:dddddd4444", game: "zzz", title: "Shiyu Defense",
+    period: { unit: "cycle", days: 14, from: "2026-10-16" }, measure: { kind: "days", required: 1 },
+    at: AT, updatedAt: AT,
+  };
+  const cycleStatus: GoalStatus = {
+    scope: "cycle", measure: "days", periodStart: "2026-10-02", required: 1, count: 0,
+    met: false, needed: 1, open: 1, shortfall: false,
+  };
+  const anyStatus = (t: Pick<Task, "period" | "measure">) =>
+    t.period.unit === "cycle" ? cycleStatus : statusOf(t);
+
+  test("the lower row names the periods it holds", () => {
+    expect(longerHeading(new Set(["week"]))).toBe("This week");
+    expect(longerHeading(new Set(["week", "month"]))).toBe("This week & month");
+    expect(longerHeading(new Set(["week", "month", "cycle"]))).toBe("This week, month & cycle");
+    expect(longerHeading(new Set(["cycle"]))).toBe("This cycle");
+  });
+
+  test("cycle tasks sit in the lower row, are tallied apart and switched apart", () => {
+    const [group] = dailyGroups(["zzz"], [], NOW, "europe", meta, startOf, true, undefined,
+      [points, shiyu], anyStatus);
+    expect(group!.items.map((i) => i.cadence)).toEqual(["day", "week", "cycle"]);
+    expect(dailyTally(group!.items, () => [])).toMatchObject({
+      week: { total: 1, complete: 0 }, cycle: { total: 1, complete: 0 },
+    });
+    expect(tasksShown([points, monthly, shiyu], { weekly: true, monthly: true, cycle: false }))
+      .toEqual([points, monthly]);
+    expect(tasksShown([points, monthly, shiyu], { weekly: false, monthly: false, cycle: true }))
+      .toEqual([shiyu]);
+  });
+
+  test("a cycle chip shows its days left, under a heading that names it", () => {
+    const html = render(
+      <Dailies games={["zzz"]} events={[]} region="europe" now={NOW} showChores={false}
+        daysFor={() => []} onToggleDay={() => {}} tasks={[points, shiyu]}
+        taskStatusFor={anyStatus} onSetAmount={() => {}} amountFor={() => undefined} />,
+    );
+    expect(html).toContain("0/1 · 1d");
+    expect(html).toContain("This week &amp; cycle");
+    expect(html).toMatch(/Cycles (<!-- -->)?0(<!-- -->)?\/(<!-- -->)?1/);
+    expect(html).toContain("still open this week or cycle.");
   });
 });
 

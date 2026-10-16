@@ -504,16 +504,19 @@ export function App() {
       chores: prefs.showChores,
       weekly: prefs.showWeeklyTasks,
       monthly: prefs.showMonthlyTasks,
+      cycle: prefs.showCycleTasks,
     },
     hasTasks: {
       weekly: stripTasks.some((t) => t.period.unit === "week"),
       monthly: stripTasks.some((t) => t.period.unit === "month"),
+      cycle: stripTasks.some((t) => t.period.unit === "cycle"),
     },
     onShown: (patch) =>
       update({
         ...(patch.chores !== undefined ? { showChores: patch.chores } : {}),
         ...(patch.weekly !== undefined ? { showWeeklyTasks: patch.weekly } : {}),
         ...(patch.monthly !== undefined ? { showMonthlyTasks: patch.monthly } : {}),
+        ...(patch.cycle !== undefined ? { showCycleTasks: patch.cycle } : {}),
       }),
     standing: (focus === null ? enabled : [focus]).flatMap((game): StripStanding[] => {
       if (isCustomGameId(game)) return [];
@@ -749,6 +752,7 @@ export function App() {
             tasks={tasksShown(stripTasks, {
               weekly: prefs.showWeeklyTasks,
               monthly: prefs.showMonthlyTasks,
+              cycle: prefs.showCycleTasks,
             })}
             edit={stripEditor}
             taskStatusFor={taskStatusOf}

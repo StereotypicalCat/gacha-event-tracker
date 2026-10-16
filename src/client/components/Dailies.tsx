@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import {
   catchUpDays,
   CATCH_UP_DAYS,
@@ -67,7 +67,7 @@ export interface DailyItem {
    * whose goal is a number has no "today" — nothing ticks — so it counts with
    * its week, or, over its whole run, in no tally at all.
    */
-  cadence: "day" | "week" | "month" | "event";
+  cadence: "day" | "week" | "month" | "cycle" | "event";
   /** A task's period, for finding the one before it in Catch up. */
   period?: Period | undefined;
   /** A task's unit, printed after its target. */
@@ -216,9 +216,10 @@ export function dailyGroups(
  */
 export function tasksShown<T extends Pick<StripTask, "period">>(
   tasks: readonly T[],
-  shown: { weekly: boolean; monthly: boolean },
+  shown: { weekly: boolean; monthly: boolean; cycle: boolean },
 ): T[] {
-  return tasks.filter((t) => (t.period.unit === "week" ? shown.weekly : shown.monthly));
+  const on = { week: shown.weekly, month: shown.monthly, cycle: shown.cycle } as const;
+  return tasks.filter((t) => on[t.period.unit]);
 }
 
 /**
@@ -231,13 +232,33 @@ export function splitByCadence(items: readonly DailyItem[]): {
   today: DailyItem[];
   longer: DailyItem[];
 } {
-  const longer = (i: DailyItem) => i.cadence === "week" || i.cadence === "month";
+  const longer = (i: DailyItem) =>
+    i.cadence === "week" || i.cadence === "month" || i.cadence === "cycle";
   return { today: items.filter((i) => !longer(i)), longer: items.filter(longer) };
 }
 
 interface PeriodTally {
   total: number;
   complete: number;
+}
+
+type Longer = "week" | "month" | "cycle";
+const LONGER: readonly Longer[] = ["week", "month", "cycle"];
+
+/** "week", "week or month", "week, month or cycle": the periods present, in order. */
+function periodList(present: ReadonlySet<Longer>, conjunction: "&" | "or" | "and"): string {
+  const names = LONGER.filter((c) => present.has(c));
+  const last = names.at(-1) ?? "";
+  const head = names.slice(0, -1).join(", ");
+  return head === "" ? last : `${head} ${conjunction} ${last}`;
+}
+
+/**
+ * The lower row's heading: the periods it holds, in order — "This week",
+ * "This week & month", "This week, month & cycle".
+ */
+export function longerHeading(present: ReadonlySet<Longer>): string {
+  return present.size === 0 ? "" : `This ${periodList(present, "&")}`;
 }
 
 /**
@@ -256,17 +277,19 @@ export function dailyTally(
   tickedToday: number;
   week: PeriodTally;
   month: PeriodTally;
+  cycle: PeriodTally;
 } {
   let total = 0;
   let complete = 0;
   let tickedToday = 0;
   const week = { total: 0, complete: 0 };
   const month = { total: 0, complete: 0 };
+  const cycle = { total: 0, complete: 0 };
   for (const i of items) {
     const met = i.goal?.met === true;
     if (i.cadence === "event") continue;
     if (i.cadence !== "day") {
-      const tally = i.cadence === "week" ? week : month;
+      const tally = i.cadence === "week" ? week : i.cadence === "month" ? month : cycle;
       tally.total += 1;
       if (met) tally.complete += 1;
       continue;
@@ -276,7 +299,7 @@ export function dailyTally(
     if (ticked) tickedToday += 1;
     if (ticked || met) complete += 1;
   }
-  return { total, complete, tickedToday, week, month };
+  return { total, complete, tickedToday, week, month, cycle };
 }
 
 /** The chip's accessible name: today's tick and the goal are separate facts. */
@@ -377,7 +400,7 @@ export function Dailies({
     taskStatusFor,
   );
   const items = groups.flatMap((group) => group.items);
-  const { total, complete, tickedToday, week, month } = dailyTally(items, daysFor);
+  const { total, complete, tickedToday, week, month, cycle } = dailyTally(items, daysFor);
   const allDone = total > 0 && complete === total;
 
   const [burst, setBurst] = useState(0);
@@ -476,6 +499,12 @@ export function Dailies({
   const open = items.find((i) => i.key === editing && i.goal?.measure === "amount");
 
   const { today, longer } = splitByCadence(items);
+  const tallies = { week, month, cycle };
+  const present = new Set(LONGER.filter((c) => tallies[c].total > 0));
+  const periodCounts = (
+    [["Weekly", week], ["Monthly", month], ["Cycles", cycle]] as const
+  ).filter(([, t]) => t.total > 0);
+  const longerOpen = LONGER.reduce((n, c) => n + tallies[c].total - tallies[c].complete, 0);
   const chip = (item: DailyItem) => (
     <li key={item.key}>
       {item.goal?.measure === "amount" ? (
@@ -513,11 +542,14 @@ export function Dailies({
           {total > 0 ? <>Today's dailies · {complete}/{total}</> : "Your tasks"}
           {/* A line of their own: in the rail, three counts on one line wrapped
               the heading and pushed the reset countdown onto two. */}
-          {(week.total > 0 || month.total > 0) && (
+          {periodCounts.length > 0 && (
             <span className="mt-0.5 block text-faint">
-              {week.total > 0 && <>Weekly {week.complete}/{week.total}</>}
-              {week.total > 0 && month.total > 0 && " · "}
-              {month.total > 0 && <>Monthly {month.complete}/{month.total}</>}
+              {periodCounts.map(([name, t], n) => (
+                <Fragment key={name}>
+                  {n > 0 && " · "}
+                  {name} {t.complete}/{t.total}
+                </Fragment>
+              ))}
             </span>
           )}
         </h2>
@@ -554,7 +586,7 @@ export function Dailies({
           {longer.length > 0 && (
             <>
               <p className="relative mt-3 text-[0.6875rem] font-medium text-faint">
-                This week &amp; month
+                {longerHeading(new Set(longer.map((i) => i.cadence as Longer)))}
               </p>
               <ul className="relative mt-1.5 flex flex-wrap gap-1.5">
                 {longer.map(chip)}
@@ -589,9 +621,12 @@ export function Dailies({
             : catchUp
             ? `Tick a day you did but didn't record. The last ${CATCH_UP_DAYS} days, and nothing later than today.`
             : total === 0
-              ? week.complete + month.complete === week.total + month.total
-                ? "All done for this week and month."
-                : `${waiting(week.total + month.total - week.complete - month.complete)} still open this week or month.`
+              ? longerOpen === 0
+                ? // An event's whole-run number is in no period; nothing to name.
+                  present.size === 0
+                  ? "All done for this week and month."
+                  : `All done for this ${periodList(present, "and")}.`
+                : `${waiting(longerOpen)} still open this ${periodList(present, "or")}.`
               : allDone
                 ? "All done. Nothing else expires tonight."
                 : `${waiting(total - complete)} still waiting on you today.`}

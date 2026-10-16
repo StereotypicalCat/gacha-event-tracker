@@ -114,7 +114,11 @@ export function Controls({
       .filter((g) => shownFor(routines, g))
       .flatMap((g) => routinesFor(g).filter((r) => offered(r, standardPulls)).map((r) => r.period.unit)),
   ];
-  const taskPeriods = { week: periods.includes("week"), month: periods.includes("month") };
+  const taskPeriods = {
+    week: periods.includes("week"),
+    month: periods.includes("month"),
+    cycle: periods.includes("cycle"),
+  };
 
   return (
     <section
@@ -342,6 +346,14 @@ export function Controls({
                 onChange={(showMonthlyTasks) => onUpdate({ showMonthlyTasks })}
                 label="Show monthly tasks under the dailies"
                 hint="Off hides them from the strip and its counts; your ticks and numbers are kept."
+              />
+            )}
+            {taskPeriods.cycle && (
+              <Check
+                checked={prefs.showCycleTasks}
+                onChange={(showCycleTasks) => onUpdate({ showCycleTasks })}
+                label="Show cycle tasks under the dailies"
+                hint="Tasks that repeat every so many days, like a two-week endgame mode. Off hides them from the strip and its counts; your ticks and numbers are kept."
               />
             )}
 

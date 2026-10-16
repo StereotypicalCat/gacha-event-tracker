@@ -124,3 +124,27 @@ describe("taskCaption", () => {
     ).toBe("every month from the 22nd · 3 days");
   });
 });
+
+describe("a task on a cycle", () => {
+  test("its status is by its cycle, and its caption names the start", () => {
+    const t = task({
+      period: { unit: "cycle", days: 14, from: "2026-10-16" },
+      measure: { kind: "days", required: 5 },
+    });
+    expect(TaskSchema.safeParse(t).success).toBe(true);
+    expect(taskCaption(t)).toBe("every 14 days from 16 Oct 2026 · 5 days");
+    const s = taskStatus({
+      task: t, region: "europe", now: noon("2026-10-20"),
+      logged: ["2026-10-15", "2026-10-16", "2026-10-18"],
+    });
+    expect(s).toMatchObject({ scope: "cycle", periodStart: "2026-10-16", count: 2, required: 5, open: 10 });
+  });
+
+  test("a short cycle never asks for more days than it holds", () => {
+    const t = task({
+      period: { unit: "cycle", days: 3, from: "2026-10-16" },
+      measure: { kind: "days", required: 5 },
+    });
+    expect(taskStatus({ task: t, region: "europe", now: noon("2026-10-16"), logged: [] }).required).toBe(3);
+  });
+});

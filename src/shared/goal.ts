@@ -72,8 +72,8 @@ export function readGoal(stored: unknown): Goal | undefined {
 }
 
 export interface GoalStatus {
-  /** Month is a task's period (task.ts); an event's goal is a week or the event. */
-  scope: "week" | "month" | "event";
+  /** Month and cycle are a task's period (task.ts); an event's goal is a week or the event. */
+  scope: "week" | "month" | "cycle" | "event";
   measure: "days" | "amount";
   /** The period's first game-day: the key an amount is stored under. */
   periodStart: string;
@@ -172,7 +172,7 @@ export function goalStatus(input: {
 const days = (n: number) => (n === 1 ? "1 day" : `${n} days`);
 /** Thousands grouped: 2,100 reads as a number of points, 2100 as a year. */
 const num = (n: number) => n.toLocaleString("en-US");
-/** " this week", " this month", or nothing for a whole event. */
+/** " this week", " this month", " this cycle", or nothing for a whole event. */
 const within = (s: GoalStatus) => (s.scope === "event" ? "" : ` this ${s.scope}`);
 const doneLabel = (s: GoalStatus) => (s.scope === "event" ? "goal reached" : `done this ${s.scope}`);
 
@@ -206,6 +206,8 @@ export function goalSummary(goal: Goal | undefined): string {
 
 /** The Dailies chip's short count. */
 export function goalCount(s: GoalStatus): string {
+  // "cy" means nothing; the days left in a cycle say where it is.
+  if (s.scope === "cycle") return `${num(s.count)}/${num(s.required)} · ${s.open ?? 0}d`;
   const unit = s.scope === "week" ? " wk" : s.scope === "month" ? " mo" : "";
   return `${num(s.count)}/${num(s.required)}${unit}`;
 }

@@ -4,6 +4,8 @@ import { GameId } from "./schema.ts";
 import { shownFor, type PerGame } from "./perGame.ts";
 import { MeasureSchema, type TaskShape } from "./task.ts";
 
+export { asOfLabel } from "./task.ts";
+
 /**
  * Weekly and monthly tasks the app ships for a game — the built-in counterpart of a
  * reader's own `mytask:` (PRD F17).
@@ -547,14 +549,6 @@ export function routineToAsk(
     if (routinesFor(game).length > 0) return game;
   }
   return null;
-}
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-/** `2025-12-02` → `2 Dec 2025`: the same in every locale, so it reads the same wherever it is quoted. */
-export function asOfLabel(day: string): string {
-  const [y, m, d] = day.split("-").map(Number);
-  return `${d} ${MONTHS[(m ?? 1) - 1]} ${y}`;
 }
 
 /**
