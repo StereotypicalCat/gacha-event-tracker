@@ -35,6 +35,19 @@
     Rails) vs one per server reset; a target that differs per player (the Incentive Fund) — the
     reader sets it, or ship the base with a note; whether "typically every 14 days" is safe to
     model as fixed.
+- [ ] **Rework the settings, with mockups first** (owner, 2026-10-16: "we will have to do a
+  settings rework of some kinds with some mockups"). *What you see* keeps gaining switches —
+  dailies, built-ins globally and per game, standard-banner pulls, weekly / monthly tasks, and
+  with N-week cycles a third task switch (`showCycleTasks`). Start with mockups the owner can
+  compare (the brainstorming visual companion), not code; keep every pref's stored meaning
+  (`docs/DATA-MODEL.md` § Client-side storage — an absent pref still means never answered).
+  Code: `src/client/components/Controls.tsx`, `src/client/state/usePrefs.ts`.
+- [ ] Find out whether NTE's *Beyond the Rails* ends at one instant for every server. On
+  2026-10-16 the owner, on Europe, read it ending Wednesday 2026-10-21 at 21:00 UTC — the Asia
+  server's Thursday 05:00 UTC+8 reset, not Europe's 03:00 UTC. The built-in therefore rolls on
+  Asia's clock for every reader (`clock: "asia"`, sub-project 2). A timer read from the America
+  server (and one from Asia, to be sure) settles it; if America rolls on its own reset, the
+  clock is per server and the entry needs changing.
 - [ ] **Sub-project 3: dated battle pass and shop windows as feed events.** Source and parser work
   (AGENTS.md § the ingest pipeline; the `adapter-author` agent and `add-game-source` skill), not
   built-ins. **Check the feed first**: Genshin's battle pass is already a feed event (`Battle Pass
