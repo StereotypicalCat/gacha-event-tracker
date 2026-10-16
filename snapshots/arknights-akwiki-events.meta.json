@@ -1,12 +1,12 @@
 {
   "sourceId": "arknights-akwiki-events",
   "url": "https://arknights.wiki.gg/wiki/Event",
-  "contentHash": "3101a39729db31fe141e82071fd26cedd50cc3f1de0b1937a332ce1bd8433e99",
-  "bytes": 99590,
+  "contentHash": "759328060079ebc981f60362ab0615ad51fcfc6b87567f6577704c1261b64b91",
+  "bytes": 99550,
   "etag": null,
-  "lastModified": "Wed, 14 Oct 2026 17:23:32 GMT",
-  "contentChangedAt": "2026-10-14T17:27:58.689Z",
-  "lastConfirmedAt": "2026-10-15T17:27:58.742Z",
+  "lastModified": "Fri, 16 Oct 2026 04:41:57 GMT",
+  "contentChangedAt": "2026-10-16T05:28:02.298Z",
+  "lastConfirmedAt": "2026-10-16T05:28:02.298Z",
   "eventCount": 5,
   "charset": "utf-8"
 }
