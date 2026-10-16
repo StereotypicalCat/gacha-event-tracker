@@ -8,6 +8,7 @@ import {
   mineFrom,
   copyRoutineState,
   hiddenAfter,
+  offered,
 } from "../src/shared/routines.ts";
 import { choreRule, defaults, restorePrefsValue, routineRule, trackRoutinePatch } from "../src/client/state/usePrefs.ts";
 import { shownFor } from "../src/shared/perGame.ts";
@@ -60,6 +61,7 @@ describe("ROUTINES", () => {
       ["Reputation Requests", week, { kind: "amount", target: 3, unit: "requests" }],
       ["Realm Depot: Realm Treasures", week, { kind: "days", required: 1 }],
       ["Paimon's Bargains: Intertwined Fates", { unit: "month", startsOn: 1 }, { kind: "amount", target: 5, unit: "fates" }],
+      ["Paimon's Bargains: Acquaint Fates", { unit: "month", startsOn: 1 }, { kind: "amount", target: 5, unit: "fates" }],
       ["Spiral Abyss", { unit: "month", startsOn: 16 }, { kind: "days", required: 1 }],
       ["Imaginarium Theater", { unit: "month", startsOn: 1 }, { kind: "days", required: 1 }],
     ]);
@@ -67,6 +69,7 @@ describe("ROUTINES", () => {
       ["Echo of War", week, { kind: "amount", target: 3, unit: "runs" }],
       ["Nameless Honor weekly EXP", week, { kind: "amount", target: 8000, unit: "EXP" }],
       ["Embers Exchange: Star Rail Special Pass", { unit: "month", startsOn: 1 }, { kind: "amount", target: 5, unit: "passes" }],
+      ["Embers Exchange: Star Rail Pass", { unit: "month", startsOn: 1 }, { kind: "amount", target: 5, unit: "passes" }],
     ]);
     expect(shape("zzz")).toEqual([
       ["Ridu Weekly", week, { kind: "amount", target: 2100, unit: "points" }],
@@ -74,6 +77,7 @@ describe("ROUTINES", () => {
       ["Notorious Hunt", week, { kind: "amount", target: 3, unit: "runs" }],
       ["New Eridu City Fund weekly EXP", week, { kind: "amount", target: 10000, unit: "EXP" }],
       ["Signal Shop: Encrypted Master Tapes", { unit: "month", startsOn: 1 }, { kind: "amount", target: 5, unit: "tapes" }],
+      ["Signal Shop: Master Tapes", { unit: "month", startsOn: 1 }, { kind: "amount", target: 5, unit: "tapes" }],
       ["Signal Shop: Boopons", { unit: "month", startsOn: 1 }, { kind: "amount", target: 5, unit: "Boopons" }],
     ]);
     expect(shape("endfield")).toEqual([
@@ -96,6 +100,7 @@ describe("ROUTINES", () => {
       ["Mira Journey weekly EXP", week, { kind: "amount", target: 8000, unit: "Journey EXP" }],
       ["Realm of Breakthrough", week, { kind: "amount", target: 2, unit: "trials" }],
       ["Resonance Store: Revelation Crystals", { unit: "month", startsOn: 1 }, { kind: "amount", target: 5, unit: "crystals" }],
+      ["Resonance Store: Resonite Crystals", { unit: "month", startsOn: 1 }, { kind: "amount", target: 5, unit: "crystals" }],
     ]);
   });
 
@@ -109,7 +114,8 @@ describe("ROUTINES", () => {
   });
 });
 
-const OFFERED = ROUTINES;
+// What is on offer with standard-banner pulls left off, the default.
+const OFFERED = ROUTINES.filter((r) => r.pulls !== "standard");
 const idsOf = (...games: string[]) =>
   OFFERED.filter((r) => games.includes(r.game)).map((r) => r.id);
 const RIDU = "routine:zzz:ridu-weekly";
@@ -226,6 +232,42 @@ describe("tracking one built-in, or not", () => {
       .toEqual(["routine:zzz:ridu-weekly"]);
     expect(restorePrefsValue({ routinesHidden: "routine:zzz:ridu-weekly" }).routinesHidden).toBeUndefined();
     expect(restorePrefsValue({}).routinesHidden).toBeUndefined();
+  });
+});
+
+describe("standard-banner pulls", () => {
+  const standard = ROUTINES.filter((r) => r.pulls === "standard");
+
+  test("each shop's standard line sits beside its premium one, on the same reset", () => {
+    // The switch adds a second line to a shop the reader already tracks; a
+    // standard line with no premium twin would arrive alone.
+    expect(standard.length).toBeGreaterThan(0);
+    for (const r of standard) {
+      const twin = ROUTINES.find(
+        (p) => p.game === r.game && p.pulls === "premium" && JSON.stringify(p.period) === JSON.stringify(r.period),
+      );
+      expect(twin).toBeDefined();
+    }
+  });
+
+  test("are left out unless the reader asks for them", () => {
+    const all = { all: true, on: undefined, off: undefined };
+    const ids = (on: boolean) => activeRoutines(all, new Set(), new Set(), on).map((r) => r.id);
+    for (const r of standard) {
+      expect(ids(false)).not.toContain(r.id);
+      expect(ids(true)).toContain(r.id);
+    }
+    // Everything else is the same either way.
+    expect(ids(true).filter((id) => !standard.some((r) => r.id === id))).toEqual(ids(false));
+    expect(offered(standard[0]!, false)).toBe(false);
+    expect(offered(standard[0]!, true)).toBe(true);
+    expect(offered(routinesFor("zzz")[0]!, false)).toBe(true);
+  });
+
+  test("the switch survives a restore, and junk in it is dropped", () => {
+    expect(restorePrefsValue({ standardPulls: true }).standardPulls).toBe(true);
+    expect(restorePrefsValue({ standardPulls: "yes" }).standardPulls).toBeUndefined();
+    expect(restorePrefsValue({}).standardPulls).toBeUndefined();
   });
 });
 

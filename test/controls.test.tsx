@@ -381,6 +381,22 @@ describe("Controls: the Your own summary counts tasks", () => {
   });
 });
 
+describe("Controls: standard-banner pulls", () => {
+  test("offered beside the built-ins switch, and reads its own pref", () => {
+    const off = render({ ...PREFS, routineGames: ["genshin"] });
+    expect(off).toContain("Include standard-banner pulls");
+    expect(off).toContain("Paimon&#x27;s Bargains: Acquaint Fates");
+    const on = render({ ...PREFS, routineGames: ["genshin"], standardPulls: true });
+    expect(checkboxes(on).filter(Boolean).length).toBe(checkboxes(off).filter(Boolean).length + 1);
+  });
+
+  test("not offered when no game listed has a standard line", () => {
+    expect(render({ ...PREFS, routineGames: ["endfield"] }, 0, ["endfield"])).not.toContain(
+      "Include standard-banner pulls",
+    );
+  });
+});
+
 describe("Controls: weekly and monthly tasks under the dailies", () => {
   test("built-ins switched on globally count as a weekly task", () => {
     expect(render({ ...PREFS, showRoutines: true }, 0, ["zzz"])).toContain("Show weekly tasks");

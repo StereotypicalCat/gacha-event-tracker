@@ -231,6 +231,12 @@ export interface Prefs {
    */
   routinesHidden?: string[] | undefined;
   /**
+   * Whether a shop's standard-banner pulls are tracked beside its premium ones
+   * (`Routine.pulls`, owner, 2026-10-16). Absent means no — premium only — so
+   * an install from before the standard lines existed gains nothing new.
+   */
+  standardPulls?: boolean | undefined;
+  /**
    * The newest changelog entry the reader dismissed (PRD F18). Absent means
    * unrecorded, not "seen nothing": first-run setup sets it, so an absent value
    * is an install from before the changelog, shown the launch window once.
@@ -440,6 +446,9 @@ export function restorePrefsValue(incoming: unknown): Prefs {
 
   if (result.showRoutines !== undefined && typeof result.showRoutines !== "boolean") {
     result.showRoutines = undefined;
+  }
+  if (result.standardPulls !== undefined && typeof result.standardPulls !== "boolean") {
+    result.standardPulls = undefined;
   }
 
   // focusGame

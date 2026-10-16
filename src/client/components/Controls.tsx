@@ -9,7 +9,7 @@ import { choreRule, routineRule, type Prefs } from "../state/usePrefs.ts";
 import { YourOwn } from "./YourOwn.tsx";
 import { isCustomGameId } from "../../shared/custom.ts";
 import { exceptionLine, setFor, shownFor, type PerGame } from "../../shared/perGame.ts";
-import { asOfLabel, routinesFor } from "../../shared/routines.ts";
+import { asOfLabel, offered, routinesFor } from "../../shared/routines.ts";
 
 const REGIONS: Array<{ id: Region; label: string }> = (
   ["america", "europe", "asia"] as const
@@ -103,13 +103,16 @@ export function Controls({
   // neither is offered — a chip for it would be a control that does nothing.
   const choreGames = games.filter((g) => !prefs.hiddenGames.includes(g) && !isCustomGameId(g));
   const routineGames = games.filter((g) => routinesFor(g).length > 0);
+  const standardPulls = prefs.standardPulls ?? false;
+  // The standard-banner lines the switch below would add, named in its hint.
+  const standardLines = routineGames.flatMap((g) => routinesFor(g)).filter((r) => r.pulls === "standard");
   // Which periods have a task at all — the reader's own, or a built-in they
   // turned on — so a switch is offered only with something behind it.
   const periods = [
     ...(own.tasks ?? []).map((t) => t.period.unit),
     ...routineGames
       .filter((g) => shownFor(routines, g))
-      .flatMap((g) => routinesFor(g).map((r) => r.period.unit)),
+      .flatMap((g) => routinesFor(g).filter((r) => offered(r, standardPulls)).map((r) => r.period.unit)),
   ];
   const taskPeriods = { week: periods.includes("week"), month: periods.includes("month") };
 
@@ -287,7 +290,7 @@ export function Controls({
                 games={routineGames}
                 chipsLabel="Built-in weekly and monthly tasks per game"
                 titleFor={(game) => {
-                  const list = routinesFor(game);
+                  const list = routinesFor(game).filter((r) => offered(r, standardPulls));
                   // Several pages per game now: quote the oldest, so the
                   // tooltip never makes a year-old figure look current.
                   const oldest = list.map((r) => r.asOf).sort()[0]!;
@@ -306,6 +309,20 @@ export function Controls({
                   });
                 }}
               />
+            )}
+
+            {/* Most shops sell both banners' pulls. The premium line comes with
+                the built-ins; the standard line beside it only on request, one
+                answer for every game (owner, 2026-10-16). */}
+            {standardLines.length > 0 && (
+              <div className="ml-6">
+                <Check
+                  checked={standardPulls}
+                  onChange={(value) => onUpdate({ standardPulls: value })}
+                  label="Include standard-banner pulls"
+                  hint={`Shops that sell premium pulls mostly sell standard ones too. Off, only the premium line is tracked; on, these join it: ${standardLines.map((r) => r.title).join(", ")}.`}
+                />
+              </div>
             )}
 
             {/* Where weekly and monthly tasks sit: their own row under the

@@ -53,6 +53,7 @@ import { goalStatus, readGoal, type GoalStatus } from "../shared/goal.ts";
 import { taskStatus, type TaskShape } from "../shared/task.ts";
 import {
   activeRoutines,
+  offered,
   copyRoutineState,
   mineFrom,
   routinesFor,
@@ -234,7 +235,8 @@ export function App() {
   // Every built-in the reader could track, for the lists that offer them; the
   // strip carries only those not stopped one by one.
   const routinesHidden = new Set(prefs.routinesHidden ?? []);
-  const routines = activeRoutines(routineRule(prefs), copiedFrom);
+  const standardPulls = prefs.standardPulls ?? false;
+  const routines = activeRoutines(routineRule(prefs), copiedFrom, new Set(), standardPulls);
   const stripTasks = [...tasks.tasks, ...routines.filter((r) => !routinesHidden.has(r.id))];
 
   /**
@@ -527,7 +529,7 @@ export function App() {
         // A copy the reader made stands in for its built-in, so the original is
         // not offered; the copy is theirs, in Your own.
         ...routinesFor(game)
-          .filter((r) => !copiedFrom.has(r.id))
+          .filter((r) => !copiedFrom.has(r.id) && offered(r, standardPulls))
           .map((r): StripStanding => ({
             id: r.id,
             game,

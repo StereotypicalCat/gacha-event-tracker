@@ -38,6 +38,13 @@ export const RoutineSchema = z.object({
   checked: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   /** Anything the reader needs to know before relying on it. */
   note: z.string().max(140).optional(),
+  /**
+   * Gacha pulls a shop sells, by banner. Most shops stock both: the premium
+   * (limited) line is offered with the game's other built-ins, the standard
+   * line only when the reader also asks for standard pulls
+   * (`prefs.standardPulls`, owner, 2026-10-16). Absent on everything else.
+   */
+  pulls: z.enum(["premium", "standard"]).optional(),
 });
 export type Routine = z.infer<typeof RoutineSchema> & TaskShape;
 
@@ -107,11 +114,24 @@ export const ROUTINES: readonly Routine[] = [
     game: "genshin",
     title: "Paimon's Bargains: Intertwined Fates",
     period: { unit: "month", startsOn: 1 },
+    pulls: "premium",
     measure: { kind: "amount", target: 5, unit: "fates" },
     source: "https://genshin-impact.fandom.com/wiki/Paimon%27s_Bargains",
     asOf: "2026-08-23",
     checked: "2026-10-14",
     note: "Bought with Masterless Stardust. Confirmed in game, 2026-10-16.",
+  },
+  {
+    id: "routine:genshin:paimons-bargains-acquaint",
+    game: "genshin",
+    title: "Paimon's Bargains: Acquaint Fates",
+    period: { unit: "month", startsOn: 1 },
+    pulls: "standard",
+    measure: { kind: "amount", target: 5, unit: "fates" },
+    source: "https://genshin-impact.fandom.com/wiki/Paimon%27s_Bargains",
+    asOf: "2026-08-23",
+    checked: "2026-10-16",
+    note: "The standard-banner line beside the Intertwined Fates, bought with Masterless Stardust.",
   },
   {
     id: "routine:genshin:spiral-abyss",
@@ -168,11 +188,25 @@ export const ROUTINES: readonly Routine[] = [
     // The wiki marks the stock as refreshing monthly; the 1st is the owner's
     // in-game countdown on 2026-10-14, which ends at the reset on 1 Nov 2026.
     period: { unit: "month", startsOn: 1 },
+    pulls: "premium",
     measure: { kind: "amount", target: 5, unit: "passes" },
     source: "https://honkai-star-rail.fandom.com/wiki/Embers_Exchange",
     asOf: "2026-07-12",
     checked: "2026-10-14",
     note: "Bought with Undying Embers. The wiki says monthly; the 1st is ours. Confirmed in game, 2026-10-14.",
+  },
+  {
+    id: "routine:hsr:embers-exchange-standard",
+    game: "hsr",
+    title: "Embers Exchange: Star Rail Pass",
+    // Resets with the Special Pass line beside it: the 1st.
+    period: { unit: "month", startsOn: 1 },
+    pulls: "standard",
+    measure: { kind: "amount", target: 5, unit: "passes" },
+    source: "https://honkai-star-rail.fandom.com/wiki/Embers_Exchange",
+    asOf: "2026-07-12",
+    checked: "2026-10-16",
+    note: "The standard-banner line beside the Special Pass, bought with Undying Embers.",
   },
 
   // Zenless Zone Zero.
@@ -232,11 +266,25 @@ export const ROUTINES: readonly Routine[] = [
     // The wiki marks the Fading Signal stock as refreshing monthly; the 1st is
     // the owner's in-game timer on 2026-10-16, which ends at the reset on 1 Nov.
     period: { unit: "month", startsOn: 1 },
+    pulls: "premium",
     measure: { kind: "amount", target: 5, unit: "tapes" },
     source: "https://zenless-zone-zero.fandom.com/wiki/Signal_Shop",
     asOf: "2026-09-09",
     checked: "2026-10-16",
     note: "Bought with Fading Signal; 5 a month per the wiki. The monthly reset on the 1st is ours. Confirmed in game, 2026-10-16.",
+  },
+  {
+    id: "routine:zzz:signal-shop-master-tapes",
+    game: "zzz",
+    title: "Signal Shop: Master Tapes",
+    // Resets with the Encrypted Master Tape line beside it: the 1st.
+    period: { unit: "month", startsOn: 1 },
+    pulls: "standard",
+    measure: { kind: "amount", target: 5, unit: "tapes" },
+    source: "https://zenless-zone-zero.fandom.com/wiki/Signal_Shop",
+    asOf: "2026-09-09",
+    checked: "2026-10-16",
+    note: "The standard-banner line beside the Encrypted Master Tapes, bought with Fading Signal.",
   },
   {
     id: "routine:zzz:signal-shop-boopons",
@@ -245,6 +293,7 @@ export const ROUTINES: readonly Routine[] = [
     // The Bangbuck section's monthly stock, which resets with the Fading Signal
     // one (the 1st, per the owner's in-game timer).
     period: { unit: "month", startsOn: 1 },
+    pulls: "premium",
     measure: { kind: "amount", target: 5, unit: "Boopons" },
     source: "https://zenless-zone-zero.fandom.com/wiki/Signal_Shop",
     asOf: "2026-09-09",
@@ -346,11 +395,25 @@ export const ROUTINES: readonly Routine[] = [
     // The wiki marks the Tranquility Droplet stock monthly; the 1st is the
     // owner's in-game timer on 2026-10-16, which ends at the reset on 1 Nov.
     period: { unit: "month", startsOn: 1 },
+    pulls: "premium",
     measure: { kind: "amount", target: 5, unit: "crystals" },
     source: "https://infinity-nikki.fandom.com/wiki/Tranquility_Droplet",
     asOf: "2025-12-26",
     checked: "2026-10-16",
     note: "Bought with Tranquility Droplets, 5 a month. The 1st is ours. Confirmed in game, 2026-10-16.",
+  },
+  {
+    id: "routine:nikki:resonance-resonite",
+    game: "nikki",
+    title: "Resonance Store: Resonite Crystals",
+    // Resets with the Revelation Crystal line beside it: the 1st.
+    period: { unit: "month", startsOn: 1 },
+    pulls: "standard",
+    measure: { kind: "amount", target: 5, unit: "crystals" },
+    source: "https://infinity-nikki.fandom.com/wiki/Tranquility_Droplet",
+    asOf: "2025-12-26",
+    checked: "2026-10-16",
+    note: "The standard-banner line beside the Revelation Crystals, bought with Tranquility Droplets.",
   },
 
   // Neverness to Everness.
@@ -431,10 +494,21 @@ export function activeRoutines(
   rule: PerGame,
   copiedFrom: ReadonlySet<string>,
   hidden: ReadonlySet<string> = new Set(),
+  standardPulls = false,
 ): Routine[] {
   return ROUTINES.filter(
-    (r) => shownFor(rule, r.game) && !copiedFrom.has(r.id) && !hidden.has(r.id),
+    (r) =>
+      shownFor(rule, r.game) && offered(r, standardPulls) && !copiedFrom.has(r.id) && !hidden.has(r.id),
   );
+}
+
+/**
+ * Whether a built-in is on offer at all: a shop's standard-banner line only
+ * when the reader asked for standard pulls, everything else always. Below the
+ * game rule and per-item tracking, not instead of them.
+ */
+export function offered(routine: Routine, standardPulls: boolean): boolean {
+  return routine.pulls !== "standard" || standardPulls;
 }
 
 /**
