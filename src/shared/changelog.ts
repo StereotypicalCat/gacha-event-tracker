@@ -51,6 +51,15 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "pass-windows",
+    date: "2026-10-16",
+    kind: "games",
+    title: "Battle pass windows for Star Rail, ZZZ and Infinity Nikki",
+    body: "Nameless Honor, the New Eridu City Fund and Mira Journey now appear as events, so you can see when each pass ends before its rewards go.",
+    ref: "ec66967",
+    note: "pass-windows",
+  },
+  {
     id: "cycle-built-ins",
     date: "2026-10-16",
     kind: "games",
@@ -535,6 +544,19 @@ export const ENTRIES: Entry[] = [
 ];
 
 export const NOTES: Note[] = [
+  {
+    id: "pass-windows",
+    date: "2026-10-16",
+    title: "When each battle pass ends",
+    summary: [
+      "Star Rail's Nameless Honor and ZZZ's New Eridu City Fund now come from the wikis' pass tables, which date every run, so the current pass shows in Next up and on the timeline until it ends.",
+      "Infinity Nikki's Mira Journey has no dated page; it takes the version's dates, because its end was checked in the game and matched the version's. The event says so.",
+      "Genshin's battle passes were already listed. Endfield's Protocol Pass, Wuthering Waves' Pioneer Podcast and NTE's Circle Bounty wait for a page that dates them.",
+    ],
+    from: "0a4be4e",
+    to: "ec66967",
+    specs: ["docs/superpowers/specs/2026-10-16-pass-windows-design.md"],
+  },
   {
     id: "cycle-routines",
     date: "2026-10-16",
