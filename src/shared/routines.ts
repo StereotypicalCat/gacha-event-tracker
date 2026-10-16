@@ -14,6 +14,11 @@ import { MeasureSchema, type TaskShape } from "./task.ts";
  * then visibly ten months old rather than presented as current. Nothing here is
  * inferred; add one only when a page states it.
  *
+ * The one exception is a figure the repository owner confirmed in the game
+ * when no page states it (owner, 2026-10-14). It still links the best page
+ * there is, and its `note` says `Confirmed in game, YYYY-MM-DD.` so the reader
+ * can tell which figure is ours rather than the page's.
+ *
  * Off unless the reader says yes — for every game (`prefs.showRoutines`) or for
  * one (`prefs.routineGames`, `prefs.routinesOff`; see `perGame.ts`). Its id is in
  * the reserved `routine:` space, and its ticks and numbers are stored under that
@@ -37,6 +42,102 @@ export const RoutineSchema = z.object({
 export type Routine = z.infer<typeof RoutineSchema> & TaskShape;
 
 export const ROUTINES: readonly Routine[] = [
+  // Genshin Impact. Every weekly item rolls with the Monday reset, which each
+  // page states for itself; the monthly two name their own day.
+  {
+    id: "routine:genshin:weekly-bosses",
+    game: "genshin",
+    title: "Weekly Bosses",
+    period: { unit: "week", startsOn: 1 },
+    // The three discounted claims; a fourth costs full resin.
+    measure: { kind: "amount", target: 3, unit: "runs" },
+    source: "https://genshin-impact.fandom.com/wiki/Weekly_Boss",
+    asOf: "2026-08-21",
+    checked: "2026-10-14",
+    note: "Trounce Domains: three runs at half the Resin. Confirmed in game, 2026-10-16.",
+  },
+  {
+    id: "routine:genshin:battle-pass-exp",
+    game: "genshin",
+    title: "Battle Pass weekly EXP",
+    period: { unit: "week", startsOn: 1 },
+    measure: { kind: "amount", target: 10000, unit: "EXP" },
+    source: "https://genshin-impact.fandom.com/wiki/Battle_Pass",
+    asOf: "2026-01-08",
+    checked: "2026-10-14",
+    note: "The cap on EXP from daily and weekly missions. Confirmed in game, 2026-10-14.",
+  },
+  {
+    id: "routine:genshin:bounties",
+    game: "genshin",
+    title: "Reputation Bounties",
+    period: { unit: "week", startsOn: 1 },
+    measure: { kind: "amount", target: 3, unit: "bounties" },
+    source: "https://genshin-impact.fandom.com/wiki/Bounties",
+    asOf: "2026-06-13",
+    checked: "2026-10-14",
+    note: "Counted apart from Reputation Requests. Confirmed in game, 2026-10-16.",
+  },
+  {
+    id: "routine:genshin:requests",
+    game: "genshin",
+    title: "Reputation Requests",
+    period: { unit: "week", startsOn: 1 },
+    measure: { kind: "amount", target: 3, unit: "requests" },
+    source: "https://genshin-impact.fandom.com/wiki/Request",
+    asOf: "2026-06-13",
+    checked: "2026-10-14",
+    note: "Three across all nations, not three each; apart from Bounties. Confirmed in game, 2026-10-16.",
+  },
+  {
+    id: "routine:genshin:realm-depot",
+    game: "genshin",
+    title: "Realm Depot: Realm Treasures",
+    // The page says weekly and names no day; Monday is the owner's in-game
+    // restock timer. No one target either, so it is ticked once a week.
+    period: { unit: "week", startsOn: 1 },
+    measure: { kind: "days", required: 1 },
+    source: "https://genshin-impact.fandom.com/wiki/Serenitea_Pot/Realm_Depot",
+    asOf: "2026-10-12",
+    checked: "2026-10-16",
+    note: "Bought with Realm Currency; the whole stock costs 13,100. The wiki says weekly; the Monday is ours. Confirmed in game, 2026-10-16.",
+  },
+  {
+    id: "routine:genshin:paimons-bargains",
+    game: "genshin",
+    title: "Paimon's Bargains: Intertwined Fates",
+    period: { unit: "month", startsOn: 1 },
+    measure: { kind: "amount", target: 5, unit: "fates" },
+    source: "https://genshin-impact.fandom.com/wiki/Paimon%27s_Bargains",
+    asOf: "2026-08-23",
+    checked: "2026-10-14",
+    note: "Bought with Masterless Stardust. Confirmed in game, 2026-10-16.",
+  },
+  {
+    id: "routine:genshin:spiral-abyss",
+    game: "genshin",
+    title: "Spiral Abyss",
+    // The page names the reset and no target, so it is ticked once a cycle.
+    period: { unit: "month", startsOn: 16 },
+    measure: { kind: "days", required: 1 },
+    source: "https://genshin-impact.fandom.com/wiki/Spiral_Abyss",
+    asOf: "2026-08-29",
+    checked: "2026-10-14",
+    note: "Confirmed in game, 2026-10-16.",
+  },
+  {
+    id: "routine:genshin:imaginarium-theater",
+    game: "genshin",
+    title: "Imaginarium Theater",
+    period: { unit: "month", startsOn: 1 },
+    measure: { kind: "days", required: 1 },
+    source: "https://genshin-impact.fandom.com/wiki/Imaginarium_Theater",
+    asOf: "2026-09-01",
+    checked: "2026-10-14",
+    note: "Confirmed in game, 2026-10-16.",
+  },
+
+  // Zenless Zone Zero.
   {
     id: "routine:zzz:ridu-weekly",
     game: "zzz",
@@ -48,6 +149,8 @@ export const ROUTINES: readonly Routine[] = [
     asOf: "2025-12-02",
     checked: "2026-10-13",
   },
+
+  // Arknights: Endfield.
   {
     id: "routine:endfield:weekly-routine",
     game: "endfield",

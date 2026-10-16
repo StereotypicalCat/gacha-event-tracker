@@ -33,6 +33,15 @@ describe("ROUTINES", () => {
     }
   });
 
+  test("a figure confirmed in game says so, with the day", () => {
+    // The one exception to "a page states it" (routines.ts): the reader must
+    // be able to tell our figure from the page's.
+    for (const r of ROUTINES) {
+      if (r.note?.toLowerCase().includes("in game") !== true) continue;
+      expect(r.note).toMatch(/Confirmed in game, \d{4}-\d{2}-\d{2}\./);
+    }
+  });
+
   test("a routine without a source is refused", () => {
     const { source: _s, ...bare } = ROUTINES[0]!;
     expect(RoutineSchema.safeParse(bare).success).toBe(false);
@@ -44,7 +53,16 @@ describe("ROUTINES", () => {
     const shape = (game: string): unknown[] =>
       routinesFor(game).map((r) => [r.title, r.period, r.measure]);
     const week = { unit: "week" as const, startsOn: 1 };
-    expect(shape("genshin")).toEqual([]);
+    expect(shape("genshin")).toEqual([
+      ["Weekly Bosses", week, { kind: "amount", target: 3, unit: "runs" }],
+      ["Battle Pass weekly EXP", week, { kind: "amount", target: 10000, unit: "EXP" }],
+      ["Reputation Bounties", week, { kind: "amount", target: 3, unit: "bounties" }],
+      ["Reputation Requests", week, { kind: "amount", target: 3, unit: "requests" }],
+      ["Realm Depot: Realm Treasures", week, { kind: "days", required: 1 }],
+      ["Paimon's Bargains: Intertwined Fates", { unit: "month", startsOn: 1 }, { kind: "amount", target: 5, unit: "fates" }],
+      ["Spiral Abyss", { unit: "month", startsOn: 16 }, { kind: "days", required: 1 }],
+      ["Imaginarium Theater", { unit: "month", startsOn: 1 }, { kind: "days", required: 1 }],
+    ]);
     expect(shape("hsr")).toEqual([]);
     expect(shape("zzz")).toEqual([
       ["Ridu Weekly", week, { kind: "amount", target: 1300, unit: "points" }],
@@ -131,10 +149,12 @@ describe("a reader's answers from before the global switch carry over", () => {
 describe("which game to ask about", () => {
   const off = { all: false };
   test("the first game on screen with built-ins, not asked and not on", () => {
-    expect(routineToAsk(["genshin", "zzz", "endfield"], off, undefined, false)).toBe("zzz");
-    expect(routineToAsk(["genshin", "zzz", "endfield"], off, ["zzz"], false)).toBe("endfield");
+    // Arknights has none, so the first game asked about is the next one.
+    expect(routineToAsk(["arknights", "zzz", "endfield"], off, undefined, false)).toBe("zzz");
+    expect(routineToAsk(["arknights", "zzz", "endfield"], off, ["zzz"], false)).toBe("endfield");
     expect(routineToAsk(["zzz"], { all: false, on: ["zzz"] }, undefined, false)).toBeNull();
-    expect(routineToAsk(["genshin"], off, undefined, false)).toBeNull();
+    expect(routineToAsk(["arknights"], off, undefined, false)).toBeNull();
+    expect(routineToAsk(["genshin"], off, undefined, false)).toBe("genshin");
   });
 
   test("never once the reader has answered the global switch", () => {

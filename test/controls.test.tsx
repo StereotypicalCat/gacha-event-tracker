@@ -325,7 +325,8 @@ describe("Controls: built-in weekly and monthly tasks", () => {
   });
 
   test("no switch when no game on the list has any", () => {
-    expect(render(PREFS)).not.toContain("built-in weekly and monthly tasks");
+    // Arknights and Blue Archive have none.
+    expect(render(PREFS, 0, ["arknights", "ba"])).not.toContain("built-in weekly and monthly tasks");
   });
 });
 
