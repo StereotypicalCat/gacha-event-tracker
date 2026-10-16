@@ -404,3 +404,18 @@ export function freshnessAt(snapshot: Snapshot): string {
     ? confirmed
     : snapshot.meta.contentChangedAt;
 }
+
+/**
+ * The newest checked-in fixture for one *source*, from `files`, or undefined.
+ *
+ * Fixtures are named `<id without the game>-<YYYY-MM-DD>.html`: `fandom-events-2026-09-12`
+ * for `genshin-fandom-events`. The name must be followed directly by the date —
+ * a glob of `fandom-*` would hand `genshin-fandom-miliastra-pass`'s page to the
+ * events parser, a second page on the same site being exactly the case that
+ * shares a prefix. Sorted by name, so the newest date is last.
+ */
+export function pickFixture(adapterId: string, game: string, files: readonly string[]): string | undefined {
+  const name = adapterId.slice(game.length + 1);
+  const own = new RegExp(`(^|/)${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}-\\d{4}-\\d{2}-\\d{2}\\.html$`);
+  return files.filter((f) => own.test(f)).sort().at(-1);
+}

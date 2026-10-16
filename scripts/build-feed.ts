@@ -12,7 +12,7 @@
 import { ADAPTERS } from "../src/ingest/adapters/index.ts";
 import { sourceHealth } from "../src/ingest/health.ts";
 import { mergeEvents } from "../src/ingest/merge.ts";
-import { SnapshotStore, freshnessAt } from "../src/ingest/snapshots.ts";
+import { SnapshotStore, freshnessAt, pickFixture } from "../src/ingest/snapshots.ts";
 import { EventFeed, SCHEMA_VERSION, type SourceHealth } from "../src/shared/feed.ts";
 import type { GachaEvent, GameId } from "../src/shared/schema.ts";
 
@@ -22,17 +22,16 @@ const snapshots = new SnapshotStore(process.env["SNAPSHOT_DIR"] ?? "snapshots");
 /**
  * Newest fixture for one *source*, not one game.
  *
- * A game can have several sources, and fixtures are named `<site>-events-<date>`
- * against adapter ids of `<game>-<site>-events`. Globbing by game alone hands
- * one site's page to another site's parser.
+ * A game can have several sources, and fixtures are named `<id less the
+ * game>-<date>` (`fandom-events-2026-09-12` for `genshin-fandom-events`).
+ * Globbing by game alone, or by site, hands one page to another page's parser —
+ * see `pickFixture`.
  */
 async function latestFixture(adapterId: string, game: GameId) {
-  const site = adapterId.replace(`${game}-`, "").replace(/-events$/, "");
-  const pattern = `fixtures/${game}/${site}-*.html`;
-  const files = [...new Bun.Glob(pattern).scanSync(".")].sort();
-  const file = files.at(-1);
+  const files = [...new Bun.Glob(`fixtures/${game}/*.html`).scanSync(".")];
+  const file = pickFixture(adapterId, game, files);
   if (file === undefined) {
-    throw new Error(`no fixture found for ${adapterId} (${pattern})`);
+    throw new Error(`no fixture found for ${adapterId} (fixtures/${game}/${adapterId.slice(game.length + 1)}-<date>.html)`);
   }
   return { file, html: await Bun.file(file).text() };
 }

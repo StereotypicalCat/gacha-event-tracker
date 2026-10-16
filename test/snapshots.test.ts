@@ -1,3 +1,4 @@
+import { pickFixture } from "../src/ingest/snapshots.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { statSync } from "node:fs";
 import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
@@ -452,5 +453,31 @@ describe("freshnessAt", () => {
         html: "",
       }),
     ).toBe(T0);
+  });
+});
+
+describe("pickFixture: a source's own fixture, never a sibling's", () => {
+  const files = [
+    "fixtures/genshin/fandom-events-2026-09-12.html",
+    "fixtures/genshin/fandom-miliastra-pass-2026-10-16.html",
+    "fixtures/genshin/game8-events-2026-08-14.html",
+  ];
+
+  test("an -events source keeps its old names", () => {
+    expect(pickFixture("genshin-fandom-events", "genshin", files)).toBe(
+      "fixtures/genshin/fandom-events-2026-09-12.html",
+    );
+  });
+
+  test("a second page on the same site does not take the events page's fixture, or give it its own", () => {
+    expect(pickFixture("genshin-fandom-miliastra-pass", "genshin", files)).toBe(
+      "fixtures/genshin/fandom-miliastra-pass-2026-10-16.html",
+    );
+  });
+
+  test("the newest date wins, and nothing matches nothing", () => {
+    expect(pickFixture("genshin-game8-events", "genshin", [...files, "fixtures/genshin/game8-events-2026-09-01.html"]))
+      .toBe("fixtures/genshin/game8-events-2026-09-01.html");
+    expect(pickFixture("genshin-fandom-other", "genshin", files)).toBeUndefined();
   });
 });
