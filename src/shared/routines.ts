@@ -261,8 +261,20 @@ export const ROUTINES: readonly Routine[] = [
     measure: { kind: "amount", target: 10, unit: "points" },
     source: "https://endfield.wiki.gg/wiki/Weekly_Routine",
     asOf: "2026-04-11",
-    checked: "2026-10-13",
-    note: "Unlocks at Authority Level 15.",
+    checked: "2026-10-14",
+    note: "Unlocks at Authority Level 15. Confirmed in game, 2026-10-14.",
+  },
+  {
+    id: "routine:endfield:focus-commissions",
+    game: "endfield",
+    title: "Etchspace Salvage: Focus Commissions",
+    // The page says weekly; Monday is the wiki's own stated weekly reset.
+    period: { unit: "week", startsOn: 1 },
+    measure: { kind: "amount", target: 3, unit: "commissions" },
+    source: "https://endfield.wiki.gg/wiki/Etchspace_Salvage",
+    asOf: "2026-09-01",
+    checked: "2026-10-14",
+    note: "Unlocks after Aberrant Exploration III.",
   },
 ];
 

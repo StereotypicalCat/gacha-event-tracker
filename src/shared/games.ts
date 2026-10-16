@@ -83,6 +83,8 @@ export const GAMES: Record<GameId, GameMeta> = {
   // at 09:00 UTC — 11:00 in Copenhagen in summer, 10:00 in winter — six hours
   // after the HoYo/Kuro pattern above. Asia has its own server and is unchanged,
   // and `america` already resolves to -5, so Europe is the only real override.
+  // Confirmed in game by the owner on 2026-10-14: at 03:42 CEST on a Wednesday
+  // the EU weekly reset read 5d 7h, i.e. Monday between 10:42 and 11:42 CEST.
   endfield: { id: "endfield", name: "Arknights: Endfield", short: "Endfield", hue: "#E8635A" , studio: "Hypergryph", dailyTasks: "Daily missions", resetOffsets: { europe: -5 } },
   // Neverness to Everness resets at 05:00 server time, not 04:00, on all three
   // servers, and its America server runs UTC-4 rather than the regional UTC-5,
