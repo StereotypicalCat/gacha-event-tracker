@@ -313,6 +313,67 @@ export const ROUTINES: readonly Routine[] = [
     checked: "2026-10-14",
     note: "Fantasies of the Thousand Gateways or Phantasma Dreamland Rhapsoda, whichever you play. Confirmed in game, 2026-10-16."
   },
+
+  // Neverness to Everness.
+  {
+    id: "routine:nte:season-pass-exp",
+    game: "nte",
+    title: "Season Pass weekly EXP",
+    period: { unit: "week", startsOn: 1 },
+    measure: { kind: "amount", target: 12000, unit: "EXP" },
+    source: "https://gamewith.net/nte/74371",
+    asOf: "2026-09-03",
+    checked: "2026-10-14",
+    note: "The cap on EXP from daily and weekly quests; season quests don't count. Confirmed in game, 2026-10-16.",
+  },
+  {
+    id: "routine:nte:anomaly-pilgrimage",
+    game: "nte",
+    title: "Anomaly Pilgrimage",
+    // Game8's boss list says once per boss; the owner settled it in game.
+    period: { unit: "week", startsOn: 1 },
+    measure: { kind: "amount", target: 3, unit: "claims" },
+    source: "https://allthings.how/nte-weekly-activities-guide-every-reset-task-in-neverness-to-everness/",
+    asOf: "2026-05-06",
+    checked: "2026-10-16",
+    note: "Weekly bosses: three reward claims in total, not three per boss. Confirmed in game, 2026-10-16.",
+  },
+  {
+    id: "routine:nte:city-stamina",
+    game: "nte",
+    title: "City Stamina",
+    // The page says only "full bar to spend"; the 700 is the owner's reading.
+    period: { unit: "week", startsOn: 1 },
+    measure: { kind: "amount", target: 700, unit: "stamina" },
+    source: "https://allthings.how/nte-weekly-activities-guide-every-reset-task-in-neverness-to-everness/",
+    asOf: "2026-05-06",
+    checked: "2026-10-16",
+    note: "Spent on Hethereau Hobbies; refills at the weekly reset. Confirmed in game, 2026-10-16.",
+  },
+  {
+    id: "routine:nte:realm-of-greed",
+    game: "nte",
+    title: "Realm of Greed",
+    // One payout a week; its size scales with Blind Mammon's level, so it is
+    // ticked once rather than counted.
+    period: { unit: "week", startsOn: 1 },
+    measure: { kind: "days", required: 1 },
+    source: "https://allthings.how/nte-weekly-activities-guide-every-reset-task-in-neverness-to-everness/",
+    asOf: "2026-05-06",
+    checked: "2026-10-16",
+    note: "Blind Mammon at home: one Fons payout a week; Gold Heist resets every Monday at 5:00. Confirmed in game, 2026-10-16.",
+  },
+  {
+    id: "routine:nte:special-city-commission",
+    game: "nte",
+    title: "Special City Commission",
+    period: { unit: "week", startsOn: 1 },
+    measure: { kind: "days", required: 1 },
+    source: "https://allthings.how/nte-weekly-activities-guide-every-reset-task-in-neverness-to-everness/",
+    asOf: "2026-05-06",
+    checked: "2026-10-16",
+    note: "The delivery from the Old Mailbox in your second apartment: one claim a week. Confirmed in game, 2026-10-16.",
+  },
 ];
 
 /** A game's built-ins, in the order listed. */

@@ -85,7 +85,13 @@ describe("ROUTINES", () => {
       ["Pioneer Podcast weekly EXP", week, { kind: "amount", target: 12000, unit: "EXP" }],
       ["Weekly Activities", week, { kind: "amount", target: 6000, unit: "points" }],
     ]);
-    expect(shape("nte")).toEqual([]);
+    expect(shape("nte")).toEqual([
+      ["Season Pass weekly EXP", week, { kind: "amount", target: 12000, unit: "EXP" }],
+      ["Anomaly Pilgrimage", week, { kind: "amount", target: 3, unit: "claims" }],
+      ["City Stamina", week, { kind: "amount", target: 700, unit: "stamina" }],
+      ["Realm of Greed", week, { kind: "days", required: 1 }],
+      ["Special City Commission", week, { kind: "days", required: 1 }],
+    ]);
     expect(shape("nikki")).toEqual([]);
   });
 
