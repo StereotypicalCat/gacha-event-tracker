@@ -111,13 +111,12 @@ describe("fandomtable canParse across every fixture", () => {
     expect(files.length).toBeGreaterThan(20);
   });
 
-  test("true on the three pass-history fixtures only", async () => {
+  test("true on the pass-history fixtures only", async () => {
     const accepted: string[] = [];
     for (const f of files) {
       if (fandomTableParser.canParse(await Bun.file(f).text())) accepted.push(f);
     }
     expect(accepted).toEqual([
-      "fixtures/genshin/fandom-miliastra-pass-2026-10-16.html",
       FIXTURE,
       "fixtures/zzz/fandom-city-fund-2026-10-16.html",
     ]);
@@ -126,7 +125,6 @@ describe("fandomtable canParse across every fixture", () => {
   test("no other parser claims a pass-history fixture", async () => {
     for (const f of [
       FIXTURE,
-      "fixtures/genshin/fandom-miliastra-pass-2026-10-16.html",
       "fixtures/zzz/fandom-city-fund-2026-10-16.html",
     ]) {
       const text = await Bun.file(f).text();

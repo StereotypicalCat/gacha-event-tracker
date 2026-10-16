@@ -8,7 +8,7 @@ import type { SourceParser } from "./types.ts";
 
 /**
  * Fandom's dated *history table* — the template behind the battle-pass pages
- * (`Nameless_Honor`, and next `New_Eridu_City_Fund` and `Miliastra_Pass`).
+ * (`Nameless_Honor`, `New_Eridu_City_Fund`).
  *
  * It shares nothing with the event pages `fandom.ts` reads: there is no section
  * fence and no "ongoing" heading, only one `article-table` with a row per past
@@ -51,12 +51,6 @@ export const PASS_SOURCES: Readonly<Record<string, PassSource>> = {
     // subpage, which `eventId` already carries as the start. Constant title.
     pass: "Nameless Honor",
     title: () => "Nameless Honor",
-  },
-  "genshin-fandom-miliastra-pass": {
-    // The Name cell is the run's own chronicle name (`Silvery Moonlight
-    // Chronicle`), a new one each version, so the title carries it.
-    pass: "Miliastra Pass",
-    title: (rowName) => `Miliastra Pass: ${rowName}`,
   },
   "zzz-fandom-city-fund": {
     // One fund, one name; the Name cell is the run's own label, so a constant.

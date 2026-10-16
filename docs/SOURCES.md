@@ -89,7 +89,6 @@ Two things this method cannot tell you, and both matter:
 | Silver Palace | — | — | — | Unreleased; beta only |
 | Genshin Impact (Fandom) | `genshin-impact.fandom.com/api.php?…page=Event` | `fandom`, fifth template | yes (via `api.php`) | **BUILT** 2026-09-12 — adds 11 events Game8 missed; Game8 priority preserves localStorage IDs |
 | Star Rail — Nameless Honor | `honkai-star-rail.fandom.com/api.php?…page=Nameless_Honor` | new (`fandomtable`) | yes (via `api.php`) | **BUILT** 2026-10-16 — the pass window as one `other` event, day precision |
-| Genshin — Miliastra Pass | `genshin-impact.fandom.com/api.php?…page=Miliastra_Pass` | existing (`fandomtable`) | yes (via `api.php`) | **BUILT** 2026-10-16 — the live pass run as one `other` event, day precision |
 | ZZZ — New Eridu City Fund | `zenless-zone-zero.fandom.com/api.php?…page=New_Eridu_City_Fund` | existing (`fandomtable`) | yes (via `api.php`) | **BUILT** 2026-10-16 — the live fund run as one `other` event, day precision |
 | Infinity Nikki — Mira Journey | `infinity-nikki.fandom.com/api.php?…page=Version` | new (`fandomversion`) | yes (via `api.php`) | **BUILT** 2026-10-16 — the current version's window as one `other` event, on the owner's in-game confirmation; day precision |
 | hololive Dreams | `holodori.wiki/wiki/Events` (still) | `holodoriwiki` | yes, but nothing new to fetch | **LAPSED** 2026-10-14 — NamuWiki is behind a Cloudflare challenge, the official site posts no events, Game8 has no page |
@@ -872,23 +871,15 @@ passed. A `fetched` with more than zero events means the wiki is back.
 
 **Reuse:** the parser is `fandomtable` (`src/ingest/parsers/fandomTable.ts`). The next pass pages (ZZZ `New_Eridu_City_Fund`, Genshin `Miliastra_Pass`) are one `PASS_SOURCES` entry each (title as a function of the row's Name cell) plus a `SOURCES` entry; columns are found by heading. A table headed with `Duration` is deliberately not this template (it is a version table).
 
-## 18. Genshin — Miliastra Pass window (Fandom) — BUILT 2026-10-16
+## 18. ZZZ — New Eridu City Fund window (Fandom) — BUILT 2026-10-16
 
-**Source:** `https://genshin-impact.fandom.com/api.php?action=parse&page=Miliastra_Pass&prop=text&formatversion=2&format=json` (page `https://genshin-impact.fandom.com/wiki/Miliastra_Pass`), source id `genshin-fandom-miliastra-pass`. Second pass-window source; no parser change.
-
-**What it is:** the first table on the page, `Image | Name | Start | End | Version`, 9 rows (Awakening Chronicle, 2025-10-22, to Silvery Moonlight Chronicle, 2026-09-23 to 2026-11-02; counted independently of the parser). Each row not ended by `ctx.now` becomes one `other` event titled `Miliastra Pass: <name>`, day precision. At capture one is live.
-
-**Conduct:** the `RobotsCache` with the real User-Agent got `403` (the interstitial challenge) for `robots.txt` on 2026-10-16, so this host rests on the person-recorded reading for `genshin-fandom-events` and the standing `--assume-robots-on-403` decision. The API answered `200` to the real User-Agent for the single fixture fetch.
-
-## 19. ZZZ — New Eridu City Fund window (Fandom) — BUILT 2026-10-16
-
-**Source:** `https://zenless-zone-zero.fandom.com/api.php?action=parse&page=New_Eridu_City_Fund&prop=text&formatversion=2&format=json` (page `https://zenless-zone-zero.fandom.com/wiki/New_Eridu_City_Fund`), source id `zzz-fandom-city-fund`. Third pass-window source; no parser change beyond one `PASS_SOURCES` entry (constant title).
+**Source:** `https://zenless-zone-zero.fandom.com/api.php?action=parse&page=New_Eridu_City_Fund&prop=text&formatversion=2&format=json` (page `https://zenless-zone-zero.fandom.com/wiki/New_Eridu_City_Fund`), source id `zzz-fandom-city-fund`. Second pass-window source; no parser change beyond one `PASS_SOURCES` entry (constant title).
 
 **What it is:** the first table on the page, `Image | Name | Start | End | Version`, 20 rows (1.0, 2024-07-04, to 3.2, 2026-09-09 to 2026-10-19; counted independently of the parser). Each row not ended by `ctx.now` becomes one `other` event titled `New Eridu City Fund`, day precision. At capture (now 2026-10-16) one row is not ended (3.2) and one event is emitted. The second table (`Language | Official Name`) is not a pass table and is ignored.
 
 **Conduct:** the `RobotsCache` gets `403` (the interstitial challenge) for this host's `robots.txt`. The repository owner read it in a browser on 2026-10-16: the `User-agent: *` group allows `/api.php?`, `/api.php?action=` and `/api.php?*&action=` and disallows only `/wiki/Special:`, `/wiki/User_talk:`, `/wiki/Template:`, `/wiki/Template_talk:`, `/wiki/Help:`, `/wiki/User:`, `/wiki/UserProfile:` (and language variants); `Disallow: /` applies only to named crawlers (SemrushBot, serpstatbot, GPTBot, ImagesiftBot, CCBot, OAI-SearchBot, ClaudeBot, GrokBot, xAI-SearchBot, xAI-Grok, GrokApp, xAI-Bot); `ias_crawler` has `Crawl-delay: 1`. With the standing `--assume-robots-on-403` decision that covers this source. The API answered `200` to the real User-Agent for the single fixture fetch.
 
-## 20. Infinity Nikki — Mira Journey window, from its version (Fandom) — BUILT 2026-10-16
+## 19. Infinity Nikki — Mira Journey window, from its version (Fandom) — BUILT 2026-10-16
 
 **Source:** `https://infinity-nikki.fandom.com/api.php?action=parse&page=Version&prop=text&formatversion=2&format=json` (page `https://infinity-nikki.fandom.com/wiki/Version`), source id `nikki-fandom-mira-journey`, parser `fandomversion` (`src/ingest/parsers/versionTable.ts`).
 
