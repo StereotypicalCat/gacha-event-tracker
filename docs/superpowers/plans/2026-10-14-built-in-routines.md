@@ -2,9 +2,9 @@
 
 Spec: `docs/superpowers/specs/2026-10-14-built-in-routines-design.md`. Branch `feat/built-in-routines`.
 
-**Hold:** nothing is committed or pushed until the owner has verified the entries by hand
-(owner, 2026-10-14). The work below is done in the working tree; § Commits is the split to apply
-after sign-off, each step green on its own (AGENTS.md § Conventions).
+**Done 2026-10-16.** The owner verified the entries game by game in the game itself, then signed
+off; the split below was applied as written (`612e0a2..9d5b473`, changelog `23924db`), each commit
+tested on its own, fast-forwarded into `main` and pushed. Two in-game checks remain open in TODO.md.
 
 ## Tasks
 
@@ -28,16 +28,17 @@ after sign-off, each step green on its own (AGENTS.md § Conventions).
    source; per-game table test pinned to the spec. ✅
 8. **Review.** schema-guardian on the new pref — no blocking findings. ✅
 9. **Docs.** PRD F12 (Edit panel) and F17, DATA-MODEL prefs block and built-in paragraph. ✅
-10. **Browser check** of the Edit panel and *Your own* on a fresh port (AGENTS.md § Commands).
+10. **Browser check** of the Edit panel and *Your own* on a fresh port (AGENTS.md § Commands). ✅
 11. **Owner verification** of § Entries and § Not shipped — then apply any corrections to both the
-    entries and the spec table together.
+    entries and the spec table together. ✅ (Endfield Focus Commissions and Nikki Realm of
+    Breakthrough still to confirm — TODO.md)
 12. **Changelog** — entry in a follow-up `chore(changelog)` commit naming the feature commit, then
-    `bun run scripts/check-changelog.ts`.
+    `bun run scripts/check-changelog.ts`. ✅
 13. **Standard-banner pulls** (spec decision 10, owner 2026-10-16). Tests first: twin per standard
     line, `activeRoutines` leaves standard out unless asked, `standardPulls` restore, Settings
     switch. Then `pulls` on `RoutineSchema` and `offered()`; premium lines tagged; four standard
     lines; `standardPulls` pref; App and Controls wiring; schema-guardian; PRD F17, DATA-MODEL. ✅
-    Browser check with task 10.
+    Browser check with task 10. ✅
 
 ## Commits (after sign-off)
 

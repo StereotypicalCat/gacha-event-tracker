@@ -1,7 +1,8 @@
 # More built-in routines, and tracking any one of them — design
 
-Date: 2026-10-14. Status: design approved (repository owner, 2026-10-14). Entries pending the
-owner's manual verification before commit. Sub-project 1 of 3 — see § Scope.
+Date: 2026-10-14. Status: **shipped 2026-10-16** (`612e0a2..23924db`, merged to `main`), every
+entry verified in game by the owner except the two open in TODO.md. Sub-project 1 of 3 — see
+§ Scope; sub-projects 2 and 3 are next, with their starting points in TODO.md.
 
 ## Problem
 

@@ -1,5 +1,50 @@
 # TODO
 
+- [ ] **Sub-project 2 of the "usual repeatable events" request: N-week cycles.** Built-ins today
+  repeat weekly or monthly; many endgame modes run on longer fixed cycles. Add a period unit anchored
+  to a known start (every N weeks or days from a dated reset). It is a stored-shape change, so it
+  gets its own brainstorm → spec → plan (owner's process: once a design is approved, carry it
+  through with no extra review stops, and report decisions at the end), and a schema-guardian
+  review. Entries are verified by the owner in game, game by game, before anything is committed —
+  the same hold sub-project 1 used.
+  - **Facts already gathered** are in the [sub-project 1 spec](docs/superpowers/specs/2026-10-14-built-in-routines-design.md)
+    § Scope item 2, each with the owner's in-game reading and its UTC instant: Star Rail's Pure
+    Fiction / Forgotten Hall / Apocalyptic Shadow (six-week cycles two weeks apart, ending 19 Oct,
+    2 Nov, 16 Nov 2026), Divergent Universe + Currency Wars (one 18,000-point cap per two-week
+    period, ending 19 Oct), ZZZ's Shiyu Defense and Deadly Assault (Fridays, a week apart: 16 and
+    23 Oct), Wuthering Waves' Tower of Adversity (28 days, 9 Nov) and Whimpering Wastes (26 Oct),
+    NTE's Beyond the Rails (14 days, "typically", ending 21 Oct 21:00 UTC — an Asia-server
+    instant, possibly the same for every server) and Tycoon Incentive Fund (14 days, 26 Oct; the
+    cap differs per player through the Puka Membership Program — base 1,000,000).
+  - **Still to source:** cycle lengths for ZZZ's two modes and Whimpering Wastes (a timer read
+    just after each reset gives them); Infinity Nikki's Pinnacle Contest (half-month periods) and
+    Merit Arena (from earlier research: a new arena each Monday, six per version — no wiki page,
+    and its weekly caps change per version).
+  - **Design questions to settle:** a cycle that ends at one instant for every server (Beyond the
+    Rails) vs one per server reset; a target that differs per player (the Incentive Fund) — the
+    reader sets it, or ship the base with a note; whether "typically every 14 days" is safe to
+    model as fixed.
+- [ ] **Sub-project 3: dated battle pass and shop windows as feed events.** Source and parser work
+  (AGENTS.md § the ingest pipeline; the `adapter-author` agent and `add-game-source` skill), not
+  built-ins. **Check the feed first**: Genshin's battle pass is already a feed event (`Battle Pass
+  - Moontrace`, de-duplicated against Fandom's `Moontrace` on 2026-10-14), so a new source must not
+  add a third copy. A local `build:static` on 2026-10-16 still showed both names — probably the
+  locally staged feed predating that fix; confirm against the live feed.
+  - **Candidate sources** (from research, 2026-10-14): Genshin Fandom lists Battle Pass /
+    Moontrace and the Miliastra Pass; endfield.wiki.gg mentions the Protocol Pass.
+  - **End dates the owner read in game**, in the sub-project 1 spec § Scope item 3: Endfield
+    Protocol Pass (~15 Oct 00:00 CEST), Genshin Battle Pass (2 Nov 03:00 UTC), Wuthering Waves'
+    Oscillated Coral shop (resets each version, 11 Nov ~10–11 UTC), ZZZ City Fund season (19 Oct
+    03:00 UTC), Infinity Nikki Mira Journey (29 Oct ~20:00 UTC). Never invent a date: an event is
+    built only from a source that states it; these readings are for checking a parser.
+- [ ] Give Genshin's *To Temper Thyself and Journey Far* a check-in goal by default, so a reader
+  need not set it by hand. The owner asked on 2026-10-16 to "mark it as a 4/5 wk event"; earlier
+  the same day they described it as five days out of seven, and the [check-in goals spec](docs/superpowers/specs/2026-10-03-check-in-goals-design.md)
+  says five of seven — **confirm the count with the owner before building**. Today the goal is
+  the reader's own (`progress[id].goal`), set from the event's checklist; with it set, a met week
+  stays done in the strip for the rest of the week (checked in a browser on 2026-10-16). A default
+  must not overwrite a goal the reader already set, and the event's id changes each cycle
+  (`…:2026-08-10`), so it should match by title or source, not id.
 - [x] Move NTE's Europe server to UTC+2. `games.ts` rolls it at 05:00 UTC+1 (04:00 UTC), per
   Game-Time-Master and GameWith, but the game disagrees. On 2026-10-16 the owner read: a weekly
   timer of 3d 2h at 00:40 UTC (→ Monday 2026-10-19 **03:00 UTC**); Realm of Greed's own text, "Gold
