@@ -91,6 +91,7 @@ Two things this method cannot tell you, and both matter:
 | Star Rail — Nameless Honor | `honkai-star-rail.fandom.com/api.php?…page=Nameless_Honor` | new (`fandomtable`) | yes (via `api.php`) | **BUILT** 2026-10-16 — the pass window as one `other` event, day precision |
 | Genshin — Miliastra Pass | `genshin-impact.fandom.com/api.php?…page=Miliastra_Pass` | existing (`fandomtable`) | yes (via `api.php`) | **BUILT** 2026-10-16 — the live pass run as one `other` event, day precision |
 | ZZZ — New Eridu City Fund | `zenless-zone-zero.fandom.com/api.php?…page=New_Eridu_City_Fund` | existing (`fandomtable`) | yes (via `api.php`) | **BUILT** 2026-10-16 — the live fund run as one `other` event, day precision |
+| Infinity Nikki — Mira Journey | `infinity-nikki.fandom.com/api.php?…page=Version` | new (`fandomversion`) | yes (via `api.php`) | **BUILT** 2026-10-16 — the current version's window as one `other` event, on the owner's in-game confirmation; day precision |
 | hololive Dreams | `holodori.wiki/wiki/Events` (still) | `holodoriwiki` | yes, but nothing new to fetch | **LAPSED** 2026-10-14 — NamuWiki is behind a Cloudflare challenge, the official site posts no events, Game8 has no page |
 
 ---
@@ -886,6 +887,18 @@ passed. A `fetched` with more than zero events means the wiki is back.
 **What it is:** the first table on the page, `Image | Name | Start | End | Version`, 20 rows (1.0, 2024-07-04, to 3.2, 2026-09-09 to 2026-10-19; counted independently of the parser). Each row not ended by `ctx.now` becomes one `other` event titled `New Eridu City Fund`, day precision. At capture (now 2026-10-16) one row is not ended (3.2) and one event is emitted. The second table (`Language | Official Name`) is not a pass table and is ignored.
 
 **Conduct:** the `RobotsCache` gets `403` (the interstitial challenge) for this host's `robots.txt`. The repository owner read it in a browser on 2026-10-16: the `User-agent: *` group allows `/api.php?`, `/api.php?action=` and `/api.php?*&action=` and disallows only `/wiki/Special:`, `/wiki/User_talk:`, `/wiki/Template:`, `/wiki/Template_talk:`, `/wiki/Help:`, `/wiki/User:`, `/wiki/UserProfile:` (and language variants); `Disallow: /` applies only to named crawlers (SemrushBot, serpstatbot, GPTBot, ImagesiftBot, CCBot, OAI-SearchBot, ClaudeBot, GrokBot, xAI-SearchBot, xAI-Grok, GrokApp, xAI-Bot); `ias_crawler` has `Crawl-delay: 1`. With the standing `--assume-robots-on-403` decision that covers this source. The API answered `200` to the real User-Agent for the single fixture fetch.
+
+## 20. Infinity Nikki — Mira Journey window, from its version (Fandom) — BUILT 2026-10-16
+
+**Source:** `https://infinity-nikki.fandom.com/api.php?action=parse&page=Version&prop=text&formatversion=2&format=json` (page `https://infinity-nikki.fandom.com/wiki/Version`), source id `nikki-fandom-mira-journey`, parser `fandomversion` (`src/ingest/parsers/versionTable.ts`).
+
+**What it is:** Mira Journey has no dated page. The `Version` page dates *versions*: three tables headed `Version Name | Version Number | Release Date | End Date | Duration` (2.x, 1.x, prerelease), 25 rows in all (counted independently of the parser), e.g. `The Feather of Justice | 2.10 | September 23, 2026 | October 29, 2026 | 36 Days`. A version stands in for the pass only because the owner confirmed in game, 2026-10-16, that the pass ends with it (it read 13d 19h at 00:47 UTC, ending 2026-10-29 with version 2.10). That claim and its evidence are one entry in `VERSION_PASSES`, keyed by source id; the event's summary repeats it (`Follows version 2.10 (The Feather of Justice). That the pass ends with the version was confirmed in game, 2026-10-16.`). Rows already ended are skipped, a row without a readable end is skipped; at capture exactly one row survives: 2026-09-23 to 2026-10-29, day precision, titled `Mira Journey`. The page states no zone, so nothing is region-scoped.
+
+**Not the history-table reader:** `fandomtable` refuses any table with a `Duration` heading and this reader requires one, so neither claims the other's page (tested across every fixture).
+
+**Conduct:** same host as `nikki-fandom-events` (§ 11), whose recorded robots reading (the standard Fandom file) applies. The `RobotsCache` with the real User-Agent got `403` (the interstitial challenge) on 2026-10-16, so that reading and the standing `--assume-robots-on-403` decision cover it. The API answered `200` to the real User-Agent for the single fixture fetch.
+
+**Reuse:** Endfield's wiki.gg source can copy the entry shape (title, stated link, evidence); whether it shares this reader is its own call, as wiki.gg's markup differs.
 
 ## What every one of these costs, beyond the source
 

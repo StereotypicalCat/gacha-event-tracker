@@ -264,6 +264,25 @@ const SOURCES: SourceSpec[] = [
     parserId: "fandom",
   },
   {
+    id: "nikki-fandom-mira-journey",
+    game: "nikki",
+    // Same host as `nikki-fandom-events` above, whose robots.txt reading (the
+    // standard Fandom file) is recorded there. Re-checked with the runner's own
+    // client (`RobotsCache`, the real User-Agent) on 2026-10-16: it answered
+    // 403 (the interstitial challenge), so that person-recorded reading and the
+    // standing `--assume-robots-on-403` decision (AGENTS.md § Scraping conduct)
+    // cover this source, as they do the other Fandom sources. The API path
+    // answered 200 to the real User-Agent for the single fixture fetch; no
+    // browser-shaped headers.
+    //
+    // A version table, not a pass page: Mira Journey has no dated page, so the
+    // event takes the version's window, on the owner's in-game confirmation
+    // that the pass ends with the version. That claim and its evidence live in
+    // `VERSION_PASSES` in `parsers/versionTable.ts`, keyed by this id.
+    url: "https://infinity-nikki.fandom.com/api.php?action=parse&page=Version&prop=text&formatversion=2&format=json",
+    parserId: "fandomversion",
+  },
+  {
     id: "nikke-fandom-events",
     game: "nikke",
     // The MediaWiki API, like the two Fandom sources above. This wiki's

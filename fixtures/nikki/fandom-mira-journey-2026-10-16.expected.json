@@ -1,0 +1,23 @@
+[
+  {
+    "id": "nikki:mira-journey:2026-09-23",
+    "game": "nikki",
+    "title": "Mira Journey",
+    "type": "other",
+    "summary": "Follows version 2.10 (The Feather of Justice). That the pass ends with the version was confirmed in game, 2026-10-16.",
+    "startsAt": "2026-09-23T00:00:00.000Z",
+    "startPrecision": "day",
+    "endsAt": "2026-10-29T00:00:00.000Z",
+    "endPrecision": "day",
+    "regionScoped": false,
+    "regionEnds": null,
+    "sourceUrl": "https://infinity-nikki.fandom.com/wiki/Version",
+    "sourceId": "nikki-fandom-mira-journey",
+    "status": "published",
+    "confidence": 0.85,
+    "extractionMethod": "parser",
+    "version": 1,
+    "firstSeenAt": "2026-10-16T00:00:00.000Z",
+    "updatedAt": "2026-10-16T00:00:00.000Z"
+  }
+]
