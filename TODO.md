@@ -39,6 +39,17 @@
   every-N-days periods for tasks and built-ins, `showCycleTasks`, a built-in `clock`, and cycle
   built-ins for Star Rail, ZZZ, Wuthering Waves and NTE. Star Rail's Divergent Universe / Currency
   Wars pool turned out to be weekly and shipped as such.
+- [ ] Confirm the cycle built-ins in game (shipped 2026-10-16 ahead of the owner's checks, by the
+  owner's call). If one differs, correct its entry in `src/shared/routines.ts` and its row in the
+  [cycle routines spec](docs/superpowers/specs/2026-10-16-cycle-routines-design.md) § Entries
+  together, with the note `Confirmed in game, YYYY-MM-DD.`
+  - Star Rail: Pure Fiction, Memory of Chaos and Apocalyptic Shadow as one tick per cycle — or
+    should they track stars? (No page states a fixed star target.)
+  - Star Rail: the shared Divergent Universe / Currency Wars 18,000-point cap resets every Monday
+    (weekly since 4.2 per Fandom's *Version/4.2*), not every two weeks.
+  - ZZZ: Shiyu Defense showed about 14 days left after it rolled on Friday 2026-10-16.
+  - Wuthering Waves: Tower of Adversity at about 24 days left on 2026-10-16 (a 28-day cycle from
+    Monday 2026-11-09; the source says "roughly").
 - [ ] Track Wuthering Waves' *Whimpering Wastes* (Respawning Waters: Chasm, Torrents). Not every N
   days, so not shipped with the cycles: gurugamer (2025-09-04) says "the last Monday of each month",
   lootbar (2025-12-26) "roughly 4 weeks (about 26–28 days)"; the owner's timer put the next reset on
