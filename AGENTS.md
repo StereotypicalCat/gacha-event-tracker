@@ -43,7 +43,7 @@ A web app that aggregates live and upcoming events across popular gacha games, p
 calendar, sorts them by end date or by what the reader is partway through, tracks day-by-day
 progress on events that repeat daily, and lets a user mark events completed.
 
-**Status: working app, refreshing itself on a schedule.** Schema, twelve parsers, twenty-six sources across
+**Status: working app, refreshing itself on a schedule.** Schema, twelve parsers, twenty-five sources across
 twenty games, the full interface, offline support, a static server, a Docker image and CI all exist and
 are tested. The refresh runner (`bun run refresh`) fetches, caches raw snapshots and rebuilds the
 feed; `.gitea/workflows/refresh.yml` runs it twice a day and commits only when a page actually

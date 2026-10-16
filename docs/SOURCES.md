@@ -869,7 +869,7 @@ passed. A `fetched` with more than zero events means the wiki is back.
 
 **Precision:** day, start and end. Nothing is inferred: no clock, no region, no end for a row without one (skipped). At capture one row is live, 2026-09-28 to 2026-11-09 (4.6); each row ends on the day the next one starts. The Name cell reads `Nameless Honor <start date>`, so the title is constant and the start is the only thing that tells runs apart in the ID.
 
-**Reuse:** the parser is `fandomtable` (`src/ingest/parsers/fandomTable.ts`). The next pass pages (ZZZ `New_Eridu_City_Fund`, Genshin `Miliastra_Pass`) are one `PASS_SOURCES` entry each (title as a function of the row's Name cell) plus a `SOURCES` entry; columns are found by heading. A table headed with `Duration` is deliberately not this template (it is a version table).
+**Reuse:** the parser is `fandomtable` (`src/ingest/parsers/fandomTable.ts`). Another pass page is one `PASS_SOURCES` entry (a title, constant or built from the row's Name cell) plus a `SOURCES` entry, as ZZZ's `New_Eridu_City_Fund` is (§ 18); Genshin's `Miliastra_Pass` was tried and reverted, being in the feed already; columns are found by heading. A table headed with `Duration` is deliberately not this template (it is a version table).
 
 ## 18. ZZZ — New Eridu City Fund window (Fandom) — BUILT 2026-10-16
 
