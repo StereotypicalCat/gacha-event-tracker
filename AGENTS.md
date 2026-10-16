@@ -128,6 +128,10 @@ cycle:
 - **Read text with `textContent`.** Eyebrows are uppercased in CSS, so `innerText` returns
   `TODAY'S DAILIES` and a wait for `Today's dailies` never ends.
 - **Keep total capture scale at or below about 3×**; above it sticky panes rasterise blank.
+- **A fresh git worktree has no feed.** `public/data/` is git-ignored, so a worktree's app shows
+  "Events unavailable — Feed request failed (404)". Copy `public/data/` from the main checkout (or
+  run `bun run build:feed`, which builds from snapshots and fixtures) before serving. A worktree
+  also needs its own `bun install`.
 
 **`build:js` passes `--production`, and that flag is load-bearing.** Without it Bun bundles React's
 *development* build: 566 KB rather than 344 KB (164 KB vs 103 KB gzipped), every element creation

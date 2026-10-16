@@ -1,5 +1,35 @@
 # TODO
 
+## Handoff — state on 2026-10-16
+
+For an agent picking this up with no prior conversation. Everything below is in the repo; this
+note only says where to start.
+
+- **Done today, all on `main` and pushed:** the owner's "usual repeatable events" request, in three
+  sub-projects — built-in weekly/monthly routines with per-item tracking
+  ([spec](docs/superpowers/specs/2026-10-14-built-in-routines-design.md)), every-N-days cycles for
+  tasks and built-ins ([spec](docs/superpowers/specs/2026-10-16-cycle-routines-design.md)), and
+  battle pass windows as feed events ([spec](docs/superpowers/specs/2026-10-16-pass-windows-design.md),
+  see its § Outcome). Plans are beside them in `docs/superpowers/plans/`. Nothing is in flight: no
+  open branches or worktrees.
+- **No next task has been chosen.** The open items below are the candidates; the owner decides.
+  The ones that need the owner in the game first are marked as checks.
+- **How the owner works** (their standing instructions, also in their personal Claude settings):
+  once they approve a design, carry it through spec → plan → execution with no extra review stops,
+  and report the decisions made at the end. Built-in figures are verified by the owner in game
+  before they are relied on (§ the "Confirmed in game" rule in `src/shared/routines.ts`); the
+  owner chose on 2026-10-16 to merge the cycle built-ins ahead of their checks and keep the checks
+  here. Ask before anything outward-facing; push to `origin` (Gitea) only.
+- **Practical notes from this session:** the `adapter-author` agent (`.claude/agents/`) adds one
+  source per run and correctly stops when a host's `robots.txt` answers Fandom's challenge (403) —
+  the owner then reads the file in a browser and the reading is recorded in the source's comment
+  (AGENTS.md § Scraping conduct); scheduled refreshes run with `--assume-robots-on-403` for every
+  host. endfield.wiki.gg disallows `/api.php` for `*`, so only its `/wiki/` pages are open. A
+  fresh worktree needs `bun install` and a copy of `public/data/` (AGENTS.md § Looking at the
+  built app).
+
+## Open items
+
 - [ ] Make it clear which game each *This week & month* chip belongs to (owner, 2026-10-16: "it can
   become a bit unclear"). With built-ins for seven games, that row now holds many chips whose
   titles do not name their game — "Weekly Routine", "Weekly Challenge", "City Stamina",
