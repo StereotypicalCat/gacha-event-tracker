@@ -181,11 +181,13 @@ export const ROUTINES: readonly Routine[] = [
     game: "zzz",
     title: "Ridu Weekly",
     period: { unit: "week", startsOn: 1 },
-    // The last milestone; every reward is claimed by then.
-    measure: { kind: "amount", target: 1300, unit: "points" },
-    source: "https://game8.co/games/Zenless-Zone-Zero/archives/484723",
-    asOf: "2025-12-02",
-    checked: "2026-10-13",
+    // The last milestone; every reward is claimed by then. Was 1,300 until the
+    // wiki recorded 2,100 on 2026-01-05 — Game8's page still says 1,300.
+    measure: { kind: "amount", target: 2100, unit: "points" },
+    source: "https://zenless-zone-zero.fandom.com/wiki/Ridu_Weekly",
+    asOf: "2026-08-31",
+    checked: "2026-10-14",
+    note: "Confirmed in game, 2026-10-16.",
   },
 
   // Arknights: Endfield.

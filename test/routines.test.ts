@@ -69,7 +69,7 @@ describe("ROUTINES", () => {
       ["Embers Exchange: Star Rail Special Pass", { unit: "month", startsOn: 1 }, { kind: "amount", target: 5, unit: "passes" }],
     ]);
     expect(shape("zzz")).toEqual([
-      ["Ridu Weekly", week, { kind: "amount", target: 1300, unit: "points" }],
+      ["Ridu Weekly", week, { kind: "amount", target: 2100, unit: "points" }],
     ]);
     expect(shape("endfield")).toEqual([
       ["Weekly Routine", week, { kind: "amount", target: 10, unit: "points" }],
@@ -85,7 +85,7 @@ describe("ROUTINES", () => {
       now: Date.parse("2026-10-15T12:00:00Z"), logged: [],
       amounts: { "2026-10-12": { value: 900, at: "2026-10-15T12:00:00.000Z" } },
     });
-    expect(s).toMatchObject({ scope: "week", count: 900, required: 1300 });
+    expect(s).toMatchObject({ scope: "week", count: 900, required: 2100 });
   });
 });
 
@@ -239,7 +239,7 @@ describe("making a built-in your own", () => {
     const ridu = routinesFor("zzz")[0]!;
     expect(mineFrom(ridu)).toEqual({
       game: "zzz", title: "Ridu Weekly", period: { unit: "week", startsOn: 1 },
-      measure: { kind: "amount", target: 1300, unit: "points" }, from: "routine:zzz:ridu-weekly",
+      measure: { kind: "amount", target: 2100, unit: "points" }, from: "routine:zzz:ridu-weekly",
     });
   });
 });

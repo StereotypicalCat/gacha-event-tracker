@@ -1333,8 +1333,8 @@ describe("built-in weekly and monthly tasks in Your own", () => {
         routines={routinesFor("zzz")} onMakeItMine={noop} />,
     );
     expect(html).toContain("Ridu Weekly");
-    expect(html).toContain("as of 2 Dec 2025");
-    expect(html).toContain('href="https://game8.co/games/Zenless-Zone-Zero/archives/484723"');
+    expect(html).toContain("as of 31 Aug 2026");
+    expect(html).toContain('href="https://zenless-zone-zero.fandom.com/wiki/Ridu_Weekly"');
     expect(html).toContain("Make it mine");
   });
 

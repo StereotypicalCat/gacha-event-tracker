@@ -1499,15 +1499,15 @@ describe("built-in weekly and monthly tasks in the strip", () => {
   const NOW = Date.parse("2026-10-15T12:00:00.000Z");
   const ridu = routinesFor("zzz")[0]!;
   const status: GoalStatus = {
-    scope: "week", measure: "amount", periodStart: "2026-10-12", required: 1300, count: 0,
-    met: false, needed: 1300, open: 4, shortfall: false,
+    scope: "week", measure: "amount", periodStart: "2026-10-12", required: 2100, count: 0,
+    met: false, needed: 2100, open: 4, shortfall: false,
   };
 
   test("a routine draws like a task, and its tooltip says its source date", () => {
     const [group] = dailyGroups(["zzz"], [], NOW, "europe", (id) => metaFor(id, {}),
       (e) => Date.parse(e.startsAt), false, undefined, [ridu], () => status);
     expect(group!.items[0]!.key).toBe("routine:zzz:ridu-weekly");
-    expect(group!.items[0]!.title).toContain("as of 2 Dec 2025");
+    expect(group!.items[0]!.title).toContain("as of 31 Aug 2026");
   });
 
   test("the question shows on its own, and names the game", () => {
