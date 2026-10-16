@@ -14,7 +14,7 @@ const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Satur
 export interface TaskFields {
   game: string;
   title: string;
-  unit: "week" | "month";
+  unit: "week" | "month" | "cycle";
   weekday: number;
   /** As typed, so the field can be emptied and retyped; read through `parseMonthDay`. */
   monthDay: string | number;
@@ -22,12 +22,52 @@ export interface TaskFields {
   required: string;
   target: string;
   amountUnit: string;
+  /** A cycle's length in days, as typed; read through `parseCycleDays`. */
+  cycleDays: string;
+  /** The game-day a cycle began, `YYYY-MM-DD` from the date input; "" until chosen. */
+  cycleFrom: string;
 }
 
 /** A typed day of the month, clamped to 1–31; null while empty or unreadable. */
 export function parseMonthDay(raw: string): number | null {
   const n = Number.parseInt(raw, 10);
   return Number.isFinite(n) ? Math.min(31, Math.max(1, n)) : null;
+}
+
+/** A typed cycle length: a whole number of days from 2 to 366, else null. */
+export function parseCycleDays(raw: string): number | null {
+  const n = Number(raw.trim());
+  return raw.trim() !== "" && Number.isInteger(n) && n >= 2 && n <= 366 ? n : null;
+}
+
+const isDayKey = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
+
+/**
+ * The fields for a task being edited, or the defaults for a new one. A cycle
+ * keeps its length and start, so saving an edit never turns it into a week.
+ */
+export function taskFieldsFrom(initial: TaskDraft | undefined, lanes: readonly LaneId[]): TaskFields {
+  const p = initial?.period;
+  return {
+    game: initial?.game ?? lanes[0] ?? "",
+    title: initial?.title ?? "",
+    unit: p?.unit ?? "week",
+    weekday: p?.unit === "week" ? p.startsOn : 1,
+    monthDay: String(p?.unit === "month" ? p.startsOn : 1),
+    cycleDays: String(p?.unit === "cycle" ? p.days : 14),
+    cycleFrom: p?.unit === "cycle" ? p.from : "",
+    kind: initial?.measure.kind ?? "days",
+    required: initial?.measure.kind === "days" ? String(initial.measure.required) : "1",
+    target: initial?.measure.kind === "amount" ? String(initial.measure.target) : "",
+    amountUnit: initial?.measure.kind === "amount" ? (initial.measure.unit ?? "") : "",
+  };
+}
+
+/** The most days a "tick it off" count can ask for in this period. */
+function mostDays(f: TaskFields): number {
+  if (f.unit === "week") return 7;
+  if (f.unit === "month") return 31;
+  return Math.min(31, parseCycleDays(f.cycleDays) ?? 31);
 }
 
 /**
@@ -44,7 +84,9 @@ export function taskDraftFrom(f: TaskFields): TaskDraft | null {
   const period =
     f.unit === "week"
       ? ({ unit: "week", startsOn: f.weekday } as const)
-      : ({ unit: "month", startsOn: monthDay ?? 1 } as const);
+      : f.unit === "month"
+        ? ({ unit: "month", startsOn: monthDay ?? 1 } as const)
+        : ({ unit: "cycle", days: parseCycleDays(f.cycleDays) ?? 0, from: f.cycleFrom } as const);
   const unit = f.amountUnit.trim();
   const target = parseAmount(f.target);
   const measure =
@@ -76,7 +118,8 @@ export function withTaskTemplate(f: TaskFields, t: TaskTemplate): TaskFields {
 /**
  * What these fields still lack before they are a task, in the order the form
  * asks. Empty exactly when `taskDraftFrom` would return a draft — the bounds
- * here are the schema's (`AmountTarget`, 1–7 days a week, 1–31 a month).
+ * here are the schema's (`AmountTarget`, 1–7 days a week, 1–31 a month, a
+ * cycle's length up to 31).
  */
 export function taskStillNeeded(f: TaskFields): string[] {
   const needs: string[] = [];
@@ -84,9 +127,13 @@ export function taskStillNeeded(f: TaskFields): string[] {
   if (f.unit === "month" && parseMonthDay(String(f.monthDay)) === null) {
     needs.push("a day of the month");
   }
+  if (f.unit === "cycle") {
+    if (parseCycleDays(f.cycleDays) === null) needs.push("a length of 2 to 366 days");
+    if (!isDayKey(f.cycleFrom)) needs.push("a start date");
+  }
   if (f.kind === "days") {
     const n = Number(f.required.trim());
-    const most = f.unit === "week" ? 7 : 31;
+    const most = mostDays(f);
     if (f.required.trim() === "" || !Number.isInteger(n) || n < 1 || n > most) {
       needs.push("how many days");
     }
@@ -100,7 +147,7 @@ export function taskStillNeeded(f: TaskFields): string[] {
 }
 
 /**
- * Add or change a weekly or monthly task.
+ * Add or change a weekly, monthly or every-N-days task.
  *
  * Every answer has a default a reader can accept unread — weekly, from Monday,
  * ticked off once — because most of these games roll their week on Monday at
@@ -119,17 +166,7 @@ export function TaskForm({
   onCancel: () => void;
 }) {
   const gameMeta = useGameMeta();
-  const [f, setF] = useState<TaskFields>(() => ({
-    game: initial?.game ?? lanes[0] ?? "",
-    title: initial?.title ?? "",
-    unit: initial?.period.unit === "month" ? "month" : "week",
-    weekday: initial?.period.unit === "week" ? initial.period.startsOn : 1,
-    monthDay: String(initial?.period.unit === "month" ? initial.period.startsOn : 1),
-    kind: initial?.measure.kind ?? "days",
-    required: initial?.measure.kind === "days" ? String(initial.measure.required) : "1",
-    target: initial?.measure.kind === "amount" ? String(initial.measure.target) : "",
-    amountUnit: initial?.measure.kind === "amount" ? (initial.measure.unit ?? "") : "",
-  }));
+  const [f, setF] = useState<TaskFields>(() => taskFieldsFrom(initial, lanes));
   const set = (patch: Partial<TaskFields>) => setF((prev) => ({ ...prev, ...patch }));
   const [chosen, setChosen] = useState<TaskTemplate | null>(null);
   const draft = taskDraftFrom(f);
@@ -190,7 +227,36 @@ export function TaskForm({
         <button type="button" aria-pressed={f.unit === "month"} onClick={() => set({ unit: "month" })} className={pill(f.unit === "month")}>
           Every month
         </button>
-        {f.unit === "week" ? (
+        <button type="button" aria-pressed={f.unit === "cycle"} onClick={() => set({ unit: "cycle" })} className={pill(f.unit === "cycle")}>
+          Every N days
+        </button>
+        {f.unit === "cycle" ? (
+          <span className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
+            <label className="flex items-center gap-1.5">
+              every
+              <input
+                type="number"
+                aria-label="Cycle length in days"
+                min={2}
+                max={366}
+                value={f.cycleDays}
+                onChange={(e) => set({ cycleDays: e.target.value })}
+                className={`tnum w-16 ${field}`}
+              />
+              days,
+            </label>
+            <label className="flex items-center gap-1.5">
+              from
+              <input
+                type="date"
+                aria-label="Cycle starts on"
+                value={f.cycleFrom}
+                onChange={(e) => set({ cycleFrom: e.target.value })}
+                className={field}
+              />
+            </label>
+          </span>
+        ) : f.unit === "week" ? (
           <label className="flex items-center gap-1.5 text-xs text-muted">
             from
             <select
@@ -222,7 +288,9 @@ export function TaskForm({
         )}
       </div>
       <p className="mt-1 text-[0.6875rem] leading-relaxed text-faint">
-        It rolls over at the game's daily reset on that day, on your server.
+        {f.unit === "cycle"
+          ? "Pick a day a cycle began — the day after one ended. It rolls at the game's daily reset, on your server."
+          : "It rolls over at the game's daily reset on that day, on your server."}
       </p>
 
       <p className="mt-3 text-xs font-medium text-muted">Done when</p>
@@ -241,7 +309,7 @@ export function TaskForm({
               type="number"
               aria-label="Days needed"
               min={1}
-              max={f.unit === "week" ? 7 : 31}
+              max={mostDays(f)}
               value={f.required}
               onChange={(e) => set({ required: e.target.value })}
               className={`tnum w-14 ${field}`}

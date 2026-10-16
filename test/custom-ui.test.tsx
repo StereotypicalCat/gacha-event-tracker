@@ -1296,6 +1296,7 @@ describe("the reader's weekly and monthly tasks in settings", () => {
     const fields = {
       game: "zzz", title: "Activity points", unit: "week" as const, weekday: 1, monthDay: 1,
       kind: "amount" as const, required: "1", target: "2,100", amountUnit: "points",
+      cycleDays: "14", cycleFrom: "",
     };
     expect(taskDraftFrom(fields)).toEqual({
       game: "zzz", title: "Activity points",

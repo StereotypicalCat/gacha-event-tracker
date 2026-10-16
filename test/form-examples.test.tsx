@@ -4,6 +4,7 @@ import { stillNeededLine } from "../src/client/components/formParts.tsx";
 import {
   TaskForm,
   taskDraftFrom,
+  taskFieldsFrom,
   taskStillNeeded,
   withTaskTemplate,
   type TaskFields,
@@ -29,6 +30,8 @@ const typed: TaskFields = {
   required: "2",
   target: "1300",
   amountUnit: "points",
+  cycleDays: "14",
+  cycleFrom: "",
 };
 
 describe("the still-needed line", () => {
@@ -311,6 +314,10 @@ describe("review fixes: Save never sits disabled without a reason", () => {
       { ...typed, kind: "days", required: "8" },
       { ...typed, unit: "month", kind: "days", required: "31" },
       { ...typed, unit: "month", monthDay: "" },
+      { ...typed, unit: "cycle", cycleFrom: "2026-10-16" },
+      { ...typed, unit: "cycle", cycleFrom: "" },
+      { ...typed, unit: "cycle", cycleDays: "1", cycleFrom: "2026-10-16" },
+      { ...typed, unit: "cycle", kind: "days", required: "4", cycleDays: "3", cycleFrom: "2026-10-16" },
     ];
     for (const f of cases) {
       expect({ target: f.target, required: f.required, empty: taskStillNeeded(f).length === 0 })
@@ -355,5 +362,48 @@ describe("follow-up: a wait with the end set to unknown", () => {
     ]);
     // With the end field on screen, the plain words are enough.
     expect(eventFormState({ ...v, endKnown: true }, null).needs).toEqual(["an end date"]);
+  });
+});
+
+describe("a task every N days", () => {
+  const shiyu: TaskFields = {
+    ...typed, title: "Shiyu Defense", unit: "cycle", kind: "days", required: "1",
+    cycleDays: "14", cycleFrom: "2026-10-16",
+  };
+
+  test("becomes a cycle period", () => {
+    expect(taskDraftFrom(shiyu)?.period).toEqual({ unit: "cycle", days: 14, from: "2026-10-16" });
+  });
+
+  test("needs a length of 2 to 366 days and a start date", () => {
+    expect(taskStillNeeded({ ...shiyu, cycleDays: "1" })).toEqual(["a length of 2 to 366 days"]);
+    expect(taskStillNeeded({ ...shiyu, cycleDays: "367" })).toEqual(["a length of 2 to 366 days"]);
+    expect(taskStillNeeded({ ...shiyu, cycleDays: "" })).toEqual(["a length of 2 to 366 days"]);
+    expect(taskStillNeeded({ ...shiyu, cycleFrom: "" })).toEqual(["a start date"]);
+  });
+
+  test("days needed is bounded by the cycle's length and by 31", () => {
+    expect(taskStillNeeded({ ...shiyu, cycleDays: "3", required: "3" })).toEqual([]);
+    expect(taskStillNeeded({ ...shiyu, cycleDays: "3", required: "4" })).toEqual(["how many days"]);
+    expect(taskStillNeeded({ ...shiyu, cycleDays: "42", required: "32" })).toEqual(["how many days"]);
+  });
+
+  test("editing one keeps its length and start", () => {
+    const initial = {
+      game: "zzz", title: "Shiyu Defense",
+      period: { unit: "cycle" as const, days: 14, from: "2026-10-16" },
+      measure: { kind: "days" as const, required: 1 },
+    };
+    expect(taskDraftFrom(taskFieldsFrom(initial, ["zzz"]))).toEqual(initial);
+    const html = renderToStaticMarkup(
+      <TaskForm lanes={["zzz"]} initial={initial} onSave={noop} onCancel={noop} />,
+    );
+    expect(html).toMatch(/aria-pressed="true"[^>]*>Every N days</);
+    expect(html).toContain('value="14"');
+    expect(html).toContain('value="2026-10-16"');
+  });
+
+  test("a week or month task still starts with a two-week cycle on offer", () => {
+    expect(taskFieldsFrom(undefined, ["zzz"])).toMatchObject({ unit: "week", cycleDays: "14", cycleFrom: "" });
   });
 });
