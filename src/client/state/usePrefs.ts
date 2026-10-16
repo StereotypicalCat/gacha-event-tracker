@@ -8,7 +8,8 @@ import type { TimelineGroup } from "./lanes.ts";
 import { DEFAULT_THEME_CHOICE, type ThemeChoice } from "./theme.ts";
 import { DEFAULT_DAY_WIDTH, snapDayWidth } from "./zoom.ts";
 import { ENTRIES, newestId } from "../../shared/changelog.ts";
-import type { PerGame } from "../../shared/perGame.ts";
+import { setFor, shownFor, type PerGame } from "../../shared/perGame.ts";
+import { hiddenAfter, routinesFor, type Routine } from "../../shared/routines.ts";
 
 /**
  * Which of the two views the reader is looking at.
@@ -223,6 +224,13 @@ export interface Prefs {
   /** Games already asked "track its weekly tasks?", so the question is asked once. */
   routinesAsked?: LaneId[] | undefined;
   /**
+   * Built-ins the reader stopped tracking one at a time, by `routine:` id —
+   * Endfield's weekly items but not its Stock Redistribution. Narrows the game
+   * rule above and never widens it; absent means none, and their ticks and
+   * numbers stay stored under the id.
+   */
+  routinesHidden?: string[] | undefined;
+  /**
    * The newest changelog entry the reader dismissed (PRD F18). Absent means
    * unrecorded, not "seen nothing": first-run setup sets it, so an absent value
    * is an install from before the changelog, shown the launch window once.
@@ -260,6 +268,32 @@ export function choreRule(p: Prefs): PerGame {
 /** Whose built-in weekly tasks are on. An unanswered global switch is off. */
 export function routineRule(p: Prefs): PerGame {
   return { all: p.showRoutines ?? false, on: p.routineGames, off: p.routinesOff };
+}
+
+/**
+ * What tracking one built-in, or stopping, writes (the strip's Edit panel).
+ *
+ * Stopping hides that one and nothing else. Tracking one whose game is on
+ * unhides it. Tracking one whose game is off turns the game on — the same
+ * answer the strip's question records — with its siblings hidden, because the
+ * reader asked for one item and not the game's whole list.
+ */
+export function trackRoutinePatch(p: Prefs, routine: Routine, track: boolean): Partial<Prefs> {
+  const rule = routineRule(p);
+  if (!track || shownFor(rule, routine.game)) {
+    return { routinesHidden: hiddenAfter(p.routinesHidden, routine.id, track) };
+  }
+  const { on, off } = setFor(rule, routine.game, true);
+  const siblings = routinesFor(routine.game)
+    .map((r) => r.id)
+    .filter((id) => id !== routine.id);
+  const hidden = [...(p.routinesHidden ?? []).filter((id) => id !== routine.id && !siblings.includes(id)), ...siblings];
+  return {
+    routineGames: on,
+    routinesOff: off,
+    routinesAsked: [...(p.routinesAsked ?? []).filter((g) => g !== routine.game), routine.game],
+    routinesHidden: hidden.length > 0 ? hidden : undefined,
+  };
 }
 
 export function defaults(): Prefs {
@@ -396,7 +430,7 @@ export function restorePrefsValue(incoming: unknown): Prefs {
   }
 
   // Per-game exceptions and built-in tasks: string arrays, or absent.
-  for (const key of ["routineGames", "routinesAsked", "routinesOff", "choresOn", "choresOff"] as const) {
+  for (const key of ["routineGames", "routinesAsked", "routinesOff", "routinesHidden", "choresOn", "choresOff"] as const) {
     const value: unknown = result[key];
     if (value === undefined) continue;
     result[key] = Array.isArray(value)

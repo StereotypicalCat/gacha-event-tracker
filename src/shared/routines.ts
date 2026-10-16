@@ -69,10 +69,34 @@ export function routinesFor(game: string): Routine[] {
 /**
  * The built-ins on screen: those of games the rule shows, less any the reader
  * made their own (`Task.from`) — the copy replaces the original while it
- * exists, and deleting the copy brings the original back.
+ * exists, and deleting the copy brings the original back — and less any they
+ * stopped tracking one by one (`prefs.routinesHidden`). Leave `hidden` out to
+ * get every built-in the reader could track, which is what settings lists.
  */
-export function activeRoutines(rule: PerGame, copiedFrom: ReadonlySet<string>): Routine[] {
-  return ROUTINES.filter((r) => shownFor(rule, r.game) && !copiedFrom.has(r.id));
+export function activeRoutines(
+  rule: PerGame,
+  copiedFrom: ReadonlySet<string>,
+  hidden: ReadonlySet<string> = new Set(),
+): Routine[] {
+  return ROUTINES.filter(
+    (r) => shownFor(rule, r.game) && !copiedFrom.has(r.id) && !hidden.has(r.id),
+  );
+}
+
+/**
+ * `prefs.routinesHidden` after the reader tracks one built-in or stops. Per
+ * item and never per game, so it moves nothing the game's switch says, and a
+ * built-in we ship later for that game still arrives. Absent when empty, like
+ * the other lists.
+ */
+export function hiddenAfter(
+  hidden: readonly string[] | undefined,
+  id: string,
+  track: boolean,
+): string[] | undefined {
+  const rest = (hidden ?? []).filter((h) => h !== id);
+  const next = track ? rest : [...rest, id];
+  return next.length > 0 ? next : undefined;
 }
 
 /**

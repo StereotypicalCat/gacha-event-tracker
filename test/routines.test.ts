@@ -7,8 +7,9 @@ import {
   routineToAsk,
   mineFrom,
   copyRoutineState,
+  hiddenAfter,
 } from "../src/shared/routines.ts";
-import { choreRule, defaults, restorePrefsValue, routineRule } from "../src/client/state/usePrefs.ts";
+import { choreRule, defaults, restorePrefsValue, routineRule, trackRoutinePatch } from "../src/client/state/usePrefs.ts";
 import { shownFor } from "../src/shared/perGame.ts";
 import { taskStatus } from "../src/shared/task.ts";
 
@@ -37,14 +38,23 @@ describe("ROUTINES", () => {
     expect(RoutineSchema.safeParse(bare).success).toBe(false);
   });
 
-  test("the first two, as sourced", () => {
-    expect(routinesFor("zzz").map((r) => [r.title, r.measure])).toEqual([
-      ["Ridu Weekly", { kind: "amount", target: 1300, unit: "points" }],
+  // Pinned to docs/superpowers/specs/2026-10-14-built-in-routines-design.md:
+  // a figure that moves here moves there, with the page that says so.
+  test("each game's, as sourced", () => {
+    const shape = (game: string): unknown[] =>
+      routinesFor(game).map((r) => [r.title, r.period, r.measure]);
+    const week = { unit: "week" as const, startsOn: 1 };
+    expect(shape("genshin")).toEqual([]);
+    expect(shape("hsr")).toEqual([]);
+    expect(shape("zzz")).toEqual([
+      ["Ridu Weekly", week, { kind: "amount", target: 1300, unit: "points" }],
     ]);
-    expect(routinesFor("endfield").map((r) => [r.title, r.measure])).toEqual([
-      ["Weekly Routine", { kind: "amount", target: 10, unit: "points" }],
+    expect(shape("endfield")).toEqual([
+      ["Weekly Routine", week, { kind: "amount", target: 10, unit: "points" }],
     ]);
-    expect(routinesFor("genshin")).toEqual([]);
+    expect(shape("wuwa")).toEqual([]);
+    expect(shape("nte")).toEqual([]);
+    expect(shape("nikki")).toEqual([]);
   });
 
   test("a routine has a status like any task", () => {
@@ -57,23 +67,37 @@ describe("ROUTINES", () => {
   });
 });
 
+const OFFERED = ROUTINES;
+const idsOf = (...games: string[]) =>
+  OFFERED.filter((r) => games.includes(r.game)).map((r) => r.id);
+const RIDU = "routine:zzz:ridu-weekly";
+
 describe("which built-ins are on", () => {
   const off = { all: false };
   test("only for games the reader said yes to", () => {
     expect(activeRoutines(off, new Set()).map((r) => r.id)).toEqual([]);
-    expect(activeRoutines({ all: false, on: ["zzz"] }, new Set()).map((r) => r.id)).toEqual(["routine:zzz:ridu-weekly"]);
+    expect(activeRoutines({ all: false, on: ["zzz"] }, new Set()).map((r) => r.id)).toEqual(idsOf("zzz"));
   });
 
   test("one the reader made their own is hidden while the copy exists", () => {
-    expect(activeRoutines({ all: false, on: ["zzz", "endfield"] }, new Set(["routine:zzz:ridu-weekly"])).map((r) => r.id))
-      .toEqual(["routine:endfield:weekly-routine"]);
+    expect(activeRoutines({ all: false, on: ["zzz", "endfield"] }, new Set([RIDU])).map((r) => r.id))
+      .toEqual(idsOf("zzz", "endfield").filter((id) => id !== RIDU));
+  });
+
+  test("one the reader stopped tracking is hidden, and nothing else moves", () => {
+    // Endfield's weekly items on, one of them not: the game's own answer is
+    // untouched, so the rest stay and a new built-in for it still arrives.
+    const rule = { all: false, on: ["zzz", "endfield"] };
+    expect(activeRoutines(rule, new Set(), new Set([RIDU])).map((r) => r.id))
+      .toEqual(idsOf("zzz", "endfield").filter((id) => id !== RIDU));
+    expect(shownFor(rule, "zzz")).toBe(true);
   });
 
   test("switched on globally, every game's — less the ones switched off", () => {
     expect(activeRoutines({ all: true }, new Set()).map((r) => r.id))
-      .toEqual(["routine:zzz:ridu-weekly", "routine:endfield:weekly-routine"]);
+      .toEqual(OFFERED.map((r) => r.id));
     expect(activeRoutines({ all: true, off: ["zzz"] }, new Set()).map((r) => r.id))
-      .toEqual(["routine:endfield:weekly-routine"]);
+      .toEqual(OFFERED.filter((r) => r.game !== "zzz").map((r) => r.id));
   });
 });
 
@@ -82,7 +106,7 @@ describe("a reader's answers from before the global switch carry over", () => {
   // and an absent `showRoutines` is the opt-in it always was.
   test("routineGames alone still means exactly those games", () => {
     const rule = routineRule({ ...defaults(), routineGames: ["zzz"] });
-    expect(activeRoutines(rule, new Set()).map((r) => r.id)).toEqual(["routine:zzz:ridu-weekly"]);
+    expect(activeRoutines(rule, new Set()).map((r) => r.id)).toEqual(idsOf("zzz"));
   });
 
   test("an install that never answered gets none", () => {
@@ -91,7 +115,8 @@ describe("a reader's answers from before the global switch carry over", () => {
 
   test("showRoutines and routinesOff are read", () => {
     const rule = routineRule({ ...defaults(), showRoutines: true, routinesOff: ["zzz"] });
-    expect(activeRoutines(rule, new Set()).map((r) => r.id)).toEqual(["routine:endfield:weekly-routine"]);
+    expect(activeRoutines(rule, new Set()).map((r) => r.id))
+      .toEqual(OFFERED.filter((r) => r.game !== "zzz").map((r) => r.id));
   });
 
   test("showChores alone still means every game's chore, and choresOff narrows it", () => {
@@ -139,6 +164,49 @@ describe("restoring prefs with the new fields", () => {
     expect([empty.choresOn, empty.choresOff, empty.routinesOff, empty.showRoutines]).toEqual([
       undefined, undefined, undefined, undefined,
     ]);
+  });
+});
+
+describe("tracking one built-in, or not", () => {
+  test("stopping adds its id once; tracking again removes it; the list is absent when empty", () => {
+    expect(hiddenAfter(undefined, "routine:zzz:ridu-weekly", false)).toEqual(["routine:zzz:ridu-weekly"]);
+    expect(hiddenAfter(["routine:zzz:ridu-weekly"], "routine:zzz:ridu-weekly", false))
+      .toEqual(["routine:zzz:ridu-weekly"]);
+    expect(hiddenAfter(["routine:zzz:ridu-weekly", "routine:x:y"], "routine:zzz:ridu-weekly", true))
+      .toEqual(["routine:x:y"]);
+    expect(hiddenAfter(["routine:zzz:ridu-weekly"], "routine:zzz:ridu-weekly", true)).toBeUndefined();
+  });
+
+  test("the pref survives a restore, and junk in it is dropped", () => {
+    expect(restorePrefsValue({ routinesHidden: ["routine:zzz:ridu-weekly", 4] }).routinesHidden)
+      .toEqual(["routine:zzz:ridu-weekly"]);
+    expect(restorePrefsValue({ routinesHidden: "routine:zzz:ridu-weekly" }).routinesHidden).toBeUndefined();
+    expect(restorePrefsValue({}).routinesHidden).toBeUndefined();
+  });
+});
+
+describe("tracking a built-in from the strip", () => {
+  const ridu = routinesFor("zzz")[0]!;
+
+  test("stopping hides that one and leaves the game's answer alone", () => {
+    const p = { ...defaults(), routineGames: ["zzz"] };
+    expect(trackRoutinePatch(p, ridu, false)).toEqual({ routinesHidden: [ridu.id] });
+  });
+
+  test("tracking one of a game that is on just unhides it", () => {
+    const p = { ...defaults(), routineGames: ["zzz"], routinesHidden: [ridu.id] };
+    expect(trackRoutinePatch(p, ridu, true)).toEqual({ routinesHidden: undefined });
+  });
+
+  test("tracking one of a game that is off turns the game on with only that one", () => {
+    // The reader asked for one item, not the game's whole list: its siblings
+    // arrive hidden, and the game counts as asked so the strip does not ask again.
+    const p = { ...defaults(), showRoutines: false };
+    const patch = trackRoutinePatch(p, ridu, true);
+    const after = { ...p, ...patch };
+    const shown = activeRoutines(routineRule(after), new Set(), new Set(after.routinesHidden ?? []));
+    expect(shown.map((r) => r.id)).toEqual([ridu.id]);
+    expect(after.routinesAsked).toContain("zzz");
   });
 });
 
