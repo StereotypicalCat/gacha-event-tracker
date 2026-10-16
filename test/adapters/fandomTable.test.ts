@@ -133,3 +133,24 @@ describe("fandomtable canParse across every fixture", () => {
     }
   });
 });
+
+describe("fandomtable: a page whose runs have all ended", () => {
+  // Between runs, until the wiki adds the next row, the page parses to zero.
+  // That zero is the page's own answer, not a broken source (AGENTS.md § A
+  // count of zero has two causes).
+  test("says so, because its pass table holds dated runs", async () => {
+    const page = await Bun.file(FIXTURE).text();
+    expect(fandomTableParser.parse(page, ctx("2027-06-01T00:00:00.000Z"))).toEqual([]);
+    expect(fandomTableParser.statesNoEvents?.(page)).toBe(true);
+    expect(adapterById(SOURCE_ID)!.statesNoEvents?.(page)).toBe(true);
+  });
+
+  test("does not, when the table holds no dated run at all", () => {
+    expect(fandomTableParser.statesNoEvents?.(body([["A", "TBA", "TBA"]]))).toBe(false);
+    expect(fandomTableParser.statesNoEvents?.(body([]))).toBe(false);
+  });
+
+  test("does not, on a page that is not a pass table", () => {
+    expect(fandomTableParser.statesNoEvents?.(JSON.stringify({ parse: { title: "T", text: "<p>x</p>" } }))).toBe(false);
+  });
+});

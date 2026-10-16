@@ -228,5 +228,24 @@ export const fandomTableParser: SourceParser = {
     const rendered = renderedHtml(body);
     return rendered !== null && passTables(rendered).length > 0;
   },
+  /**
+   * Between runs — the last listed run ended and the wiki has not added the
+   * next — this page parses to zero, and that zero is its own answer: the pass
+   * table is there and dates its runs, all of them past. Asked only of a zero
+   * (`health.ts`, the refresh's parse gate), so it never excuses a page that is
+   * still producing rows. A table with no dated run is not this, and a page
+   * with no pass table is not even ours.
+   */
+  statesNoEvents(body: string): boolean {
+    const rendered = renderedHtml(body);
+    if (rendered === null) return false;
+    return passTables(rendered).some((table) =>
+      table.rows.some(
+        (row) =>
+          wholeDate(row[table.columns.start] ?? "") !== null &&
+          wholeDate(row[table.columns.end] ?? "") !== null,
+      ),
+    );
+  },
   parse: parseFandomHistoryTable,
 };
