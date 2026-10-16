@@ -63,7 +63,11 @@ describe("ROUTINES", () => {
       ["Spiral Abyss", { unit: "month", startsOn: 16 }, { kind: "days", required: 1 }],
       ["Imaginarium Theater", { unit: "month", startsOn: 1 }, { kind: "days", required: 1 }],
     ]);
-    expect(shape("hsr")).toEqual([]);
+    expect(shape("hsr")).toEqual([
+      ["Echo of War", week, { kind: "amount", target: 3, unit: "runs" }],
+      ["Nameless Honor weekly EXP", week, { kind: "amount", target: 8000, unit: "EXP" }],
+      ["Embers Exchange: Star Rail Special Pass", { unit: "month", startsOn: 1 }, { kind: "amount", target: 5, unit: "passes" }],
+    ]);
     expect(shape("zzz")).toEqual([
       ["Ridu Weekly", week, { kind: "amount", target: 1300, unit: "points" }],
     ]);

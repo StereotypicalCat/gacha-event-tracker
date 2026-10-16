@@ -137,6 +137,44 @@ export const ROUTINES: readonly Routine[] = [
     note: "Confirmed in game, 2026-10-16.",
   },
 
+  // Honkai: Star Rail.
+  {
+    id: "routine:hsr:echo-of-war",
+    game: "hsr",
+    title: "Echo of War",
+    period: { unit: "week", startsOn: 1 },
+    measure: { kind: "amount", target: 3, unit: "runs" },
+    source: "https://honkai-star-rail.fandom.com/wiki/Echo_of_War",
+    asOf: "2025-10-17",
+    checked: "2026-10-14",
+    note: "Confirmed in game, 2026-10-14.",
+  },
+  {
+    id: "routine:hsr:nameless-honor-exp",
+    game: "hsr",
+    title: "Nameless Honor weekly EXP",
+    // Monday is Star Rail's weekly reset, as Echo of War's page states it.
+    period: { unit: "week", startsOn: 1 },
+    measure: { kind: "amount", target: 8000, unit: "EXP" },
+    source: "https://honkai-star-rail.fandom.com/wiki/Nameless_Honor",
+    asOf: "2026-08-26",
+    checked: "2026-10-14",
+    note: "The pass's weekly EXP cap; the wiki doesn't state it. Confirmed in game, 2026-10-14.",
+  },
+  {
+    id: "routine:hsr:embers-exchange",
+    game: "hsr",
+    title: "Embers Exchange: Star Rail Special Pass",
+    // The wiki marks the stock as refreshing monthly; the 1st is the owner's
+    // in-game countdown on 2026-10-14, which ends at the reset on 1 Nov 2026.
+    period: { unit: "month", startsOn: 1 },
+    measure: { kind: "amount", target: 5, unit: "passes" },
+    source: "https://honkai-star-rail.fandom.com/wiki/Embers_Exchange",
+    asOf: "2026-07-12",
+    checked: "2026-10-14",
+    note: "Bought with Undying Embers. The wiki says monthly; the 1st is ours. Confirmed in game, 2026-10-14.",
+  },
+
   // Zenless Zone Zero.
   {
     id: "routine:zzz:ridu-weekly",

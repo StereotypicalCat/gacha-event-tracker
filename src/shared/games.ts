@@ -65,6 +65,8 @@ export const GAMES: Record<GameId, GameMeta> = {
   // EU reset at 04:00 UTC+1 confirmed in game by the owner on 2026-10-16: the
   // Trounce Domains menu reads "every Monday 4AM GMT+1".
   genshin: { id: "genshin", name: "Genshin Impact", short: "Genshin", hue: "#4EA8DE" , studio: "HoYoverse", dailyTasks: "Commissions, resin" },
+  // EU reset at 04:00 UTC+1 (05:00 CEST) confirmed in game by the owner on
+  // 2026-10-14: at 03:49 CEST on a Wednesday a period read 5d 1h left.
   hsr: { id: "hsr", name: "Honkai: Star Rail", short: "Star Rail", hue: "#7B8CFF" , studio: "HoYoverse", dailyTasks: "Daily training, Trailblaze Power" },
   zzz: { id: "zzz", name: "Zenless Zone Zero", short: "ZZZ", hue: "#F2A03D" , studio: "HoYoverse", dailyTasks: "Daily missions, battery" },
   wuwa: { id: "wuwa", name: "Wuthering Waves", short: "Wuwa", hue: "#3DD6A0" , studio: "Kuro Games", dailyTasks: "Daily activity, waveplate" },
