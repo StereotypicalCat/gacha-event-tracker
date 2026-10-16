@@ -189,6 +189,68 @@ export const ROUTINES: readonly Routine[] = [
     checked: "2026-10-14",
     note: "Confirmed in game, 2026-10-16.",
   },
+  {
+    id: "routine:zzz:bounty-commissions",
+    game: "zzz",
+    title: "Bounty Commissions",
+    period: { unit: "week", startsOn: 1 },
+    measure: { kind: "amount", target: 8000, unit: "points" },
+    source: "https://zenless-zone-zero.fandom.com/wiki/Hollow_Zero/Bounty_Commission",
+    asOf: "2025-03-21",
+    checked: "2026-10-14",
+    note: "One cap shared by Lost Void and Enigma of the Labyrinth. Confirmed in game, 2026-10-16.",
+  },
+  {
+    id: "routine:zzz:notorious-hunt",
+    game: "zzz",
+    title: "Notorious Hunt",
+    // The page says per week and names no day; Monday is ZZZ's weekly reset,
+    // as Ridu Weekly's page states it and the owner confirmed in game.
+    period: { unit: "week", startsOn: 1 },
+    measure: { kind: "amount", target: 3, unit: "runs" },
+    source: "https://zenless-zone-zero.fandom.com/wiki/Notorious_Hunt",
+    asOf: "2026-02-26",
+    checked: "2026-10-16",
+    note: "Three a week at no Battery cost. Confirmed in game, 2026-10-16.",
+  },
+  {
+    id: "routine:zzz:city-fund-exp",
+    game: "zzz",
+    title: "New Eridu City Fund weekly EXP",
+    // Monday is ZZZ's weekly reset, as Ridu Weekly's page states it.
+    period: { unit: "week", startsOn: 1 },
+    measure: { kind: "amount", target: 10000, unit: "EXP" },
+    source: "https://zenless-zone-zero.fandom.com/wiki/New_Eridu_City_Fund",
+    asOf: "2026-09-04",
+    checked: "2026-10-16",
+    note: "The battle pass's weekly EXP cap; the wiki doesn't state it. Confirmed in game, 2026-10-16.",
+  },
+  {
+    id: "routine:zzz:signal-shop-tapes",
+    game: "zzz",
+    title: "Signal Shop: Encrypted Master Tapes",
+    // The wiki marks the Fading Signal stock as refreshing monthly; the 1st is
+    // the owner's in-game timer on 2026-10-16, which ends at the reset on 1 Nov.
+    period: { unit: "month", startsOn: 1 },
+    measure: { kind: "amount", target: 5, unit: "tapes" },
+    source: "https://zenless-zone-zero.fandom.com/wiki/Signal_Shop",
+    asOf: "2026-09-09",
+    checked: "2026-10-16",
+    note: "Bought with Fading Signal; 5 a month per the wiki. The monthly reset on the 1st is ours. Confirmed in game, 2026-10-16.",
+  },
+  {
+    id: "routine:zzz:signal-shop-boopons",
+    game: "zzz",
+    title: "Signal Shop: Boopons",
+    // The Bangbuck section's monthly stock, which resets with the Fading Signal
+    // one (the 1st, per the owner's in-game timer).
+    period: { unit: "month", startsOn: 1 },
+    measure: { kind: "amount", target: 5, unit: "Boopons" },
+    source: "https://zenless-zone-zero.fandom.com/wiki/Signal_Shop",
+    asOf: "2026-09-09",
+    checked: "2026-10-16",
+    note: "Bought with Bangbucks, 5 a month per the wiki; Boopons pay for Bangboo pulls. Confirmed in game, 2026-10-16.",
+  },
 
   // Arknights: Endfield.
   {

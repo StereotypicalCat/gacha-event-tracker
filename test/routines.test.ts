@@ -70,6 +70,11 @@ describe("ROUTINES", () => {
     ]);
     expect(shape("zzz")).toEqual([
       ["Ridu Weekly", week, { kind: "amount", target: 2100, unit: "points" }],
+      ["Bounty Commissions", week, { kind: "amount", target: 8000, unit: "points" }],
+      ["Notorious Hunt", week, { kind: "amount", target: 3, unit: "runs" }],
+      ["New Eridu City Fund weekly EXP", week, { kind: "amount", target: 10000, unit: "EXP" }],
+      ["Signal Shop: Encrypted Master Tapes", { unit: "month", startsOn: 1 }, { kind: "amount", target: 5, unit: "tapes" }],
+      ["Signal Shop: Boopons", { unit: "month", startsOn: 1 }, { kind: "amount", target: 5, unit: "Boopons" }],
     ]);
     expect(shape("endfield")).toEqual([
       ["Weekly Routine", week, { kind: "amount", target: 10, unit: "points" }],

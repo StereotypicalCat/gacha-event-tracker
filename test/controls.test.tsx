@@ -390,12 +390,12 @@ describe("Controls: weekly and monthly tasks under the dailies", () => {
   });
 
   test("each switch appears once there is a task of its period, and reads its own pref", () => {
-    // ZZZ's built-ins are weekly; there is no monthly task, so no monthly switch.
-    const prefs = { ...PREFS, routineGames: ["zzz"] };
-    const on = render(prefs, 0, ["zzz"]);
+    // Endfield's built-ins are weekly; there is no monthly task, so no monthly switch.
+    const prefs = { ...PREFS, routineGames: ["endfield"] };
+    const on = render(prefs, 0, ["endfield"]);
     expect(on).toContain("Show weekly tasks");
     expect(on).not.toContain("Show monthly tasks");
-    const off = render({ ...prefs, showWeeklyTasks: false }, 0, ["zzz"]);
+    const off = render({ ...prefs, showWeeklyTasks: false }, 0, ["endfield"]);
     expect(checkboxes(off).filter(Boolean).length).toBe(checkboxes(on).filter(Boolean).length - 1);
   });
 
