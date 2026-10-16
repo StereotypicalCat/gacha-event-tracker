@@ -1,5 +1,9 @@
 # Built-ins on longer cycles — design
 
+Date: 2026-10-16. Status: **shipped 2026-10-16** (`a80f581..f19ef32`, plus review fixes `4427f6c`,
+`5080397`; merged to `main` at `9488053`). The owner's four in-game checks of § Entries were
+deferred by the owner to TODO.md. Sub-project 2 of 3.
+
 Sub-project 2 of the owner's "usual repeatable events" request. Sub-project 1 (weekly and monthly
 built-ins, per-item tracking) is in the [built-in routines spec](2026-10-14-built-in-routines-design.md),
 whose § Scope item 2 holds the in-game readings this design starts from.

@@ -1,5 +1,9 @@
 # Battle pass windows as feed events — design
 
+Date: 2026-10-16. Status: **shipped 2026-10-16** for Star Rail, ZZZ and Infinity Nikki
+(`40d0dbe..c2cc685`, merged to `main`); see § Outcome for what changed from the plan, and TODO.md
+for Endfield, Wuthering Waves and NTE. Sub-project 3 of 3.
+
 Sub-project 3 of the owner's "usual repeatable events" request (sub-project 1: the
 [built-in routines spec](2026-10-14-built-in-routines-design.md), whose § Scope item 3 holds the
 owner's in-game readings; sub-project 2: the [cycle routines spec](2026-10-16-cycle-routines-design.md)).

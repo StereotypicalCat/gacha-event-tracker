@@ -58,6 +58,24 @@
 - [ ] Track Infinity Nikki's *Pinnacle Contest*, which resets on the 1st and 16th of each month
   (infinity-nikki.fandom.com/wiki/Mira_Crown, 2025-12-08) — a half-month period, which `period.ts`
   cannot express yet. *Merit Arena* has no page stating its cycle; leave it until one does.
+- [ ] Small things the whole-branch reviews of sub-projects 2 and 3 found and left (2026-10-16),
+  none a bug a reader meets today:
+  - At phone width, with weekly, monthly and cycle tasks all present, the strip header's period
+    counts wrap ("Cycles 0/8" on its own line). `Dailies.tsx`, the `periodCounts` line.
+  - Copy still says "weekly and monthly" where cycles now count too: `YourOwn.tsx` (the tasks and
+    built-ins headings), `Controls.tsx` ("Show built-in weekly and monthly tasks"), and the
+    strip's one-time question "Track X's built-in weekly and monthly tasks?" — a yes also turns on
+    that game's cycle built-ins. Fold into the settings rework below.
+  - The header label "Cycles" against "Weekly"/"Monthly".
+  - `TaskForm.tsx`'s `isDayKey` checks the pattern only; the schema also refuses impossible dates.
+    A date input cannot produce one, so the two agree in practice.
+  - Editing a cycle task's length or start files its old numbers under the old start keys (kept,
+    and restored by undoing the edit) — the same as editing a week's start day, but with no
+    notice; `CustomForms.tsx`'s `strandedNotice` could be reused.
+  - `fandomtable` and `fandomversion` are kept apart per table, not per page: a page holding both
+    kinds of table would match both parsers (none does). `PassSource.title(rowName)` and the
+    `"event"` name heading were for Miliastra and are unused; `cells`, `wholeDate` and `pageUrl`
+    are copied between `fandomTable.ts` and `versionTable.ts`.
 - [ ] **Rework the settings, with mockups first** (owner, 2026-10-16: "we will have to do a
   settings rework of some kinds with some mockups"). *What you see* keeps gaining switches —
   dailies, built-ins globally and per game, standard-banner pulls, weekly / monthly tasks, and

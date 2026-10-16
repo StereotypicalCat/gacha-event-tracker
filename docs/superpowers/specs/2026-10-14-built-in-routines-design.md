@@ -2,7 +2,8 @@
 
 Date: 2026-10-14. Status: **shipped 2026-10-16** (`612e0a2..23924db`, merged to `main`), every
 entry verified in game by the owner except the two open in TODO.md. Sub-project 1 of 3 — see
-§ Scope; sub-projects 2 and 3 are next, with their starting points in TODO.md.
+§ Scope; sub-projects 2 and 3 shipped the same day — the [cycle routines spec](2026-10-16-cycle-routines-design.md)
+and the [pass windows spec](2026-10-16-pass-windows-design.md).
 
 ## Problem
 
