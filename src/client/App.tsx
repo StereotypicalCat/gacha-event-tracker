@@ -25,7 +25,7 @@ import { useProgress, type ProgressMap } from "./state/useProgress.ts";
 import { useDailyLog, type DailyLogMap } from "./state/useDailyLog.ts";
 import { useTasks } from "./state/useTasks.ts";
 import { useAmounts } from "./state/useAmounts.ts";
-import { adoptNewLanes, choreRule, firstRunPrefs, routineRule, usePrefs, type Prefs } from "./state/usePrefs.ts";
+import { adoptNewLanes, choreRule, firstRunPrefs, routineRule, trackRoutinePatch, usePrefs, type Prefs } from "./state/usePrefs.ts";
 import { buildExportData, parseImportData, triggerDownload } from "./state/export.ts";
 import { snapDayWidth } from "./state/zoom.ts";
 import { useCustom, type EventDraft } from "./state/useCustom.ts";
@@ -39,6 +39,7 @@ import {
 } from "./state/lens.ts";
 import { clockFor, formatRemaining } from "../shared/time.ts";
 import {
+  dailiesId,
   dailyDays as runDays,
   dailySummary,
   dayKey,
@@ -47,13 +48,14 @@ import {
 } from "../shared/daily.ts";
 import { isoWeekday } from "../shared/period.ts";
 import { tasksShown } from "./components/Dailies.tsx";
-import type { StripEditor, StripEvent } from "./components/EditPanel.tsx";
+import type { StripEditor, StripEvent, StripStanding } from "./components/EditPanel.tsx";
 import { goalStatus, readGoal, type GoalStatus } from "../shared/goal.ts";
 import { taskStatus, type TaskShape } from "../shared/task.ts";
 import {
   activeRoutines,
   copyRoutineState,
   mineFrom,
+  routinesFor,
   routineToAsk,
   type Routine,
 } from "../shared/routines.ts";
@@ -67,9 +69,11 @@ import { GameMetaProvider, type MetaResolver } from "./state/gameMeta.tsx";
 import { metaOnTheme, useTheme } from "./state/theme.ts";
 import {
   displayEventFor,
+  isCustomGameId,
   recordFor,
   type LaneId,
 } from "../shared/custom.ts";
+import type { GameId } from "../shared/schema.ts";
 import { metaFor } from "../shared/games.ts";
 
 /**
@@ -227,8 +231,11 @@ export function App() {
   const copiedFrom = new Set(
     tasks.tasks.flatMap((t) => (t.from === undefined ? [] : [t.from])),
   );
+  // Every built-in the reader could track, for the lists that offer them; the
+  // strip carries only those not stopped one by one.
+  const routinesHidden = new Set(prefs.routinesHidden ?? []);
   const routines = activeRoutines(routineRule(prefs), copiedFrom);
-  const stripTasks = [...tasks.tasks, ...routines];
+  const stripTasks = [...tasks.tasks, ...routines.filter((r) => !routinesHidden.has(r.id))];
 
   /**
    * Copy a built-in into the reader's own tasks, ticks and numbers included.
@@ -506,6 +513,39 @@ export function App() {
         ...(patch.weekly !== undefined ? { showWeeklyTasks: patch.weekly } : {}),
         ...(patch.monthly !== undefined ? { showMonthlyTasks: patch.monthly } : {}),
       }),
+    standing: (focus === null ? enabled : [focus]).flatMap((game): StripStanding[] => {
+      if (isCustomGameId(game)) return [];
+      const rule = routineRule(prefs);
+      return [
+        {
+          id: dailiesId(game as GameId),
+          game,
+          title: gameMeta(game).dailyTasks,
+          kind: "chore",
+          tracked: shownFor(choreRule(prefs), game),
+        },
+        // A copy the reader made stands in for its built-in, so the original is
+        // not offered; the copy is theirs, in Your own.
+        ...routinesFor(game)
+          .filter((r) => !copiedFrom.has(r.id))
+          .map((r): StripStanding => ({
+            id: r.id,
+            game,
+            title: r.title,
+            kind: "routine",
+            tracked: shownFor(rule, game) && !routinesHidden.has(r.id),
+          })),
+      ];
+    }),
+    onTrack: (item, track) => {
+      if (item.kind === "chore") {
+        const { on, off } = setFor(choreRule(prefs), item.game, track);
+        update({ choresOn: on, choresOff: off });
+        return;
+      }
+      const routine = routinesFor(item.game).find((r) => r.id === item.id);
+      if (routine !== undefined) update(trackRoutinePatch(prefs, routine, track));
+    },
   };
   const headline = nextToExpire(todo, HEADLINE_DEADLINES);
 
@@ -851,6 +891,8 @@ export function App() {
           onRemoveTask: tasks.removeTask,
           routines,
           onMakeItMine: makeItMine,
+          routinesHidden,
+          onTrackRoutine: (routine: Routine, track: boolean) => update(trackRoutinePatch(prefs, routine, track)),
           now,
           // The index lists rules; the sheet opens rows. A repeating rule's
           // own id is never a row — the lists hold its occurrences — so it is

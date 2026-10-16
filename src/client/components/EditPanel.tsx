@@ -36,6 +36,19 @@ export interface StripEvent {
   maxDays: number | null;
 }
 
+/**
+ * Something the strip carries on a game's behalf rather than from the feed: its
+ * standing chore (`dailies:<game>`) or a built-in weekly or monthly task
+ * (`routine:`). No goal to set — only whether the reader tracks it.
+ */
+export interface StripStanding {
+  id: string;
+  game: LaneId;
+  title: string;
+  kind: "chore" | "routine";
+  tracked: boolean;
+}
+
 /** Which parts of the strip are switched on. */
 export interface StripShown {
   chores: boolean;
@@ -58,17 +71,21 @@ export interface StripEditor {
   /** Whether there is any weekly or monthly task to switch: a switch with nothing behind it is not offered. */
   hasTasks: { weekly: boolean; monthly: boolean };
   onShown: (patch: Partial<StripShown>) => void;
+  /** Chores and built-ins of the strip's games, tracked or not; chore first in each game. */
+  standing: StripStanding[];
+  /** Track one, or stop. App writes the prefs that already decide it — nothing new for a chore. */
+  onTrack: (item: StripStanding, track: boolean) => void;
 }
 
 /**
- * Events by lane: the reader's order first, then any lane only an event brought
+ * Items by lane: the reader's order first, then any lane only an item brought
  * — the rule `dailyGroups` follows — and never re-sorted inside a lane. A lane
  * with nothing in it is dropped. Pure.
  */
-export function laneGroups(
+export function laneGroups<T extends { game: LaneId }>(
   games: readonly LaneId[],
-  events: readonly StripEvent[],
-): { game: LaneId; events: StripEvent[] }[] {
+  events: readonly T[],
+): { game: LaneId; events: T[] }[] {
   const lanes: LaneId[] = [...games];
   for (const event of events) if (!lanes.includes(event.game)) lanes.push(event.game);
   return lanes
@@ -98,7 +115,7 @@ export function EditPanel({
    * all at once buried the strip's own events under a wall of pills.
    */
   const [adding, setAdding] = useState<LaneId | null>(initialAdding);
-  const { inStrip, addable, shown, hasTasks } = editor;
+  const { inStrip, addable, shown, hasTasks, standing } = editor;
 
   const add = (event: StripEvent) => {
     editor.onDaily(event.id, dailyOverride(true, event.detected));
@@ -106,19 +123,40 @@ export function EditPanel({
     setOpen(event.id);
   };
 
-  const groups = laneGroups(games, [...inStrip, ...addable]);
+  const groups = laneGroups<StripEvent | StripStanding>(games, [...standing, ...inStrip, ...addable]);
+  const untracked = standing.filter((s) => !s.tracked);
 
   return (
     <div className="relative mt-3 flex flex-col gap-3">
-      {groups.map(({ game, events }) => {
+      {groups.map(({ game, events: items }) => {
         const meta = gameMeta(game);
-        const here = events.filter((e) => inStrip.includes(e));
-        const more = events.filter((e) => addable.includes(e));
+        const kept = standing.filter((s) => s.game === game && s.tracked);
+        const here = inStrip.filter((e) => items.includes(e));
+        // What the game could track and does not: its chore or built-ins when
+        // off, then its running events — one list, so "Track" means one thing.
+        const more: (StripEvent | StripStanding)[] = [
+          ...untracked.filter((s) => s.game === game),
+          ...addable.filter((e) => items.includes(e)),
+        ];
         return (
           <div key={game}>
             <p className="text-[0.6875rem] font-semibold" style={{ color: meta.hue }}>
               {meta.name}
             </p>
+            {/* No goal to open, so the way out sits on the row itself. */}
+            {kept.map((item) => (
+              <div key={item.id} className="mt-1.5 flex items-baseline justify-between gap-3 text-xs">
+                <span className="truncate text-muted">{item.title}</span>
+                <button
+                  type="button"
+                  onClick={() => editor.onTrack(item, false)}
+                  aria-label={`Stop tracking ${item.title}`}
+                  className="shrink-0 text-faint transition-colors hover:text-muted"
+                >
+                  Stop tracking
+                </button>
+              </div>
+            ))}
             {here.map((event) => {
               const isOpen = open === event.id;
               return (
@@ -155,8 +193,9 @@ export function EditPanel({
                         >
                           Open details
                         </button>
-                        {/* The sheet's "not a daily" control and wording: the
-                            goal goes with it, so the two never contradict. */}
+                        {/* The sheet's "not a daily" control: the goal goes
+                            with it, so the two never contradict. Named as the
+                            chore's and built-ins' are, since it does the same. */}
                         <button
                           type="button"
                           onClick={() => {
@@ -166,8 +205,8 @@ export function EditPanel({
                           className="text-faint transition-colors hover:text-muted"
                         >
                           {event.hasStoredGoal
-                            ? "Remove from dailies — removes the goal"
-                            : "Remove from dailies"}
+                            ? "Stop tracking — removes the goal"
+                            : "Stop tracking"}
                         </button>
                       </div>
                     </div>
@@ -182,7 +221,7 @@ export function EditPanel({
                 aria-expanded={adding === game}
                 className="mt-1.5 text-xs text-faint transition-colors hover:text-muted"
               >
-                Add an event · {more.length}
+                Track · {more.length}
               </button>
             )}
             {more.length > 0 && adding === game && (
@@ -191,8 +230,8 @@ export function EditPanel({
                   <li key={event.id}>
                     <button
                       type="button"
-                      onClick={() => add(event)}
-                      aria-label={`Add ${event.title} to dailies`}
+                      onClick={() => ("kind" in event ? editor.onTrack(event, true) : add(event))}
+                      aria-label={`Track ${event.title}`}
                       className="flex max-w-[15rem] items-center gap-1.5 rounded-full border border-dashed border-hairline px-3 py-1.5 text-xs text-faint transition-colors hover:border-faint hover:text-muted"
                     >
                       <svg viewBox="0 0 16 16" aria-hidden className="size-3 shrink-0">
@@ -214,9 +253,9 @@ export function EditPanel({
         );
       })}
 
-      {addable.length === 0 && (
+      {addable.length === 0 && untracked.length === 0 && (
         <p className="text-[0.6875rem] leading-relaxed text-faint">
-          Every running event is already here. One that hasn't started joins the list to add once
+          Everything running is tracked. An event that hasn't started joins the list to track once
           it opens.
         </p>
       )}

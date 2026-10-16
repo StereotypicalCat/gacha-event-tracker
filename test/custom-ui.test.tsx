@@ -1337,4 +1337,19 @@ describe("built-in weekly tasks in Your own", () => {
     expect(html).toContain('href="https://game8.co/games/Zenless-Zone-Zero/archives/484723"');
     expect(html).toContain("Make it mine");
   });
+
+  test("each can be tracked or not, and one not tracked stays listed so it can come back", async () => {
+    const { routinesFor } = await import("../src/shared/routines.ts");
+    const noop = () => {};
+    const html = render(
+      <YourOwn games={GAMES} events={{}} lanes={["zzz"]} now={0} onOpen={noop}
+        onAddGame={noop} onEditGame={noop} onRemoveGame={() => ({ removed: true, blockedBy: 0 })}
+        onAddEvent={noop} onAddTask={noop} onEditTask={noop} onRemoveTask={noop} tasks={[]}
+        routines={routinesFor("zzz")} onMakeItMine={noop}
+        routinesHidden={new Set(["routine:zzz:ridu-weekly"])} onTrackRoutine={noop} />,
+    );
+    expect(html).toContain("Ridu Weekly");
+    expect(html).toContain("Not tracked");
+    expect(html).toContain('aria-label="Track Ridu Weekly"');
+  });
 });

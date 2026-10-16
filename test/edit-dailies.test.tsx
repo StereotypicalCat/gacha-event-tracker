@@ -11,6 +11,7 @@ import {
   laneGroups,
   type StripEditor,
   type StripEvent,
+  type StripStanding,
 } from "../src/client/components/EditPanel.tsx";
 import { GameMetaProvider } from "../src/client/state/gameMeta.tsx";
 import { metaFor } from "../src/shared/games.ts";
@@ -76,6 +77,8 @@ function editor(over: Partial<StripEditor> = {}): StripEditor {
     shown: { chores: true, weekly: true, monthly: true },
     hasTasks: { weekly: true, monthly: false },
     onShown: () => {},
+    standing: [],
+    onTrack: () => {},
     ...over,
   };
 }
@@ -169,12 +172,12 @@ describe("EditPanel", () => {
     // Closed, a game says how many it could add and lists none of them: with
     // every game on, the open list was a hundred pills deep.
     const closed = render(<EditPanel games={["genshin", "hsr"]} editor={editor()} />);
-    expect(closed).toMatch(/Add an event · (<!-- -->)?1/);
-    expect(closed).not.toContain("Add Spiral Abyss to dailies");
+    expect(closed).toMatch(/Track · (<!-- -->)?1/);
+    expect(closed).not.toContain("Track Spiral Abyss");
     const open = render(
       <EditPanel games={["genshin", "hsr"]} editor={editor()} initialAdding="genshin" />,
     );
-    expect(open).toMatch(/aria-label="Add Spiral Abyss to dailies"/);
+    expect(open).toMatch(/aria-label="Track Spiral Abyss"/);
   });
 
   test("a goal this version cannot read is said, not shown as none", () => {
@@ -194,7 +197,7 @@ describe("EditPanel", () => {
     expect(html).toContain("Check-in goal");
     expect(html).toContain("Open details");
     // Same wording as the sheet, so the reader is told what goes with it.
-    expect(html).toContain("Remove from dailies — removes the goal");
+    expect(html).toContain("Stop tracking — removes the goal");
   });
 
   test("the switches are offered only for what exists", () => {
@@ -208,8 +211,50 @@ describe("EditPanel", () => {
     const html = render(
       <EditPanel games={["genshin"]} editor={editor({ inStrip: [temper], addable: [] })} />,
     );
-    expect(html).not.toContain("to dailies\"");
-    expect(html).toContain("Every running event is already here");
+    expect(html).not.toContain('aria-label="Track');
+    expect(html).toContain("Everything running is tracked");
+  });
+
+  const chore: StripStanding = {
+    id: "dailies:genshin", game: "genshin", title: "Commissions, resin", kind: "chore", tracked: true,
+  };
+  const bosses: StripStanding = {
+    id: "routine:genshin:weekly-bosses", game: "genshin", title: "Weekly Bosses", kind: "routine", tracked: true,
+  };
+  const bargains: StripStanding = {
+    id: "routine:genshin:paimons-bargains", game: "genshin", title: "Paimon's Bargains", kind: "routine", tracked: false,
+  };
+
+  test("a game's chore and built-ins are listed with its events, each with Stop tracking", () => {
+    const html = render(
+      <EditPanel games={["genshin"]} editor={editor({ inStrip: [temper], addable: [], standing: [chore, bosses] })} />,
+    );
+    // Chore first, then built-ins, then the events — the order the strip draws.
+    const at = (t: string) => html.indexOf(t);
+    expect(at("Commissions, resin")).toBeLessThan(at("Weekly Bosses"));
+    expect(at("Weekly Bosses")).toBeLessThan(at("To Temper Thyself"));
+    expect(html).toContain('aria-label="Stop tracking Commissions, resin"');
+    expect(html).toContain('aria-label="Stop tracking Weekly Bosses"');
+  });
+
+  test("what a game could track and does not is counted under Track, events included", () => {
+    const ed = editor({ inStrip: [temper], addable: [abyss], standing: [{ ...chore, tracked: false }, bosses, bargains] });
+    const closed = render(<EditPanel games={["genshin"]} editor={ed} />);
+    expect(closed).toMatch(/Track · (<!-- -->)?3/);
+    expect(closed).not.toContain("Everything running is tracked");
+    const open = render(<EditPanel games={["genshin"]} editor={ed} initialAdding="genshin" />);
+    expect(open).toContain('aria-label="Track Commissions, resin"');
+    expect(open).toContain('aria-label="Track Paimon&#x27;s Bargains"');
+    expect(open).toContain('aria-label="Track Spiral Abyss"');
+    expect(open).not.toContain('aria-label="Track Weekly Bosses"');
+  });
+
+  test("a game with only standing items still gets its group", () => {
+    const html = render(
+      <EditPanel games={["genshin", "hsr"]} editor={editor({ inStrip: [], addable: [], standing: [chore] })} />,
+    );
+    expect(html).toContain("Genshin Impact");
+    expect(html).not.toContain("Honkai: Star Rail");
   });
 });
 

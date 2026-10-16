@@ -71,6 +71,8 @@ export function YourOwn({
   onRemoveTask,
   routines = [],
   onMakeItMine,
+  routinesHidden,
+  onTrackRoutine,
 }: {
   games: CustomGames;
   events: CustomEvents;
@@ -92,9 +94,15 @@ export function YourOwn({
   onAddTask?: ((draft: TaskDraft) => void) | undefined;
   onEditTask?: ((id: string, draft: TaskDraft) => void) | undefined;
   onRemoveTask?: ((id: string) => void) | undefined;
-  /** Built-in weekly tasks the reader has on, and how to copy one into their own. */
+  /** Built-in tasks of the games the reader has on, and how to copy one into their own. */
   routines?: readonly Routine[] | undefined;
   onMakeItMine?: ((routine: Routine) => void) | undefined;
+  /**
+   * The ones stopped one by one. Still listed: this is where a reader finds one
+   * again, and a built-in absent from here would be off with no way back on.
+   */
+  routinesHidden?: ReadonlySet<string> | undefined;
+  onTrackRoutine?: ((routine: Routine, track: boolean) => void) | undefined;
 }) {
   const gameMeta = useGameMeta();
   const [adding, setAdding] = useState<"game" | "event" | "task" | null>(null);
@@ -326,7 +334,9 @@ export function YourOwn({
         <>
           <p className="mt-4 text-xs text-faint">Built-in weekly tasks</p>
           <ul className="mt-1.5 flex flex-col gap-1">
-            {routines.map((routine) => (
+            {routines.map((routine) => {
+              const tracked = !(routinesHidden?.has(routine.id) ?? false);
+              return (
               <li key={routine.id}>
                 <div className="flex items-baseline gap-2">
                   <span className="shrink-0 text-xs text-faint">{gameMeta(routine.game).short}</span>
@@ -346,13 +356,25 @@ export function YourOwn({
                   >
                     Make it mine
                   </button>
+                  {onTrackRoutine !== undefined && (
+                    <button
+                      type="button"
+                      onClick={() => onTrackRoutine(routine, !tracked)}
+                      aria-label={`${tracked ? "Stop tracking" : "Track"} ${routine.title}`}
+                      className="shrink-0 text-xs text-faint transition-colors hover:text-ink"
+                    >
+                      {tracked ? "Stop tracking" : "Track"}
+                    </button>
+                  )}
                 </div>
                 <p className="text-xs text-faint">
+                  {!tracked && "Not tracked · "}
                   {taskCaption(routine)}
                   {routine.note !== undefined && ` · ${routine.note}`}
                 </p>
               </li>
-            ))}
+              );
+            })}
           </ul>
         </>
       )}
