@@ -51,6 +51,24 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "cycle-built-ins",
+    date: "2026-10-16",
+    kind: "games",
+    title: "Endgame modes on their own cycles for Star Rail, ZZZ, Wuthering Waves and NTE",
+    body: "Pure Fiction, Memory of Chaos, Apocalyptic Shadow, Shiyu Defense, Deadly Assault, Tower of Adversity, Beyond the Rails and the Tycoon Incentive Fund, each showing the days left in its cycle. Star Rail's shared Divergent Universe points are weekly.",
+    ref: "524b6f2",
+    note: "cycle-routines",
+  },
+  {
+    id: "cycle-tasks",
+    date: "2026-10-16",
+    kind: "feature",
+    title: "Set up a task that repeats every so many days",
+    body: "Add a task now offers Every N days, from a day a cycle began, for a two-week endgame mode, say. Cycles sit under the dailies with the weekly and monthly tasks, and have their own switch.",
+    ref: "be3c140",
+    note: "cycle-routines",
+  },
+  {
     id: "nte-europe-reset",
     date: "2026-10-16",
     kind: "fix",
@@ -517,6 +535,20 @@ export const ENTRIES: Entry[] = [
 ];
 
 export const NOTES: Note[] = [
+  {
+    id: "cycle-routines",
+    date: "2026-10-16",
+    title: "Tasks and built-ins on longer cycles",
+    summary: [
+      "A task can now repeat every so many days from a day a cycle began, not only every week or month. It rolls at the game's daily reset like the others, sits in the row under the dailies, and shows how many days its cycle has left.",
+      "Star Rail's three endgame modes, ZZZ's Shiyu Defense and Deadly Assault, Wuthering Waves' Tower of Adversity and NTE's Beyond the Rails and Tycoon Incentive Fund are built in, each from a dated source and anchored on a reset read in the game. The modes are ticked once a cycle; the Fund counts fons against its base cap, and yours may be higher.",
+      "Beyond the Rails ends at the same moment on every server, the Asia server's reset, so it rolls then for everyone.",
+      "Cycle tasks have their own switch beside the weekly and monthly ones, on unless you turn it off.",
+    ],
+    from: "a80f581",
+    to: "524b6f2",
+    specs: ["docs/superpowers/specs/2026-10-16-cycle-routines-design.md"],
+  },
   {
     id: "built-in-routines",
     date: "2026-10-16",
