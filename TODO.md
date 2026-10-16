@@ -1,5 +1,16 @@
 # TODO
 
+- [ ] Make it clear which game each *This week & month* chip belongs to (owner, 2026-10-16: "it can
+  become a bit unclear"). With built-ins for seven games, that row now holds many chips whose
+  titles do not name their game — "Weekly Routine", "Weekly Challenge", "City Stamina",
+  "Realm of Breakthrough" — and today only the chip's hue says which game it is
+  (`Dailies.tsx`, the `longer` row; the comment above `today` explains why the strip has no
+  per-game headings: they would push *next to expire* down the page). Hue alone is weak — some
+  games' hues are close, and colour cannot be the only carrier of meaning for accessibility.
+  Options to weigh in a short design: the game's short name before the title on each chip
+  (as *Your own* already does), one compact game label per run of chips (the row is already in
+  game order), or grouping by game only in this row. Keep the row short, check it in a browser at
+  phone width, and keep the chip's accessible name naming the game (it already does).
 - [ ] **Sub-project 2 of the "usual repeatable events" request: N-week cycles.** Built-ins today
   repeat weekly or monthly; many endgame modes run on longer fixed cycles. Add a period unit anchored
   to a known start (every N weeks or days from a dated reset). It is a stored-shape change, so it
