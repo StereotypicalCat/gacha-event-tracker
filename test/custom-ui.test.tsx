@@ -1322,7 +1322,7 @@ describe("review fixes: the month-day field", () => {
   });
 });
 
-describe("built-in weekly tasks in Your own", () => {
+describe("built-in weekly and monthly tasks in Your own", () => {
   test("listed with their source's date, and a way to make one yours", async () => {
     const { routinesFor } = await import("../src/shared/routines.ts");
     const noop = () => {};

@@ -332,7 +332,7 @@ export function YourOwn({
           a copy that replaces it while it exists, numbers and ticks included. */}
       {routines.length > 0 && onMakeItMine !== undefined && (
         <>
-          <p className="mt-4 text-xs text-faint">Built-in weekly tasks</p>
+          <p className="mt-4 text-xs text-faint">Built-in weekly and monthly tasks</p>
           <ul className="mt-1.5 flex flex-col gap-1">
             {routines.map((routine) => {
               const tracked = !(routinesHidden?.has(routine.id) ?? false);

@@ -304,17 +304,17 @@ describe("Controls: backup and export actions", () => {
 });
 
 
-describe("Controls: built-in weekly tasks", () => {
+describe("Controls: built-in weekly and monthly tasks", () => {
   test("one global switch, not a checkbox per game", () => {
     const html = render(PREFS, 0, ["genshin", "zzz", "endfield"]);
-    expect(html).toContain("Show built-in weekly tasks");
+    expect(html).toContain("Show built-in weekly and monthly tasks");
     expect(html).not.toContain("Built-in weekly tasks for");
   });
 
   test("it reads showRoutines, and an unanswered one is off", () => {
     const games = ["genshin", "zzz"];
     const box = (html: string) =>
-      html.match(/<input type="checkbox"[^>]*>(?=[^<]*<span>Show built-in weekly tasks)/)?.[0];
+      html.match(/<input type="checkbox"[^>]*>(?=[^<]*<span>Show built-in weekly and monthly tasks)/)?.[0];
     expect(box(render(PREFS, 0, games))).not.toContain('checked=""');
     expect(box(render({ ...PREFS, showRoutines: true }, 0, games))).toContain('checked=""');
   });
@@ -325,7 +325,7 @@ describe("Controls: built-in weekly tasks", () => {
   });
 
   test("no switch when no game on the list has any", () => {
-    expect(render(PREFS)).not.toContain("built-in weekly tasks");
+    expect(render(PREFS)).not.toContain("built-in weekly and monthly tasks");
   });
 });
 

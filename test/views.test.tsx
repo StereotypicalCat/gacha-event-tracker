@@ -1495,7 +1495,7 @@ describe("review fixes: an event's points goal is not a daily", () => {
   });
 });
 
-describe("built-in weekly tasks in the strip", () => {
+describe("built-in weekly and monthly tasks in the strip", () => {
   const NOW = Date.parse("2026-10-15T12:00:00.000Z");
   const ridu = routinesFor("zzz")[0]!;
   const status: GoalStatus = {
@@ -1516,11 +1516,11 @@ describe("built-in weekly tasks in the strip", () => {
         daysFor={() => []} onToggleDay={() => {}} ask={{ game: "zzz", onAnswer: () => {} }} />,
     );
     expect(html).toContain("Track Zenless Zone Zero");
-    expect(html).toContain("weekly tasks?");
+    expect(html).toContain("weekly and monthly tasks?");
     expect(html).toContain("No thanks");
     // Heard out of context, "Yes" has to say what it agrees to.
-    expect(html).toContain(`aria-label="Yes, track Zenless Zone Zero's built-in weekly tasks"`.replace("'", "&#x27;"));
-    expect(html).toContain(`aria-label="No thanks to Zenless Zone Zero's built-in weekly tasks"`.replace("'", "&#x27;"));
+    expect(html).toContain(`aria-label="Yes, track Zenless Zone Zero's built-in weekly and monthly tasks"`.replace("'", "&#x27;"));
+    expect(html).toContain(`aria-label="No thanks to Zenless Zone Zero's built-in weekly and monthly tasks"`.replace("'", "&#x27;"));
   });
 
   test("with nothing to show and nothing to ask, the strip is absent", () => {

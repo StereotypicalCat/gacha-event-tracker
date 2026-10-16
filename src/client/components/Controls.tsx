@@ -281,14 +281,17 @@ export function Controls({
               <PerGameSwitch
                 checked={routines.all}
                 onChange={(showRoutines) => onUpdate({ showRoutines })}
-                label="Show built-in weekly tasks"
-                hint="Weekly tasks the app knows for some games, each from a cited page and dated by it. Off hides them; your ticks and numbers are kept."
+                label="Show built-in weekly and monthly tasks"
+                hint="Weekly and monthly tasks the app knows for some games, each from a cited page and dated by it. Off hides them; your ticks and numbers are kept."
                 rule={routines}
                 games={routineGames}
-                chipsLabel="Built-in weekly tasks per game"
+                chipsLabel="Built-in weekly and monthly tasks per game"
                 titleFor={(game) => {
                   const list = routinesFor(game);
-                  return `${list.map((r) => r.title).join(", ")} — from a source as of ${asOfLabel(list[0]!.asOf)}`;
+                  // Several pages per game now: quote the oldest, so the
+                  // tooltip never makes a year-old figure look current.
+                  const oldest = list.map((r) => r.asOf).sort()[0]!;
+                  return `${list.map((r) => r.title).join(", ")} — ${list.length > 1 ? "from sources, the oldest" : "from a source"} as of ${asOfLabel(oldest)}`;
                 }}
                 onSet={(game, value) => {
                   const { on, off } = setFor(routines, game, value);

@@ -5,7 +5,7 @@ import { shownFor, type PerGame } from "./perGame.ts";
 import { MeasureSchema, type TaskShape } from "./task.ts";
 
 /**
- * Weekly tasks the app ships for a game — the built-in counterpart of a
+ * Weekly and monthly tasks the app ships for a game — the built-in counterpart of a
  * reader's own `mytask:` (PRD F17).
  *
  * Each is a claim about a game we did not write, so it is held to the bar the

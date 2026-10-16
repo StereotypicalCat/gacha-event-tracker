@@ -334,7 +334,7 @@ export function Dailies({
   tasks?: readonly StripTask[] | undefined;
   taskStatusFor?: ((task: StripTask) => GoalStatus | undefined) | undefined;
   /**
-   * A game whose built-in weekly tasks the reader has not been asked about yet,
+   * A game whose built-in weekly and monthly tasks the reader has not been asked about yet,
    * and how to record the answer. Asked here because this is where the tasks
    * would appear; one line, never a modal, never twice.
    */
@@ -427,13 +427,13 @@ export function Dailies({
     ask === undefined ? null : (
       <div className="relative flex flex-wrap items-baseline gap-x-3 gap-y-1 text-xs">
         <p className="text-muted">
-          Track {gameMeta(ask.game).name}'s built-in weekly tasks?
+          Track {gameMeta(ask.game).name}'s built-in weekly and monthly tasks?
         </p>
         <div className="flex gap-3">
           <button
             type="button"
             onClick={() => ask.onAnswer(true)}
-            aria-label={`Yes, track ${gameMeta(ask.game).name}'s built-in weekly tasks`}
+            aria-label={`Yes, track ${gameMeta(ask.game).name}'s built-in weekly and monthly tasks`}
             className="font-medium text-near transition-colors hover:text-ink"
           >
             Yes
@@ -441,7 +441,7 @@ export function Dailies({
           <button
             type="button"
             onClick={() => ask.onAnswer(false)}
-            aria-label={`No thanks to ${gameMeta(ask.game).name}'s built-in weekly tasks`}
+            aria-label={`No thanks to ${gameMeta(ask.game).name}'s built-in weekly and monthly tasks`}
             className="text-faint transition-colors hover:text-muted"
           >
             No thanks
