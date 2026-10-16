@@ -249,7 +249,7 @@ Looked for on 2026-10-14 and not shipped. Each is a candidate the owner may know
 | Endfield | Protocol Pass weekly missions | Missions change every week; no fixed target or EXP cap stated, and the owner found none in game (2026-10-14) |
 | Endfield | Algorithmic Memories, Credit Store, Arsenal Exchange | No figure; Beta-era; daily store; a shop rotation, not a chore |
 | Nikki | Merit Arena, Pinnacle Contest | No wiki page (2026-10-16); Merit Arena's weekly caps change per version and only a fan account gives numbers; Pinnacle Contest runs in half-month periods → sub-project 2 |
-| ZZZ | Shiyu Defense, Deadly Assault | Multi-week cycles → sub-project 2; the owner's in-game dates are in § Scope |
+| ZZZ | Shiyu Defense, Deadly Assault | Multi-week cycles → sub-project 2; the owner's in-game dates are in § Scope. **Shipped 2026-10-16** as two-week cycle built-ins ([cycle routines spec](2026-10-16-cycle-routines-design.md)) |
 | Wuwa | Oscillated Coral exchange (gacha pulls) | Resets with each version update, not a week or month — the owner confirmed this in game, 2026-10-16. A dated window → sub-project 3 (§ Scope) |
 | Wuwa | Afterglow Coral exchange, Souvenir Stores, Tactical Hologram shops | No limit, or no stated reset |
 | Wuwa | Simulation Training, Forgery | Cost Waveplates; no weekly cap |

@@ -83,6 +83,8 @@ describe("ROUTINES", () => {
       ["Signal Shop: Encrypted Master Tapes", { unit: "month", startsOn: 1 }, { kind: "amount", target: 5, unit: "tapes" }],
       ["Signal Shop: Master Tapes", { unit: "month", startsOn: 1 }, { kind: "amount", target: 5, unit: "tapes" }],
       ["Signal Shop: Boopons", { unit: "month", startsOn: 1 }, { kind: "amount", target: 5, unit: "Boopons" }],
+      ["Shiyu Defense", { unit: "cycle", days: 14, from: "2026-10-16" }, { kind: "days", required: 1 }],
+      ["Deadly Assault", { unit: "cycle", days: 14, from: "2026-10-23" }, { kind: "days", required: 1 }],
     ]);
     expect(shape("endfield")).toEqual([
       ["Weekly Routine", week, { kind: "amount", target: 10, unit: "points" }],

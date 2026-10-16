@@ -357,6 +357,31 @@ export const ROUTINES: readonly Routine[] = [
     checked: "2026-10-16",
     note: "Bought with Bangbucks, 5 a month per the wiki; Boopons pay for Bangboo pulls. Confirmed in game, 2026-10-16.",
   },
+  // The two endgame modes alternate Fridays, each every two weeks. Anchors are
+  // the owner's in-game readings (2026-10-16): Shiyu rolled that day, Deadly
+  // Assault a week later.
+  {
+    id: "routine:zzz:shiyu-defense",
+    game: "zzz",
+    title: "Shiyu Defense",
+    period: { unit: "cycle", days: 14, from: "2026-10-16" },
+    measure: { kind: "days", required: 1 },
+    source: "https://zenless-zone-zero.fandom.com/wiki/Shiyu_Defense/Critical_Node",
+    asOf: "2026-01-02",
+    checked: "2026-10-16",
+    note: "Critical Node. Fridays, alternating weeks with Deadly Assault.",
+  },
+  {
+    id: "routine:zzz:deadly-assault",
+    game: "zzz",
+    title: "Deadly Assault",
+    period: { unit: "cycle", days: 14, from: "2026-10-23" },
+    measure: { kind: "days", required: 1 },
+    source: "https://zenless-zone-zero.fandom.com/wiki/Deadly_Assault",
+    asOf: "2026-07-31",
+    checked: "2026-10-16",
+    note: "Fridays, alternating weeks with Shiyu Defense.",
+  },
 
   // Arknights: Endfield.
   {
