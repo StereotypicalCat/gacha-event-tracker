@@ -1,6 +1,6 @@
 # TODO
 
-- [ ] Move NTE's Europe server to UTC+2. `games.ts` rolls it at 05:00 UTC+1 (04:00 UTC), per
+- [x] Move NTE's Europe server to UTC+2. `games.ts` rolls it at 05:00 UTC+1 (04:00 UTC), per
   Game-Time-Master and GameWith, but the game disagrees. On 2026-10-16 the owner read: a weekly
   timer of 3d 2h at 00:40 UTC (→ Monday 2026-10-19 **03:00 UTC**); Realm of Greed's own text, "Gold
   Heist resets every Monday at 5:00"; and the Tycoon Incentive Fund at 10d 2h at 00:43 UTC (→
@@ -10,6 +10,7 @@
   and update `docs/DATA-MODEL.md`'s reset table and Game-Time-Master's place as the source. One
   NTE timer read after 2026-10-25 would confirm it (it should still land on 03:00 UTC). See the
   [built-in routines spec](docs/superpowers/specs/2026-10-14-built-in-routines-design.md).
+  Done 2026-10-16 (`resetOffsets.europe: 2`); a timer read after 2026-10-25 would still confirm it.
 - [ ] Confirm Infinity Nikki's *Realm of Breakthrough* in game: still two Phantom Trials (Wish
   Master Chigda, Guardian Beast Whirls), once a week each, renewed at the Monday reset? The owner
   could not check on 2026-10-16 ("insufficient story progress" — it unlocks after *Showdown with

@@ -419,7 +419,7 @@ reader cannot see.
 | Genshin, Star Rail, ZZZ, Wuwa, Honkai Impact 3rd | 04:00 | region (EU = UTC+1) | 03:00 | 05:00 / 04:00 |
 | Fate/Grand Order | 04:00 | region (see below — the real one shifts) | 03:00 | 05:00 / 04:00 |
 | Infinity Nikki, Asia / America / Europe | 04:00 | UTC+8 / **UTC-7** / **UTC+2** | 20:00 / 11:00 / 02:00 | 04:00 / 03:00 in Europe |
-| Neverness to Everness, Asia / America / Europe | **05:00** | UTC+8 / **UTC-4** / UTC+1 | 21:00 / 09:00 / 04:00 | 06:00 / 05:00 in Europe |
+| Neverness to Everness, Asia / America / Europe | **05:00** | UTC+8 / **UTC-4** / **UTC+2** | 21:00 / 09:00 / 03:00 | 05:00 / 04:00 in Europe |
 | Arknights, all regions | 04:00 | UTC-7 (one Global server) | 11:00 | 13:00 / 12:00 |
 | Endfield, Europe | 04:00 | UTC-5 (on the Americas server) | 09:00 | 11:00 / 10:00 |
 | Endfield, Asia / Americas | 04:00 | regional default | 20:00 / 09:00 | — |
@@ -446,6 +446,12 @@ assumption no source had checked, and every one of them was wrong for at least o
 Nikki's was the report that found it: its American readers' day rolled two hours early. Correcting
 them re-labelled ticks readers had already logged, which an override that arrives with the game
 never does — so check Game-Time-Master when a game is added, not after it has readers.
+
+**The game outranks Game-Time-Master when the two disagree.** Neverness to Everness's Europe server
+is UTC+2, not the UTC+1 Game-Time-Master lists: on 2026-10-16 the owner read two in-game timers that
+both ran out at 03:00 UTC — one on 26 Oct, after Europe's clocks change, which rules out a server
+following daylight saving — and Realm of Greed's own text, "resets every Monday at 5:00". Moving it
+re-labelled the one hour 03:00–04:00 UTC of every European reader's NTE day.
 
 Arknights' offset is read off the source rather than assumed — every ending event on
 arknights.wiki.gg carries an exact end of `10:59:59Z`, which is `03:59:59` at UTC-7, one second

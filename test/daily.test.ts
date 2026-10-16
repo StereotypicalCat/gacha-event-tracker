@@ -525,7 +525,7 @@ describe("reset clocks, per server, as Game-Time-Master states them", () => {
     ["stellasora", "europe", "20:00", -7],
     ["nte", "asia", "21:00", 8],
     ["nte", "america", "09:00", -4],
-    ["nte", "europe", "04:00", 1],
+    ["nte", "europe", "03:00", 2],
     ["gfl2", "asia", "21:00", 8],
     ["gfl2", "america", "05:00", -8],
     ["gfl2", "europe", "05:00", -8],

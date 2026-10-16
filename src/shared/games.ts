@@ -91,7 +91,12 @@ export const GAMES: Record<GameId, GameMeta> = {
   // per Game-Time-Master (github.com/cicerakes/Game-Time-Master). The 05:00 hour
   // is corroborated by neverness.gg and vpesports; the America offset is the one
   // guides disagree on, and Game-Time-Master's is the one taken.
-  nte: { id: "nte", name: "Neverness to Everness", short: "NTE", hue: "#C77DFF" , studio: "Hotta Studio", dailyTasks: "Daily tasks", resetOffsets: { america: -4 }, resetHourLocal: { asia: 5, america: 5, europe: 5 } },
+  // Europe is UTC+2, not Game-Time-Master's UTC+1 — the game itself, read by the
+  // owner on 2026-10-16: a weekly timer and the Tycoon Incentive Fund's both ran
+  // out at 03:00 UTC, the second on 26 Oct, after the clocks change, and Realm of
+  // Greed says "resets every Monday at 5:00". Only 05:00 at a fixed UTC+2 fits all
+  // three.
+  nte: { id: "nte", name: "Neverness to Everness", short: "NTE", hue: "#C77DFF" , studio: "Hotta Studio", dailyTasks: "Daily tasks", resetOffsets: { america: -4, europe: 2 }, resetHourLocal: { asia: 5, america: 5, europe: 5 } },
   // Infinity Nikki resets at 04:00 server time on three servers, and two of them
   // are not on the regional default: America runs UTC-7 and Europe UTC+2, per
   // Game-Time-Master (github.com/cicerakes/Game-Time-Master). The Fandom wiki's
