@@ -42,7 +42,7 @@ describe("fandomversion parser", () => {
     // Only 2.10 (to October 29) has not ended on 2026-10-16.
     const now = fandomVersionParser.parse(page, ctx("2026-10-16T00:00:00.000Z"));
     expect(now.map((e) => [e.title, e.startsAt, e.endsAt])).toEqual([
-      ["Mira Journey", "2026-09-23T00:00:00.000Z", "2026-10-29T00:00:00.000Z"],
+      ["Mira Journey", "2026-09-23T00:00:00.000Z", "2026-10-29T20:00:00.000Z"],
     ]);
   });
 
@@ -52,18 +52,19 @@ describe("fandomversion parser", () => {
       "Follows version 2.10 (The Feather of Justice). That the pass ends with the version was confirmed in game, 2026-10-16.",
     );
     expect(e?.startPrecision).toBe("day");
-    expect(e?.endPrecision).toBe("day");
+    // The table's End Date is the version's last day. The owner's timer on
+    // Europe put the pass's end at ~20:00 UTC on it: Asia's 04:00 reset that
+    // opens the next day, for every server.
+    expect(e?.endsAt).toBe("2026-10-29T20:00:00.000Z");
+    expect(e?.endPrecision).toBe("exact");
     expect(e?.type).toBe("other");
   });
 
-  test("after 2026-10-29 the 2.10 row is gone", async () => {
-    expect(fandomVersionParser.parse(await html, ctx("2026-10-30T00:00:00.000Z"))).toEqual([]);
-  });
-
-  test("the row stays on its last day", async () => {
-    expect(
-      fandomVersionParser.parse(await html, ctx("2026-10-29T05:00:00.000Z")),
-    ).toHaveLength(1);
+  test("the 2.10 row stays through its last day and is gone at Asia's next reset", async () => {
+    const at = async (now: string) => fandomVersionParser.parse(await html, ctx(now)).length;
+    expect(await at("2026-10-29T15:00:00.000Z")).toBe(1);
+    expect(await at("2026-10-29T19:59:00.000Z")).toBe(1);
+    expect(await at("2026-10-29T20:01:00.000Z")).toBe(0);
   });
 
   test("a row without a readable end is skipped, not given one", () => {
@@ -75,7 +76,8 @@ describe("fandomversion parser", () => {
       ]),
       ctx("2026-09-10T00:00:00.000Z"),
     );
-    expect(events.map((e) => e.endsAt)).toEqual(["2026-10-12T00:00:00.000Z"]);
+    // End Date October 12 is the last day: Asia's reset opening the 13th.
+    expect(events.map((e) => e.endsAt)).toEqual(["2026-10-12T20:00:00.000Z"]);
   });
 
   test("a source id with no entry emits nothing", () => {

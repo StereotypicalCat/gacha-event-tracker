@@ -1,5 +1,5 @@
-import { eventId, type GachaEvent } from "../../shared/schema.ts";
-import { latestBoundaryMs } from "../../shared/time.ts";
+import { eventId, type GachaEvent, type GameId, type Region } from "../../shared/schema.ts";
+import { DAY, dayStartMs, latestBoundaryMs } from "../../shared/time.ts";
 import { parseMonthDayYear, type ParsedInstant } from "../dates.ts";
 import { text } from "../html.ts";
 import type { ParseContext } from "../adapters/types.ts";
@@ -53,6 +53,13 @@ export interface VersionPass {
   /** The sentence the summary closes with: the stated link, with its source. */
   readonly link: string;
   readonly evidence: VersionLinkEvidence;
+  /**
+   * When the table's End Date is the version's *last* day rather than the day
+   * it ends on: the pass then ends at `clock`'s reset opening the next day, for
+   * every server. Only where the evidence shows it; absent, the End Date is
+   * read as other day-precision ends are, the reset opening that day.
+   */
+  readonly endsAfterLastDay?: { readonly clock: Region };
 }
 
 /** Keyed by source id, because the claim is a fact about the source. */
@@ -64,8 +71,9 @@ export const VERSION_PASSES: Readonly<Record<string, VersionPass>> = {
       by: "owner",
       on: "2026-10-16",
       reading:
-        "in game, the pass read 13d 19h at 00:47 UTC, ending 2026-10-29 with version 2.10",
+        "in game on Europe, the pass read 13d 19h at 00:47 UTC: an end between 19:47 and 20:47 UTC on 2026-10-29, the table's End Date for version 2.10 — Asia's 04:00 reset opening 2026-10-30, not Europe's",
     },
+    endsAfterLastDay: { clock: "asia" },
   },
 };
 
@@ -146,6 +154,16 @@ function pageUrl(sourceUrl: string): string {
     : `${url.origin}/wiki/${encodeURIComponent(page).replace(/%2F/g, "/")}`;
 }
 
+/** A row's end, moved to the stated reset when the table prints a last day. */
+function endOf(end: ParsedInstant, pass: VersionPass, game: GameId): ParsedInstant {
+  if (pass.endsAfterLastDay === undefined || end.precision !== "day") return end;
+  const next = new Date(Date.parse(end.iso) + DAY).toISOString().slice(0, 10);
+  return {
+    iso: new Date(dayStartMs(next, pass.endsAfterLastDay.clock, game)).toISOString(),
+    precision: "exact",
+  };
+}
+
 export function parseFandomVersionTable(
   body: string,
   ctx: ParseContext,
@@ -161,9 +179,10 @@ export function parseFandomVersionTable(
 
   for (const row of versionRows(rendered).rows) {
     if (row.end.iso <= row.start.iso) continue;
+    const end = endOf(row.end, pass, ctx.game);
     // Day-precision end: judged by the last moment any reset could put it at,
     // not the UTC-midnight placeholder (AGENTS.md § Domain rules).
-    if (latestBoundaryMs(row.end.iso, row.end.precision, ctx.game) < nowMs) {
+    if (latestBoundaryMs(end.iso, end.precision, ctx.game) < nowMs) {
       continue;
     }
 
@@ -175,8 +194,8 @@ export function parseFandomVersionTable(
       summary: `Follows version ${row.number} (${row.name}). ${pass.link}`,
       startsAt: row.start.iso,
       startPrecision: row.start.precision,
-      endsAt: row.end.iso,
-      endPrecision: row.end.precision,
+      endsAt: end.iso,
+      endPrecision: end.precision,
       regionScoped: false,
       regionEnds: null,
       sourceUrl: pageUrl(ctx.sourceUrl),
