@@ -502,8 +502,12 @@ export function Dailies({
 
   // With mixed reset clocks there is no single "resets in", so the header
   // reports the next one to land and says that it is the next one.
-  const soonest = Math.min(...items.map((i) => i.resetsIn));
-  const mixed = new Set(items.map((i) => i.resetsIn)).size > 1;
+  // A built-in on another server's clock (`clock`) rolls a cycle, not the
+  // reader's day: counting it would announce a reset nothing daily follows.
+  const own = items.filter((i) => i.clock === undefined);
+  const clocks = own.length > 0 ? own : items;
+  const soonest = Math.min(...clocks.map((i) => i.resetsIn));
+  const mixed = new Set(clocks.map((i) => i.resetsIn)).size > 1;
   const open = items.find((i) => i.key === editing && i.goal?.measure === "amount");
 
   const { today, longer } = splitByCadence(items);

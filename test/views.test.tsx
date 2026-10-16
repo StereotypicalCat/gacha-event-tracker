@@ -1471,6 +1471,22 @@ describe("weekly and monthly tasks in the dailies strip", () => {
     expect(item!.resetsIn).toBeGreaterThan(chore!.resetsIn);
   });
 
+  test("a clocked built-in does not move the header's reset countdown", () => {
+    const rails = {
+      id: "routine:nte:test-rails", game: "nte", title: "Beyond the Rails",
+      period: { unit: "cycle" as const, days: 14, from: "2026-10-22" },
+      measure: { kind: "days" as const, required: 1 }, clock: "asia" as const,
+    };
+    // 20:00 UTC: Europe's NTE day rolls at 03:00 UTC, seven hours off; Asia's in one.
+    const html = render(
+      <Dailies games={["nte"]} events={[]} region="europe" now={Date.parse("2026-10-21T20:00:00Z")}
+        showChores daysFor={() => []} onToggleDay={() => {}} tasks={[rails]}
+        taskStatusFor={() => undefined} />,
+    );
+    expect(html).not.toContain("next reset in");
+    expect(html).toMatch(/resets in (<!-- -->)?7h/);
+  });
+
   test("a cycle chip shows its days left, under a heading that names it", () => {
     const html = render(
       <Dailies games={["zzz"]} events={[]} region="europe" now={NOW} showChores={false}
