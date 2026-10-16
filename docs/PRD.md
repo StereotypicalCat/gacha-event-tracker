@@ -614,6 +614,11 @@ changes the game's switch.
 built-ins, and the standard-banner pulls most shops sell beside them, added only when the reader
 switches on *Include standard-banner pulls* under the built-ins switch. One answer for every game;
 off by default, so the reader chooses between premium only and both.
+**Endgame modes on longer cycles are built in too** — Star Rail's six-week rotations, ZZZ's
+two-week Shiyu Defense and Deadly Assault, Wuthering Waves' Tower of Adversity, NTE's fortnightly
+Beyond the Rails and Tycoon Incentive Fund — each ticked once a cycle unless a page states a number;
+see `docs/superpowers/specs/2026-10-16-cycle-routines-design.md`. A built-in whose cycle ends at one
+instant on every server rolls on that server's reset for every reader.
 
 **F18 — What changed.**
 The app now says what changed, in two tiers, both tied to git. **Short entries** — one line each,

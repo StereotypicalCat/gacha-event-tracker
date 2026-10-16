@@ -570,6 +570,31 @@ export const ROUTINES: readonly Routine[] = [
     checked: "2026-10-16",
     note: "The delivery from the Old Mailbox in your second apartment: one claim a week. Confirmed in game, 2026-10-16.",
   },
+  // Two fortnightly cycles, anchored on the owner's in-game timers (2026-10-16).
+  {
+    id: "routine:nte:beyond-the-rails",
+    game: "nte",
+    title: "Beyond the Rails",
+    period: { unit: "cycle", days: 14, from: "2026-10-22" },
+    // Read on Europe as ending Wednesday 21:00 UTC: Asia's Thursday reset.
+    clock: "asia",
+    measure: { kind: "days", required: 1 },
+    source: "https://gamewith.net/nte/74216",
+    asOf: "2026-08-13",
+    checked: "2026-10-16",
+    note: "Special routes. Ends at the Asia server's reset on every server, as read on Europe on 2026-10-16.",
+  },
+  {
+    id: "routine:nte:tycoon-fund",
+    game: "nte",
+    title: "Tycoon Incentive Fund",
+    period: { unit: "cycle", days: 14, from: "2026-10-26" },
+    measure: { kind: "amount", target: 1000000, unit: "fons" },
+    source: "https://allthings.how/neverness-to-everness-tycoon-encouragement-fund-what-changed-for-pink-paws-heist/",
+    asOf: "2026-08-15",
+    checked: "2026-10-16",
+    note: "The base cap; the Puka Membership Program raises yours. Make it mine to set it.",
+  },
 ];
 
 /** A game's built-ins, in the order listed. */

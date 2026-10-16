@@ -102,6 +102,8 @@ describe("ROUTINES", () => {
       ["City Stamina", week, { kind: "amount", target: 700, unit: "stamina" }],
       ["Realm of Greed", week, { kind: "days", required: 1 }],
       ["Special City Commission", week, { kind: "days", required: 1 }],
+      ["Beyond the Rails", { unit: "cycle", days: 14, from: "2026-10-22" }, { kind: "days", required: 1 }],
+      ["Tycoon Incentive Fund", { unit: "cycle", days: 14, from: "2026-10-26" }, { kind: "amount", target: 1000000, unit: "fons" }],
     ]);
     expect(shape("nikki")).toEqual([
       ["Mira Journey weekly EXP", week, { kind: "amount", target: 8000, unit: "Journey EXP" }],

@@ -254,9 +254,9 @@ Looked for on 2026-10-14 and not shipped. Each is a candidate the owner may know
 | Wuwa | Afterglow Coral exchange, Souvenir Stores, Tactical Hologram shops | No limit, or no stated reset |
 | Wuwa | Simulation Training, Forgery | Cost Waveplates; no weekly cap |
 | Wuwa | Tower of Adversity Hazard Zone (28 days), Whimpering Wastes | Multi-week → sub-project 2; the owner's in-game dates for both are in § Scope. **Tower of Adversity shipped 2026-10-16** as a 28-day cycle; Whimpering Wastes has no fixed length and stays unshipped ([cycle routines spec](2026-10-16-cycle-routines-design.md) § Not shipped) |
-| NTE | Tycoon Incentive Fund (Pink Paws Heist, Volley Star weekly match, Display Case idle earnings) | A 14-day cycle by the game's own guide, not a week → sub-project 2 (§ Scope). The guide this branch cites calls Pink Paws' cap weekly; the game disagrees. The cap also differs per player (Puka Membership Program) |
+| NTE | Tycoon Incentive Fund (Pink Paws Heist, Volley Star weekly match, Display Case idle earnings) | A 14-day cycle by the game's own guide, not a week → sub-project 2 (§ Scope). The guide this branch cites calls Pink Paws' cap weekly; the game disagrees. The cap also differs per player (Puka Membership Program). **Shipped 2026-10-16** at the base cap with a note ([cycle routines spec](2026-10-16-cycle-routines-design.md), decision 5) |
 | NTE | Lost Exchange | Single launch-era source; nothing to count |
-| NTE | Beyond the Rails | 14-day cycle → sub-project 2; the owner's in-game date is in § Scope |
+| NTE | Beyond the Rails | 14-day cycle → sub-project 2; the owner's in-game date is in § Scope. **Shipped 2026-10-16**, on Asia's clock ([cycle routines spec](2026-10-16-cycle-routines-design.md), decision 3) |
 
 **One finding outside this change:** Game8's NTE boss page (2026-10-10) says the weekly timer
 resets "every Monday at 4AM", while `games.ts` has NTE on 05:00 (Game-Time-Master, neverness.gg,
