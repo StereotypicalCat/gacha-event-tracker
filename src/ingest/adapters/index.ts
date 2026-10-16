@@ -117,6 +117,27 @@ const SOURCES: SourceSpec[] = [
     parserId: "fandom",
   },
   {
+    id: "hsr-fandom-nameless-honor",
+    game: "hsr",
+    // The API, as every Fandom source (AGENTS.md § Fandom). robots.txt of
+    // honkai-star-rail.fandom.com read with the runner's own client
+    // (`RobotsCache`, the real User-Agent) on 2026-10-16: HTTP 200,
+    // `robots.txt ok`, and this API path allowed for `User-agent: *`
+    // (`Allow: /api.php?action=`, no `Disallow: /` for `*`). The groups that
+    // do `Disallow: /` name other crawlers (GPTBot, CCBot, OAI-SearchBot,
+    // ClaudeBot, ImagesiftBot, Grok*, Semrush, serpstatbot), not us; the only
+    // `Crawl-delay` (1) is `ias_crawler`'s, and the runner's 2s host gap
+    // exceeds it anyway.
+    //
+    // A pass history, not an event page: one `Name | Start | End | Version`
+    // table with a row per run, at day precision (the page prints no times).
+    // Read by the `fandomtable` parser, which emits only runs that have not
+    // ended by `ctx.now`. The title comes from `PASS_SOURCES` in
+    // `parsers/fandomTable.ts`, keyed by this id.
+    url: "https://honkai-star-rail.fandom.com/api.php?action=parse&page=Nameless_Honor&prop=text&formatversion=2&format=json",
+    parserId: "fandomtable",
+  },
+  {
     id: "r1999-fandom-events",
     game: "r1999",
     // The MediaWiki API, not `/wiki/Events`. The rendered page answers a

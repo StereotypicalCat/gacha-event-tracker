@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { adapterById, ADAPTERS } from "../src/ingest/adapters/index.ts";
 import { parserById } from "../src/ingest/parsers/index.ts";
+import { pickFixture } from "../src/ingest/snapshots.ts";
 import {
   LIMITS,
   sanitizeEvent,
@@ -537,8 +538,15 @@ describe("the adapter seam", () => {
       const parser = parserById(adapter.parserId);
       if (parser === undefined) throw new Error(`no parser ${adapter.parserId}`);
 
-      const pattern = `fixtures/${adapter.game}/${adapter.parserId}-*.html`;
-      const file = [...new Bun.Glob(pattern).scanSync(".")].sort().at(-1);
+      // The source's own fixture, selected exactly as `build-feed` selects it
+      // (`<id without game>-<date>.html`). The parser id is not the prefix for
+      // a template that shares a site with another: `fandomtable` reads
+      // `fandom-nameless-honor-*`.
+      const file = pickFixture(
+        adapter.id,
+        adapter.game,
+        [...new Bun.Glob(`fixtures/${adapter.game}/*.html`).scanSync(".")],
+      );
       if (file === undefined) throw new Error(`no fixture for ${adapter.id}`);
 
       const html = await Bun.file(file).text();

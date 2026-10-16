@@ -88,6 +88,7 @@ Two things this method cannot tell you, and both matter:
 | Aether Gazer | — | — | — | **Do not build. The game is shutting down.** |
 | Silver Palace | — | — | — | Unreleased; beta only |
 | Genshin Impact (Fandom) | `genshin-impact.fandom.com/api.php?…page=Event` | `fandom`, fifth template | yes (via `api.php`) | **BUILT** 2026-09-12 — adds 11 events Game8 missed; Game8 priority preserves localStorage IDs |
+| Star Rail — Nameless Honor | `honkai-star-rail.fandom.com/api.php?…page=Nameless_Honor` | new (`fandomtable`) | yes (via `api.php`) | **BUILT** 2026-10-16 — the pass window as one `other` event, day precision |
 | hololive Dreams | `holodori.wiki/wiki/Events` (still) | `holodoriwiki` | yes, but nothing new to fetch | **LAPSED** 2026-10-14 — NamuWiki is behind a Cloudflare challenge, the official site posts no events, Game8 has no page |
 
 ---
@@ -853,6 +854,20 @@ page lists events again, the refresh warns that the source is listing events aga
 
 **Re-check:** `bun run refresh --only holodori-holodoriwiki-events` once the six-hour floor has
 passed. A `fetched` with more than zero events means the wiki is back.
+
+## 17. Star Rail — Nameless Honor pass window (Fandom) — BUILT 2026-10-16
+
+**Source:** `https://honkai-star-rail.fandom.com/api.php?action=parse&page=Nameless_Honor&prop=text&formatversion=2&format=json` (page `https://honkai-star-rail.fandom.com/wiki/Nameless_Honor`), source id `hsr-fandom-nameless-honor`. First of the pass-window sources in `docs/superpowers/specs/2026-10-16-pass-windows-design.md`.
+
+**What it is:** Star Rail's battle pass. Event pages state no pass dates, but this page keeps a history table, one row per run, with the version each belonged to. Each row that has not ended by `ctx.now` becomes one event titled exactly `Nameless Honor`, type `other`.
+
+**Conduct:** `robots.txt` read with the runner's own `RobotsCache` and real User-Agent on 2026-10-16: `200`, allowed. `Allow: /api.php?action=` for `*`, no `Disallow: /` for `*`; the `Disallow: /` groups name other crawlers (GPTBot, CCBot, OAI-SearchBot, ClaudeBot, ImagesiftBot, Grok*, Semrush, serpstatbot), and the only `Crawl-delay` belongs to `ias_crawler`. Recorded in the `SOURCES` entry.
+
+**Shape:** the second `article-table` on the page, `Image | Name | Start | End | Version`, 31 rows (2023-04-26 to 2026-09-28; verified by counting the page's `<tr>`s independently of the parser). Cells print a bare date (`September 28, 2026`). Each cell also has a `data-sort-value` with a clock (`11:00:00` starts, `03:59:59` ends) that the page ties to no zone, so it is not read.
+
+**Precision:** day, start and end. Nothing is inferred: no clock, no region, no end for a row without one (skipped). At capture one row is live, 2026-09-28 to 2026-11-09 (4.6); each row ends on the day the next one starts. The Name cell reads `Nameless Honor <start date>`, so the title is constant and the start is the only thing that tells runs apart in the ID.
+
+**Reuse:** the parser is `fandomtable` (`src/ingest/parsers/fandomTable.ts`). The next pass pages (ZZZ `New_Eridu_City_Fund`, Genshin `Miliastra_Pass`) are one `PASS_SOURCES` entry each (title as a function of the row's Name cell) plus a `SOURCES` entry; columns are found by heading. A table headed with `Duration` is deliberately not this template (it is a version table).
 
 ## What every one of these costs, beyond the source
 

@@ -2,6 +2,7 @@ import { arknightsWikiParser } from "./akwiki.ts";
 import { aruStatsParser } from "./arustats.ts";
 import { blueArchiveWikiParser } from "./bawiki.ts";
 import { fandomParser } from "./fandom.ts";
+import { fandomTableParser } from "./fandomTable.ts";
 import { game8Parser } from "./game8.ts";
 import { holodoriWikiParser } from "./holodori.ts";
 import { iopWikiParser } from "./iopwiki.ts";
@@ -20,6 +21,7 @@ export const PARSERS: SourceParser[] = [
   wikiGgParser,
   arknightsWikiParser,
   fandomParser,
+  fandomTableParser,
   blueArchiveWikiParser,
   holodoriWikiParser,
   iopWikiParser,
@@ -37,6 +39,7 @@ export { arknightsWikiParser } from "./akwiki.ts";
 export { aruStatsParser } from "./arustats.ts";
 export { blueArchiveWikiParser } from "./bawiki.ts";
 export { fandomParser } from "./fandom.ts";
+export { fandomTableParser } from "./fandomTable.ts";
 export { game8Parser } from "./game8.ts";
 export { holodoriWikiParser } from "./holodori.ts";
 export { iopWikiParser } from "./iopwiki.ts";

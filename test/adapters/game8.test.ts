@@ -24,7 +24,7 @@ function adapter(id: string): Adapter {
 const genshinGame8 = adapter("genshin-game8-events");
 const nteGame8 = adapter("nte-game8-events");
 
-const CASES: Array<{ adapter: Adapter; fixture: string }> = [
+const CASES: Array<{ adapter: Adapter; fixture: string; now?: string }> = [
   { adapter: genshinGame8, fixture: "fixtures/genshin/game8-events-2026-08-14" },
   { adapter: nteGame8, fixture: "fixtures/nte/game8-events-2026-08-14" },
   { adapter: adapter("hsr-game8-events"), fixture: "fixtures/hsr/game8-events-2026-08-14" },
@@ -69,39 +69,43 @@ const CASES: Array<{ adapter: Adapter; fixture: string }> = [
   { adapter: adapter("hi3-arustats-events"), fixture: "fixtures/hi3/arustats-events-2026-08-27" },
   // Punishing: Gray Raven (karendar.com). Exact UTC timestamps for the Global server.
   { adapter: adapter("pgr-karendar-events"), fixture: "fixtures/pgr/karendar-events-2026-09-12" },
+  // Star Rail's Nameless Honor pass history (Fandom, `fandomtable` parser).
+  // Pinned at the capture day, not NOW: the page is a history, so which rows
+  // survive depends on the clock, and at capture exactly one does (4.6).
+  { adapter: adapter("hsr-fandom-nameless-honor"), fixture: "fixtures/hsr/fandom-nameless-honor-2026-10-16", now: "2026-10-16T00:00:00.000Z" },
 ];
 
-async function runAdapter(adapter: Adapter, fixture: string) {
+async function runAdapter(adapter: Adapter, fixture: string, now: string = NOW) {
   const html = await Bun.file(`${fixture}.html`).text();
   return adapter.parse(html, {
-    now: NOW,
+    now,
     sourceUrl: adapter.url,
     sourceId: adapter.id,
     game: adapter.game,
   });
 }
 
-describe.each(CASES)("$adapter.id $fixture", ({ adapter, fixture }) => {
+describe.each(CASES)("$adapter.id $fixture", ({ adapter, fixture, now }) => {
   test("matches the checked-in expected output", async () => {
-    const events = await runAdapter(adapter, fixture);
+    const events = await runAdapter(adapter, fixture, now);
     const expected = await Bun.file(`${fixture}.expected.json`).json();
     expect(events).toEqual(expected);
   });
 
   test("every event satisfies the schema", async () => {
-    for (const event of await runAdapter(adapter, fixture)) {
+    for (const event of await runAdapter(adapter, fixture, now)) {
       expect(() => GachaEvent.parse(event)).not.toThrow();
     }
   });
 
   test("is deterministic across runs", async () => {
-    const a = await runAdapter(adapter, fixture);
-    const b = await runAdapter(adapter, fixture);
+    const a = await runAdapter(adapter, fixture, now);
+    const b = await runAdapter(adapter, fixture, now);
     expect(a).toEqual(b);
   });
 
   test("never emits an end before its start", async () => {
-    for (const e of await runAdapter(adapter, fixture)) {
+    for (const e of await runAdapter(adapter, fixture, now)) {
       if (e.endsAt !== null) expect(e.endsAt > e.startsAt).toBe(true);
     }
   });
@@ -121,7 +125,7 @@ describe.each(CASES)("$adapter.id $fixture", ({ adapter, fixture }) => {
     // the genuinely year-long event, which is a shape this domain does have:
     // the same widening clears Fire Emblem Heroes' real seven-month
     // new-player banner (docs/SOURCES.md § 12b).
-    for (const e of await runAdapter(adapter, fixture)) {
+    for (const e of await runAdapter(adapter, fixture, now)) {
       if (e.endsAt === null) continue;
       const days =
         (Date.parse(e.endsAt) - Date.parse(e.startsAt)) / 86_400_000;
@@ -130,7 +134,7 @@ describe.each(CASES)("$adapter.id $fixture", ({ adapter, fixture }) => {
   });
 
   test("event IDs are unique and stable in shape", async () => {
-    const events = await runAdapter(adapter, fixture);
+    const events = await runAdapter(adapter, fixture, now);
     const ids = events.map((e) => e.id);
     expect(new Set(ids).size).toBe(ids.length);
     for (const e of events) {
@@ -141,7 +145,7 @@ describe.each(CASES)("$adapter.id $fixture", ({ adapter, fixture }) => {
   });
 
   test("excludes permanent and past sections", async () => {
-    const titles = (await runAdapter(adapter, fixture)).map((e) => e.title);
+    const titles = (await runAdapter(adapter, fixture, now)).map((e) => e.title);
     // Permanent entries carry no dates; past entries ended before the fixture
     // date. Neither belongs on a "what's live / what's next" calendar.
     for (const t of titles) expect(t).not.toMatch(/permanent/i);
