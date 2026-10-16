@@ -259,7 +259,7 @@ Namespaced, versioned, and small. Nothing here ever goes to the server.
                                 //   choresOn?, choresOff?,
                                 //   showWeeklyTasks, showMonthlyTasks, showCompleted, showIgnored, theme, regionConfirmed,
                                 //   onboarded, showRoutines?, routineGames?, routinesOff?,
-                                //   routinesAsked? }
+                                //   routinesAsked?, routinesHidden?, standardPulls? }
                                 // Chores and built-in weekly tasks are each one global
                                 // answer plus the games that differ (src/shared/perGame.ts):
                                 // an on-list wins, then an off-list, then the global answer.
@@ -270,8 +270,13 @@ Namespaced, versioned, and small. Nothing here ever goes to the server.
                                 // routineGames is the games whose built-ins are on (the
                                 // on-list, unchanged from before showRoutines existed),
                                 // routinesOff the off-list, routinesAsked the games already
-                                // asked about. Every list absent means none — built-ins are
-                                // opt-in for every install. PRD F17.
+                                // asked about. routinesHidden is routine ids stopped one by
+                                // one: it narrows the game's answer and never widens it.
+                                // standardPulls says whether a shop's standard-banner
+                                // pulls are offered beside its premium ones; absent is
+                                // false, premium only.
+                                // Every list absent means none — built-ins are opt-in for
+                                // every install. PRD F17.
                                 // showWeeklyTasks / showMonthlyTasks say whether tasks of
                                 // that period sit in the strip's row under the dailies.
                                 // Both default true, so an install from before them keeps
@@ -574,9 +579,14 @@ removes the task record only.
 
 **Built-in tasks** (`src/shared/routines.ts`) are not stored: they ship in the bundle, each with a
 `source` URL and the `asOf` date that page gives, and their ticks and numbers are stored under their
-`routine:` id exactly as a reader's task's are. Four prefs govern them: `showRoutines` (the answer
+`routine:` id exactly as a reader's task's are. Six prefs govern them: `showRoutines` (the answer
 for every game; **absent means never answered**, read as off), `routineGames` and `routinesOff`
-(games that differ from it, on and off), and `routinesAsked` (games the strip already asked about).
+(games that differ from it, on and off), `routinesAsked` (games the strip already asked about), and
+`routinesHidden` (single built-ins the reader stopped tracking, by id), and `standardPulls` (whether a
+shop's standard-banner line, `pulls: "standard"`, is offered at all; absent is no). A built-in is shown
+when its game is on, it is offered **and** it is not hidden, so hiding one never changes the game's answer and a built-in
+shipped later still arrives. Tracking one of a game that is off turns the game on with that one
+alone — its siblings join `routinesHidden` (`trackRoutinePatch`, `usePrefs.ts`).
 The lists are **absent meaning none**, so built-ins are opt-in for every install. `routineGames`
 predates `showRoutines` and kept its meaning when it became the on-list — nothing was migrated, and
 a tab still running an older shell reads it the same way. *Make it mine* adds a `mytask:` with `from: <routine id>` and copies

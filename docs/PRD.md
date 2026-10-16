@@ -315,11 +315,14 @@ title — and a goal makes an event a daily even with detection off.
   are left; an unknown end leaves the days left unknown.
 - **Set up from the strip, not just the sheet.** Giving Temper Thyself its goal used to mean finding
   it in the list, opening it, saying it repeats and then setting the goal. The strip's **Edit** —
-  beside *Catch up*, and like it a mode of the section rather than a control on a chip — lists the
-  strip's events by game with each goal in words; one opens to the sheet's goal control, *Open
-  details* and *Remove from dailies*. Under each game, *Add an event · N* lists its running events
-  that are not in the strip yet; adding one opens its goal at once. It writes exactly what the sheet
-  writes, so nothing about a goal or an override changes meaning.
+  beside *Catch up*, and like it a mode of the section rather than a control on a chip — lists
+  everything the strip carries, by game: the game's standing chore, its built-in tasks (F17), then
+  its events with each goal in words. An event opens to the sheet's goal control, *Open details* and
+  *Stop tracking*; the chore and built-ins, which have no goal, carry *Stop tracking* on the row.
+  Under each game, *Track · N* lists what it could carry and does not — a chore or built-in that is
+  off, and running events not in the strip yet; tracking an event opens its goal at once. It writes
+  exactly what the sheet and settings write, so nothing about a goal, an override or a switch
+  changes meaning.
 
 **F13 — Your own games and your own events.**
 No feasible adapter set covers everyone. Fourteen games were named in the first release thread and
@@ -591,14 +594,24 @@ examples to start from, held to the same bar as the event form's (F13, *Examples
 - **Theirs, kept and exported.** Deleting a task removes the task only; its ticks and numbers stay.
   Both travel in the export, and import never rolls a newer week back.
 
-**Some games' weekly tasks are built in** — ZZZ's Ridu Weekly (1,300 points) and Endfield's Weekly
-Routine (10 points) so far, each from a cited page and shown with the date that page gives, so a
-figure from an old guide is visibly old. They are **off until the reader says yes**: the strip asks
+**Some games' weekly and monthly tasks are built in** — weekly bosses, battle pass EXP caps, a
+monthly shop buy-out, endgame resets; the list per game, with the sentence each figure rests on and
+what was looked for and not found, is in `docs/superpowers/specs/2026-10-14-built-in-routines-design.md`.
+Each comes from a cited page and is shown with the date that page gives, so a figure from an old
+guide is visibly old, and an item no page states is not shipped. They are **off until the reader says yes**: the strip asks
 once, in one line, about a game on screen that has them — until the reader answers for every game —
 and *What you see* governs them after: one switch for all of them, and *Choose games* for the games
 that differ. The standing daily chores take the same shape, so a reader who wants Genshin's chore
 and not Star Rail's can say so without losing either game's events. Built-ins are not edited in place; **Make it mine** copies one into the reader's
-own tasks with its ticks and numbers, and hides the original while the copy exists.
+own tasks with its ticks and numbers, and hides the original while the copy exists. **Any single
+built-in can be tracked or not** — Endfield's weekly items but not one of them — from the strip's
+Edit panel or *Your own*, which lists every built-in of the games that are on, untracked ones
+included, so none is ever off with no way back. Stopping one keeps its ticks and numbers and never
+changes the game's switch.
+**A shop's pulls come in two lines** — the premium (limited-banner) pulls, tracked with the other
+built-ins, and the standard-banner pulls most shops sell beside them, added only when the reader
+switches on *Include standard-banner pulls* under the built-ins switch. One answer for every game;
+off by default, so the reader chooses between premium only and both.
 
 **F18 — What changed.**
 The app now says what changed, in two tiers, both tied to git. **Short entries** — one line each,

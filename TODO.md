@@ -1,5 +1,30 @@
 # TODO
 
+- [ ] Move NTE's Europe server to UTC+2. `games.ts` rolls it at 05:00 UTC+1 (04:00 UTC), per
+  Game-Time-Master and GameWith, but the game disagrees. On 2026-10-16 the owner read: a weekly
+  timer of 3d 2h at 00:40 UTC (→ Monday 2026-10-19 **03:00 UTC**); Realm of Greed's own text, "Gold
+  Heist resets every Monday at 5:00"; and the Tycoon Incentive Fund at 10d 2h at 00:43 UTC (→
+  Monday 2026-10-26 **03:00 UTC**, the day after the clocks change). Only 05:00 on a fixed UTC+2
+  fits all three — 03:00 UTC all year, not a server that follows daylight saving. Fix: set
+  `resetOffsets.europe: 2` for `nte` with a test, as a day-key change under AGENTS.md § Event IDs,
+  and update `docs/DATA-MODEL.md`'s reset table and Game-Time-Master's place as the source. One
+  NTE timer read after 2026-10-25 would confirm it (it should still land on 03:00 UTC). See the
+  [built-in routines spec](docs/superpowers/specs/2026-10-14-built-in-routines-design.md).
+- [ ] Confirm Infinity Nikki's *Realm of Breakthrough* in game: still two Phantom Trials (Wish
+  Master Chigda, Guardian Beast Whirls), once a week each, renewed at the Monday reset? The owner
+  could not check on 2026-10-16 ("insufficient story progress" — it unlocks after *Showdown with
+  Chigda!*). Until then the entry stands on infinity-nikki.fandom.com/wiki/Realm_of_Breakthrough
+  (as of 2026-01-01), whose "currently there are two Trials" is the oldest claim in the Nikki
+  list. If it differs, correct `routine:nikki:realm-of-breakthrough` in `src/shared/routines.ts`
+  and its row in the [spec](docs/superpowers/specs/2026-10-14-built-in-routines-design.md)
+  § Entries together, with the note `Confirmed in game, YYYY-MM-DD.`
+- [ ] Confirm Endfield's *Etchspace Salvage: Focus Commissions* in game: still 3 commissions a
+  week, and does it reset on Monday with the *Weekly Routine* (EU: Monday 11:00 CEST, confirmed
+  2026-10-14)? The owner could not check on 2026-10-14 ("due to mission progress"). Until then the entry stands on endfield.wiki.gg/wiki/Etchspace_Salvage (as of
+  2026-09-01), whose "weekly" is read as Monday from the wiki's own weekly-reset box. If either
+  is wrong, correct `routine:endfield:focus-commissions` in `src/shared/routines.ts` and its row
+  in the [spec](docs/superpowers/specs/2026-10-14-built-in-routines-design.md) § Entries
+  together, with the note `Confirmed in game, YYYY-MM-DD.`
 - [x] Support check-in goals for events that require only some of the available days
   (for example, five check-ins per week). Keep unfinished events in Dailies, show progress
   against the required count, and distinguish finishing a week from finishing the event.
