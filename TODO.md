@@ -11,7 +11,7 @@
   (as *Your own* already does), one compact game label per run of chips (the row is already in
   game order), or grouping by game only in this row. Keep the row short, check it in a browser at
   phone width, and keep the chip's accessible name naming the game (it already does).
-- [ ] **Sub-project 2 of the "usual repeatable events" request: N-week cycles.** Built-ins today
+- [x] **Sub-project 2 of the "usual repeatable events" request: N-week cycles.** Built-ins today
   repeat weekly or monthly; many endgame modes run on longer fixed cycles. Add a period unit anchored
   to a known start (every N weeks or days from a dated reset). It is a stored-shape change, so it
   gets its own brainstorm → spec → plan (owner's process: once a design is approved, carry it
@@ -35,6 +35,18 @@
     Rails) vs one per server reset; a target that differs per player (the Incentive Fund) — the
     reader sets it, or ship the base with a note; whether "typically every 14 days" is safe to
     model as fixed.
+  Shipped 2026-10-16 — see the [cycle routines spec](docs/superpowers/specs/2026-10-16-cycle-routines-design.md):
+  every-N-days periods for tasks and built-ins, `showCycleTasks`, a built-in `clock`, and cycle
+  built-ins for Star Rail, ZZZ, Wuthering Waves and NTE. Star Rail's Divergent Universe / Currency
+  Wars pool turned out to be weekly and shipped as such.
+- [ ] Track Wuthering Waves' *Whimpering Wastes* (Respawning Waters: Chasm, Torrents). Not every N
+  days, so not shipped with the cycles: gurugamer (2025-09-04) says "the last Monday of each month",
+  lootbar (2025-12-26) "roughly 4 weeks (about 26–28 days)"; the owner's timer put the next reset on
+  Monday 2026-10-26. Needs either a "last Monday of the month" period or a source for a fixed length,
+  confirmed by a second in-game reset.
+- [ ] Track Infinity Nikki's *Pinnacle Contest*, which resets on the 1st and 16th of each month
+  (infinity-nikki.fandom.com/wiki/Mira_Crown, 2025-12-08) — a half-month period, which `period.ts`
+  cannot express yet. *Merit Arena* has no page stating its cycle; leave it until one does.
 - [ ] **Rework the settings, with mockups first** (owner, 2026-10-16: "we will have to do a
   settings rework of some kinds with some mockups"). *What you see* keeps gaining switches —
   dailies, built-ins globally and per game, standard-banner pulls, weekly / monthly tasks, and
