@@ -1,12 +1,12 @@
 {
   "sourceId": "czn-game8-events",
   "url": "https://game8.co/games/Chaos-Zero-Nightmare/archives/559899",
-  "contentHash": "f245f1a52e382fd0e39c04b099c796906b7ddd60226cb0fa13a57ba353acf4a0",
-  "bytes": 234261,
-  "etag": "W/\"f245f1a52e382fd0e39c04b099c79690\"",
+  "contentHash": "caf7c0fa991e560b4ec71ae1562bfcc88864983fbc716c7fa972b646c9e9f07c",
+  "bytes": 234102,
+  "etag": "W/\"caf7c0fa991e560b4ec71ae1562bfcc8\"",
   "lastModified": null,
-  "contentChangedAt": "2026-10-16T05:28:22.748Z",
-  "lastConfirmedAt": "2026-10-16T05:28:22.748Z",
+  "contentChangedAt": "2026-10-16T17:28:16.912Z",
+  "lastConfirmedAt": "2026-10-16T17:28:16.912Z",
   "eventCount": 5,
   "charset": "utf-8"
 }
