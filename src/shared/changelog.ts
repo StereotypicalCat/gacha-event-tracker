@@ -51,6 +51,49 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "nte-europe-reset",
+    date: "2026-10-16",
+    kind: "fix",
+    title: "Neverness to Everness's Europe day rolls at the game's own reset",
+    body: "It rolled an hour late, at 06:00 Copenhagen time in summer rather than 05:00. Ticks you logged in that hour now count for the day the game gave them.",
+    ref: "9d5b473",
+  },
+  {
+    id: "standard-pulls",
+    date: "2026-10-16",
+    kind: "feature",
+    title: "Choose premium pulls only, or standard-banner pulls too",
+    body: "Shops that sell gacha pulls are tracked by their premium line. Include standard-banner pulls, under the built-in tasks switch, adds the standard line beside it.",
+    ref: "af2ad94",
+    note: "built-in-routines",
+  },
+  {
+    id: "ridu-weekly-2100",
+    date: "2026-10-16",
+    kind: "fix",
+    title: "ZZZ's Ridu Weekly counts to 2,100 points, not 1,300",
+    body: "The cap rose in January and our source had not caught up. A week you logged at 1,300 now reads 1,300 of 2,100.",
+    ref: "387fc1d",
+  },
+  {
+    id: "built-ins-seven-games",
+    date: "2026-10-16",
+    kind: "games",
+    title: "Built-in weekly and monthly tasks for seven games",
+    body: "Genshin, Star Rail, ZZZ, Endfield, Wuthering Waves, NTE and Infinity Nikki: weekly bosses, battle pass EXP caps, monthly shops and more, each from a dated source.",
+    ref: "9cf7649",
+    note: "built-in-routines",
+  },
+  {
+    id: "stop-tracking-one",
+    date: "2026-10-16",
+    kind: "feature",
+    title: "Track or stop tracking any single item in the strip",
+    body: "The strip's Edit panel now lists each game's daily chore and built-in tasks beside its events. Stop tracking one, such as a shop you never buy from, and the rest stay.",
+    ref: "3fd2b3c",
+    note: "built-in-routines",
+  },
+  {
     id: "genshin-duplicates",
     date: "2026-10-14",
     kind: "fix",
@@ -474,6 +517,20 @@ export const ENTRIES: Entry[] = [
 ];
 
 export const NOTES: Note[] = [
+  {
+    id: "built-in-routines",
+    date: "2026-10-16",
+    title: "Weekly and monthly tasks for seven games, and tracking them one by one",
+    summary: [
+      "Seven games now come with their weekly and monthly tasks built in: weekly bosses and point targets, battle pass EXP caps, monthly shop buy-outs and endgame resets. Each one names the page it comes from and the date that page gives. Where no page states a figure, the figure was checked in the game and says so, with the day.",
+      "Any single item can be tracked or not, from the strip's Edit panel or from Your own, which lists every built-in of your games so none is ever off with no way back. The Edit panel now holds everything the strip carries, by game: the daily chore, the built-in tasks, then the events.",
+      "Shops that sell gacha pulls usually stock both the premium and the standard banner. The premium line is tracked with the rest; Include standard-banner pulls adds the standard one.",
+      "Built-ins stay off until you say yes, as before. Nothing you ticked or entered is removed by stopping one.",
+    ],
+    from: "612e0a2",
+    to: "e1e5fc0",
+    specs: ["docs/superpowers/specs/2026-10-14-built-in-routines-design.md"],
+  },
   {
     id: "genshin-duplicates",
     date: "2026-10-14",
