@@ -87,7 +87,7 @@ export function taskStatus(input: {
     return {
       scope, measure: "amount", periodStart: start, required, count,
       met: count >= required, needed: Math.max(0, required - count),
-      open: left.length, shortfall: false,
+      open: left.length, shortfall: false, daysLeft: left.length,
     };
   }
 
@@ -100,6 +100,7 @@ export function taskStatus(input: {
   return {
     scope, measure: "days", periodStart: start, required, count,
     met: count >= required, needed, open, shortfall: needed > open,
+    daysLeft: left.length,
   };
 }
 

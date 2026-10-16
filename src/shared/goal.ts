@@ -86,6 +86,8 @@ export interface GoalStatus {
   open: number | null;
   /** Fewer days left than check-ins needed. The target is never lowered. */
   shortfall: boolean;
+  /** A task's days left in its period from today, ticked or not — what a cycle's chip shows. */
+  daysLeft?: number | undefined;
 }
 
 /** Bounds a walk over keys when the end is unknown; matches daily.ts. */
@@ -207,7 +209,7 @@ export function goalSummary(goal: Goal | undefined): string {
 /** The Dailies chip's short count. */
 export function goalCount(s: GoalStatus): string {
   // "cy" means nothing; the days left in a cycle say where it is.
-  if (s.scope === "cycle") return `${num(s.count)}/${num(s.required)} · ${s.open ?? 0}d`;
+  if (s.scope === "cycle") return `${num(s.count)}/${num(s.required)} · ${s.daysLeft ?? s.open ?? 0}d`;
   const unit = s.scope === "week" ? " wk" : s.scope === "month" ? " mo" : "";
   return `${num(s.count)}/${num(s.required)}${unit}`;
 }

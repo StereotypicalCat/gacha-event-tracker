@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { RESERVED_ID_SEGMENTS } from "../src/shared/custom.ts";
 import { nextResetMs } from "../src/shared/daily.ts";
+import { goalCount } from "../src/shared/goal.ts";
 import { mintTaskId, TaskSchema, taskCaption, taskStatus, type Task } from "../src/shared/task.ts";
 
 /**
@@ -169,5 +170,16 @@ describe("a task on another server's clock", () => {
     const { clock: _, ...own } = t;
     const after = taskStatus({ task: own, region: "europe", now: Date.parse("2026-10-21T21:01:00Z"), logged: [] });
     expect(after.periodStart).toBe("2026-10-08");
+  });
+});
+
+describe("a cycle chip's days left", () => {
+  test("is the days left in the cycle, ticked or not", () => {
+    const t = task({ period: { unit: "cycle", days: 14, from: "2026-10-16" }, measure: { kind: "days", required: 1 } });
+    const at = (logged: string[], day: string) =>
+      goalCount(taskStatus({ task: t, region: "europe", now: noon(day), logged }));
+    expect(at([], "2026-10-20")).toBe("0/1 · 10d");
+    expect(at(["2026-10-20"], "2026-10-20")).toBe("1/1 · 10d");
+    expect(at(["2026-10-29"], "2026-10-29")).toBe("1/1 · 1d");
   });
 });
