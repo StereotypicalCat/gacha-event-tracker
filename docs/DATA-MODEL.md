@@ -257,7 +257,7 @@ Namespaced, versioned, and small. Nothing here ever goes to the server.
                                 //   timelineDayWidth, timelineGroup, showUpcoming,
                                 //   timelineSplitUpcoming, detectDaily, showChores,
                                 //   choresOn?, choresOff?,
-                                //   showWeeklyTasks, showMonthlyTasks, showCompleted, showIgnored, theme, regionConfirmed,
+                                //   showWeeklyTasks, showMonthlyTasks, showCycleTasks, showCompleted, showIgnored, theme, regionConfirmed,
                                 //   onboarded, showRoutines?, routineGames?, routinesOff?,
                                 //   routinesAsked?, routinesHidden?, standardPulls? }
                                 // Chores and built-in weekly tasks are each one global
@@ -277,10 +277,11 @@ Namespaced, versioned, and small. Nothing here ever goes to the server.
                                 // false, premium only.
                                 // Every list absent means none — built-ins are opt-in for
                                 // every install. PRD F17.
-                                // showWeeklyTasks / showMonthlyTasks say whether tasks of
-                                // that period sit in the strip's row under the dailies.
-                                // Both default true, so an install from before them keeps
-                                // its tasks on screen; off hides and never deletes.
+                                // showWeeklyTasks / showMonthlyTasks / showCycleTasks say
+                                // whether tasks of that period sit in the strip's row under
+                                // the dailies. All default true, so an install from before
+                                // them keeps its tasks on screen (an absent showCycleTasks
+                                // reads as true); off hides and never deletes.
                                 // changelogSeen is the newest changelog entry id the
                                 // reader dismissed. Absent means unrecorded: first-run
                                 // setup sets it, so absent is an install from before the
@@ -405,6 +406,11 @@ recomputes from `daily` on every read, so a backfill, a removed tick or a week r
 bookkeeping and clears nothing. Weeks are cut in day-key space by `periodOf`
 (`src/shared/period.ts`): the seven keys from the chosen weekday, so a week rolls exactly where the
 game's day does, per region and per reset override. A day key later than today never counts.
+A task's other periods are cut the same way: a month from its chosen day, and a **cycle** of N days
+as `from + k·N` for the whole number `k` that puts today inside it — before `from` as well as after,
+so `from` may be any day a cycle began. A built-in may name a server `clock` (code only, never
+stored): its day keys are then cut on that server's reset for every reader, for a cycle that ends at
+one instant everywhere (NTE's Beyond the Rails, on Asia's).
 
 **Not every game has a server per region.** `GameMeta.resetOffsets` records the regions where a
 game's server clock differs from `REGION_RESET_UTC_OFFSET`. Endfield is the case this exists for: it
@@ -567,7 +573,8 @@ true is the day two key spaces merge silently.
                                  //           startsAt, startPrecision,
                                  //           endsAt, endPrecision, at, updatedAt } }
 "gacha-tracker:v1:tasks"         // { [mytask id]: { id, game, title,
-                                 //   period: { unit: "week", startsOn: 1–7 } | { unit: "month", startsOn: 1–31 },
+                                 //   period: { unit: "week", startsOn: 1–7 } | { unit: "month", startsOn: 1–31 }
+                                 //         | { unit: "cycle", days: 2–366, from: "YYYY-MM-DD" },
                                  //   measure: { kind: "days", required } | { kind: "amount", target, unit? },
                                  //   from?, at, updatedAt } }
 "gacha-tracker:v1:amounts"       // { [itemKey]: { [periodStartKey]: { value, at } } }
@@ -581,7 +588,9 @@ one a newer version wrote, and opening an older tab must not erase it. `amounts`
 `daily` under its id; its numbers live in `amounts` under its id and the start key of the period
 (`periodOf`, `src/shared/period.ts`), so a new week starts with no value and old weeks are never
 pruned. An event's points goal stores its numbers the same way, under the event id. Deleting a task
-removes the task record only.
+removes the task record only. **A cycle task is the newest shape** (2026-10-16): a build from before
+it fails `TaskSchema` on one, skips it on display and keeps it on disk, so it reappears when the
+bundle updates; its numbers sit under the cycle's start key like any period's.
 
 **Built-in tasks** (`src/shared/routines.ts`) are not stored: they ship in the bundle, each with a
 `source` URL and the `asOf` date that page gives, and their ticks and numbers are stored under their

@@ -574,19 +574,21 @@ with the standing chore of the game it came from, because the reader thinks in g
 **F17 — Weekly and monthly tasks.**
 Some chores roll weekly or monthly rather than daily — earning ZZZ's weekly activity points,
 finishing Endfield's weekly routine — and no source publishes them, so they were nowhere in the app.
-A reader can now set them up per game in *Your own*: a title, every week (from a weekday they pick)
-or every month (from a day of the month), and either **tick it off** (N days in the period, one by
+A reader can now set them up per game in *Your own*: a title, every week (from a weekday they pick),
+every month (from a day of the month) or **every N days** (from a day a cycle began — a two-week
+endgame mode, say), and either **tick it off** (N days in the period, one by
 default) or **reach a number** (a target such as 2,100, with an optional unit). The form opens with
 examples to start from, held to the same bar as the event form's (F13, *Examples to start from*).
 
 - **They roll on the game's clock.** A week starts at the game's daily reset on the chosen day, on
   the reader's server — the same clock every daily tick is cut on, so nothing new to get wrong.
-- **They sit under the dailies, and are counted apart.** Tasks have a row of their own, *This week &
-  month*, under today's chips — in game order — and the header counts them under *Weekly* or
-  *Monthly*, not "today": a chore due by Sunday is not waiting on anyone every morning, and only
-  today's dailies celebrate. **Each period can be switched off** (`showWeeklyTasks`,
-  `showMonthlyTasks`), in *What you see* and in the strip's Edit panel, offered only once a task of
-  that period exists. Off hides tasks only — an event with a goal stays — and discards nothing.
+- **They sit under the dailies, and are counted apart.** Tasks have a row of their own under today's
+  chips — in game order — headed by the periods it holds (*This week & month*, *This week, month &
+  cycle*), and the header counts them under *Weekly*, *Monthly* or *Cycles*, not "today": a chore
+  due by Sunday is not waiting on anyone every morning, and only today's dailies celebrate. A
+  cycle's chip shows the days left in it. **Each period can be switched off** (`showWeeklyTasks`,
+  `showMonthlyTasks`, `showCycleTasks`), in *What you see* and in the strip's Edit panel, offered
+  only once a task of that period exists. Off hides tasks only — an event with a goal stays — and discards nothing.
 - **A number is entered, not ticked.** Its chip opens an editor under the strip — the value as the
   game shows it, not an increment — because a chip is one target. Catch up offers last period's
   number the way it offers yesterday's tick.
