@@ -1454,6 +1454,23 @@ describe("weekly and monthly tasks in the dailies strip", () => {
       .toEqual([shiyu]);
   });
 
+  test("a clocked task's day and countdown are cut on that server's reset", () => {
+    const rails = {
+      id: "routine:nte:test-rails", game: "nte", title: "Beyond the Rails",
+      period: { unit: "cycle" as const, days: 14, from: "2026-10-22" },
+      measure: { kind: "days" as const, required: 1 }, clock: "asia" as const,
+    };
+    const at = Date.parse("2026-10-21T21:01:00Z");
+    const [group] = dailyGroups(["nte"], [], at, "europe", meta, startOf, true, undefined,
+      [rails], () => undefined);
+    const [chore, item] = group!.items;
+    expect(chore!.today).toBe("2026-10-21");
+    expect(item!.today).toBe("2026-10-22");
+    expect(item!.clock).toBe("asia");
+    // Asia's next reset is a day away; Europe's chore resets in about six hours.
+    expect(item!.resetsIn).toBeGreaterThan(chore!.resetsIn);
+  });
+
   test("a cycle chip shows its days left, under a heading that names it", () => {
     const html = render(
       <Dailies games={["zzz"]} events={[]} region="europe" now={NOW} showChores={false}

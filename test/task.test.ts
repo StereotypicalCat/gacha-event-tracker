@@ -148,3 +148,26 @@ describe("a task on a cycle", () => {
     expect(taskStatus({ task: t, region: "europe", now: noon("2026-10-16"), logged: [] }).required).toBe(3);
   });
 });
+
+describe("a task on another server's clock", () => {
+  // NTE's Asia server rolls at 05:00 UTC+8, 21:00 UTC; its Europe server at 03:00 UTC.
+  const t = {
+    game: "nte",
+    period: { unit: "cycle" as const, days: 14, from: "2026-10-22" },
+    measure: { kind: "days" as const, required: 1 },
+    clock: "asia" as const,
+  };
+
+  test("its cycle rolls at that server's reset for a reader on another", () => {
+    const before = taskStatus({ task: t, region: "europe", now: Date.parse("2026-10-21T20:59:00Z"), logged: [] });
+    const after = taskStatus({ task: t, region: "europe", now: Date.parse("2026-10-21T21:01:00Z"), logged: [] });
+    expect(before.periodStart).toBe("2026-10-08");
+    expect(after.periodStart).toBe("2026-10-22");
+  });
+
+  test("without one, it rolls on the reader's own reset", () => {
+    const { clock: _, ...own } = t;
+    const after = taskStatus({ task: own, region: "europe", now: Date.parse("2026-10-21T21:01:00Z"), logged: [] });
+    expect(after.periodStart).toBe("2026-10-08");
+  });
+});

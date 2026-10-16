@@ -68,14 +68,15 @@ export type TaskShape = Pick<Task, "id" | "game" | "title" | "period" | "measure
 
 /** Where the reader is with a task this period. Pure; `now` explicit. */
 export function taskStatus(input: {
-  task: Pick<Task, "game" | "period" | "measure">;
+  /** `clock`: a built-in's server, when it rolls on one server's reset for everyone. */
+  task: Pick<Task, "game" | "period" | "measure"> & { clock?: Region | undefined };
   region: Region;
   now: number;
   logged: readonly string[];
   amounts?: AmountLog | undefined;
 }): GoalStatus {
   const { task, region, now, logged, amounts } = input;
-  const today = dayKey(now, region, task.game as LaneId);
+  const today = dayKey(now, task.clock ?? region, task.game as LaneId);
   const { start, days } = periodOf(task.period, today);
   const scope = task.period.unit;
   const left = days.filter((k) => k >= today);

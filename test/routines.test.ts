@@ -304,6 +304,23 @@ describe("making a built-in your own", () => {
       measure: { kind: "amount", target: 2100, unit: "points" }, from: "routine:zzz:ridu-weekly",
     });
   });
+
+  test("leaves a server clock behind: a reader's task has none", () => {
+    const ridu = routinesFor("zzz")[0]!;
+    expect("clock" in mineFrom({ ...ridu, clock: "asia" })).toBe(false);
+  });
+});
+
+describe("a built-in on one server's clock", () => {
+  test("only a cycle has one", () => {
+    for (const r of ROUTINES) if (r.clock !== undefined) expect(r.period.unit).toBe("cycle");
+  });
+
+  test("the schema reads it as a server", () => {
+    const ridu = routinesFor("zzz")[0]!;
+    expect(RoutineSchema.safeParse({ ...ridu, clock: "asia" }).success).toBe(true);
+    expect(RoutineSchema.safeParse({ ...ridu, clock: "mars" }).success).toBe(false);
+  });
 });
 
 describe("copying a built-in's record to the reader's copy", () => {

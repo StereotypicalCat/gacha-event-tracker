@@ -72,13 +72,19 @@ export interface DailyItem {
   period?: Period | undefined;
   /** A task's unit, printed after its target. */
   unit?: string | undefined;
+  /**
+   * The server whose reset this item follows, when not the reader's — a
+   * built-in on one clock for everyone. Its day, countdown and catch-up days
+   * are cut on it.
+   */
+  clock?: Region | undefined;
 }
 
 /**
  * A task as the strip needs it: a reader's own, or a built-in routine, which
  * also says what date its source gives (`asOf`) so the tooltip can show it.
  */
-export type StripTask = TaskShape & { asOf?: string | undefined };
+export type StripTask = TaskShape & { asOf?: string | undefined; clock?: Region | undefined };
 
 /** A game and everything of its that wants ticking today. */
 export interface DailyGroup {
@@ -183,6 +189,7 @@ export function dailyGroups(
     if (games.includes(lane)) {
       for (const task of tasks) {
         if (task.game !== lane) continue;
+        const clock = task.clock;
         items.push({
           key: task.id,
           game: lane,
@@ -194,8 +201,9 @@ export function dailyGroups(
               ? `${game.name} — ${task.title}`
               : `${game.name} — ${task.title} · built in, from a source as of ${asOfLabel(task.asOf)}`,
           ariaLabel: `${task.title} (${game.name})`,
-          today,
-          resetsIn,
+          today: clock === undefined ? today : dayKey(now, clock, lane),
+          resetsIn: clock === undefined ? resetsIn : msUntilReset(now, clock, lane),
+          ...(clock === undefined ? {} : { clock }),
           notBefore: null,
           goal: taskStatusFor(task),
           cadence: task.period.unit,
@@ -718,7 +726,7 @@ export function CatchUpPanel({
             <div key={item.key} className="mt-1.5">
               <p className="truncate text-xs text-muted">{item.label}</p>
               <div className="mt-1 flex flex-wrap gap-1">
-                {catchUpDays(now, region, item.game, item.notBefore).map((day) => (
+                {catchUpDays(now, item.clock ?? region, item.game, item.notBefore).map((day) => (
                   <DayPip
                     key={day}
                     day={day}

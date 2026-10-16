@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { PeriodSchema } from "./period.ts";
-import { GameId } from "./schema.ts";
+import { GameId, Region } from "./schema.ts";
 import { shownFor, type PerGame } from "./perGame.ts";
 import { MeasureSchema, type TaskShape } from "./task.ts";
 
@@ -47,6 +47,13 @@ export const RoutineSchema = z.object({
    * (`prefs.standardPulls`, owner, 2026-10-16). Absent on everything else.
    */
   pulls: z.enum(["premium", "standard"]).optional(),
+  /**
+   * The server whose reset this rolls on for every reader — for a cycle that
+   * ends at one instant everywhere, such as NTE's Beyond the Rails on Asia's
+   * (spec 2026-10-16, decision 3). Code only, never stored; *Make it mine*
+   * leaves it behind, since a reader's task has no such field.
+   */
+  clock: Region.optional(),
 });
 export type Routine = z.infer<typeof RoutineSchema> & TaskShape;
 

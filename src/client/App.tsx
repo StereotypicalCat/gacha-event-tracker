@@ -47,10 +47,10 @@ import {
   resolveDaily,
 } from "../shared/daily.ts";
 import { isoWeekday } from "../shared/period.ts";
-import { tasksShown } from "./components/Dailies.tsx";
+import { tasksShown, type StripTask } from "./components/Dailies.tsx";
 import type { StripEditor, StripEvent, StripStanding } from "./components/EditPanel.tsx";
 import { goalStatus, readGoal, type GoalStatus } from "../shared/goal.ts";
-import { taskStatus, type TaskShape } from "../shared/task.ts";
+import { taskStatus } from "../shared/task.ts";
 import {
   activeRoutines,
   offered,
@@ -253,7 +253,7 @@ export function App() {
     amounts.merge(copy.amounts);
   };
 
-  const taskStatusOf = (task: TaskShape): GoalStatus =>
+  const taskStatusOf = (task: StripTask): GoalStatus =>
     taskStatus({
       task,
       region: prefs.region,
