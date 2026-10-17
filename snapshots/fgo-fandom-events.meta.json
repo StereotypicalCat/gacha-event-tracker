@@ -1,12 +1,12 @@
 {
   "sourceId": "fgo-fandom-events",
   "url": "https://fategrandorder.fandom.com/api.php?action=parse&page=Event_List_(US)&prop=text&formatversion=2&format=json",
-  "contentHash": "94fe4a5c1e4df56e2e4220ff7bbb53b49f17b3681953c3ec47de7c46f6381d6c",
-  "bytes": 663094,
+  "contentHash": "566cc3df2e0471e60419413ef266f49a8e16e6e7f6621b361beaf9cf7c37a869",
+  "bytes": 665146,
   "etag": null,
   "lastModified": null,
-  "contentChangedAt": "2026-10-16T17:28:06.550Z",
-  "lastConfirmedAt": "2026-10-16T17:28:06.550Z",
+  "contentChangedAt": "2026-10-17T05:28:12.523Z",
+  "lastConfirmedAt": "2026-10-17T05:28:12.523Z",
   "eventCount": 3,
   "charset": "utf-8"
 }
