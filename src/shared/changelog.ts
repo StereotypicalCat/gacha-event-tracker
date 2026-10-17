@@ -51,6 +51,15 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "redesign",
+    date: "2026-10-18",
+    kind: "feature",
+    title: "A new look for Event Clock",
+    body: "Checklist, Timeline, Routines and Archive are redesigned, with Structured and Relaxed layouts. Your games, ticks and settings carried over; the quick tour shows what moved.",
+    ref: "50c6e91",
+    note: "redesign",
+  },
+  {
     id: "pass-windows",
     date: "2026-10-16",
     kind: "games",
@@ -544,6 +553,20 @@ export const ENTRIES: Entry[] = [
 ];
 
 export const NOTES: Note[] = [
+  {
+    id: "redesign",
+    date: "2026-10-18",
+    title: "The redesigned Event Clock",
+    summary: [
+      "Event Clock has a new layout. The Checklist keeps what ends first at the top, with a side column for focusing a game, the next deadline, today's dailies and the routines you pin. The Timeline, Routines and Archive have their own tabs, and Settings gathers appearance, region and time, each game's servers and colours, data sources and backups.",
+      "Two layouts share everything: Structured, a compact ruled planner and the default, and Relaxed, with separated panels and more room. Urgency keeps its colours from before, grey to blue to yellow to red, and you can now change them in Appearance.",
+      "Routines have a home: follow dailies, weeklies, monthlies and cycles, pin them beside the Checklist or on the Timeline, and tick or count them off. Finishing one, or a whole section, is celebrated. Redeem codes for the games you track appear at the top of the Checklist and in each game's Codes tab.",
+      "Your games, ticks, goals and settings moved to a new saved format on first load. The old copy is kept untouched, a recovery copy is written first, and Backup can save your own copies by hand.",
+    ],
+    from: "ddd9673",
+    to: "50c6e91",
+    specs: ["docs/superpowers/specs/2026-10-16-ui-redesign-design.md"],
+  },
   {
     id: "pass-windows",
     date: "2026-10-16",
