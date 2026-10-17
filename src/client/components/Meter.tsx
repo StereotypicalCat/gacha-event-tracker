@@ -2,12 +2,14 @@ import type { Urgency } from "../../shared/time.ts";
 
 const TICKS = 24;
 
+// `--color-urgency-*` is set by the redesign's appearance (the live ramp,
+// kept apart from its accent); the live site doesn't set it and falls back.
 export const URGENCY_COLOR: Record<Urgency, string> = {
   expired: "var(--color-faint)",
-  critical: "var(--color-critical)",
-  soon: "var(--color-soon)",
-  near: "var(--color-near)",
-  calm: "var(--color-calm)",
+  critical: "var(--color-urgency-critical, var(--color-critical))",
+  soon: "var(--color-urgency-soon, var(--color-soon))",
+  near: "var(--color-urgency-near, var(--color-near))",
+  calm: "var(--color-urgency-calm, var(--color-calm))",
 };
 
 interface MeterProps {

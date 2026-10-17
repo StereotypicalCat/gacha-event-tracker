@@ -47,10 +47,10 @@
 import { appendFile } from "node:fs/promises";
 import {
   ADAPTERS,
-  adapterById,
 } from "../src/ingest/adapters/index.ts";
 import { SIX_HOURS_MS } from "../src/ingest/adapters/types.ts";
-import type { Adapter } from "../src/ingest/adapters/types.ts";
+import { CODE_SOURCES, type RefreshSource } from "../src/ingest/codes/registry.ts";
+const REFRESH_SOURCES: readonly RefreshSource[] = [...ADAPTERS, ...CODE_SOURCES];
 import { RobotsCache, type FetchLike } from "../src/ingest/robots.ts";
 import { decodeBody, SnapshotStore } from "../src/ingest/snapshots.ts";
 
@@ -129,7 +129,7 @@ export interface RobotsGate {
 }
 
 export interface RefreshOptions {
-  adapters: readonly Adapter[];
+  adapters: readonly RefreshSource[];
   store: SnapshotStore;
   robots: RobotsGate;
   fetchImpl: FetchLike;
@@ -335,7 +335,7 @@ export async function runRefresh(
 }
 
 async function refreshOne(
-  adapter: Adapter,
+  adapter: RefreshSource,
   options: RefreshOptions,
   cycle: Cycle,
 ): Promise<SourceOutcome> {
@@ -715,6 +715,8 @@ export async function rebuildFeedViaScript(): Promise<void> {
   });
   const code = await proc.exited;
   if (code !== 0) throw new Error(`build-feed exited ${code}`);
+  const codes = Bun.spawn(["bun", "run", "scripts/build-codes.ts"], { stdout: "inherit", stderr: "inherit" });
+  if (await codes.exited !== 0) throw new Error("build-codes failed");
 }
 
 /** Whether a person authorised this run, and who, for the override gates. */
@@ -847,7 +849,7 @@ const USAGE = `usage: bun run refresh [--dry-run] [--only <sourceId>] [--snapsho
                        [--force]
 
   --dry-run       report what each source would do; no requests, no writes
-  --only <id>     refresh a single source (${ADAPTERS.map((a) => a.id).join(", ")})
+  --only <id>     refresh a single source (${REFRESH_SOURCES.map((a) => a.id).join(", ")})
   --snapshots     snapshot cache directory (default: snapshots, env SNAPSHOT_DIR)
   --user-agent    override the User-Agent (env REFRESH_USER_AGENT)
   --no-feed       skip regenerating public/data/events.v1.json
@@ -878,7 +880,7 @@ async function main(): Promise<number> {
     return 0;
   }
 
-  if (args.only !== null && adapterById(args.only) === undefined) {
+  if (args.only !== null && !REFRESH_SOURCES.some(source => source.id === args.only)) {
     console.error(`unknown source '${args.only}'`);
     console.error(USAGE);
     return 2;
@@ -939,7 +941,7 @@ async function main(): Promise<number> {
   });
 
   if (args.force) {
-    const n = args.only === null ? ADAPTERS.length : 1;
+    const n = args.only === null ? REFRESH_SOURCES.length : 1;
     console.warn(
       `  ! --force: ignoring the 6h floor for ${n} source${n === 1 ? "" : "s"}. ` +
         `Conditional headers still apply, so an unchanged page costs a 304.`,
@@ -955,14 +957,14 @@ async function main(): Promise<number> {
   }
 
   console.log(
-    `refresh: ${args.only ?? `${ADAPTERS.length} sources`}${args.dryRun ? " (dry run)" : ""}`,
+    `refresh: ${args.only ?? `${REFRESH_SOURCES.length} sources`}${args.dryRun ? " (dry run)" : ""}`,
   );
   console.log(`  user-agent: ${args.userAgent}`);
   console.log(`  snapshots:  ${args.root}`);
   console.log(`  interval:   ${SIX_HOURS_MS / 3_600_000}h minimum per source\n`);
 
   const summary = await runRefresh({
-    adapters: ADAPTERS,
+    adapters: REFRESH_SOURCES,
     store,
     robots,
     fetchImpl: (input, init) => fetch(input, init),

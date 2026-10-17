@@ -1,3 +1,4 @@
+import { CodesFeedSchema, type CodesFeed } from "../shared/codes.ts";
 import { EventFeed, SCHEMA_VERSION } from "../shared/feed.ts";
 
 export type FeedState =
@@ -50,7 +51,7 @@ export async function fetchFeed(
   return parsed.data;
 }
 
-export type RefreshOutcome = "updated" | "same" | "failed";
+export type RefreshOutcome = "updated" | "same" | "failed" | "partial";
 
 /**
  * What a "check for new data" brought back.
@@ -66,4 +67,12 @@ export function refreshOutcome(before: EventFeed, after: EventFeed | Error): Ref
     JSON.stringify(before.events) === JSON.stringify(after.events) &&
     JSON.stringify(before.sources) === JSON.stringify(after.sources);
   return same ? "same" : "updated";
+}
+
+export async function fetchCodesFeed(signal?: AbortSignal, options: {fresh?: boolean} = {}): Promise<CodesFeed> {
+  const response = await fetch(new URL("data/codes.v1.json", document.baseURI), { signal: signal ?? null, ...(options.fresh ? {cache: "no-cache" as const} : {}) });
+  if (!response.ok || (options.fresh && response.headers.get("x-served-from") === "sw-cache")) throw new Error("The codes feed is unavailable.");
+  const parsed = CodesFeedSchema.safeParse(await response.json());
+  if (!parsed.success) throw new Error("The codes feed could not be read.");
+  return parsed.data;
 }

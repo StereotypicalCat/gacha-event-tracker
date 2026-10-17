@@ -32,25 +32,55 @@ const COLORS = [
   "var(--color-ink)",
 ];
 
-export function Fireworks() {
+/**
+ * The grand version, for finishing a whole section (every daily, or every
+ * routine in a game's group) rather than one item: more bursts across the
+ * section, wider and longer, in waves. Same fixed geometry rule as above.
+ */
+const GRAND_BURSTS: Array<{ x: number; y: number; delay: number }> = [
+  { x: 12, y: 30, delay: 0 },
+  { x: 50, y: 18, delay: 120 },
+  { x: 86, y: 34, delay: 220 },
+  { x: 30, y: 62, delay: 380 },
+  { x: 70, y: 66, delay: 480 },
+  { x: 20, y: 86, delay: 640 },
+  { x: 80, y: 84, delay: 720 },
+];
+const GRAND_SPARKS = 14;
+
+export function Fireworks({
+  grand = false,
+  hue,
+}: {
+  /** The section-complete celebration rather than the single burst. */
+  grand?: boolean;
+  /** A game's colour to mix into the sparks. */
+  hue?: string | undefined;
+} = {}) {
+  const bursts = grand ? GRAND_BURSTS : BURSTS,
+    sparks = grand ? GRAND_SPARKS : SPARKS,
+    colors = hue ? [hue, ...COLORS] : COLORS;
   return (
-    <div aria-hidden className="fireworks">
-      {BURSTS.map((burst, b) => (
+    <div aria-hidden className={`fireworks${grand ? " grand" : ""}`}>
+      {bursts.map((burst, b) => (
         <span
           key={b}
           className="firework"
           style={{ left: `${burst.x}%`, top: `${burst.y}%` }}
         >
-          {Array.from({ length: SPARKS }, (_, i) => (
+          {Array.from({ length: sparks }, (_, i) => (
             <span
               key={i}
               className="spark"
               style={{
-                ["--a" as string]: `${(360 / SPARKS) * i + b * 13}deg`,
+                ["--a" as string]: `${(360 / sparks) * i + b * 13}deg`,
                 // Uneven reach, so it reads as a burst rather than a wheel.
-                ["--d" as string]: `${16 + ((i * 7) % 13)}px`,
+                ["--d" as string]: grand
+                  ? `${34 + ((i * 11) % 34)}px`
+                  : `${16 + ((i * 7) % 13)}px`,
                 ["--delay" as string]: `${burst.delay}ms`,
-                background: COLORS[(i + b) % COLORS.length] ?? "var(--color-ink)",
+                background:
+                  colors[(i + b) % colors.length] ?? "var(--color-ink)",
               }}
             />
           ))}

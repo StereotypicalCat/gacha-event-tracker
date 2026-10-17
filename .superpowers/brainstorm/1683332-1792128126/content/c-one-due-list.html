@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C · One due list</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ground:#1a1c24; --surface:#21242e; --soft:#292c38; --softer:#323543;
+  --ink:#eeeae3; --strong:#fffdf8; --muted:#aaa6b0; --faint:#77747f; --line:#2f3240;
+  --calm:#7d8499; --near:#7ba5f3; --soon:#e9b95b; --critical:#f76b7d;
+  --r-sm:8px; --r:14px; --r-lg:20px;
+  --display:"Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --body:"Figtree", ui-sans-serif, system-ui, sans-serif;
+  --bar:40px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--ground);color:var(--ink);font:400 15px/1.6 var(--body);-webkit-font-smoothing:antialiased;padding-top:var(--bar);min-height:100vh}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--near);outline-offset:2px;border-radius:6px}
+.tnum{font-variant-numeric:tabular-nums}
+.hidden{display:none!important}
+
+/* ---------- prototype chrome (deliberately not the app) ---------- */
+.mock{position:fixed;inset:0 0 auto 0;height:var(--bar);z-index:100;background:#d8d5cc;color:#22232a;display:flex;align-items:center;gap:6px;padding:0 12px;font:500 12.5px/1 ui-sans-serif,system-ui,sans-serif;overflow-x:auto;white-space:nowrap;border-bottom:1px solid #bdb9ae}
+.mock b{font-weight:700;margin-right:8px}
+.mock button{padding:6px 9px;border-radius:6px;color:#22232a}
+.mock button:hover{background:#c6c2b7}
+.mock button.on{background:#22232a;color:#d8d5cc}
+.mock .sp{flex:1}
+.why{position:fixed;top:var(--bar);right:0;bottom:0;width:min(440px,100vw);background:#e7e4dc;color:#1e1f25;z-index:99;padding:22px 24px 40px;overflow:auto;font:400 14px/1.6 ui-sans-serif,system-ui,sans-serif;box-shadow:-12px 0 30px rgb(0 0 0/.35)}
+.why h3{font-size:15px;margin:20px 0 6px}
+.why code{background:#d5d1c6;padding:1px 5px;border-radius:4px;font-size:12.5px}
+.why pre{background:#d5d1c6;padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.5;overflow:auto}
+.why ul{padding-left:18px;margin:6px 0}
+
+/* ---------- app shell ---------- */
+.shell{max-width:1360px;margin:0 auto;padding:0 28px 80px}
+header.top{display:flex;align-items:center;gap:20px;padding:22px 0 18px}
+.word{font:700 21px/1 var(--display);letter-spacing:-.01em}
+.word span{color:var(--near)}
+.tabs{display:flex;gap:2px;background:var(--surface);padding:4px;border-radius:12px}
+.tabs button{padding:7px 14px;border-radius:9px;color:var(--muted);font-weight:500;font-size:14px}
+.tabs button:hover{color:var(--ink)}
+.tabs button[aria-selected=true]{background:var(--softer);color:var(--ink)}
+.grow{flex:1}
+.link{color:var(--muted);font-size:14px}
+.link:hover{color:var(--ink)}
+.addbtn{display:flex;align-items:center;gap:8px;background:var(--ink);color:var(--ground);padding:9px 14px 9px 12px;border-radius:12px;font-weight:600;font-size:14px}
+.addbtn:hover{background:var(--strong)}
+.addbtn kbd{font:600 11px/1 var(--body);background:rgb(26 28 36/.12);padding:3px 6px;border-radius:5px}
+
+.layout{display:grid;grid-template-columns:400px 1fr;gap:28px;align-items:start}
+.rail{display:flex;flex-direction:column;gap:16px;position:sticky;top:calc(var(--bar) + 16px)}
+
+.sec{background:var(--surface);border-radius:var(--r-lg);padding:18px 20px 16px}
+.sec-h{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
+.sec-h h2{font:600 17px/1.3 var(--display);margin:0;letter-spacing:-.005em}
+.sec-h .meta{color:var(--faint);font-size:13px}
+.cust{margin-left:auto;display:flex;align-items:center;gap:6px;color:var(--faint);font-size:13px;padding:4px 8px;border-radius:8px}
+.cust:hover,.cust[aria-expanded=true]{color:var(--ink);background:var(--soft)}
+.cust svg{width:15px;height:15px}
+
+/* due list */
+.bucket{color:var(--faint);font-size:13px;margin:14px 0 4px}
+.bucket:first-of-type{margin-top:4px}
+.due{display:grid;grid-template-columns:10px 1fr auto;gap:2px 12px;align-items:center;padding:9px 10px;margin:0 -10px;border-radius:12px;width:calc(100% + 20px);text-align:left}
+.due:hover{background:var(--soft)}
+.dot{width:9px;height:9px;border-radius:50%}
+.due .t{font-weight:500;line-height:1.35;min-width:0}
+.due .t .sub{display:block;font-weight:400;color:var(--muted);font-size:13px;margin-top:1px}
+.due .left{font-weight:600;font-size:14px;text-align:right}
+.kind{display:inline-block;font-size:11.5px;font-weight:500;color:var(--muted);background:var(--soft);padding:1px 7px;border-radius:999px;margin-left:6px;vertical-align:1px}
+.due:hover .kind{background:var(--softer)}
+.kind.yours{color:var(--soon);background:rgb(233 185 91/.13)}
+.due.done .t{color:var(--faint);text-decoration:line-through;text-decoration-color:var(--faint)}
+.due.done .left{color:var(--faint)}
+.fill{grid-column:2/4;height:3px;border-radius:2px;background:var(--softer);overflow:hidden;margin-top:5px}
+.fill i{display:block;height:100%;border-radius:2px}
+.more{color:var(--muted);font-size:14px;margin-top:8px;padding:4px 0}
+.more:hover{color:var(--ink)}
+.empty{color:var(--muted);font-size:14px;padding:6px 0 4px}
+.empty button{color:var(--near);text-decoration:underline;text-underline-offset:3px}
+.editor{grid-column:1/4;display:flex;gap:8px;align-items:center;padding:8px 0 4px 22px;font-size:13.5px;color:var(--muted);flex-wrap:wrap}
+.editor input{width:96px;background:var(--ground);border:1px solid var(--line);border-radius:8px;padding:5px 8px}
+.pill{padding:6px 12px;border-radius:999px;background:var(--softer);font-size:13px;font-weight:500}
+.pill:hover{background:#3c3f4f}
+.pill.primary{background:var(--near);color:#0f1420}
+
+/* chips */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:6px 12px 6px 9px;border-radius:999px;background:var(--soft);font-size:13.5px;font-weight:500;color:var(--muted)}
+.chip:hover{color:var(--ink)}
+.chip .ck{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--h);display:grid;place-items:center}
+.chip[aria-pressed=true]{background:color-mix(in srgb,var(--h) 16%,var(--surface));color:var(--ink)}
+.chip[aria-pressed=true] .ck{background:var(--h)}
+.chip[aria-pressed=true] .ck svg{opacity:1}
+.chip .ck svg{width:10px;height:10px;opacity:0;color:var(--ground)}
+
+.addsec{border:1.5px dashed var(--line);border-radius:var(--r-lg);padding:13px 18px;color:var(--muted);font-size:14px;text-align:left;display:flex;gap:8px;align-items:center}
+.addsec:hover{color:var(--ink);border-color:var(--faint)}
+
+/* headline */
+.head{background:var(--surface);border-radius:var(--r-lg);padding:26px 30px 24px;position:relative;overflow:hidden;margin-bottom:16px}
+.head .lbl{color:var(--muted);font-size:14px}
+.head h1{font:600 34px/1.12 var(--display);letter-spacing:-.02em;margin:6px 0 4px;max-width:22ch}
+.head .game{font-weight:600;font-size:15px}
+.head .row{display:flex;align-items:flex-end;gap:18px;margin:18px 0 14px;flex-wrap:wrap}
+.big{font:700 54px/1 var(--body);letter-spacing:-.03em}
+.head .when{color:var(--muted);font-size:14px;padding-bottom:6px}
+.meter{display:flex;gap:3px}
+.meter i{flex:1;height:10px;border-radius:3px;background:var(--softer)}
+.meter i.on{background:var(--c)}
+.meter.sm i{height:7px;border-radius:2px}
+
+/* running list */
+.runrow{display:grid;grid-template-columns:4px 1fr auto;gap:4px 16px;padding:16px 14px;margin:0 -14px;border-radius:14px;width:calc(100% + 28px);text-align:left}
+.runrow:hover{background:var(--soft)}
+.runrow .rail3{grid-row:1/4;border-radius:3px;background:var(--h);opacity:.7}
+.runrow .gname{font-size:13px;font-weight:600}
+.runrow .title{font-size:16px;font-weight:500;line-height:1.35}
+.runrow .left{font-weight:600;font-size:15px;align-self:start;text-align:right}
+.runrow .range{color:var(--faint);font-size:13px;margin-top:6px}
+.runrow .meter{grid-column:2/4;margin-top:8px}
+.rowacts{grid-column:2/4;display:flex;gap:8px;margin-top:10px}
+
+/* popover */
+.pop{position:absolute;z-index:60;width:340px;background:var(--softer);border-radius:16px;padding:16px 18px 14px;box-shadow:0 18px 40px rgb(0 0 0/.45)}
+.pop h4{font:600 13px/1.3 var(--body);color:var(--muted);margin:14px 0 8px}
+.pop h4:first-child{margin-top:0}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.opt{padding:5px 11px;border-radius:999px;background:var(--soft);font-size:13px;color:var(--muted)}
+.opt:hover{color:var(--ink)}
+.opt[aria-pressed=true]{background:rgb(123 165 243/.18);color:var(--ink);box-shadow:inset 0 0 0 1px rgb(123 165 243/.5)}
+.opt.g[aria-pressed=true]{background:color-mix(in srgb,var(--h) 18%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--h) 60%,transparent)}
+.popfoot{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:16px;padding-top:12px;border-top:1px solid #3a3d4c;font-size:13.5px}
+.popfoot button{color:var(--muted)}
+.popfoot button:hover{color:var(--ink)}
+.popfoot .addb{color:var(--near)}
+
+/* palette */
+.scrim{position:fixed;inset:var(--bar) 0 0 0;background:rgb(14 15 20/.66);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:10vh 16px 16px}
+.pal{width:min(620px,100%);background:var(--surface);border-radius:20px;box-shadow:0 30px 60px rgb(0 0 0/.5);overflow:hidden}
+.pal .q{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--line)}
+.pal .q svg{width:18px;height:18px;color:var(--faint)}
+.pal .q input{flex:1;background:none;border:0;outline:0;font-size:17px}
+.pal .res{max-height:56vh;overflow:auto;padding:8px 8px 12px}
+.pal .grp{color:var(--faint);font-size:13px;padding:10px 12px 4px}
+.pr{display:grid;grid-template-columns:10px 1fr auto;gap:2px 12px;align-items:center;padding:9px 12px;border-radius:12px;width:100%;text-align:left}
+.pr:hover,.pr.sel{background:var(--soft)}
+.pr .sub{grid-column:2;color:var(--muted);font-size:13px}
+.pr .act{font-size:13px;font-weight:600;color:var(--near);grid-row:1/3;grid-column:3}
+.pr .act.on{color:var(--muted);font-weight:500}
+.pal .hint{padding:10px 18px;border-top:1px solid var(--line);color:var(--faint);font-size:12.5px}
+
+/* toast */
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--softer);border-radius:14px;padding:11px 12px 11px 18px;display:flex;gap:16px;align-items:center;box-shadow:0 14px 34px rgb(0 0 0/.45);z-index:90;font-size:14px;max-width:calc(100vw - 32px)}
+.toast button{color:var(--near);font-weight:600;padding:4px 8px}
+
+/* settings & archive */
+.page{max-width:820px}
+.page h1{font:600 30px/1.2 var(--display);letter-spacing:-.02em;margin:8px 0 6px}
+.page .lead{color:var(--muted);margin:0 0 22px;max-width:60ch}
+.set{background:var(--surface);border-radius:var(--r-lg);padding:20px 22px;margin-bottom:14px}
+.set h2{font:600 18px/1.3 var(--display);margin:0 0 4px}
+.set p{color:var(--muted);margin:0 0 14px;font-size:14px;max-width:62ch}
+.lrow{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:14.5px}
+.lrow:first-of-type{border-top:0}
+.lrow .s{color:var(--muted);font-size:13px}
+.lrow .r{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.seg{display:inline-flex;background:var(--ground);border-radius:10px;padding:3px}
+.seg button{padding:5px 12px;border-radius:8px;font-size:13px;color:var(--muted)}
+.seg button[aria-pressed=true]{background:var(--softer);color:var(--ink)}
+
+/* timeline (light sketch) */
+.tl{background:var(--surface);border-radius:var(--r-lg);padding:18px 20px;overflow:auto}
+.tlrow{display:grid;grid-template-columns:120px 1fr;gap:12px;align-items:center;min-height:34px}
+.tltrack{position:relative;height:26px}
+.tlbar{position:absolute;top:2px;height:22px;border-radius:6px;font-size:12px;padding:3px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.now{position:absolute;top:0;bottom:0;width:1px;background:var(--critical)}
+
+/* onboarding */
+.ob{position:fixed;inset:var(--bar) 0 0 0;background:var(--ground);z-index:80;overflow:auto}
+.obin{max-width:720px;margin:0 auto;padding:56px 24px 60px}
+.step{color:var(--faint);font-size:14px}
+.ob h1{font:600 38px/1.12 var(--display);letter-spacing:-.025em;margin:8px 0 10px}
+.ob .lead{color:var(--muted);font-size:16px;margin:0 0 28px;max-width:52ch}
+.ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.gopt{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:var(--surface);text-align:left;font-weight:500;color:var(--muted)}
+.gopt:hover{color:var(--ink)}
+.gopt[aria-pressed=true]{background:color-mix(in srgb,var(--h) 16%,var(--surface));color:var(--ink);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--h) 70%,transparent)}
+.choice{display:block;width:100%;text-align:left;background:var(--surface);border-radius:18px;padding:20px 22px;margin-bottom:10px}
+.choice:hover{background:var(--soft)}
+.choice[aria-pressed=true]{box-shadow:inset 0 0 0 2px var(--near);background:var(--soft)}
+.choice strong{font:600 19px/1.3 var(--display);display:block}
+.choice span{color:var(--muted);font-size:14.5px;display:block;margin-top:4px}
+.choice .ex{color:var(--faint);font-size:13px;margin-top:10px}
+.obfoot{display:flex;align-items:center;gap:16px;margin-top:28px}
+.commit{background:var(--ink);color:var(--ground);font-weight:600;padding:12px 22px;border-radius:12px}
+.commit:hover{background:var(--strong)}
+.commit:disabled{background:var(--soft);color:var(--faint);cursor:not-allowed}
+
+/* coach marks */
+.spot{position:fixed;z-index:85;border-radius:14px;box-shadow:0 0 0 9999px rgb(10 11 16/.72);pointer-events:none;transition:all .22s ease-out}
+.tip{position:fixed;z-index:86;width:320px;background:var(--ink);color:var(--ground);border-radius:16px;padding:16px 18px 14px;box-shadow:0 18px 40px rgb(0 0 0/.5)}
+.tip .n{font-size:12.5px;color:#5d5a63}
+.tip h3{font:600 17px/1.3 var(--display);margin:4px 0 6px}
+.tip p{margin:0;font-size:14px;line-height:1.5;color:#3a3840}
+.tip .f{display:flex;gap:10px;align-items:center;margin-top:14px}
+.tip .f .skip{color:#5d5a63;font-size:13.5px}
+.tip .f .nx{margin-left:auto;background:var(--ground);color:var(--ink);padding:7px 14px;border-radius:10px;font-weight:600;font-size:13.5px}
+
+@media (max-width:960px){
+  .layout{grid-template-columns:1fr}
+  .rail{position:static}
+}
+@media (max-width:640px){
+  .shell{padding:0 16px 80px}
+  header.top{flex-wrap:wrap;gap:12px;padding:16px 0 14px}
+  header.top .tabs{order:3;width:100%}
+  header.top .tabs button{flex:1}
+  .head{padding:20px 18px}
+  .head h1{font-size:26px}
+  .big{font-size:42px}
+  .sec{padding:16px}
+  .pop{position:fixed!important;left:0!important;right:0;bottom:0;top:auto!important;width:auto;border-radius:20px 20px 0 0;max-height:80vh;overflow:auto}
+  .ob h1{font-size:30px}
+  .tip{left:16px!important;right:16px;width:auto}
+  .addbtn kbd{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="mock" id="mock"></div>
+<div id="app"></div>
+<div id="layer"></div>
+
+<script>
+/* ---------------- real content (from the feed and src/shared) ---------------- */
+const GAMES=[{"id":"genshin","name":"Genshin Impact","short":"Genshin","hue":"#4EA8DE","chores":"Commissions, resin"},{"id":"hsr","name":"Honkai: Star Rail","short":"Star Rail","hue":"#7B8CFF","chores":"Daily training, Trailblaze Power"},{"id":"zzz","name":"Zenless Zone Zero","short":"ZZZ","hue":"#F2A03D","chores":"Daily missions, battery"},{"id":"wuwa","name":"Wuthering Waves","short":"Wuwa","hue":"#3DD6A0","chores":"Daily activity, waveplate"},{"id":"endfield","name":"Arknights: Endfield","short":"Endfield","hue":"#E8635A","chores":"Daily missions"},{"id":"nte","name":"Neverness to Everness","short":"NTE","hue":"#C77DFF","chores":"Daily tasks"},{"id":"arknights","name":"Arknights","short":"Arknights","hue":"#9AA3B8","chores":"Daily missions, sanity"},{"id":"nikki","name":"Infinity Nikki","short":"Nikki","hue":"#F27BB0","chores":"Daily tasks, Vital Energy"},{"id":"p5x","name":"Persona 5: The Phantom X","short":"P5X","hue":"#D62246","chores":"Daily missions, stamina"},{"id":"r1999","name":"Reverse: 1999","short":"R1999","hue":"#C9A227","chores":"Daily missions"},{"id":"ba","name":"Blue Archive","short":"Blue Archive","hue":"#3FCBDD","chores":"Daily missions, AP"},{"id":"fgo","name":"Fate/Grand Order","short":"FGO","hue":"#5d7fe0","chores":"Daily Quests, AP"},{"id":"gfl2","name":"Girls' Frontline 2: Exilium","short":"GFL2","hue":"#A9C23F","chores":"Daily missions"},{"id":"stellasora","name":"Stella Sora","short":"Stella Sora","hue":"#2E9E9E","chores":"Daily missions"},{"id":"czn","name":"Chaos Zero Nightmare","short":"CZN","hue":"#B84A9C","chores":"Daily missions"},{"id":"nikke","name":"Goddess of Victory: Nikke","short":"Nikke","hue":"#E4572E","chores":"Daily missions, outpost"},{"id":"uma","name":"Umamusume: Pretty Derby","short":"Umamusume","hue":"#6FBF44","chores":"Daily races, missions"},{"id":"hi3","name":"Honkai Impact 3rd","short":"Honkai 3rd","hue":"#8B5CF6","chores":"Daily missions, stamina"},{"id":"pgr","name":"Punishing: Gray Raven","short":"PGR","hue":"#CC292B","chores":"Daily missions, serum"}];
+const ROUTINES=[{"id":"routine:genshin:weekly-bosses","game":"genshin","title":"Weekly Bosses","period":{"unit":"week","startsOn":1},"measure":{"kind":"amount","target":3,"unit":"runs"}},{"id":"routine:genshin:battle-pass-exp","game":"genshin","title":"Battle Pass weekly EXP","period":{"unit":"week","startsOn":1},"measure":{"kind":"amount","target":10000,"unit":"EXP"}},{"id":"routine:genshin:bounties","game":"genshin","title":"Reputation Bounties","period":{"unit":"week","startsOn":1},"measure":{"kind":"amount","target":3,"unit":"bounties"}},{"id":"routine:genshin:requests","game":"genshin","title":"Reputation Requests","period":{"unit":"week","startsOn":1},"measure":{"kind":"amount","target":3,"unit":"requests"}},{"id":"routine:genshin:realm-depot","game":"genshin","title":"Realm Depot: Realm Treasures","period":{"unit":"week","startsOn":1},"measure":{"kind":"days","required":1}},{"id":"routine:genshin:paimons-bargains","game":"genshin","title":"Paimon's Bargains: Intertwined Fates","period":{"unit":"month","startsOn":1},"measure":{"kind":"amount","target":5,"unit":"fates"}},{"id":"routine:genshin:spiral-abyss","game":"genshin","title":"Spiral Abyss","period":{"unit":"month","startsOn":16},"measure":{"kind":"days","required":1}},{"id":"routine:genshin:imaginarium-theater","game":"genshin","title":"Imaginarium Theater","period":{"unit":"month","startsOn":1},"measure":{"kind":"days","required":1}},{"id":"routine:hsr:echo-of-war","game":"hsr","title":"Echo of War","period":{"unit":"week","startsOn":1},"measure":{"kind":"amount","target":3,"unit":"runs"}},{"id":"routine:hsr:nameless-honor-exp","game":"hsr","title":"Nameless Honor weekly EXP","period":{"unit":"week","startsOn":1},"measure":{"kind":"amount","target":8000,"unit":"EXP"}},{"id":"routine:hsr:embers-exchange","game":"hsr","title":"Embers Exchange: Star Rail Special Pass","period":{"unit":"month","startsOn":1},"measure":{"kind":"amount","target":5,"unit":"passes"}},{"id":"routine:hsr:points","game":"hsr","title":"Divergent Universe & Currency Wars points","period":{"unit":"week","startsOn":1},"measure":{"kind":"amount","target":18000,"unit":"points"}},{"id":"routine:hsr:pure-fiction","game":"hsr","title":"Pure Fiction","period":{"unit":"cycle","days":42,"from":"2026-10-19"},"measure":{"kind":"days","required":1}},{"id":"routine:hsr:memory-of-chaos","game":"hsr","title":"Memory of Chaos","period":{"unit":"cycle","days":42,"from":"2026-11-02"},"measure":{"kind":"days","required":1}},{"id":"routine:hsr:apocalyptic-shadow","game":"hsr","title":"Apocalyptic Shadow","period":{"unit":"cycle","days":42,"from":"2026-11-16"},"measure":{"kind":"days","required":1}},{"id":"routine:zzz:ridu-weekly","game":"zzz","title":"Ridu Weekly","period":{"unit":"week","startsOn":1},"measure":{"kind":"amount","target":2100,"unit":"points"}},{"id":"routine:zzz:bounty-commissions","game":"zzz","title":"Bounty Commissions","period":{"unit":"week","startsOn":1},"measure":{"kind":"amount","target":8000,"unit":"points"}},{"id":"routine:zzz:notorious-hunt","game":"zzz","title":"Notorious Hunt","period":{"unit":"week","startsOn":1},"measure":{"kind":"amount","target":3,"unit":"runs"}},{"id":"routine:zzz:city-fund-exp","game":"zzz","title":"New Eridu City Fund weekly EXP","period":{"unit":"week","startsOn":1},"measure":{"kind":"amount","target":10000,"unit":"EXP"}},{"id":"routine:zzz:signal-shop-tapes","game":"zzz","title":"Signal Shop: Encrypted Master Tapes","period":{"unit":"month","startsOn":1},"measure":{"kind":"amount","target":5,"unit":"tapes"}},{"id":"routine:zzz:signal-shop-boopons","game":"zzz","title":"Signal Shop: Boopons","period":{"unit":"month","startsOn":1},"measure":{"kind":"amount","target":5,"unit":"Boopons"}},{"id":"routine:zzz:shiyu-defense","game":"zzz","title":"Shiyu Defense","period":{"unit":"cycle","days":14,"from":"2026-10-16"},"measure":{"kind":"days","required":1}},{"id":"routine:zzz:deadly-assault","game":"zzz","title":"Deadly Assault","period":{"unit":"cycle","days":14,"from":"2026-10-23"},"measure":{"kind":"days","required":1}},{"id":"routine:endfield:weekly-routine","game":"endfield","title":"Weekly Routine","period":{"unit":"week","startsOn":1},"measure":{"kind":"amount","target":10,"unit":"points"}},{"id":"routine:endfield:focus-commissions","game":"endfield","title":"Etchspace Salvage: Focus Commissions","period":{"unit":"week","startsOn":1},"measure":{"kind":"amount","target":3,"unit":"commissions"}},{"id":"routine:wuwa:weekly-challenge","game":"wuwa","title":"Weekly Challenge","period":{"unit":"week","startsOn":1},"measure":{"kind":"amount","target":3,"unit":"claims"}},{"id":"routine:wuwa:pioneer-podcast-exp","game":"wuwa","title":"Pioneer Podcast weekly EXP","period":{"unit":"week","startsOn":1},"measure":{"kind":"amount","target":12000,"unit":"EXP"}},{"id":"routine:wuwa:weekly-activities","game":"wuwa","title":"Weekly Activities","period":{"unit":"week","startsOn":1},"measure":{"kind":"amount","target":6000,"unit":"points"}},{"id":"routine:wuwa:tower-of-adversity","game":"wuwa","title":"Tower of Adversity","period":{"unit":"cycle","days":28,"from":"2026-11-09"},"measure":{"kind":"days","required":1}},{"id":"routine:nte:season-pass-exp","game":"nte","title":"Season Pass weekly EXP","period":{"unit":"week","startsOn":1},"measure":{"kind":"amount","target":12000,"unit":"EXP"}},{"id":"routine:nte:anomaly-pilgrimage","game":"nte","title":"Anomaly Pilgrimage","period":{"unit":"week","startsOn":1},"measure":{"kind":"amount","target":3,"unit":"claims"}},{"id":"routine:nte:city-stamina","game":"nte","title":"City Stamina","period":{"unit":"week","startsOn":1},"measure":{"kind":"amount","target":700,"unit":"stamina"}},{"id":"routine:nte:realm-of-greed","game":"nte","title":"Realm of Greed","period":{"unit":"week","startsOn":1},"measure":{"kind":"days","required":1}},{"id":"routine:nte:beyond-the-rails","game":"nte","title":"Beyond the Rails","period":{"unit":"cycle","days":14,"from":"2026-10-22"},"measure":{"kind":"days","required":1}},{"id":"routine:nte:tycoon-fund","game":"nte","title":"Tycoon Incentive Fund","period":{"unit":"cycle","days":14,"from":"2026-10-26"},"measure":{"kind":"amount","target":1000000,"unit":"fons"}}];
+const EVENTS=[{"game":"genshin","title":"Anniversary Memories Album","startsAt":"2026-09-28T00:00:00Z","endsAt":"2026-10-18T00:00:00Z"},{"game":"zzz","title":"Clink, Clank, Pinball Knight!","startsAt":"2026-09-10T00:00:00Z","endsAt":"2026-10-19T00:00:00Z"},{"game":"zzz","title":"Diary of an Orbie Parent","startsAt":"2026-09-30T00:00:00Z","endsAt":"2026-10-19T00:00:00Z"},{"game":"zzz","title":"Chronicles of the Hobbling Crow","startsAt":"2026-10-03T00:00:00Z","endsAt":"2026-10-19T00:00:00Z"},{"game":"nte","title":"Stamina Recharge","startsAt":"2026-10-05T00:00:00Z","endsAt":"2026-10-19T00:00:00Z"},{"game":"zzz","title":"Data Bounty - Combat Simulation","startsAt":"2026-10-14T00:00:00Z","endsAt":"2026-10-19T00:00:00Z"},{"game":"zzz","title":"All-New Program","startsAt":"2026-09-09T00:00:00Z","endsAt":"2026-10-20T00:00:00Z"},{"game":"genshin","title":"Predictive Victory Dynamics","startsAt":"2026-10-12T00:00:00Z","endsAt":"2026-10-20T00:00:00Z"},{"game":"wuwa","title":"Bountiful Crescendo","startsAt":"2026-10-15T00:00:00Z","endsAt":"2026-10-22T00:00:00Z"},{"game":"hsr","title":"4.6 Planar Fissure","startsAt":"2026-10-12T00:00:00Z","endsAt":"2026-10-25T00:00:00Z"},{"game":"wuwa","title":"Artisan's Search","startsAt":"2026-10-08T00:00:00Z","endsAt":"2026-10-26T00:00:00Z"},{"game":"wuwa","title":"Waking Moon Fishing","startsAt":"2026-10-15T00:00:00Z","endsAt":"2026-11-01T00:00:00Z"},{"game":"genshin","title":"To Temper Thyself and Journey Far","startsAt":"2026-08-10T00:00:00Z","endsAt":"2026-11-02T00:00:00Z"},{"game":"genshin","title":"Battle Pass - Moontrace","startsAt":"2026-09-23T00:00:00Z","endsAt":"2026-11-02T00:00:00Z"},{"game":"hsr","title":"Astral Imagea","startsAt":"2026-09-28T00:00:00Z","endsAt":"2026-11-11T00:00:00Z"},{"game":"hsr","title":"Love, Ghosts & Robots","startsAt":"2026-09-28T00:00:00Z","endsAt":"2026-11-11T00:00:00Z"},{"game":"hsr","title":"Wishpower UP! Down with Voracity!","startsAt":"2026-09-28T00:00:00Z","endsAt":"2026-11-11T00:00:00Z"},{"game":"nte","title":"Pukaland Travelogue","startsAt":"2026-09-30T00:00:00Z","endsAt":"2026-11-11T00:00:00Z"},{"game":"wuwa","title":"3.7 Moonlit Path","startsAt":"2026-09-30T00:00:00Z","endsAt":"2026-11-11T00:00:00Z"},{"game":"wuwa","title":"Ascendant Aces","startsAt":"2026-09-30T00:00:00Z","endsAt":"2026-11-11T00:00:00Z"},{"game":"nte","title":"Coal Lumps Treasure","startsAt":"2026-10-08T00:00:00Z","endsAt":"2026-11-11T00:00:00Z"},{"game":"hsr","title":"Free Gilgamesh or Archer","startsAt":"2026-07-24T00:00:00Z","endsAt":null}].map((e,i)=>({...e,id:"ev"+i}));
+
+/* ---------------- clock (fake now; one reset hour for the sketch) ---------------- */
+const NOW=Date.parse("2026-10-16T12:00:00Z"), H=3600e3, D=24*H, RESET_H=3;
+const at=(ymd)=>Date.parse(ymd+"T0"+RESET_H+":00:00Z");
+const NEXT_DAILY=at("2026-10-17");
+function periodSpan(p){
+  if(p.unit==="week"){const end=at("2026-10-19");return [end-7*D,end];}
+  if(p.unit==="month"){
+    const d=new Date(NOW);let y=d.getUTCFullYear(),m=d.getUTCMonth();
+    let end=Date.UTC(y,m,p.startsOn,RESET_H); if(end<=NOW) end=Date.UTC(y,m+1,p.startsOn,RESET_H);
+    const e=new Date(end); return [Date.UTC(e.getUTCFullYear(),e.getUTCMonth()-1,p.startsOn,RESET_H),end];
+  }
+  const len=p.days*D, from=at(p.from); let k=Math.ceil((NOW-from)/len); let end=from+k*len; if(end<=NOW) end+=len; return [end-len,end];
+}
+function left(ms){ if(ms==null) return "no end date"; const t=ms-NOW; const d=Math.floor(t/D), h=Math.floor((t%D)/H);
+  return d>0?`${d}d ${h}h`:`${h}h ${Math.floor((t%H)/6e4)}m`; }
+function heat(ms){ if(ms==null) return "var(--faint)"; const h=(ms-NOW)/H; return h<24?"var(--critical)":h<72?"var(--soon)":h<168?"var(--near)":"var(--calm)"; }
+const fmtD=(ms)=>new Date(ms).toLocaleDateString("en-GB",{day:"numeric",month:"short",timeZone:"UTC"});
+const num=(n)=>n.toLocaleString("en-GB");
+const G=Object.fromEntries(GAMES.map(g=>[g.id,g]));
+const esc=(s)=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const ICON={
+  tune:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 4.5h7M12 4.5h2M2 11.5h2M7 11.5h7"/><circle cx="10.5" cy="4.5" r="1.5"/><circle cx="5.5" cy="11.5" r="1.5"/></svg>',
+  plus:'<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>',
+  check:'<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.2 5 8.5l4.5-5"/></svg>',
+  search:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="9" cy="9" r="5.5"/><path d="m13.2 13.2 3.8 3.8"/></svg>',
+};
+
+/* ---------------- the foundation, in miniature ----------------
+   Every source projects to one Item shape; every visible list is a Section (a saved query). */
+const KINDS=[["event","Events"],["daily","Dailies"],["weekly","Weekly"],["monthly","Monthly"],["cycle","Cycles"],["own","Your own"]];
+const KIND_TAG={event:"event",daily:"dailies",weekly:"weekly",monthly:"monthly",cycle:"cycle"};
+const DEMO_GAMES=["genshin","hsr","zzz","wuwa","endfield","nte"];
+const ALL_KINDS=KINDS.map(k=>k[0]);
+const sectionPresets={
+  due:{id:"due",title:"Due next",where:"rail",kinds:["event","daily","weekly","cycle","own"],games:"all",limit:8,sort:"due",within:7},
+  dailies:{id:"dailies",title:"Today's dailies",where:"rail",kinds:["daily"],games:"all",limit:0,sort:"game"},
+  running:{id:"running",title:"Running now",where:"main",kinds:["event","own"],games:"all",limit:6,sort:"due"},
+};
+function demoState(){
+  return {
+    tab:"checklist", view:"main",
+    games:[...DEMO_GAMES],
+    chores:["genshin","hsr","zzz","wuwa"],
+    follow:["routine:zzz:ridu-weekly","routine:zzz:shiyu-defense","routine:genshin:weekly-bosses","routine:hsr:pure-fiction","routine:nte:beyond-the-rails","routine:wuwa:weekly-challenge"],
+    own:[
+      {id:"own:1",game:"nte",title:"Collect every Pukaland postcard",kind:"event",startsAt:Date.parse("2026-10-01T00:00:00Z"),dueAt:Date.parse("2026-11-05T03:00:00Z"),measure:{kind:"days",required:1}},
+      {id:"own:2",game:"zzz",title:"Lost Void runs",kind:"weekly",period:{unit:"week",startsOn:1},measure:{kind:"amount",target:4,unit:"runs"}},
+    ],
+    progress:{"routine:zzz:ridu-weekly":1400,"routine:genshin:weekly-bosses":1,"routine:wuwa:weekly-challenge":3,"own:2":1},
+    choresDone:["hsr"],
+    status:{ev3:"done",ev6:"ignored",ev13:"done"},
+    layout:[{...sectionPresets.due},{...sectionPresets.dailies},{...sectionPresets.running}],
+    expanded:{}, editing:null, rowOpen:null,
+    archiveGame:"all", archiveStatus:"all",
+  };
+}
+function blankState(){
+  const s=demoState(); s.games=[]; s.chores=[]; s.follow=[]; s.own=[]; s.progress={}; s.choresDone=[]; s.status={};
+  s.layout=[{...sectionPresets.due,kinds:["event","own"]},{...sectionPresets.dailies,hidden:true},{...sectionPresets.running}]; return s;
+}
+let S=demoState();
+let UI={pop:null, pal:null, toast:null, why:false, ob:null, tour:null, addMenu:false, screen:"main"};
+
+function items(){
+  const out=[];
+  for(const e of EVENTS){ if(!S.games.includes(e.game)) continue;
+    out.push({id:e.id,src:"event",game:e.game,title:e.title,kind:"event",startAt:Date.parse(e.startsAt),dueAt:e.endsAt?Date.parse(e.endsAt):null,status:S.status[e.id]||"open"}); }
+  for(const g of S.chores){ if(!S.games.includes(g)) continue;
+    out.push({id:"dailies:"+g,src:"chore",game:g,title:G[g].chores,kind:"daily",startAt:NEXT_DAILY-D,dueAt:NEXT_DAILY,status:S.choresDone.includes(g)?"done":"open"}); }
+  for(const id of S.follow){ const r=ROUTINES.find(x=>x.id===id); if(!r||!S.games.includes(r.game)) continue;
+    const [a,b]=periodSpan(r.period); out.push(routineItem(r,"routine",a,b)); }
+  for(const o of S.own){
+    if(o.kind==="event") out.push({...o,src:"own",startAt:o.startsAt,status:S.status[o.id]||"open",own:true});
+    else { const [a,b]=periodSpan(o.period); out.push({...routineItem(o,"own",a,b),own:true}); }
+  }
+  return out;
+}
+function routineItem(r,src,a,b){
+  const kind=r.period.unit==="week"?"weekly":r.period.unit==="month"?"monthly":"cycle";
+  const v=S.progress[r.id]||0, m=r.measure;
+  const done=m.kind==="amount"?v>=m.target:v>=1;
+  return {id:r.id,src,game:r.game,title:r.title,kind,startAt:a,dueAt:b,measure:m,value:v,status:done?"done":"open"};
+}
+function query(sec){
+  let xs=items().filter(i=>{
+    const k=i.own?"own":i.kind;
+    if(!sec.kinds.includes(k)) return false;
+    if(sec.games!=="all" && !sec.games.includes(i.game)) return false;
+    if(sec.where==="main" && i.kind!=="event") return false;
+    if(sec.within && i.dueAt!=null && i.dueAt-NOW>sec.within*D && i.status!=="done") return false;
+    if(i.src==="event"||(i.own&&i.kind==="event")) return i.status==="open";
+    return true;
+  });
+  xs.sort((a,b)=>sec.sort==="game"?(S.games.indexOf(a.game)-S.games.indexOf(b.game))||((a.dueAt??9e15)-(b.dueAt??9e15)):((a.status==="done")-(b.status==="done"))||((a.dueAt??9e15)-(b.dueAt??9e15)));
+  return xs;
+}
+
+/* ---------------- rendering ---------------- */
+function render(){
+  renderMock();
+  const app=document.getElementById("app");
+  app.innerHTML=`<div class="shell">${header()}${S.tab==="settings"?settings():S.tab==="timeline"?timeline():S.view==="archive"?archive():main()}</div>`;
+  renderLayer();
+}
+function renderMock(){
+  const b=(k,l)=>`<button data-act="screen" data-v="${k}" class="${UI.screen===k?"on":""}">${l}</button>`;
+  document.getElementById("mock").innerHTML=`<b>C · One due list, customise where you see it</b>${b("main","Main")}${b("add","Add &amp; choose systems")}${b("settings","Settings")}${b("onboard","Onboarding (new user)")}${b("return","Returning user")}${b("archive","Archive")}<span class="sp"></span><button data-act="reset">Reset demo</button><button data-act="why" class="${UI.why?"on":""}">Why / foundation</button>`;
+}
+function header(){
+  const t=(k,l)=>`<button role="tab" aria-selected="${S.tab===k}" data-act="tab" data-v="${k}" ${k==="settings"?'id="tab-settings"':""}>${l}</button>`;
+  return `<header class="top"><div class="word">Event <span>Clock</span></div>
+    <div class="tabs" role="tablist">${t("checklist","Checklist")}${t("timeline","Timeline")}${t("settings","Settings")}</div>
+    <span class="grow"></span>
+    <button class="link" data-act="archive">Done &amp; ignored</button>
+    <button class="addbtn" id="addbtn" data-act="pal">${ICON.plus} Add <kbd>/</kbd></button></header>`;
+}
+function main(){
+  const rail=S.layout.filter(s=>s.where==="rail"&&!s.hidden), mainS=S.layout.filter(s=>s.where==="main"&&!s.hidden);
+  return `<div class="layout"><aside class="rail">${rail.map(sectionHtml).join("")}
+    <div style="position:relative"><button class="addsec" data-act="addmenu" id="addsec">${ICON.plus} Add a section</button>${UI.addMenu?addMenu():""}</div></aside>
+    <main>${headline()}${mainS.map(sectionHtml).join("")}</main></div>`;
+}
+function headline(){
+  const ev=items().filter(i=>i.kind==="event"&&i.status==="open"&&i.dueAt).sort((a,b)=>a.dueAt-b.dueAt)[0];
+  if(!ev) return `<section class="head"><div class="lbl">Nothing is running for your games.</div></section>`;
+  const g=G[ev.game];
+  return `<section class="head" style="background:radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, ${heat(ev.dueAt)} 14%, transparent), transparent 55%), var(--surface)">
+    <div class="lbl">Ends first</div><h1>${esc(ev.title)}</h1><div class="game" style="color:${g.hue}">${g.name}</div>
+    <div class="row"><div class="big tnum" style="color:${heat(ev.dueAt)}">${left(ev.dueAt)}</div><div class="when tnum">left, ends ${fmtD(ev.dueAt)} at the reset</div></div>
+    ${meter(ev,28)}</section>`;
+}
+function meter(i,n=24,sm){
+  if(!i.dueAt) return `<div class="meter ${sm?"sm":""}" style="--c:var(--faint);opacity:.6">${'<i class="on" style="background:repeating-linear-gradient(135deg,var(--softer) 0 3px,transparent 3px 6px)"></i>'.repeat(n)}</div>`;
+  const f=Math.max(0,Math.min(1,(i.dueAt-NOW)/(i.dueAt-i.startAt))); const on=Math.max(1,Math.round(f*n));
+  return `<div class="meter ${sm?"sm":""}" style="--c:${heat(i.dueAt)}">${Array.from({length:n},(_,k)=>`<i class="${k<on?"on":""}"></i>`).join("")}</div>`;
+}
+function sectionHtml(sec){
+  const xs=query(sec);
+  const meta=sec.id==="dailies"?`${xs.filter(x=>x.status!=="done").length} of ${xs.length} left`:sec.id==="running"?`${xs.length}`:"";
+  const head=`<div class="sec-h"><h2>${esc(sec.title)}</h2><span class="meta tnum">${meta}</span>
+    <button class="cust" data-act="pop" data-v="${sec.id}" id="cust-${sec.id}" aria-expanded="${UI.pop===sec.id}">${ICON.tune}<span>Customise</span></button></div>`;
+  let body="";
+  if(sec.id==="dailies") body=dailiesBody(xs);
+  else if(sec.where==="main") body=runningBody(sec,xs);
+  else body=dueBody(sec,xs);
+  return `<section class="sec" id="sec-${sec.id}">${head}${body}</section>`;
+}
+function dailiesBody(xs){
+  if(!xs.length) return `<div class="empty">No daily chores yet. <button data-act="pal" data-q="dailies">Add a game's dailies</button></div>`;
+  return `<div class="chips" style="margin-top:6px">${xs.map(x=>{const g=G[x.game];return `<button class="chip" style="--h:${g.hue}" aria-pressed="${x.status==="done"}" data-act="chore" data-v="${x.game}" title="${esc(x.title)}"><span class="ck">${ICON.check}</span>${g.short}</button>`}).join("")}</div>
+  <div class="empty" style="font-size:13px;color:var(--faint);padding-top:10px">Next reset in <span class="tnum">${left(NEXT_DAILY)}</span></div>`;
+}
+function bucketOf(t){ if(t==null) return "No end date"; if(t<=NEXT_DAILY) return "Before tonight's reset"; if(t<=at("2026-10-19")) return "By Monday's reset"; if(t<=at("2026-10-26")) return "Next week"; return "Later"; }
+function dueBody(sec,xs){
+  if(!xs.length) return `<div class="empty">Nothing here yet. <button data-act="pal">Add something to follow</button></div>`;
+  // the chores fold into one line per reset: a list of six "Daily missions" teaches nothing
+  const chores=xs.filter(x=>x.kind==="daily"); let rows=xs.filter(x=>x.kind!=="daily");
+  if(chores.length){ const lft=chores.filter(c=>c.status!=="done");
+    rows.push({id:"__chores",kind:"daily",game:null,title:"Daily chores",dueAt:NEXT_DAILY,status:lft.length?"open":"done",sub:lft.length?lft.map(c=>G[c.game].short).join(", ")+" still to do":"All done today",count:lft.length?`${lft.length} left`:"done"});
+    rows.sort((a,b)=>((a.status==="done")-(b.status==="done"))||((a.dueAt??9e15)-(b.dueAt??9e15))); }
+  const full=S.expanded[sec.id]; const cap=sec.limit||rows.length; const shown=full?rows:rows.slice(0,cap);
+  let html="",last=null;
+  for(const r of shown){ const b=r.status==="done"?"Done for now":bucketOf(r.dueAt); if(b!==last&&sec.sort==="due"){html+=`<div class="bucket">${b}</div>`;last=b;} html+=dueRow(r); }
+  if(rows.length>cap) html+=`<button class="more" data-act="more" data-v="${sec.id}">${full?"Show fewer":`Show ${rows.length-cap} more`}</button>`;
+  return html;
+}
+function dueRow(r){
+  const hue=r.game?G[r.game].hue:"var(--muted)";
+  const tag=r.own?`<span class="kind yours">your ${r.kind==="event"?"event":r.kind}</span>`:`<span class="kind">${KIND_TAG[r.kind]}</span>`;
+  let sub="", fill="";
+  if(r.id==="__chores"){ sub=r.sub; }
+  else if(r.measure){ const m=r.measure;
+    sub=m.kind==="amount"?`<span class="tnum">${num(r.value)} / ${num(m.target)}</span> ${esc(m.unit||"")}`:(r.status==="done"?"Cleared this "+(r.kind==="cycle"?"cycle":r.kind.replace("ly","")):"Not cleared yet");
+    if(m.kind==="amount") fill=`<div class="fill"><i style="width:${Math.min(100,r.value/m.target*100)}%;background:${hue}"></i></div>`;
+    sub=`${G[r.game].short}, ${sub}`;
+  } else sub=G[r.game].short;
+  const lt=r.status==="done"&&r.id!=="__chores"?"done":r.id==="__chores"?`<span style="color:${heat(r.dueAt)}">${r.count}</span>`:`<span style="color:${heat(r.dueAt)}">${left(r.dueAt)}</span>`;
+  const ed=S.editing===r.id&&r.measure?editor(r):"";
+  return `<button class="due ${r.status==="done"?"done":""}" data-act="due" data-v="${r.id}"><span class="dot" style="background:${hue}"></span>
+    <span class="t">${esc(r.title)}${tag}<span class="sub">${sub}</span></span><span class="left tnum">${lt}</span>${fill}</button>${ed}`;
+}
+function editor(r){
+  const m=r.measure;
+  if(m.kind==="amount") return `<div class="editor">Now at <input class="tnum" id="ed-in" type="number" value="${r.value}" min="0"> / ${num(m.target)} ${esc(m.unit||"")}<button class="pill primary" data-act="saveamt" data-v="${r.id}">Save</button><button class="pill" data-act="unfollow" data-v="${r.id}">Stop following</button></div>`;
+  return `<div class="editor"><button class="pill primary" data-act="tick" data-v="${r.id}">${r.status==="done"?"Mark not cleared":"Mark cleared"}</button><button class="pill" data-act="unfollow" data-v="${r.id}">Stop following</button></div>`;
+}
+function runningBody(sec,xs){
+  if(!xs.length) return `<div class="empty">No running events for the games you follow.</div>`;
+  const full=S.expanded[sec.id]; const cap=sec.limit||xs.length; const shown=full?xs:xs.slice(0,cap);
+  return shown.map(e=>{const g=G[e.game];const open=S.rowOpen===e.id;return `<button class="runrow" data-act="row" data-v="${e.id}" style="--h:${g.hue}"><span class="rail3"></span>
+    <span><span class="gname" style="color:${g.hue}">${g.name}</span>${e.own?'<span class="kind yours">your event</span>':""}<br><span class="title">${esc(e.title)}</span></span>
+    <span class="left tnum" style="color:${heat(e.dueAt)}">${left(e.dueAt)}</span>${meter(e,32,true)}
+    <span class="range tnum" style="grid-column:2/4">${fmtD(e.startAt)} to ${e.dueAt?fmtD(e.dueAt):"end not announced"}</span>
+    ${open?`<span class="rowacts"><span class="pill primary" data-act="mark" data-v="${e.id}" data-s="done">Mark done</span><span class="pill" data-act="mark" data-v="${e.id}" data-s="ignored">Ignore</span></span>`:""}</button>`}).join("")
+    +(xs.length>cap?`<button class="more" data-act="more" data-v="${sec.id}">${full?"Show fewer":`Show all ${xs.length}`}</button>`:"");
+}
+function addMenu(){
+  const opts=[["dailies","Today's dailies","Tick each game's chores"],["cycles","Endgame cycles","Only the modes on a cycle"],["own","Your own","Only things you added"],["game","One game","Everything for one game"]];
+  return `<div class="pop" style="left:0;bottom:calc(100% + 8px)"><h4>Add a section</h4>${opts.map(o=>`<button class="pr" data-act="addsecv" data-v="${o[0]}"><span class="dot" style="background:var(--muted)"></span><span>${o[1]}</span><span class="sub">${o[2]}</span></button>`).join("")}</div>`;
+}
+
+/* customise popover, scoped to one section */
+function popHtml(sec){
+  const opt=(on,act,v,l,extra="")=>`<button class="opt ${extra}" aria-pressed="${on}" data-act="${act}" data-v="${v}" data-s="${sec.id}">${l}</button>`;
+  const i=S.layout.indexOf(sec);
+  const kinds=KINDS.map(([k,l])=>opt(sec.kinds.includes(k),"kind",k,l)).join("");
+  const games=opt(sec.games==="all","gamesall","all","All my games")+S.games.map(g=>`<button class="opt g" style="--h:${G[g].hue}" aria-pressed="${sec.games!=="all"&&sec.games.includes(g)}" data-act="game" data-v="${g}" data-s="${sec.id}">${G[g].short}</button>`).join("");
+  const rows=[4,8,12,0].map(n=>opt(sec.limit===n,"limit",n,n||"All")).join("");
+  const within=[[3,"3 days"],[7,"A week"],[0,"Any time"]].map(([n,l])=>opt((sec.within||0)===n,"within",n,l)).join("");
+  const sort=opt(sec.sort==="due","sort","due","Due soonest")+opt(sec.sort==="game","sort","game","By game");
+  return `<div class="pop" id="pop"><h4>Shows</h4><div class="opts">${kinds}</div>
+    <h4>From</h4><div class="opts">${games}</div>
+    ${sec.id==="dailies"?"":`${sec.where==="rail"?`<h4>Due within</h4><div class="opts">${within}</div>`:""}<h4>Rows before “show more”</h4><div class="opts">${rows}</div><h4>Order</h4><div class="opts">${sort}</div>`}
+    <div class="popfoot"><button class="addb" data-act="pal" data-q="${sec.games!=="all"&&sec.games.length===1?G[sec.games[0]].short:""}">Add from built-ins</button>
+    ${sec.id==="running"?`<button data-act="archive">Done &amp; ignored</button>`:""}
+    <button data-act="move" data-v="-1" data-s="${sec.id}" ${i===0?"disabled style=opacity:.4":""}>Move up</button><button data-act="move" data-v="1" data-s="${sec.id}">Move down</button>
+    <button data-act="hide" data-s="${sec.id}">Hide section</button></div></div>`;
+}
+
+/* quick-add palette */
+function palResults(q){
+  q=q.trim().toLowerCase(); const words=q.split(/\s+/).filter(Boolean);
+  const periodWord=words.find(w=>["weekly","week","monthly","month","cycle","cycles","endgame","dailies","daily"].includes(w));
+  const gameHit=GAMES.filter(g=>words.some(w=>g.name.toLowerCase().includes(w)||g.short.toLowerCase().includes(w)||g.id===w));
+  const unit=periodWord?({weekly:"week",week:"week",monthly:"month",month:"month",cycle:"cycle",cycles:"cycle",endgame:"cycle"}[periodWord]):null;
+  const res={bulk:[],chores:[],built:[]};
+  const scope=gameHit.length?gameHit.map(g=>g.id):S.games.length?S.games:DEMO_GAMES;
+  const rest=words.filter(w=>w!==periodWord&&!gameHit.some(g=>g.name.toLowerCase().includes(w)||g.short.toLowerCase().includes(w)||g.id===w));
+  res.built=ROUTINES.filter(r=>scope.includes(r.game)&&(!unit||r.period.unit===unit)&&rest.every(w=>r.title.toLowerCase().includes(w))).slice(0,9);
+  if(gameHit.length===1&&unit){ const g=gameHit[0]; const n=ROUTINES.filter(r=>r.game===g.id&&r.period.unit===unit).length; if(n) res.bulk.push({g,unit,n}); }
+  if(periodWord==="dailies"||periodWord==="daily"||(!unit&&gameHit.length)) res.chores=scope.slice(0,6);
+  return res;
+}
+function palHtml(){
+  const q=UI.pal.q, r=palResults(q);
+  const unitWord={week:"weekly",month:"monthly",cycle:"cycle"};
+  let h="";
+  if(r.bulk.length) h+=`<div class="grp">Follow a whole set</div>`+r.bulk.map(b=>`<button class="pr sel" data-act="bulk" data-v="${b.g.id}" data-s="${b.unit}"><span class="dot" style="background:${b.g.hue}"></span><span>Follow every ${b.g.short} ${unitWord[b.unit]}</span><span class="act">Follow ${b.n}</span><span class="sub">${b.n} built-ins, they appear in Due next</span></button>`).join("");
+  if(r.chores.length) h+=`<div class="grp">Daily chores</div>`+r.chores.map(g=>{const on=S.chores.includes(g)&&S.games.includes(g);return `<button class="pr" data-act="choreon" data-v="${g}"><span class="dot" style="background:${G[g].hue}"></span><span>${G[g].name} dailies</span><span class="act ${on?"on":""}">${on?"Following":"Follow"}</span><span class="sub">${esc(G[g].chores)}</span></button>`}).join("");
+  if(r.built.length) h+=`<div class="grp">Built-in for the game</div>`+r.built.map(x=>{const on=S.follow.includes(x.id)&&S.games.includes(x.game);const k=x.period.unit==="week"?"Weekly":x.period.unit==="month"?"Monthly":`Every ${x.period.days} days`;
+    return `<button class="pr" data-act="follow" data-v="${x.id}"><span class="dot" style="background:${G[x.game].hue}"></span><span>${esc(x.title)}</span><span class="act ${on?"on":""}">${on?"Following":"Follow"}</span><span class="sub">${G[x.game].short}, ${k}${x.measure.kind==="amount"?`, ${num(x.measure.target)} ${esc(x.measure.unit)}`:""}</span></button>`}).join("");
+  h+=`<div class="grp">Your own</div><button class="pr" data-act="mkown"><span class="dot" style="background:var(--soon)"></span><span>${q.trim()?`Create a weekly task called “${esc(q.trim())}”`:"Create your own event or task"}</span><span class="act">Create</span><span class="sub">Kept apart from the built-ins, under Settings, Your own events</span></button>`;
+  return `<div class="scrim" data-act="closepal"><div class="pal" role="dialog" aria-label="Add"><div class="q">${ICON.search}<input id="palq" placeholder="Try “zzz weekly”, “star rail cycle” or “dailies”" value="${esc(q)}" autocomplete="off"></div><div class="res" id="palres">${h}</div><div class="hint">Type a game and a kind. Everything you follow lands in Due next straight away.</div></div></div>`;
+}
+
+/* settings */
+function settings(){
+  const segm=(opts,cur)=>`<div class="seg">${opts.map(o=>`<button aria-pressed="${o===cur}">${o}</button>`).join("")}</div>`;
+  const ordered=[...GAMES.filter(g=>S.games.includes(g.id)),...GAMES.filter(g=>!S.games.includes(g.id))];
+  const nOff=GAMES.length-S.games.length;
+  const gameRows=ordered.filter(g=>UI.moreGames||S.games.includes(g.id)).map(g=>{const on=S.games.includes(g.id);const n=S.follow.filter(f=>f.includes(":"+g.id+":")).length+(S.chores.includes(g.id)?1:0);
+    return `<div class="lrow"><span class="dot" style="background:${g.hue}"></span><span>${g.name}<br><span class="s">${on?(n?`${n} thing${n>1?"s":""} followed besides events`:"Events only"):"Not followed"}</span></span><span class="r"><button class="opt g" style="--h:${g.hue}" aria-pressed="${on}" data-act="togglegame" data-v="${g.id}">${on?"Following":"Follow"}</button></span></div>`}).join("");
+  const lay=S.layout.map(s=>`<div class="lrow"><span>${esc(s.title)}<br><span class="s">${s.kinds.map(k=>KINDS.find(x=>x[0]===k)[1]).join(", ")}${s.games==="all"?", all games":", "+s.games.map(g=>G[g].short).join(", ")}${s.limit?`, ${s.limit} rows`:""}</span></span><span class="r"><button class="opt" aria-pressed="${!s.hidden}" data-act="showsec" data-s="${s.id}">${s.hidden?"Hidden":"Shown"}</button><button class="opt" data-act="editsec" data-s="${s.id}">Customise</button></span></div>`).join("");
+  const own=S.own.map(o=>`<div class="lrow"><span class="dot" style="background:${G[o.game].hue}"></span><span>${esc(o.title)}<br><span class="s">${G[o.game].short}, ${o.kind==="event"?"event until "+fmtD(o.dueAt):"weekly task"}</span></span><span class="r"><button class="opt">Edit</button></span></div>`).join("")||`<div class="empty">Nothing yet. Built-in weeklies and cycles never appear here.</div>`;
+  return `<div class="page"><h1>Settings</h1><p class="lead">Everything that changes what you see lives here or in the Customise button on each section. Nothing leaves this browser.</p>
+  <div class="set"><h2>Games</h2><p>Follow a game to see its events. What else you follow for it (dailies, weeklies, cycles) you add with the Add button or from a section.</p>${gameRows}${nOff?`<button class="more" data-act="moregames">${UI.moreGames?"Hide games you don't follow":`Show ${nOff} more games`}</button>`:""}</div>
+  <div class="set"><h2>Layout</h2><p>The same settings as each section's Customise button, all in one place.</p>${lay}</div>
+  <div class="set"><h2>Your own events</h2><p>Only things you created yourself.</p>${own}<div style="margin-top:12px"><button class="pill" data-act="pal">Create one</button></div></div>
+  <div class="set"><h2>Server region</h2><div class="lrow"><span>Resets and countdowns follow this server</span><span class="r">${segm(["Asia","America","Europe"],"Europe")}</span></div></div>
+  <div class="set"><h2>Appearance</h2><div class="lrow"><span>Theme</span><span class="r">${segm(["Dark","Light","System"],"Dark")}</span></div></div>
+  <div class="set"><h2>Backup</h2><p>Save your progress and layout to a file, or load one from another device.</p><div style="display:flex;gap:8px"><button class="pill">Save to a file</button><button class="pill">Load a file</button></div></div></div>`;
+}
+
+/* archive */
+function archive(){
+  const xs=items().filter(i=>i.status==="done"||i.status==="ignored").filter(i=>i.src==="event"||(i.own&&i.kind==="event"))
+    .filter(i=>S.archiveGame==="all"||i.game===S.archiveGame).filter(i=>S.archiveStatus==="all"||i.status===S.archiveStatus);
+  const o=(on,act,v,l,h)=>`<button class="opt ${h?"g":""}" ${h?`style="--h:${h}"`:""} aria-pressed="${on}" data-act="${act}" data-v="${v}">${l}</button>`;
+  return `<div class="page"><button class="link" data-act="back">Back to the checklist</button><h1>Done &amp; ignored</h1><p class="lead">Events you finished or set aside. They stay out of every section until you restore them.</p>
+  <div class="opts" style="margin-bottom:10px">${o(S.archiveStatus==="all","astat","all","All")}${o(S.archiveStatus==="done","astat","done","Done")}${o(S.archiveStatus==="ignored","astat","ignored","Ignored")}</div>
+  <div class="opts" style="margin-bottom:18px">${o(S.archiveGame==="all","agame","all","Every game")}${S.games.map(g=>o(S.archiveGame===g,"agame",g,G[g].short,G[g].hue)).join("")}</div>
+  <div class="set">${xs.length?xs.map(e=>`<div class="lrow"><span class="dot" style="background:${G[e.game].hue}"></span><span>${esc(e.title)}<br><span class="s">${G[e.game].short}, ${e.status==="done"?"done":"ignored"}, ${e.dueAt?(e.dueAt<NOW?"ended ":"ends ")+fmtD(e.dueAt):"no end date"}</span></span><span class="r"><button class="pill" data-act="restore" data-v="${e.id}">Restore</button></span></div>`).join(""):`<div class="empty">Nothing here. Open an event and choose Mark done or Ignore to send it here.</div>`}</div></div>`;
+}
+
+/* timeline sketch */
+function timeline(){
+  const t0=NOW-14*D, t1=NOW+30*D, x=(t)=>Math.max(0,Math.min(100,(t-t0)/(t1-t0)*100));
+  const rows=S.games.map(g=>{const evs=items().filter(i=>i.game===g&&i.kind==="event"&&i.status==="open");
+    return evs.map((e,k)=>`<div class="tlrow"><span style="color:${G[g].hue};font-size:13px;font-weight:600">${k?"":G[g].short}</span><div class="tltrack"><div class="now" style="left:${x(NOW)}%"></div><div class="tlbar" style="left:${x(e.startAt)}%;width:${x(e.dueAt??t1)-x(e.startAt)}%;background:color-mix(in srgb,${G[g].hue} 24%,var(--surface));box-shadow:inset 3px 0 0 ${G[g].hue}">${esc(e.title)}</div></div></div>`).join("")}).join("");
+  return `<div class="tl"><div class="empty" style="margin-bottom:10px">Timeline is unchanged in this idea. It reads the same Running now section, so its filters apply here too.</div>${rows}</div>`;
+}
+
+/* layer: popover, palette, toast, onboarding, tour, why */
+function renderLayer(){
+  const L=document.getElementById("layer"); let h="";
+  if(UI.toast) h+=`<div class="toast"><span>${UI.toast.msg}</span>${UI.toast.undo?`<button data-act="undo">Undo</button>`:""}</div>`;
+  if(UI.pal) h+=palHtml();
+  if(UI.ob) h+=obHtml();
+  if(UI.why) h+=whyHtml();
+  L.innerHTML=h;
+  if(UI.pop){ const sec=S.layout.find(s=>s.id===UI.pop); const anchor=document.getElementById("sec-"+UI.pop);
+    if(sec&&anchor){ anchor.style.position="relative"; anchor.insertAdjacentHTML("beforeend",popHtml(sec)); const p=document.getElementById("pop"); p.style.top="52px"; p.style.right="12px"; } }
+  if(UI.pal){ const i=document.getElementById("palq"); i.focus(); i.setSelectionRange(i.value.length,i.value.length); }
+  if(UI.tour) placeTour();
+}
+
+/* onboarding */
+function obHtml(){
+  const o=UI.ob;
+  if(o.step===1) return `<div class="ob"><div class="obin"><div class="step">Step 1 of 3</div><h1>Which games do you play?</h1><p class="lead">You'll see their events. Nothing else is switched on until you ask for it.</p>
+    <div class="ggrid">${GAMES.map(g=>`<button class="gopt" style="--h:${g.hue}" aria-pressed="${o.games.includes(g.id)}" data-act="obgame" data-v="${g.id}"><span class="dot" style="background:${g.hue}"></span>${g.name}</button>`).join("")}</div>
+    <div class="obfoot"><button class="commit" data-act="obnext" ${o.games.length?"":"disabled"}>${o.games.length?`Continue with ${o.games.length} game${o.games.length>1?"s":""}`:"Pick at least one game"}</button></div></div></div>`;
+  const c=(k,t,d,ex)=>`<button class="choice" aria-pressed="${o.plan===k}" data-act="obplan" data-v="${k}"><strong>${t}</strong><span>${d}</span><span class="ex">${ex}</span></button>`;
+  const n=ROUTINES.filter(r=>o.games.includes(r.game)).length;
+  return `<div class="ob"><div class="obin"><div class="step">Step 2 of 3</div><h1>What do you want on your list?</h1><p class="lead">You can change this for any section later, from its Customise button.</p>
+    ${c("events","Just events","Limited-time events and their deadlines. The calmest list.","Good if you only log in for new content.")}
+    ${c("dailies","Events and dailies","Events, plus a tick for each game's daily chores before the reset.",o.games.slice(0,3).map(g=>G[g].chores).join("; "))}
+    ${c("all","Everything that resets","Events, dailies, and every weekly, monthly and endgame cycle we know for your games.",`${n} built-ins for your games, like ${ROUTINES.filter(r=>o.games.includes(r.game)).slice(0,2).map(r=>r.title).join(" and ")||"weekly bosses"}`)}
+    <div class="obfoot"><button class="link" data-act="obback">Back</button><button class="commit" data-act="obdone">Show me my list</button></div></div></div>`;
+}
+const TOUR_NEW=[
+  {sel:"#cust-due",t:"Change a list where you see it",b:"Every section has its own Customise button: what it shows, which games, how many rows."},
+  {sel:"#addbtn",t:"Follow a weekly, cycle or chore",b:"Press Add or the / key and type a game, like “zzz weekly”. What you pick lands in Due next."},
+  {sel:"#tab-settings",t:"The rest is in Settings",b:"Games, region, theme, backups, and your own events, kept apart from the built-ins."},
+];
+const TOUR_BACK=[
+  {sel:"#sec-due",t:"One list for everything that's due",b:"Events, dailies, weeklies and cycles now share one list, ordered by when you'd lose them."},
+  {sel:"#cust-due",t:"Edit is now Customise, on every section",b:"The old Edit button at the bottom of the strip is gone. Each section has its own, at the top."},
+  {sel:"#addbtn",t:"Stopped following something?",b:"Find it again with Add. Type its name and choose Follow. Your old progress is still there."},
+  {sel:"#tab-settings",t:"Settings moved to a tab",b:"“What you see” and the Games panel are merged into Games and Layout."},
+];
+function placeTour(){
+  const st=UI.tour.steps[UI.tour.i]; const el=document.querySelector(st.sel); if(!el) return;
+  el.scrollIntoView({block:"center"});
+  const r=el.getBoundingClientRect(), pad=6;
+  const L=document.getElementById("layer");
+  L.insertAdjacentHTML("beforeend",`<div class="spot" style="left:${r.left-pad}px;top:${r.top-pad}px;width:${r.width+pad*2}px;height:${r.height+pad*2}px"></div>
+   <div class="tip" id="tip"><div class="n">${UI.tour.i+1} of ${UI.tour.steps.length}${UI.tour.back?", what's changed":""}</div><h3>${st.t}</h3><p>${st.b}</p>
+   <div class="f"><button class="skip" data-act="tourend">${UI.tour.back?"Skip the tour":"Skip"}</button><button class="nx" data-act="tournext">${UI.tour.i===UI.tour.steps.length-1?"Done":"Next"}</button></div></div>`);
+  const tip=document.getElementById("tip"); const tw=320, th=tip.offsetHeight;
+  let left=Math.min(window.innerWidth-tw-16,Math.max(16,r.left)); let top=r.bottom+14; if(top+th>window.innerHeight-12) top=Math.max(52,r.top-th-14);
+  tip.style.left=left+"px"; tip.style.top=top+"px";
+}
+
+function whyHtml(){
+  return `<aside class="why"><h2 style="margin:0;font-size:19px">C · One due list</h2>
+  <h3>The idea</h3><p>You don't think in events, weeklies and cycles; you think in “what do I lose next”. So everything with a deadline goes into one Due next list, ordered by when it's lost, capped so it never floods. Nothing but events is on until you add it. Every section carries its own Customise button, so changing a list happens where you are looking, not at the bottom of the page.</p>
+  <h3>The foundation underneath</h3><p>Two ideas replace the fifteen scattered prefs (<code>hiddenGames</code>, <code>knownGames</code>, <code>showChores</code>/<code>choresOn</code>/<code>choresOff</code>, <code>showRoutines</code>/<code>routineGames</code>/<code>routinesOff</code>/<code>routinesAsked</code>/<code>routinesHidden</code>, <code>showWeeklyTasks</code>/<code>showMonthlyTasks</code>/<code>showCycleTasks</code>, <code>standardPulls</code>):</p>
+<pre>// 1. one stream: every source projects to Item
+Item = { id, game, kind: event|daily|weekly|monthly|cycle,
+         own: boolean, startAt, dueAt, measure?, status }
+// feed events, chores, built-ins and your tasks are adapters
+
+// 2. what you follow, and how you look at it
+Prefs = {
+  games: GameId[],          // followed, in your order
+  follow: ItemSourceId[],   // chores + built-ins you opted into
+  layout: Section[],
+}
+Section = { id, title, where: rail|main,
+            kinds, games: 'all'|GameId[], limit, sort, hidden }</pre>
+  <p>Due next, Today's dailies and Running now are just three saved queries. The Timeline and the archive read the same stream.</p>
+  <h3>How it scales</h3><ul><li>A new kind (a season pass, a shop reset) is one adapter into <code>Item</code>; every section can show it at once.</li><li>A new view (a per-game page, a “cycles only” panel) is a new <code>Section</code> preset, not new prefs and not new components.</li><li>Onboarding answers write sections; they don't flip switches.</li></ul>
+  <h3>Tradeoffs, honestly</h3><ul><li>A merged list can bury a long cycle under many short dailies; the cap and the folded “Daily chores” line are what stop that, and they need tuning.</li><li>Section configs are power-user surface. Most readers will never open Customise, so the presets have to be right.</li><li>Kind tags are small; a reader who wants weeklies visually apart gets that only by adding a section.</li><li>Migration has to translate today's prefs into sections, once.</li></ul></aside>`;
+}
+
+/* ---------------- actions ---------------- */
+let undoState=null;
+function snapshot(){ undoState=JSON.parse(JSON.stringify(S)); }
+function toast(msg,undo=true){ UI.toast={msg,undo}; clearTimeout(toast.t); toast.t=setTimeout(()=>{UI.toast=null;render();},5000); }
+document.addEventListener("click",(ev)=>{
+  const el=ev.target.closest("[data-act]");
+  if(!el){ if(UI.pop||UI.addMenu){UI.pop=null;UI.addMenu=false;render();} return; }
+  const a=el.dataset.act, v=el.dataset.v, s=el.dataset.s, sec=S.layout.find(x=>x.id===s);
+  if(a==="closepal"&&ev.target!==el) return;
+  ev.stopPropagation();
+  switch(a){
+    case "screen": go(v); return;
+    case "reset": S=demoState(); UI={...UI,pop:null,pal:null,toast:null,ob:null,tour:null,addMenu:false,screen:"main"}; break;
+    case "why": UI.why=!UI.why; break;
+    case "tab": S.tab=v; S.view="main"; UI.pop=null; UI.screen=v==="settings"?"settings":"main"; break;
+    case "archive": S.tab="checklist"; S.view="archive"; UI.pop=null; UI.screen="archive"; break;
+    case "back": S.view="main"; UI.screen="main"; break;
+    case "pal": UI.pop=null; UI.addMenu=false; UI.pal={q:el.dataset.q||""}; break;
+    case "closepal": UI.pal=null; break;
+    case "pop": UI.pop=UI.pop===v?null:v; UI.addMenu=false; break;
+    case "addmenu": UI.addMenu=!UI.addMenu; UI.pop=null; break;
+    case "addsecv": snapshot(); addSection(v); UI.addMenu=false; break;
+    case "kind": snapshot(); sec.kinds=sec.kinds.includes(v)?sec.kinds.filter(k=>k!==v):[...sec.kinds,v]; break;
+    case "gamesall": sec.games="all"; break;
+    case "game": { let gs=sec.games==="all"?[]:[...sec.games]; gs=gs.includes(v)?gs.filter(g=>g!==v):[...gs,v]; sec.games=gs.length?gs:"all"; break; }
+    case "limit": sec.limit=+v; break;
+    case "sort": sec.sort=v; break;
+    case "within": sec.within=+v; break;
+    case "moregames": UI.moreGames=!UI.moreGames; break;
+    case "move": { const i=S.layout.indexOf(sec), j=i+(+v); if(j>=0&&j<S.layout.length){ S.layout.splice(i,1); S.layout.splice(j,0,sec);} break; }
+    case "hide": snapshot(); sec.hidden=true; UI.pop=null; toast(`Hid ${sec.title}. Bring it back from Add a section or Settings, Layout.`); break;
+    case "showsec": sec.hidden=!sec.hidden; break;
+    case "editsec": sec.hidden=false; S.tab="checklist"; S.view="main"; UI.pop=s; UI.screen="main"; break;
+    case "more": S.expanded[v]=!S.expanded[v]; break;
+    case "due": if(v==="__chores"){ const d=S.layout.find(x=>x.id==="dailies"); if(d.hidden){d.hidden=false;toast("Showing Today's dailies so you can tick them",false);} else document.getElementById("sec-dailies")?.scrollIntoView({behavior:"smooth",block:"center"}); break; }
+      if(v.startsWith("ev")){ S.rowOpen=v; break; } S.editing=S.editing===v?null:v; break;
+    case "saveamt": { const n=+document.getElementById("ed-in").value||0; S.progress[v]=n; S.editing=null; break; }
+    case "tick": S.progress[v]=S.progress[v]?0:1; S.editing=null; break;
+    case "unfollow": snapshot(); S.follow=S.follow.filter(f=>f!==v); S.own=S.own.filter(o=>o.id!==v); S.editing=null; toast("Stopped following. Find it again with Add."); break;
+    case "chore": S.choresDone=S.choresDone.includes(v)?S.choresDone.filter(g=>g!==v):[...S.choresDone,v]; break;
+    case "row": S.rowOpen=S.rowOpen===v?null:v; break;
+    case "mark": snapshot(); S.status[v]=s; S.rowOpen=null; toast(s==="done"?"Marked done, moved to Done & ignored":"Ignored, moved to Done & ignored"); break;
+    case "restore": snapshot(); delete S.status[v]; toast("Restored to Running now"); break;
+    case "astat": S.archiveStatus=v; break;
+    case "agame": S.archiveGame=v; break;
+    case "togglegame": snapshot(); S.games=S.games.includes(v)?S.games.filter(g=>g!==v):[...S.games,v]; break;
+    case "follow": { snapshot(); const r=ROUTINES.find(x=>x.id===v); if(!S.games.includes(r.game)) S.games.push(r.game);
+      if(S.follow.includes(v)){S.follow=S.follow.filter(f=>f!==v); toast(`Stopped following ${esc(r.title)}`);} else { S.follow.push(v); ensureKind(r.period.unit); toast(`Following ${esc(r.title)}, it's in Due next`);} break; }
+    case "bulk": { snapshot(); const ids=ROUTINES.filter(r=>r.game===v&&r.period.unit===s).map(r=>r.id); if(!S.games.includes(v)) S.games.push(v); S.follow=[...new Set([...S.follow,...ids])]; ensureKind(s); UI.pal=null; toast(`Following ${ids.length} ${G[v].short} ${s==="week"?"weeklies":s==="month"?"monthlies":"cycles"}`); break; }
+    case "choreon": snapshot(); if(!S.games.includes(v)) S.games.push(v); if(S.chores.includes(v)) S.chores=S.chores.filter(g=>g!==v); else { S.chores.push(v); ensureKind("daily"); const d=S.layout.find(x=>x.id==="dailies"); d.hidden=false; } toast(`${G[v].short} dailies ${S.chores.includes(v)?"added":"removed"}`); break;
+    case "mkown": { snapshot(); const t=UI.pal.q.trim()||"New task"; const g=S.games[0]||"genshin"; S.own.push({id:"own:"+Date.now(),game:g,title:t,kind:"weekly",period:{unit:"week",startsOn:1},measure:{kind:"days",required:1}}); ensureKind("own"); UI.pal=null; toast(`Created “${esc(t)}” for ${G[g].short}. It's in Due next and in Settings, Your own events`); break; }
+    case "undo": if(undoState){S=undoState;undoState=null;} UI.toast=null; break;
+    case "obgame": UI.ob.games=UI.ob.games.includes(v)?UI.ob.games.filter(g=>g!==v):[...UI.ob.games,v]; break;
+    case "obnext": UI.ob.step=2; break;
+    case "obback": UI.ob.step=1; break;
+    case "obplan": UI.ob.plan=v; break;
+    case "obdone": finishOnboarding(); break;
+    case "tournext": if(UI.tour.i<UI.tour.steps.length-1) UI.tour.i++; else UI.tour=null; break;
+    case "tourend": UI.tour=null; break;
+  }
+  render();
+});
+function ensureKind(unit){ const k={week:"weekly",month:"monthly",cycle:"cycle",daily:"daily",own:"own"}[unit]||unit; const d=S.layout.find(x=>x.id==="due"); if(d&&!d.kinds.includes(k)) d.kinds.push(k); }
+function addSection(v){
+  const id=v+Math.floor(Math.random()*1e4);
+  if(v==="dailies"){ const d=S.layout.find(x=>x.id==="dailies"); d.hidden=false; toast("Showing Today's dailies"); return; }
+  const base={id,where:"rail",games:"all",limit:6,sort:"due"};
+  if(v==="cycles") S.layout.push({...base,title:"Endgame cycles",kinds:["cycle"]});
+  if(v==="own") S.layout.push({...base,title:"Your own",kinds:["own"]});
+  if(v==="game"){ const g=S.games[1]||S.games[0]||"zzz"; S.layout.push({...base,title:G[g].short,kinds:ALL_KINDS,games:[g],sort:"due"}); }
+  UI.pop=id; toast("Section added. Change it with Customise.");
+}
+function finishOnboarding(){
+  const o=UI.ob; const s=blankState(); s.games=[...o.games];
+  if(o.plan==="dailies"||o.plan==="all"){ s.chores=[...o.games]; s.layout[0].kinds=["event","daily","own"]; s.layout[1].hidden=false; }
+  if(o.plan==="all"){ s.follow=ROUTINES.filter(r=>o.games.includes(r.game)).map(r=>r.id); s.layout[0].kinds=[...ALL_KINDS]; }
+  S=s; UI.ob=null; UI.screen="main"; render(); UI.tour={steps:TOUR_NEW,i:0,back:false};
+}
+function go(k){
+  UI.pop=null; UI.pal=null; UI.ob=null; UI.tour=null; UI.addMenu=false; UI.toast=null; UI.screen=k;
+  if(k==="main"){ S.tab="checklist"; S.view="main"; }
+  if(k==="add"){ S.tab="checklist"; S.view="main"; UI.pal={q:"zzz weekly"}; }
+  if(k==="settings"){ S.tab="settings"; }
+  if(k==="archive"){ S.tab="checklist"; S.view="archive"; }
+  if(k==="onboard"){ S=blankState(); UI.ob={step:1,games:["genshin","zzz","hsr"],plan:"dailies"}; }
+  if(k==="return"){ S=demoState(); render(); UI.tour={steps:TOUR_BACK,i:0,back:true}; }
+  render();
+}
+document.addEventListener("input",(ev)=>{ if(ev.target.id==="palq"){ UI.pal.q=ev.target.value; const r=document.getElementById("palres"); const tmp=document.createElement("div"); tmp.innerHTML=palHtml(); r.innerHTML=tmp.querySelector("#palres").innerHTML; } });
+document.addEventListener("keydown",(ev)=>{
+  if(ev.key==="/"&&!UI.pal&&!UI.ob&&!/input|textarea/i.test(document.activeElement.tagName)){ ev.preventDefault(); UI.pal={q:""}; render(); }
+  if(ev.key==="Escape"){ UI.pal=null; UI.pop=null; UI.addMenu=false; UI.tour=null; render(); }
+});
+window.addEventListener("resize",()=>{ if(UI.tour) render(); });
+render();
+</script>
+</body>
+</html>

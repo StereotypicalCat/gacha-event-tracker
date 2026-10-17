@@ -56,7 +56,7 @@ falling back to checked-in fixtures.
 ## Three constraints that shape everything
 
 1. **No accounts, no logins, no user records.** Completion state lives in the browser's
-   `localStorage`, keyed by event ID. There is no user table and no session. Any request implying
+   `localStorage`, in a v2 envelope keyed by local game/server account and unchanged event ID. There is no user table and no session. Any request implying
    "sync across devices" is solved with export/import JSON, not a server-side user.
 2. **No LLM in the pipeline.** Event data is extracted by deterministic code-based parsers only.
    There is no Anthropic dependency, no API key, and no per-run inference cost. A source that
@@ -133,6 +133,15 @@ cycle:
   run `bun run build:feed`, which builds from snapshots and fixtures) before serving. A worktree
   also needs its own `bun install`.
 
+**Browser verification must include an ordinary HTTP network hostname, not only localhost.**
+Localhost is a secure context even over HTTP, so it conceals API restrictions that affect LAN and
+WireGuard addresses. On 2026-10-16 the redesign called `crypto.randomUUID()` during first-visit
+migration: it was undefined on HTTP `10.20.20.2`, and startup mislabeled that TypeError as a saved-data
+failure. Browser-local IDs now come from `state/reader/ids.ts` using 128-bit `crypto.getRandomValues`,
+which works on HTTP too. Use that helper for accounts, operations, clock revisions and backups;
+never remint existing identities. A Chrome test hostname mapped to loopback reproduces the HTTP
+security boundary without contacting another machine. Test startup and subsequent writes there.
+
 **`build:js` passes `--production`, and that flag is load-bearing.** Without it Bun bundles React's
 *development* build: 566 KB rather than 344 KB (164 KB vs 103 KB gzipped), every element creation
 validated at runtime, and `StrictMode` double-invoking effects — which in this app means
@@ -167,8 +176,9 @@ src/ingest/       html.ts, dates.ts (sixteen formats), merge.ts, sanitize.ts, ro
   parsers/        game8.ts, wikigg.ts, akwiki.ts, fandom.ts, bawiki.ts, holodori.ts, iopwiki.ts,
                   stellasora.ts, arustats.ts, karendar.ts — keyed by SITE, not game
   adapters/       index.ts — SOURCES registry binding url+game+parser, and the sanitize seam
-src/client/       React app, service worker, manifest
-  state/          progress, daily log, ignores, prefs, sort — all localStorage
+src/client/       ReaderApp (shared interfaces), components/redesign/, service worker, manifest
+  state/reader/   active v2 envelope, accounts/clocks, migration, archive, backup/restore
+  state/          legacy v1 helpers, progress validators, prefs normalization, sort
                   gameOrder.ts — the reader's game order, and the A–Z fallback; pure
                   useCustom.ts — the reader's own games and events (PRD F13)
                   lens.ts — who sees which rows (focus, outstanding, next-to-expire); pure
@@ -1228,48 +1238,19 @@ to an open page). Four things hold it up:
   keeps a retired source's slot warm rather than pruning it. `games` itself is left in feed order on
   purpose: `adoptNewLanes` diffs it and `knownGames` is seeded from it, so ordering it at source
   would let a display preference reach the code that hides a reader's games.
-- **Reordering is a settings-only affordance.** The focus bar and the dailies strip are the fastest
-  tap targets in the app, and a drag target on top of a tick target costs somebody a streak the first
-  time it misfires — so the live surfaces are never draggable. Both a handle and ↑↓ buttons ship,
-  because touch fires no drag events at all: the arrows are the mechanism and the drag is the pointer
-  fast path, and being ordinary buttons is what makes the whole thing reachable by keyboard and
-  screen reader without a second implementation of the same interaction.
-- **The settings panel is groups that state their own answer, and they ship closed.** Six
-  `<details>` groups — games, server region, appearance, what you see, your own, your progress — each
-  with its current state on the summary line (`Europe`, `17 of 18 on · A–Z`, `plus finished, not
-  started`). It was one open block in two columns, which is readable at four games and not at
-  eighteen, where the game list is eighteen rows of four controls sitting above the checkbox somebody
-  came to tick. The state line is the half that makes collapsing honest: without it every question
-  about how the app is set up costs a click, so the closed panel has to be a report and not a menu.
-  Three rules follow. **Do not default a group open** to make something inside it findable — the empty
-  states name the group as well as the switch, which is what makes that unnecessary. The summaries are
-  **derived from `prefs` at render**, never stored, so they cannot drift from the controls they
-  describe. And **one group answers one question**, which is what the sixth group is: the region and
-  the theme were a group called `Reading`, grouped on "both are how do I read this?" and summarising
-  as `Europe · Dark` — two unrelated answers joined by a dot, under a name for neither of them, in a
-  panel whose whole premise is that a closed line answers *its* group. The region is not a reading
-  preference: region-scoped ends and every daily reset are cut on that server's clock (§ Domain
-  rules), so it is the one control here that can make a countdown wrong, and it is now a line of its
-  own rather than filed behind a word for the theme.
-  Native `<details>` for the reason the reorder arrows are ordinary buttons: keyboard and screen
-  reader reach it without a second implementation. `summary` is not an `a`, `button` or `[tabindex]`,
-  so it needs its own `:focus-visible` rule in `styles.css` — the shared one does not reach it.
-- **The panel is one column of groups, and it uses the page's width.** Those are two claims and only
-  the first survived a desktop read: the rows were held to `max-w-3xl` inside a shell a third wider,
-  so every rule inside the panel stopped short of the panel's own, and it was the one block on a wide
-  page not using the width — between a two-column checklist and a three-column footer that both do.
-  A name at one end of a row and its state at the other is what "running now" already does with a
-  title and its countdown, so full width is the house pattern rather than a stretch. Prose inside a
-  group keeps its own measure, and the game list — the one thing tall enough to need it — takes **two
-  columns of its own past `lg` once there are nine or more games**, flowing down then across so the
-  numbers still read in a straight line and an arrow still swaps a row with its neighbour. Eighteen
-  rows in one column was a 1,000px ribbon with two thirds of the width empty beside it.
-- **A game's dailies stay together, and grouping never re-sorts inside a group.** `dailyGroups`
-  (`Dailies.tsx`) emits a game's standing chore followed by that game's repeating events, in the
-  order those arrived; it replaced `[...chores, ...repeating]`, which put a game's chore and its own
-  login event at opposite ends of the strip. Collapsed, the grouping is **adjacency only** — no
-  per-game headings, because that strip is the part of the page answerable in ten seconds and a
-  heading per game makes it the tallest block on it, pushing "next to expire" down the page.
+- **Reordering is a settings-only affordance.** Your games provides ordinary ↑↓ buttons for
+  keyboard, screen reader and touch. Live focus/daily tick targets are never draggable.
+- **Settings uses named pages.** General, Your games, Appearance, Lists, Region & time,
+  Data & sources, Backup, About Event Clock and Changelog. Keep the complete colophon in About;
+  Changelog has its own page and no footer link. The footer always states data age and links About.
+  Reset overrides live per game/server; display timezone is a separate preference.
+- **Both interfaces share the reader.** Structured (default, Round 6 B rail) and Relaxed (Round 7)
+  are CSS/layout choices over one feature tree. Theme, palette and row density are independent.
+  Do not mount the old v1 persistence hooks alongside ReaderApp's v2 store. See DATA-MODEL for
+  account IDs, clock revisions, migration recovery, backups and export validation.
+- **A game's routines stay together.** The separate daily panel keeps direct ticks; grouped
+  routines use per-game/server summaries. Collapse policy is configurable and focus can expand a
+  group without changing that saved policy. Timeline reset strips sit next to their game's events.
 - **A day already gone is still tickable, and the window bounds display and never data.** People play
   at midnight and tick at breakfast, so `catchUpDays` (`src/shared/daily.ts`) offers the last
   `CATCH_UP_DAYS` game-days for a standing chore and for an event whose end was never announced —

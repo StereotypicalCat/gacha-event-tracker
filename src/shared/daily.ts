@@ -1,3 +1,4 @@
+import type { ResetTiming } from "./time.ts";
 import type { LaneId } from "./custom.ts";
 import type { GachaEvent, GameId, Region } from "./schema.ts";
 import { DAY, resetShiftMs } from "./time.ts";
@@ -117,19 +118,19 @@ export function dailyOverride(
  * generic "what day is it here?" — still gets the regional answer. Anything
  * that reads or writes a tick should pass it.
  */
-export function dayKey(ms: number, region: Region, game?: LaneId): string {
-  return new Date(ms + resetShiftMs(region, game)).toISOString().slice(0, 10);
+export function dayKey(ms: number, region: Region, game?: LaneId, timing?: ResetTiming): string {
+  return new Date(ms + resetShiftMs(region, game, timing)).toISOString().slice(0, 10);
 }
 
 /** The next reset instant strictly after `ms`. */
-export function nextResetMs(ms: number, region: Region, game?: LaneId): number {
-  const s = resetShiftMs(region, game);
+export function nextResetMs(ms: number, region: Region, game?: LaneId, timing?: ResetTiming): number {
+  const s = resetShiftMs(region, game, timing);
   return Math.floor((ms + s) / DAY) * DAY + DAY - s;
 }
 
 /** How long the reader has left to do today's dailies. */
-export function msUntilReset(ms: number, region: Region, game?: LaneId): number {
-  return nextResetMs(ms, region, game) - ms;
+export function msUntilReset(ms: number, region: Region, game?: LaneId, timing?: ResetTiming): number {
+  return nextResetMs(ms, region, game, timing) - ms;
 }
 
 /**
@@ -144,6 +145,7 @@ export function dailyDays(
   endsMs: number | null,
   region: Region,
   game?: LaneId,
+  timing?: ResetTiming,
 ): string[] | null {
   if (endsMs === null) return null;
 
@@ -152,11 +154,11 @@ export function dailyDays(
   // reset: an event ending at 04:00 gives you nothing on that final day.
   const last = endsMs - 1;
   let cursor = startsMs;
-  if (last < startsMs) return [dayKey(startsMs, region, game)];
+  if (last < startsMs) return [dayKey(startsMs, region, game, timing)];
 
   while (cursor <= last && out.length < MAX_DAYS) {
-    out.push(dayKey(cursor, region, game));
-    cursor = nextResetMs(cursor, region, game);
+    out.push(dayKey(cursor, region, game, timing));
+    cursor = nextResetMs(cursor, region, game, timing);
   }
   return out;
 }
@@ -196,9 +198,10 @@ export function catchUpDays(
   game: LaneId | undefined,
   notBefore: number | null,
   span = CATCH_UP_DAYS,
+  timing?: ResetTiming,
 ): string[] {
-  const today = dayKey(now, region, game);
-  const floor = notBefore === null ? null : dayKey(notBefore, region, game);
+  const today = dayKey(now, region, game, timing);
+  const floor = notBefore === null ? null : dayKey(notBefore, region, game, timing);
 
   const out: string[] = [];
   // Walked in day-key space rather than in instants, like `streakOf`: these are
@@ -248,10 +251,11 @@ export function dailySummary(input: {
   game?: LaneId | undefined;
   now: number;
   logged: readonly string[];
+  timing?: ResetTiming;
 }): DailySummary {
-  const { startsMs, endsMs, region, game, now, logged } = input;
-  const days = dailyDays(startsMs, endsMs, region, game);
-  const today = dayKey(now, region, game);
+  const { startsMs, endsMs, region, game, now, logged, timing } = input;
+  const days = dailyDays(startsMs, endsMs, region, game, timing);
+  const today = dayKey(now, region, game, timing);
   const ticked = new Set(logged);
 
   const inWindow = days === null ? logged.slice() : days.filter((d) => ticked.has(d));
@@ -269,7 +273,7 @@ export function dailySummary(input: {
         ? null
         : days.filter((d) => d < today && !ticked.has(d)).length,
     streak: streakOf(logged, today),
-    msUntilReset: msUntilReset(now, region, game),
+    msUntilReset: msUntilReset(now, region, game, timing),
   };
 }
 

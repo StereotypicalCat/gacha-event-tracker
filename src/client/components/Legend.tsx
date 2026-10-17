@@ -1,7 +1,7 @@
 import type { Urgency } from "../../shared/time.ts";
 import { URGENCY_COLOR } from "./Meter.tsx";
 
-const STEPS: Array<{ urgency: Urgency; label: string }> = [
+export const STEPS: Array<{ urgency: Urgency; label: string }> = [
   { urgency: "calm", label: "a week+" },
   { urgency: "near", label: "under a week" },
   { urgency: "soon", label: "under 3 days" },

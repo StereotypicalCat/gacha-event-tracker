@@ -976,3 +976,22 @@ Facts stated above that a future reader may want to re-check, with how they were
 | `marisaimpact.com` states no year on any calendar | stripped tags from `/calendar89` and `/calendar90` and grepped the text for `20\d\d` — zero matches on either |
 | Its calendar URL is per-version, with no stable alias | `/calendar90` is `200` and covers `Aug 20 - Oct 22`; `/valk/calendar90` — the scheme its own `og:url` uses — is `404`; the nav links only `/calendar88` and `/calendar89` |
 | Its schedule is not behind an API | `GET /calendar90/__data.json` returns 144 bytes: an `ogImage` URL and nothing else |
+
+
+## Redeem codes source (2026-10-16)
+
+Genshin codes use https://game8.co/games/Genshin-Impact/archives/304759, separately from events.
+One descriptive-agent robots request and one page request returned HTTP 200 during capture; no
+access workaround or repeated source fetch was used. The raw page and capture metadata are pinned
+as fixtures/genshin/game8-codes-2026-10-16.*, with ten independently counted current codes. The
+parser reads actual code inputs/current reward rows and excludes expired programme sections; a
+future-dated programme fixture variant verifies that still-current programmes are admitted.
+Unannounced expiry remains null. A printed calendar date is expiresOn, never a fabricated exact
+expiresAt instant. Attribution is retained on every code.
+
+src/ingest/codes/registry.ts registers a count-only refresh source. The existing runner shares robots,
+six-hour floors, conditional requests, per-host spacing and snapshot gates across event/code sources.
+Event adapter schemas are unchanged. scripts/build-codes.ts builds data/codes.v1.json offline from
+snapshots or fixtures and preserves observation timestamps in snapshots/codes-first-seen.json.
+Code newness is per game; redemption is per local game/server account and never clears newness by
+itself. No code row is synthesized into the event feed.

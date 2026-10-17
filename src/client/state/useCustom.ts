@@ -1,3 +1,4 @@
+import { instantInZone } from "./displayTime.ts";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   asDisplayEvent,
@@ -54,11 +55,13 @@ export function readerInstant(
   date: string,
   time: string | null,
   boundary: "start" | "end",
+  timezone?: string | null,
 ): string | null {
   const wall =
     time !== null && time !== ""
       ? `${date}T${time}`
       : `${date}T${boundary === "start" ? "00:00:00" : "23:59:59"}`;
+  if (timezone) return instantInZone(date, time || (boundary === "start" ? "00:00:00" : "23:59:59"), timezone);
   const ms = Date.parse(wall);
   if (Number.isNaN(ms)) return null;
 

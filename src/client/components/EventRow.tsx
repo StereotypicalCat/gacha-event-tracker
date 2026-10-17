@@ -10,6 +10,8 @@ import type { Status } from "../state/useProgress.ts";
 import { Meter, URGENCY_COLOR } from "./Meter.tsx";
 
 export interface RowEvent {
+  accountId?: string;
+  region?: import("../../shared/schema.ts").Region;
   event: DisplayEvent;
   clock: EventClock;
 }
@@ -22,6 +24,7 @@ export interface DailyBadge {
 }
 
 interface EventRowProps {
+  as?: "li" | "div";
   row: RowEvent;
   /**
    * The instant the page is being read at.
@@ -47,6 +50,7 @@ interface EventRowProps {
 
 export function EventRow({
   row,
+  as: Container = "li",
   now,
   completed,
   status,
@@ -73,7 +77,7 @@ export function EventRow({
       : formatRemaining(clock.msRemaining);
 
   return (
-    <li
+    <Container
       className={`event-row relative border-b border-hairline/70 ${
         completed ? "is-complete" : ""
       }`}
@@ -270,6 +274,6 @@ export function EventRow({
           </span>
         )}
       </div>
-    </li>
+    </Container>
   );
 }

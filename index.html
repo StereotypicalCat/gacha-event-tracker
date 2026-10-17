@@ -49,6 +49,10 @@
           var prefs = JSON.parse(
             localStorage.getItem("gacha-tracker:v1:prefs") || "{}",
           );
+          var reader = JSON.parse(localStorage.getItem("gacha-tracker:v2:reader") || "null");
+          if (reader && reader.version === 2 && reader.prefs) prefs = reader.prefs;
+          document.documentElement.dataset.interface = prefs.interface === "relaxed" ? "relaxed" : "structured";
+          document.documentElement.dataset.density = prefs.density === "compact" ? "compact" : "standard";
           var light =
             prefs.theme === "light" ||
             (prefs.theme === "system" &&
@@ -83,7 +87,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&amp;family=Barlow+Condensed:wght@500;600;700&amp;family=Bricolage+Grotesque:wght@500;600;700&amp;family=Figtree:wght@400;500;600;700&amp;family=Chakra+Petch:wght@500;600;700&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap"
       rel="stylesheet"
     />
     <link rel="manifest" href="manifest.webmanifest" />

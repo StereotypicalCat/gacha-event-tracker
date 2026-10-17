@@ -2,84 +2,84 @@
 name: Event Clock
 description: Live and upcoming gacha events, sorted by what expires next.
 colors:
-  ground: "#12141c"
-  surface: "#1b1e2a"
-  raised: "#232739"
-  hairline: "#2c3145"
-  ink: "#e9ebf3"
+  ground: "#1a1c24"
+  surface: "#22252f"
+  raised: "#30333c"
+  hairline: "#43454c"
+  ink: "#eeeae3"
   ink-strong: "#ffffff"
-  muted: "#888fa6"
-  faint: "#5a6178"
+  muted: "#b1afad"
+  faint: "#9c9b9b"
   scrim: "rgb(18 20 28 / 0.8)"
   glow: "#1a1e2c"
   calm: "#55607f"
-  near: "#5b8def"
-  soon: "#e8b33c"
-  critical: "#ff4d6a"
-  ground-light: "#edf0f7"
-  surface-light: "#ffffff"
-  raised-light: "#dfe4f0"
-  hairline-light: "#c9d1e2"
-  ink-light: "#151824"
+  near: "#8eb3f4"
+  soon: "#e9b95b"
+  critical: "#ff8598"
+  ground-light: "#f3f1ec"
+  surface-light: "#fffdf8"
+  raised-light: "#f0eeea"
+  hairline-light: "#dddbd8"
+  ink-light: "#28272d"
   ink-strong-light: "#000000"
-  muted-light: "#535b73"
-  faint-light: "#767e94"
+  muted-light: "#69676a"
+  faint-light: "#6e6d6e"
   scrim-light: "rgb(26 31 48 / 0.42)"
   glow-light: "#ffffff"
   calm-light: "#8a92a8"
-  near-light: "#2b62c6"
-  soon-light: "#8a6008"
-  critical-light: "#c81e3c"
+  near-light: "#315fa5"
+  soon-light: "#805a12"
+  critical-light: "#b12947"
 typography:
   numeral:
-    fontFamily: "Chakra Petch, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Bricolage Grotesque, ui-sans-serif, system-ui, sans-serif"
     fontSize: "2.75rem"
     fontWeight: 700
     lineHeight: 1
     letterSpacing: "-0.025em"
     fontFeature: "\"tnum\" 1"
   display:
-    fontFamily: "Chakra Petch, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Bricolage Grotesque, ui-sans-serif, system-ui, sans-serif"
     fontSize: "1.75rem"
     fontWeight: 600
     lineHeight: 1.15
     letterSpacing: "-0.025em"
   wordmark:
-    fontFamily: "Chakra Petch, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Bricolage Grotesque, ui-sans-serif, system-ui, sans-serif"
     fontSize: "0.9375rem"
     fontWeight: 700
     letterSpacing: "0.02em"
   reading:
-    fontFamily: "Chakra Petch, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Bricolage Grotesque, ui-sans-serif, system-ui, sans-serif"
     fontSize: "0.875rem"
     fontWeight: 600
     fontFeature: "\"tnum\" 1"
   title:
-    fontFamily: "Public Sans, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Figtree, ui-sans-serif, system-ui, sans-serif"
     fontSize: "0.9375rem"
     fontWeight: 500
     lineHeight: 1.375
   body:
-    fontFamily: "Public Sans, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Figtree, ui-sans-serif, system-ui, sans-serif"
     fontSize: "0.875rem"
     fontWeight: 400
     lineHeight: 1.625
   summary:
-    fontFamily: "Public Sans, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Figtree, ui-sans-serif, system-ui, sans-serif"
     fontSize: "0.8125rem"
     fontWeight: 400
     lineHeight: 1.375
   control:
-    fontFamily: "Public Sans, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Figtree, ui-sans-serif, system-ui, sans-serif"
     fontSize: "0.75rem"
     fontWeight: 500
   label:
-    fontFamily: "Chakra Petch, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Bricolage Grotesque, ui-sans-serif, system-ui, sans-serif"
     fontSize: "0.6875rem"
     fontWeight: 600
     letterSpacing: "0.14em"
   tag:
-    fontFamily: "Public Sans, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Figtree, ui-sans-serif, system-ui, sans-serif"
     fontSize: "0.625rem"
     fontWeight: 500
 rounded:
@@ -170,7 +170,11 @@ components:
 
 # Design System: Event Clock
 
-## Overview
+The active Relaxed/Structured layout and palette contract is recorded in
+[Active redesign system](#active-redesign-system-2026-10-16). The component rationale below describes
+the preceding instrument-panel system; use the active section and live token resolver for new work.
+
+## Original component rationale
 
 **Creative North Star: "The Lit Instrument Panel"**
 
@@ -528,3 +532,105 @@ rather than being toned down.
   chooses.
 - **Don't** put a second control inside a row, or a drag target on the focus bar or the dailies
   strip.
+
+## Shipped redesign system (2026-10-18)
+
+The owner accepted this build as the initial redesign on 2026-10-18, after screen-by-screen review
+against the approved mockups (`design/mockups/round6/b-rail.html` for Structured,
+`design/mockups/round7/converged.html` for Relaxed) and the corrections recorded round by round in
+`docs/handoffs/2026-10-17-redesign-second-rejection-handoff.md`. This section supersedes the original
+shell/type/palette/layout descriptions above. Those older sections remain the rationale for the detail,
+timeline and uncertainty components that carried over. Overrides live in `src/client/redesign.css`
+and `src/client/state/appearance.ts`.
+
+### Shell and layout
+
+- **Interfaces.** Settings → Appearance offers Structured (the Round 6 B rail; the default for new
+  installs and missing preferences) and Relaxed (Round 7). A saved Relaxed choice stays Relaxed.
+  Structured uses Barlow Condensed/Barlow and adjoining ruled sections. Relaxed uses Bricolage
+  Grotesque/Figtree with separated panels. Fonts keep system fallbacks offline.
+- **Navigation.** The tabs are Checklist, Timeline, Routines and Archive, with Settings on the right.
+  The EVENTCLOCK logo returns to the default view. Each page is in the address bar (`#checklist`,
+  `#settings/games/genshin`, …), and changing tab starts at the top of the page.
+- **Width.** The page fills up to 1920px (Relaxed 1840px) and centres beyond that.
+- **Two insets on `.reader-ui`.** `--edge` (16px) between content and the page's outer edges.
+  `--gutter` (24px) where a side column (Checklist rail, Settings nav, Archive sidebar) meets the main
+  content. At ≤700px, where everything stacks, both are the edge.
+- **Checklist rail.** 360px wide (Relaxed 380px; 280/300px at medium widths). Top to bottom: the
+  focus pills, Next to expire (headline, meter and the next three), Today's dailies, then pinned
+  routines grouped by game.
+
+### Urgency and colour
+
+- **Two axes, never crossed.** Game hue answers whose event: the 3px strip on the left of each
+  Standard row, the Compact game cell, the pills. The urgency ramp answers how long: countdowns and
+  meter ticks.
+- **The urgency ramp is live's.** Grey for a week or more, blue under a week, yellow under 3 days, red
+  under a day: `--color-urgency-{calm,near,soon,critical}`, set by `urgencyTokens`. It is separate
+  from the accent, so a chosen accent never changes urgency.
+- **Reader-editable.** Settings → Appearance → Urgency colours sets each step per theme
+  (`prefs.urgencyPalette`), with any scheme. Values are nudged only as far as 3:1 contrast, the
+  large-text bar.
+- **Fallback for the live UI.** `URGENCY_COLOR` falls back to the old `--color-*` tokens, so the
+  live UI is unchanged.
+- **Schemes.** Slate, Warm, Plum and Custom shift surfaces. Custom stores ground/surface/text/accent
+  per theme. Text and accent derive at least 4.5:1 contrast on ground and surface. Game colours are
+  set per game in Your games.
+
+Default Slate tokens:
+
+| Role | Structured dark | Structured light | Relaxed dark | Relaxed light |
+| --- | --- | --- | --- | --- |
+| Ground | #0e1117 | #eef0f5 | #1a1c24 | #f3f1ec |
+| Surface | #141923 | #ffffff | #22252f | #fffdf8 |
+| Primary text | #eeeae3 | #28272d | #eeeae3 | #28272d |
+| Accent | #8eb3f4 | #315fa5 | #8eb3f4 | #315fa5 |
+
+### Checklist
+
+- **Heading.** "Running now" sits with the sort and density buttons on one row. Under them is one
+  line: the count on the left and live's legend on the right ("bars = time left · colour = ends in a
+  week+ / under a week / under 3 days / under a day").
+- **Standard rows.** Game, title, optional description, then the countdown, date and meter, with the
+  chevron 10px from the date. Every row has a meter, with or without a description; the mockup hid
+  it on rows without one, and the owner chose consistency.
+- **Compact rows.** A ledger with Game / Event / Time left / Ends in columns.
+- **"Not started yet."** It opens a second section: a 48px gap, a 2px accent rule and a raised band
+  with a "Coming up" eyebrow. In Compact its columns read Duration / Starts in.
+
+### Focus pills
+
+They have live's chip feel: 30px tall, 12px text, a 30% hue border unpressed, the full hue with a 14%
+wash when pressed. State changes ease over 130ms. Hover adds a hue ring and a 1px lift, a press
+scales to 0.96, and games with nothing outstanding dim to 50%. The "Focus" label is a 12px body-face
+legend on the same baseline as "Next: …".
+
+### Ticking things off
+
+- **Today's dailies.** The whole row is the target. A tick washes the row in its game's hue, pops the
+  box and draws the check. A pip bar and "N of M done" sit under the heading. A check-in goal (for
+  example "5/5 wk") counts as done once met, with a dotted check, and shows its goal count instead of
+  a streak.
+- **Pinned routines** use the same card language. A box ticks a check-in routine, or completes an
+  amount routine in one click. "+1" steps an amount, and the count opens an editor. Typing a value at
+  or over the target completes it after a 450ms pause.
+- **Completion animation.** The bar fills, the row warms, then the box pops. Unticking undoes it:
+  the amount from before goes back, or the editor opens when that value isn't known.
+- **Celebration.** A single completion fires live's small `Fireworks` in the row. Finishing a whole
+  section (every daily, or every routine in a game's group) fires `Fireworks grand`: seven bursts in
+  two waves with the game's hue mixed in, a light sweep, and the "All done" line popping.
+- **When it fires.** Only an action taken now that completes the item or section, never arriving
+  complete. Reduced motion removes all of it.
+
+### Other pages
+
+- **Routines.** Bands by reset (Dailies, Weeklies, Monthlies, Cycles) or by game. The table has tick
+  and click-to-edit amount cells. The library and create/edit drawers are shelves.
+- **Timeline.** Two looks (new and classic) chosen in Appearance. Dailies are not on the timeline.
+- **Settings.** About, Changelog, Data & sources (list options first), Region & time, Appearance
+  (interface, theme, scheme, urgency colours, default view, game order, timeline design, focus bar,
+  checklist group), Your own events and games, Backup (tiers plus a manual "Your backups" list), and
+  per-game Setup / Codes / About.
+- **Returning-user tour.** Routines → Checklist → Timeline → Redeem codes → Archive → Settings.
+  Continue stays in a fixed place, Back sits beside it, and Skip is apart. "Replay the introduction"
+  starts it at step 1.

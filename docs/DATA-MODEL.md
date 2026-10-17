@@ -244,7 +244,10 @@ CREATE TABLE snapshots (
 `region_ends` and `payload` hold JSON as TEXT; parse them through the Zod schema on read so a
 malformed row surfaces at the boundary rather than deep in the UI.
 
-## Client-side storage
+## Legacy client-side storage (v1 compatibility)
+
+Production uses the [active v2 reader envelope](#active-reader-state-v2-2026-10-16). The keys and
+merge rules in this section describe migration input and retained compatibility helpers.
 
 Namespaced, versioned, and small. Nothing here ever goes to the server.
 
@@ -772,3 +775,48 @@ Two timestamp fields distinguish crawler activity from site updates: `lastConfir
 the crawler last successfully contacted and verified the source (HTTP 200 or 304 Not Modified), and
 `contentChangedAt` records when the served bytes last changed. Both default to `null` so feeds built
 before their introduction continue to validate.
+
+## Active reader state (v2, 2026-10-16)
+
+The localStorage/export descriptions above document legacy v1 compatibility. Production mounts
+only `ReaderApp` and persists `gacha-tracker:v2:reader`, validated by state/reader/schema.ts.
+One stable `account:<id>` represents one tracked game/server; it is browser-local, not a login.
+Original event/task/daily IDs remain unchanged inside account data. Account data contains progress,
+ignored, and daily/amount maps nested by clock revision. A revision freezes effectiveAt, region,
+reset override and automaticBase (offset/hour/minute). Changes append revisions; imported clocks
+can be historicalOnly and never replace the local active reset.
+
+The envelope includes accounts, data, archive, seenEvents, prefs, customGames/customEvents/tasks,
+codeSeen (per game), codeRedeemed (per account), and eventSeen (per account). Archive/seen keys are
+JSON.stringify([accountId,eventId]); archive snapshots retain event, outcome/time, resolved end,
+clockRevision, progress, days and amounts. Account/revision cross-references are validated before
+restore. Field timestamps and operation IDs rebase writes and preserve deletion tombstones. Unknown
+fields pass through exports; progress imports retain opaque root/account extensions in
+importedExtensions as well as mergeable known fields. Existing same-server settings remain local.
+
+Migration preserves raw v1 keys in place and in migration recovery, creates one account per game at
+the saved region and maps old follows/pins/logs. Newly offered games remain off. Startup compares
+legacyRaw with surviving v1 keys to carry older-tab deltas into the original account without
+resurrecting newer v2 deletions. Parser aliases carry progress, ticks, amounts and archive/seen IDs.
+
+Keys outside the envelope:
+
+- gacha-tracker:v2:migration-recovery — raw pre-migration bytes.
+- gacha-tracker:v2:backups — at most 7 daily + 4 weekly + 6 monthly UTC bucket snapshots.
+- gacha-tracker:v2:restore-recovery — the complete pre-restore export.
+- gacha-tracker:v2:restore-pending — prepared replacement, resumed before mounting on startup.
+
+Exports use format gacha-tracker-export, version 2, exportedAt, reader and legacy. Progress exports
+mark scope progress; full imports preview replacement, progress imports preview a merge. Backups
+are never recursively included. Original v1 export envelopes remain convertible.
+
+Prefs add interface (structured/default or relaxed), density (standard/default or compact), scheme
+(slate/warm/plum/custom), separate light/dark customPalette, per-game gameColors, timezone
+(null/Automatic or IANA), checklist daily placement/expansion and redesignTourSeen. Main view remains
+soon or timeline; utility navigation is transient. Future/unreadable records remain exportable even
+when this build cannot offer editing controls.
+
+
+The fidelity correction adds `prefs.routineGroup` (`reset`, the absent-value default, or `game`)
+for the Routines page's grouping. It changes no routine IDs or placement keys. Structured is the
+interface default as of the owner's 2026-10-17 instruction; explicit saved Relaxed is preserved.

@@ -8,6 +8,8 @@ import type { GameId, Precision } from "./schema.ts";
  * how long is left, how far through a window we are, and how alarmed to be.
  */
 
+export interface ResetTiming { offsetUtc: number; resetHour: number; resetMinute: number }
+
 export const MINUTE = 60_000;
 export const HOUR = 60 * MINUTE;
 export const DAY = 24 * HOUR;
@@ -86,16 +88,16 @@ export function resetHourFor(region: Region, game?: LaneId): number {
  * one, but it is still the reader's streak moving under them. Treat a change
  * here as a data change, not a constant.
  */
-export function resetShiftMs(region: Region, game?: LaneId): number {
-  return serverOffsetUtc(region, game) * HOUR - resetHourFor(region, game) * HOUR;
+export function resetShiftMs(region: Region, game?: LaneId, timing?: ResetTiming): number {
+  return timing === undefined ? serverOffsetUtc(region, game) * HOUR - resetHourFor(region, game) * HOUR : timing.offsetUtc * HOUR - timing.resetHour * HOUR - timing.resetMinute * MINUTE;
 }
 
 /**
  * The instant the game-day labelled `day` (`YYYY-MM-DD`) opens on — the inverse
  * of `dayKey`.
  */
-export function dayStartMs(day: string, region: Region, game?: LaneId): number {
-  return Date.parse(`${day}T00:00:00.000Z`) - resetShiftMs(region, game);
+export function dayStartMs(day: string, region: Region, game?: LaneId, timing?: ResetTiming): number {
+  return Date.parse(`${day}T00:00:00.000Z`) - resetShiftMs(region, game, timing);
 }
 
 export function guessRegion(
@@ -191,11 +193,12 @@ function boundaryMs(
   precision: Precision,
   event: Pick<Clockable, "game" | "extractionMethod">,
   region: Region,
+  timing?: ResetTiming,
 ): number {
   if (precision !== "day" || event.extractionMethod !== "parser") {
     return Date.parse(iso);
   }
-  return dayStartMs(iso.slice(0, 10), region, event.game);
+  return dayStartMs(iso.slice(0, 10), region, event.game, timing);
 }
 
 /**
@@ -308,10 +311,11 @@ export function clockFor(
   event: Clockable,
   region: Region,
   now: number,
+  timing?: ResetTiming,
 ): EventClock {
-  const startsMs = boundaryMs(event.startsAt, event.startPrecision, event, region);
+  const startsMs = boundaryMs(event.startsAt, event.startPrecision, event, region, timing);
   const end = endBoundary(event, region);
-  const endsMs = end === null ? null : boundaryMs(end.iso, end.precision, event, region);
+  const endsMs = end === null ? null : boundaryMs(end.iso, end.precision, event, region, timing);
 
   const msRemaining = endsMs === null ? null : endsMs - now;
   const upcoming = now < startsMs;

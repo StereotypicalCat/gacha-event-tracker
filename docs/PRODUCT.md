@@ -71,7 +71,7 @@ away for more coverage (see Product Principles).
 
 ## Capabilities and Constraints
 
-**Capabilities.** The full feature set is specified as F1–F16 in `docs/PRD.md`:
+**Capabilities.** The full feature set is specified as F1–F18 in `docs/PRD.md`:
 
 - A timeline: one lane per game, or a single queue sorted by soonest end.
 - A checklist of everything running, sorted by soonest end.
@@ -79,16 +79,17 @@ away for more coverage (see Product Principles).
 - Daily checklists, with past days that can still be filled in.
 - Ignoring an event, and filters by game or type.
 - Focusing on one game at a time.
-- Region selection.
-- JSON export and import.
+- Separate game/server tracking, reset corrections and Automatic or named display timezone.
+- JSON export/import, recoverable restore and 7 daily / 4 weekly / 6 monthly local backups.
 - The reader's own games and events, one-off or repeating.
-- First-run setup.
+- Events-first new setup and a one-time returning-reader introduction.
 - Offline use.
 - A notice when a new version of the app is ready.
 - Dark or light mode, plus a "follow the system" option.
-- The reader's own game order.
+- The reader's own game order, per-game colours, Relaxed/Structured interfaces and custom schemes.
+- A Routines library with independent view pins, an Archive with story statistics, and sourced redeem codes.
 
-The app currently covers twenty games from twenty-two sources.
+The app covers twenty games; source registries are the authoritative current count.
 
 **Hard constraints** (`AGENTS.md` § Three constraints):
 
@@ -112,7 +113,7 @@ The app currently covers twenty games from twenty-two sources.
 **Terminology:**
 
 - The user is a **reader**.
-- The two views are **Checklist** (stored id `"soon"`) and **Timeline**.
+- The main views are **Checklist** (stored id `"soon"`) and **Timeline**; Routines, Archive and Settings are utility pages.
 - An event's states are **untouched**, **doing it** and **done**.
 - **Ignore** is not the same as done.
 - A **lane** is one game's row or source.

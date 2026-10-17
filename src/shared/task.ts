@@ -1,3 +1,4 @@
+import type { ResetTiming } from "./time.ts";
 import { z } from "zod";
 import type { LaneId } from "./custom.ts";
 import { dayKey } from "./daily.ts";
@@ -55,6 +56,20 @@ export const TaskSchema = z.object({
   measure: MeasureSchema,
   /** The built-in routine this was copied from, when it was (phase 2b). */
   from: z.string().optional(),
+  /**
+   * Its own reset hour, in server time, instead of the game's. Moves only this
+   * routine's day boundary; its log stays under the account's clock revision.
+   */
+  resetHour: z.number().int().min(0).max(23).optional(),
+  note: z.string().trim().max(500).optional(),
+  /** Rendered as a link, so only web addresses. */
+  link: z
+    .string()
+    .trim()
+    .max(500)
+    .url()
+    .refine((u) => /^https?:\/\//i.test(u))
+    .optional(),
   at: z.string(),
   updatedAt: z.string(),
 });
@@ -74,9 +89,10 @@ export function taskStatus(input: {
   now: number;
   logged: readonly string[];
   amounts?: AmountLog | undefined;
+  timing?: ResetTiming;
 }): GoalStatus {
   const { task, region, now, logged, amounts } = input;
-  const today = dayKey(now, task.clock ?? region, task.game as LaneId);
+  const today = dayKey(now, task.clock ?? region, task.game as LaneId, task.clock === undefined ? input.timing : undefined);
   const { start, days } = periodOf(task.period, today);
   const scope = task.period.unit;
   const left = days.filter((k) => k >= today);
@@ -123,7 +139,9 @@ export function asOfLabel(day: string): string {
 /** One line saying when it rolls and what it wants. */
 export function taskCaption(task: Pick<Task, "period" | "measure">): string {
   const when =
-    task.period.unit === "week"
+    task.period.unit === "day"
+      ? "every day"
+      : task.period.unit === "week"
       ? `every week from ${WEEKDAYS[task.period.startsOn - 1]}`
       : task.period.unit === "month"
         ? `every month from the ${ordinal(task.period.startsOn)}`

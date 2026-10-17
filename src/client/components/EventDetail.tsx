@@ -1,3 +1,5 @@
+import type { ResetTiming } from "../../shared/time.ts";
+import { formatInZone } from "../state/displayTime.ts";
 import { useEffect, useState } from "react";
 import { useGameMeta } from "../state/gameMeta.tsx";
 import {
@@ -9,7 +11,7 @@ import {
 import type { EventDraft } from "../state/useCustom.ts";
 import { cadenceLabel, EventForm } from "./CustomForms.tsx";
 import {
-  formatAbsolute,
+  formatAbsolute as defaultFormatAbsolute,
   formatRemaining,
   REGION_LABEL,
 } from "../../shared/time.ts";
@@ -51,7 +53,13 @@ export function EventDetail({
   onNote,
   onClose,
   own,
+  timing,
+  timezone,
+  sourceNotice,
 }: {
+  sourceNotice?: React.ReactNode;
+  timing?: ResetTiming | undefined;
+  timezone?: string | null | undefined;
   row: RowEvent;
   completed: boolean;
   ignored: boolean;
@@ -101,12 +109,13 @@ export function EventDetail({
       }
     | undefined;
 }) {
+  const formatAbsolute = (instant: string | number, withTime: boolean) => timezone === undefined ? defaultFormatAbsolute(instant, withTime) : formatInZone(instant, withTime, timezone);
   const gameMeta = useGameMeta();
   const [editing, setEditing] = useState(false);
   const { event, clock } = row;
   // The run's claimable days caps an event-wide goal; null when the end is
   // unannounced, and then nothing is invented to cap it with.
-  const run = runDays(clock.startsMs, clock.endsMs, region, event.game);
+  const run = runDays(clock.startsMs, clock.endsMs, region, event.game, timing);
   const goalState =
     goal === undefined
       ? undefined
@@ -118,6 +127,7 @@ export function EventDetail({
           game: event.game,
           now,
           logged: dailyDays,
+          ...(timing === undefined ? {} : { timing }),
           amounts,
         });
   const game = gameMeta(event.game);
@@ -136,25 +146,26 @@ export function EventDetail({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+    <div className="event-detail-overlay fixed inset-0 z-50">
       <button
         type="button"
         aria-label="Close details"
         onClick={onClose}
-        className="absolute inset-0 bg-scrim backdrop-blur-sm"
+        className="absolute inset-0 bg-scrim"
       />
       <div
         role="dialog"
         aria-modal="true"
         aria-label={event.title}
-        className="relative max-h-[88vh] w-full overflow-y-auto rounded-t-2xl border border-hairline bg-surface p-5 sm:max-w-lg sm:rounded-2xl"
+        className="event-detail-sheet"
       >
-        <p className="eyebrow" style={{ color: game.hue }}>
+        <p className="detail-game" style={{ color: game.hue }}>
           {game.name}
         </p>
-        <h2 className="mt-1.5 font-display text-xl font-semibold leading-snug">
+        <h2 className="detail-title">
           {event.title}
         </h2>
+        {sourceNotice}
         {/* Stated plainly, next to the title rather than buried at the bottom:
             a reader has to be able to tell which dates the app went and found
             and which ones they typed in themselves. */}
@@ -176,7 +187,7 @@ export function EventDetail({
           />
         </div>
 
-        <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+        <dl className="detail-facts">
           {/* Off the clock, not off the event: a day-precision boundary is
               resolved to the game's reset there, and printing the stored
               00:00Z instead would name a different day to the countdown. */}
@@ -231,6 +242,7 @@ export function EventDetail({
         {daily ? (
           <>
             <DailyChecklist
+              timing={timing}
               startsMs={clock.startsMs}
               endsMs={clock.endsMs}
               region={region}
@@ -242,7 +254,7 @@ export function EventDetail({
             />
             <GoalControl
               goal={goal}
-              defaultWeekStartsOn={isoWeekday(dayKey(clock.startsMs, region, event.game))}
+              defaultWeekStartsOn={isoWeekday(dayKey(clock.startsMs, region, event.game, timing))}
               maxDays={run === null ? null : run.length}
               onChange={(g) => onGoal(event.id, g)}
             />

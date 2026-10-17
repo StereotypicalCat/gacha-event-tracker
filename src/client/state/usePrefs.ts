@@ -22,6 +22,8 @@ import { hiddenAfter, routinesFor, type Routine } from "../../shared/routines.ts
 export type View = "soon" | "timeline";
 
 export interface Prefs {
+  interface?: "relaxed" | "structured";
+  density?: "standard" | "compact";
   region: Region;
   /**
    * Games the reader has switched off.
@@ -306,6 +308,8 @@ export function trackRoutinePatch(p: Prefs, routine: Routine, track: boolean): P
 
 export function defaults(): Prefs {
   return {
+    interface: "structured",
+    density: "standard",
     region: guessRegion(),
     hiddenGames: [],
     focusGame: null,
@@ -405,6 +409,9 @@ export function restorePrefsValue(incoming: unknown): Prefs {
     ...base,
     ...raw,
   };
+
+  if (result.interface !== "relaxed" && result.interface !== "structured") result.interface = "structured";
+  if (result.density !== "standard" && result.density !== "compact") result.density = "standard";
 
   // Region
   if (result.region !== "america" && result.region !== "europe" && result.region !== "asia") {

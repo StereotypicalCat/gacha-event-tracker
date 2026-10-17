@@ -51,7 +51,7 @@ export function taskFieldsFrom(initial: TaskDraft | undefined, lanes: readonly L
   return {
     game: initial?.game ?? lanes[0] ?? "",
     title: initial?.title ?? "",
-    unit: p?.unit ?? "week",
+    unit: p === undefined || p.unit === "day" ? "week" : p.unit,
     weekday: p?.unit === "week" ? p.startsOn : 1,
     monthDay: String(p?.unit === "month" ? p.startsOn : 1),
     cycleDays: String(p?.unit === "cycle" ? p.days : 14),

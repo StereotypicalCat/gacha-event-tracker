@@ -49,6 +49,7 @@ const BASE = new URL("./", self.registration.scope);
 const at = (path) => new URL(path, BASE).toString();
 const SHELL = ["", "index.html", "styles.css", "main.js"].map(at);
 const FEED = new URL("data/events.v1.json", BASE).pathname;
+const CODES_FEED = new URL("data/codes.v1.json", BASE).pathname;
 const FONT_HOSTS = new Set(["fonts.googleapis.com", "fonts.gstatic.com"]);
 /** What a page sends to ask a waiting worker to take over now. */
 const SKIP_WAITING = "skip-waiting";
@@ -126,7 +127,7 @@ self.addEventListener("fetch", (event) => {
 
   if (url.origin !== self.location.origin) return;
 
-  if (url.pathname === FEED) {
+  if (url.pathname === FEED || url.pathname === CODES_FEED) {
     event.respondWith(feedFirst(request));
     return;
   }

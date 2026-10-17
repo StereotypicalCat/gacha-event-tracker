@@ -180,7 +180,7 @@ describe("restorePrefsValue", () => {
       regionConfirmed: true,
       onboarded: true,
     };
-    expect(restorePrefsValue(exported)).toEqual(exported);
+    expect(restorePrefsValue(exported)).toEqual({ ...exported, interface: "structured", density: "standard" });
   });
 
   test("falls back to defaults for missing fields from older exports", () => {
@@ -225,3 +225,24 @@ describe("restorePrefsValue", () => {
     expect(restored.view).toBe(defaults().view);
   });
 });
+
+describe("redesign presentation preferences", () => {
+  test("defaults to Structured and Standard without changing the reader's main view", () => {
+    const p = restorePrefsValue({ view: "timeline" });
+    expect(p.interface).toBe("structured");
+    expect(p.density).toBe("standard");
+    expect(p.view).toBe("timeline");
+  });
+  test("keeps Structured and Compact on restore", () => {
+    const p = restorePrefsValue({ interface: "structured", density: "compact" });
+    expect(p.interface).toBe("structured");
+    expect(p.density).toBe("compact");
+  });
+  test("invalid choices fall back to the supported defaults", () => {
+    const p = restorePrefsValue({ interface: "other", density: 42 });
+    expect(p.interface).toBe("structured");
+    expect(p.density).toBe("standard");
+  });
+});
+
+test("a saved Relaxed interface survives preference normalization", () => { expect(restorePrefsValue({interface:"relaxed"}).interface).toBe("relaxed"); });

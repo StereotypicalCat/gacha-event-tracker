@@ -131,7 +131,7 @@ const SITES: Record<string, { name: string; url: string }> = {
   "endfield.wiki.gg": { name: "wiki.gg", url: "https://wiki.gg" },
 };
 
-function siteFor(url: string): { name: string; url: string } {
+export function siteFor(url: string): { name: string; url: string } {
   try {
     const host = new URL(url).host;
     return SITES[host] ?? { name: host, url: `https://${host}` };
@@ -570,6 +570,7 @@ export function Colophon({
 }
 
 const OUTCOME: Record<RefreshOutcome, string> = {
+  partial: "Event data checked; redeem codes could not be checked.",
   updated: "Updated — newer data is on screen.",
   same: "Nothing newer published yet. Sources are read about twice a day.",
   failed: "Couldn't reach the server, so this is still the copy stored here.",

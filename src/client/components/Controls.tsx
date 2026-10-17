@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { createContext, useContext, useState } from "react";
 import type { LaneId } from "../../shared/custom.ts";
 import type { Region } from "../../shared/schema.ts";
 import { REGION_LABEL } from "../../shared/time.ts";
@@ -10,6 +10,9 @@ import { YourOwn } from "./YourOwn.tsx";
 import { isCustomGameId } from "../../shared/custom.ts";
 import { exceptionLine, setFor, shownFor, type PerGame } from "../../shared/perGame.ts";
 import { asOfLabel, offered, routinesFor } from "../../shared/routines.ts";
+
+const SettingsFilter = createContext<string | undefined>(undefined);
+const GROUP_PAGE: Record<string, string> = { Games: "games", "Server region": "time", Appearance: "appearance", "What you see": "lists", "Your own games and events": "general", "Your progress": "backup" };
 
 const REGIONS: Array<{ id: Region; label: string }> = (
   ["america", "europe", "asia"] as const
@@ -81,7 +84,9 @@ export function Controls({
   onExportAll,
   onImportAll,
   own,
+  section,
 }: {
+  section?: string | undefined;
   games: LaneId[];
   prefs: Prefs;
   onToggleGame: (g: LaneId) => void;
@@ -121,7 +126,7 @@ export function Controls({
   };
 
   return (
-    <section
+    <SettingsFilter value={section}><section
       aria-labelledby="settings-heading"
       className="border-t border-hairline px-4 py-5"
     >
@@ -188,6 +193,10 @@ export function Controls({
         {/* Genuinely only how the page looks, and instant: no reload, and
             nothing marked, typed or ticked is touched. */}
         <Group name="Appearance" state={themeLabel(prefs.theme)}>
+          <div className="appearance-choices">
+            <label>Interface<select aria-label="Interface" value={prefs.interface ?? "relaxed"} onChange={(e) => onUpdate({ interface: e.target.value as "relaxed" | "structured" })}><option value="relaxed">Relaxed — more breathing room</option><option value="structured">Structured — a ruled planner</option></select></label>
+            <label>Event rows<select aria-label="Event rows" value={prefs.density ?? "standard"} onChange={(e) => onUpdate({ density: e.target.value as "standard" | "compact" })}><option value="standard">Standard</option><option value="compact">Compact</option></select></label>
+          </div>
           <PillGroup
             label="Appearance"
             labelHidden
@@ -432,7 +441,7 @@ export function Controls({
           </p>
         </Group>
       </div>
-    </section>
+    </section></SettingsFilter>
   );
 }
 
@@ -614,8 +623,10 @@ function Group({
   state: string;
   children: React.ReactNode;
 }) {
+  const section = useContext(SettingsFilter);
+  if (section !== undefined && GROUP_PAGE[name] !== section) return null;
   return (
-    <details className="settings-group border-b border-hairline">
+    <details open={section !== undefined} className="settings-group border-b border-hairline">
       <summary className="flex items-center gap-2.5 py-3 text-sm">
         <svg
           aria-hidden

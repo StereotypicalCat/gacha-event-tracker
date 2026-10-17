@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A · Every game has its own setup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ground:#12141c;--surface:#1b1e2a;--raised:#232739;--hairline:#2c3145;
+  --ink:#e9ebf3;--ink-strong:#fff;--muted:#888fa6;--faint:#5a6178;--glow:#1a1e2c;
+  --calm:#55607f;--near:#5b8def;--soon:#e8b33c;--critical:#ff4d6a;
+  --scrim:rgb(18 20 28 / .8);
+  --read:"Chakra Petch",ui-sans-serif,system-ui,sans-serif;
+  --lang:"Public Sans",ui-sans-serif,system-ui,sans-serif;
+  --bar:44px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--ground) radial-gradient(120% 70% at 50% -10%,var(--glow),var(--ground) 60%) no-repeat;color:var(--ink);font:400 14px/1.6 var(--lang);min-height:100vh;overflow-x:hidden}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--near);outline-offset:2px;border-radius:4px}
+.tnum{font-variant-numeric:tabular-nums}
+
+/* ---------- prototype chrome (deliberately not the app) ---------- */
+.mock{position:fixed;inset:0 0 auto 0;height:var(--bar);z-index:50;background:#d4d8e1;color:#20242f;border-bottom:1px dashed #7d8496;display:flex;align-items:center;gap:6px;padding:0 12px;font:500 12px/1 system-ui,sans-serif;overflow-x:auto;white-space:nowrap}
+.mock b{font-weight:700;margin-right:8px}
+.mock button{padding:6px 9px;border-radius:5px;border:1px solid transparent}
+.mock button:hover{background:#c3c8d3}
+.mock button[aria-current="true"]{background:#20242f;color:#eef0f5}
+.mock .sep{width:1px;height:20px;background:#9aa1b2;margin:0 4px;flex:none}
+.mock .why{border-color:#20242f}
+.why-panel{position:fixed;top:var(--bar);right:0;bottom:0;width:min(440px,100%);z-index:49;background:#e9ebf0;color:#20242f;border-left:1px dashed #7d8496;padding:20px 22px 40px;overflow:auto;font:400 13.5px/1.6 system-ui,sans-serif;transform:translateX(100%);transition:transform .18s ease-out}
+.why-panel.open{transform:none}
+.why-panel h3{font:700 13px/1.3 system-ui;margin:18px 0 6px}
+.why-panel h3:first-child{margin-top:0}
+.why-panel code{font-size:12px;background:#d4d8e1;padding:1px 4px;border-radius:3px}
+.why-panel pre{background:#20242f;color:#e9ebf3;font-size:11.5px;line-height:1.5;padding:10px 12px;border-radius:6px;overflow:auto}
+.why-panel ul{padding-left:18px;margin:4px 0}
+
+/* ---------- app shell ---------- */
+.app{padding-top:var(--bar)}
+.shell{max-width:1320px;margin:0 auto;border-inline:1px solid var(--hairline);min-height:calc(100vh - var(--bar))}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px;border-bottom:1px solid var(--hairline)}
+.wordmark{font:700 18px/1 var(--read);letter-spacing:.02em}
+.wordmark span{color:var(--near)}
+.sub{font-size:12px;color:var(--faint);margin-top:4px}
+.tabs{display:flex;padding:2px;border:1px solid var(--hairline);border-radius:8px;gap:2px;position:relative}
+.tabs button{font:500 12px/1 var(--lang);padding:8px 12px;border-radius:6px;color:var(--faint);display:flex;align-items:center;gap:6px;transition:color .12s}
+.tabs button:hover{color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--raised);color:var(--ink)}
+.tabs .divider{width:1px;background:var(--hairline);margin:4px 2px}
+.tabs svg{width:14px;height:14px}
+.tabs .hl{box-shadow:0 0 0 2px var(--near);animation:pulse 1.4s ease-in-out 3}
+@keyframes pulse{50%{box-shadow:0 0 0 5px rgb(91 141 239 / .25)}}
+.callout{position:absolute;right:0;top:calc(100% + 10px);width:300px;background:var(--surface);border:1px solid var(--near);border-radius:12px;padding:14px;z-index:5;font-size:13px;color:var(--muted)}
+.callout b{color:var(--ink);font-weight:600}
+.callout button{margin-top:10px}
+
+.cols{display:grid;grid-template-columns:22rem 1fr}
+.rail{border-right:1px solid var(--hairline);position:sticky;top:var(--bar);align-self:start;max-height:calc(100vh - var(--bar));overflow:auto}
+.rail section{padding:20px 16px;border-bottom:1px solid var(--hairline)}
+.legend{font:600 11px/1 var(--read);letter-spacing:.06em;color:var(--faint);display:flex;align-items:center;gap:8px;min-height:22px}
+.legend .r{margin-left:auto;display:flex;align-items:center;gap:8px;letter-spacing:0;font-weight:500}
+.gear{width:22px;height:22px;display:grid;place-items:center;border-radius:6px;color:var(--faint)}
+.gear:hover{color:var(--ink);background:var(--raised)}
+.gear svg{width:14px;height:14px}
+
+/* headline */
+.headline{position:relative;overflow:hidden}
+.headline .wash{position:absolute;inset:-40% -20% auto -20%;height:120%;background:radial-gradient(closest-side,var(--heat),transparent);opacity:.16;filter:blur(20px);pointer-events:none}
+.headline h2{font:600 26px/1.15 var(--read);letter-spacing:-.02em;margin:10px 0 4px;position:relative}
+.headline .game{font-size:14px;position:relative}
+.numeral{font:700 44px/1 var(--read);letter-spacing:-.025em;margin:18px 0 12px;display:flex;align-items:baseline;justify-content:space-between;position:relative}
+.numeral small{font:400 12px/1.3 var(--lang);color:var(--faint);text-align:right;letter-spacing:0}
+.then{list-style:none;margin:16px 0 0;padding:14px 0 0;border-top:1px solid var(--hairline)}
+.then li{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);padding:3px 0}
+.then .dot{width:6px;height:6px;border-radius:50%;flex:none}
+.then .t{margin-left:auto;font:600 12px var(--read)}
+
+/* meter */
+.meter{display:flex;gap:2px;height:10px}
+.meter i{flex:1;border-radius:1px;background:var(--hairline)}
+.meter i.on{background:var(--tick);box-shadow:0 0 6px -1px var(--tick)}
+.meter.unknown{background:repeating-linear-gradient(135deg,var(--hairline) 0 3px,transparent 3px 7px);border-radius:1px}
+
+/* game lines in rail */
+.glines{margin-top:10px}
+.gline{display:grid;grid-template-columns:3px 1fr auto;gap:0 12px;align-items:center;padding:9px 0;border-top:1px solid color-mix(in srgb,var(--hairline) 60%,transparent)}
+.gline:first-child{border-top:0}
+.gline .rail3{width:3px;height:70%;border-radius:2px;background:var(--hue);opacity:.7;align-self:center;min-height:18px}
+.gline .nm{font-size:14px;font-weight:500;line-height:1.3}
+.gline .what{font-size:12px;color:var(--faint);line-height:1.35}
+.gline .what.go{color:var(--muted)}
+.gline .end{display:flex;align-items:center;gap:6px}
+.tick{width:24px;height:24px;border-radius:6px;border:1px solid var(--hairline);display:grid;place-items:center;color:transparent;transition:background .12s,border-color .12s}
+.tick svg{width:14px;height:14px}
+.tick:hover{border-color:var(--faint)}
+.tick.done{background:color-mix(in srgb,var(--near) 18%,transparent);border-color:var(--near);color:var(--near)}
+.count{font:600 12px var(--read);color:var(--muted)}
+.count.out{color:var(--soon)}
+.count.met{color:var(--near)}
+.chev{width:16px;height:16px;color:var(--faint);transition:transform .14s}
+.open .chev{transform:rotate(90deg)}
+.gline.btn{cursor:pointer;width:100%;text-align:left}
+.gline.btn:hover .nm{color:var(--ink-strong)}
+.expand{grid-column:2 / 4;padding:8px 0 4px;margin-top:6px}
+.item{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px;color:var(--muted)}
+.item .lbl{flex:1;line-height:1.3}
+.item .lbl small{display:block;color:var(--faint);font-size:11.5px}
+.item.met .lbl{color:var(--faint)}
+.amt{display:flex;align-items:center;gap:6px;font:600 12px var(--read);color:var(--faint)}
+.amt input{width:72px;background:var(--ground);border:1px solid var(--hairline);border-radius:6px;color:var(--ink);font:600 12px var(--read);padding:4px 6px;text-align:right}
+.mine{font:500 10px/1 var(--lang);padding:3px 5px;border-radius:3px;border:1px solid var(--hairline);color:var(--muted);margin-left:6px;vertical-align:1px}
+.addhere{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--faint);padding:6px 0 0}
+.addhere:hover{color:var(--ink)}
+.addhere svg{width:12px;height:12px}
+.empty{font-size:13px;color:var(--muted);margin:10px 0 0;line-height:1.5}
+.link{color:var(--near);text-decoration:underline;text-underline-offset:3px}
+
+/* main column */
+main{min-width:0}
+.banner{margin:16px;border:1px solid var(--hairline);border-left:3px solid var(--near);border-radius:8px;padding:14px 16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.banner p{margin:0;flex:1;min-width:240px;font-size:13.5px;color:var(--muted)}
+.banner p b{color:var(--ink);font-weight:600}
+.qbtn{font:500 12px/1 var(--lang);padding:8px 12px;border:1px solid var(--hairline);border-radius:8px;color:var(--muted);transition:color .12s,border-color .12s}
+.qbtn:hover{color:var(--ink);border-color:var(--faint)}
+.cbtn{font:600 13px/1 var(--lang);padding:10px 16px;border-radius:8px;background:var(--ink);color:var(--ground)}
+.cbtn:hover{background:var(--ink-strong)}
+.cbtn:disabled{background:var(--raised);color:var(--faint);cursor:default}
+.listhead{display:flex;align-items:center;gap:12px;padding:16px 16px 10px;border-bottom:1px solid var(--hairline);flex-wrap:wrap}
+.focus{display:flex;gap:2px 14px;flex-wrap:wrap;font-size:12.5px}
+.focus button{color:var(--faint);padding:4px 0;border-bottom:2px solid transparent}
+.focus button:hover{color:var(--ink)}
+.focus button[aria-pressed="true"]{color:var(--ink);border-color:var(--fh,var(--near))}
+.focus .n{font:600 11px var(--read);opacity:.7;margin-left:4px}
+.erow{display:grid;grid-template-columns:3px 1fr auto;gap:0 14px;padding:14px 16px;border-bottom:1px solid var(--hairline);width:100%;text-align:left;transition:background .12s}
+.erow:hover{background:color-mix(in srgb,var(--raised) 62%,transparent)}
+.erow .rail3{width:3px;border-radius:2px;background:var(--hue);opacity:.55;height:82%;align-self:center}
+.erow:hover .rail3{opacity:1;height:100%;box-shadow:0 0 10px var(--hue)}
+.eyebrow{font:600 11px/1 var(--read);letter-spacing:.06em;color:var(--hue)}
+.etitle{display:flex;justify-content:space-between;gap:12px;margin:6px 0 8px;font-size:15px;font-weight:500;line-height:1.375}
+.etitle .rd{font:600 14px var(--read);white-space:nowrap}
+.emeta{font-size:12px;color:var(--faint);margin-top:6px}
+.erow .chev{align-self:center}
+.mutednote{padding:16px;font-size:13px;color:var(--faint)}
+
+/* settings */
+.settings{display:grid;grid-template-columns:20rem 1fr;min-height:calc(100vh - var(--bar) - 70px)}
+.slist{border-right:1px solid var(--hairline);padding:12px 0}
+.slist h4{font:600 11px/1 var(--read);letter-spacing:.06em;color:var(--faint);margin:14px 16px 6px}
+.srow{display:grid;grid-template-columns:3px 1fr auto;gap:0 12px;align-items:center;width:100%;text-align:left;padding:9px 16px;transition:background .12s}
+.srow:hover{background:color-mix(in srgb,var(--raised) 50%,transparent)}
+.srow[aria-current="true"]{background:var(--raised)}
+.srow .rail3{width:3px;height:26px;border-radius:2px;background:var(--hue)}
+.srow .nm{font-size:13.5px;font-weight:500;line-height:1.3}
+.srow .what{font-size:11.5px;color:var(--faint);line-height:1.3}
+.srow.off .nm{color:var(--muted)}
+.srow.off .rail3{opacity:.25}
+.srow .cnt{font:600 11px var(--read);color:var(--faint)}
+.more{font-size:12px;color:var(--faint);padding:8px 16px}
+.more:hover{color:var(--ink)}
+.profile{padding:24px 32px 64px;max-width:760px}
+.ptitle{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.ptitle h2{font:600 26px/1.15 var(--read);letter-spacing:-.02em;margin:0;color:var(--hue)}
+.ptitle .studio{font-size:12.5px;color:var(--faint)}
+.switch{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+.sw{width:34px;height:20px;border-radius:10px;background:var(--hairline);position:relative;transition:background .14s;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--muted);transition:transform .14s,background .14s}
+.sw[aria-checked="true"]{background:color-mix(in srgb,var(--hue,var(--near)) 70%,var(--ground))}
+.sw[aria-checked="true"]::after{transform:translateX(14px);background:var(--ink-strong)}
+.pdesc{color:var(--muted);font-size:13.5px;margin:10px 0 0;max-width:60ch}
+.ladder{margin:24px 0 8px;display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--hairline);border-radius:10px;overflow:hidden}
+.ladder button{padding:12px 12px 11px;text-align:left;border-left:1px solid var(--hairline);transition:background .12s}
+.ladder button:first-child{border-left:0}
+.ladder button:hover{background:color-mix(in srgb,var(--raised) 50%,transparent)}
+.ladder button[aria-pressed="true"]{background:color-mix(in srgb,var(--hue) 14%,transparent);box-shadow:inset 0 -2px 0 var(--hue)}
+.ladder .ln{font-size:13px;font-weight:600;display:block}
+.ladder .ls{font-size:11.5px;color:var(--faint);display:block;margin-top:2px;line-height:1.3}
+.ladnote{font-size:12px;color:var(--faint);min-height:18px}
+.grp{margin-top:26px}
+.grp h3{display:flex;align-items:baseline;gap:10px;font:600 12px/1 var(--read);letter-spacing:.05em;color:var(--muted);margin:0 0 4px;padding-bottom:8px;border-bottom:1px solid var(--hairline)}
+.grp h3 span{font:400 12px var(--lang);letter-spacing:0;color:var(--faint)}
+.grp h3 .r{margin-left:auto}
+.trow{display:flex;align-items:center;gap:14px;padding:11px 0;border-bottom:1px solid color-mix(in srgb,var(--hairline) 55%,transparent)}
+.trow .lbl{flex:1;font-size:14px;line-height:1.35}
+.trow .lbl small{display:block;font-size:12px;color:var(--faint)}
+.trow .when{font:600 12px var(--read);color:var(--faint);white-space:nowrap}
+.trow.sub{padding-left:24px}
+.trow.sub .lbl{font-size:13px;color:var(--muted)}
+.radio{display:flex;gap:10px;align-items:flex-start;padding:10px 0;width:100%;text-align:left}
+.radio .dot{width:16px;height:16px;border-radius:50%;border:1px solid var(--faint);flex:none;margin-top:2px;display:grid;place-items:center}
+.radio[aria-checked="true"] .dot{border-color:var(--hue)}
+.radio[aria-checked="true"] .dot::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--hue)}
+.radio .lbl{font-size:14px}
+.radio .lbl small{display:block;font-size:12px;color:var(--faint)}
+.form{display:flex;gap:8px;flex-wrap:wrap;padding:12px 0}
+.input,select.input{background:var(--ground);border:1px solid var(--hairline);border-radius:8px;color:var(--ink);font:400 13.5px var(--lang);padding:8px 12px}
+.input:focus{border-color:var(--faint);outline:none}
+.seg{display:inline-flex;border:1px solid var(--hairline);border-radius:8px;padding:2px;gap:2px}
+.seg button{font:500 12px/1 var(--lang);padding:7px 11px;border-radius:6px;color:var(--faint)}
+.seg button[aria-pressed="true"]{background:var(--raised);color:var(--ink)}
+.flash{animation:flash 1.2s ease-out}
+@keyframes flash{0%{background:color-mix(in srgb,var(--near) 22%,transparent)}100%{background:transparent}}
+
+/* archive */
+.arch{padding:20px 16px 64px;max-width:900px}
+.arch h2{font:600 24px/1.2 var(--read);margin:0 0 4px;letter-spacing:-.02em}
+.arow{display:grid;grid-template-columns:3px 1fr auto;gap:0 14px;align-items:center;padding:13px 0;border-bottom:1px solid var(--hairline)}
+.arow .rail3{width:3px;height:30px;border-radius:2px;background:var(--hue);opacity:.5}
+.arow .t{font-size:14.5px;color:var(--muted)}
+.arow.done .t{text-decoration:line-through;text-decoration-color:var(--faint)}
+.tag{font:500 10px/1 var(--lang);padding:3px 6px;border-radius:3px;margin-right:6px}
+.tag.d{background:color-mix(in srgb,var(--near) 16%,transparent);color:var(--near)}
+.tag.i{border:1px solid var(--hairline);color:var(--faint)}
+
+/* onboarding */
+.ob{max-width:640px;margin:0 auto;padding:40px 16px 80px}
+.ob h1{font:600 28px/1.15 var(--read);letter-spacing:-.02em;margin:28px 0 8px}
+.ob .lead{color:var(--muted);margin:0 0 24px;max-width:52ch}
+.steps{display:flex;gap:6px;margin-top:24px}
+.steps i{height:3px;flex:1;border-radius:2px;background:var(--hairline)}
+.steps i.on{background:var(--near)}
+.pick{display:grid;grid-template-columns:1fr 1fr;gap:0 24px}
+.pick button{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--hairline);text-align:left;font-size:14px;color:var(--muted)}
+.pick button .box{width:18px;height:18px;border-radius:5px;border:1px solid var(--faint);display:grid;place-items:center;flex:none;color:transparent}
+.pick button .box svg{width:12px;height:12px}
+.pick button[aria-pressed="true"]{color:var(--ink)}
+.pick button[aria-pressed="true"] .box{background:var(--hue);border-color:var(--hue);color:var(--ground)}
+.obfoot{display:flex;align-items:center;gap:16px;margin-top:28px;flex-wrap:wrap}
+.obfoot .q{font-size:12.5px;color:var(--faint)}
+.obfoot .q:hover{color:var(--ink)}
+.pre{display:block;width:100%;text-align:left;padding:14px 16px;border:1px solid var(--hairline);border-radius:12px;margin-bottom:8px;transition:border-color .12s,background .12s}
+.pre:hover{border-color:var(--faint)}
+.pre[aria-pressed="true"]{border-color:var(--hue);background:color-mix(in srgb,var(--hue) 9%,transparent)}
+.pre .pn{font-weight:600;font-size:14px}
+.pre .pp{font-size:12.5px;color:var(--faint);margin-top:3px;line-height:1.45}
+.pre[aria-pressed="true"] .pp{color:var(--muted)}
+.map{border:1px solid var(--hairline);border-radius:12px;padding:16px;margin:8px 0 0}
+.map .row{display:flex;gap:14px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--hairline)}
+.map .row:first-child{border-top:0;padding-top:0}
+.map .ic{width:32px;height:32px;border-radius:8px;border:1px solid var(--hairline);display:grid;place-items:center;flex:none;color:var(--muted)}
+.map .ic svg{width:16px;height:16px}
+.map .row p{margin:0;font-size:13.5px;color:var(--muted)}
+.map .row b{color:var(--ink);font-weight:600;display:block}
+
+/* sheets */
+.scrim{position:fixed;inset:var(--bar) 0 0 0;background:var(--scrim);z-index:40;display:flex;justify-content:flex-end}
+.scrim.center{justify-content:center;align-items:center;padding:16px}
+.sheet{background:var(--surface);border-left:1px solid var(--hairline);width:min(440px,100%);height:100%;overflow:auto;padding:20px 20px 40px}
+.scrim.center .sheet{height:auto;border:1px solid var(--hairline);border-radius:16px;max-width:480px}
+.sheet h3{font:600 20px/1.2 var(--read);margin:4px 0 6px;color:var(--hue)}
+.sheet .grp h3{font:600 12px/1 var(--read);letter-spacing:.05em;color:var(--muted);margin:0 0 4px}
+.sheet .x{float:right;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;color:var(--faint)}
+.sheet .x:hover{color:var(--ink);background:var(--raised)}
+.sheet .x svg{width:14px;height:14px}
+.sheet p{color:var(--muted);font-size:13.5px;margin:0 0 10px}
+.btnrow{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+
+@media (max-width:960px){
+  .cols,.settings{grid-template-columns:1fr}
+  .rail{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--hairline)}
+  .slist{border-right:0;border-bottom:1px solid var(--hairline)}
+  .profile{padding:20px 16px 48px}
+}
+@media (max-width:560px){
+  header.top{flex-wrap:wrap}
+  .tabs{width:100%}
+  .tabs button{flex:1;justify-content:center;padding:8px 6px}
+  .tabs .tl{display:none}
+  .ladder{grid-template-columns:1fr 1fr}
+  .ladder button:nth-child(3){border-left:0}
+  .ladder button:nth-child(n+3){border-top:1px solid var(--hairline)}
+  .pick{grid-template-columns:1fr}
+  .callout{width:min(300px,calc(100vw - 32px))}
+  .numeral{font-size:38px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="mock" id="mock"></div>
+<aside class="why-panel" id="why" aria-label="Why and foundation"></aside>
+<div class="app" id="app"></div>
+
+<script>
+/* ---------- real content (from the shipped feed and routines.ts) ---------- */
+const NOW = Date.parse("2026-10-16T12:00:00Z");
+const GAMES = [
+  {id:"genshin",name:"Genshin Impact",short:"Genshin",hue:"#4EA8DE",studio:"HoYoverse",chores:"Commissions, resin"},
+  {id:"hsr",name:"Honkai: Star Rail",short:"Star Rail",hue:"#7B8CFF",studio:"HoYoverse",chores:"Daily training, Trailblaze Power"},
+  {id:"zzz",name:"Zenless Zone Zero",short:"ZZZ",hue:"#F2A03D",studio:"HoYoverse",chores:"Daily missions, battery"},
+  {id:"wuwa",name:"Wuthering Waves",short:"Wuwa",hue:"#3DD6A0",studio:"Kuro Games",chores:"Daily activity, waveplate"},
+  {id:"endfield",name:"Arknights: Endfield",short:"Endfield",hue:"#E8635A",studio:"Hypergryph",chores:"Daily missions"},
+  {id:"nte",name:"Neverness to Everness",short:"NTE",hue:"#C77DFF",studio:"Hotta Studio",chores:"Daily tasks"},
+  {id:"arknights",name:"Arknights",short:"Arknights",hue:"#9AA3B8",studio:"Hypergryph",chores:"Daily missions, sanity"},
+  {id:"ba",name:"Blue Archive",short:"Blue Archive",hue:"#3FCBDD",studio:"Nexon Games",chores:"Daily missions, AP"},
+  {id:"hi3",name:"Honkai Impact 3rd",short:"Honkai 3rd",hue:"#8B5CF6",studio:"HoYoverse",chores:"Daily missions, stamina"},
+  {id:"nikki",name:"Infinity Nikki",short:"Nikki",hue:"#F27BB0",studio:"Infold Games",chores:"Daily tasks, Vital Energy"},
+  {id:"pgr",name:"Punishing: Gray Raven",short:"PGR",hue:"#CC292B",studio:"Kuro Games",chores:"Daily missions, serum"},
+  {id:"r1999",name:"Reverse: 1999",short:"R1999",hue:"#C9A227",studio:"Bluepoch",chores:"Daily missions"},
+];
+const G = Object.fromEntries(GAMES.map(g=>[g.id,g]));
+// [game, title, unit, cycleDays, kind, target, unit, pulls, daysLeftInCycle]
+const R = [
+ ["genshin","Weekly Bosses","week",0,"amount",3,"runs"],["genshin","Battle Pass weekly EXP","week",0,"amount",10000,"EXP"],
+ ["genshin","Reputation Bounties","week",0,"amount",3,"bounties"],["genshin","Reputation Requests","week",0,"amount",3,"requests"],
+ ["genshin","Realm Depot: Realm Treasures","week",0,"days",1,""],["genshin","Paimon's Bargains: Intertwined Fates","month",0,"amount",5,"fates","premium"],
+ ["genshin","Paimon's Bargains: Acquaint Fates","month",0,"amount",5,"fates","standard"],["genshin","Spiral Abyss","month",0,"days",1,""],
+ ["genshin","Imaginarium Theater","month",0,"days",1,""],
+ ["hsr","Echo of War","week",0,"amount",3,"runs"],["hsr","Nameless Honor weekly EXP","week",0,"amount",8000,"EXP"],
+ ["hsr","Embers Exchange: Star Rail Special Pass","month",0,"amount",5,"passes","premium"],["hsr","Embers Exchange: Star Rail Pass","month",0,"amount",5,"passes","standard"],
+ ["hsr","Divergent Universe & Currency Wars points","week",0,"amount",18000,"points"],
+ ["hsr","Pure Fiction","cycle",42,"days",1,"",null,6],["hsr","Memory of Chaos","cycle",42,"days",1,"",null,20],["hsr","Apocalyptic Shadow","cycle",42,"days",1,"",null,34],
+ ["zzz","Ridu Weekly","week",0,"amount",2100,"points"],["zzz","Bounty Commissions","week",0,"amount",8000,"points"],
+ ["zzz","Notorious Hunt","week",0,"amount",3,"runs"],["zzz","New Eridu City Fund weekly EXP","week",0,"amount",10000,"EXP"],
+ ["zzz","Signal Shop: Encrypted Master Tapes","month",0,"amount",5,"tapes","premium"],["zzz","Signal Shop: Master Tapes","month",0,"amount",5,"tapes","standard"],
+ ["zzz","Signal Shop: Boopons","month",0,"amount",5,"Boopons","premium"],
+ ["zzz","Shiyu Defense","cycle",14,"days",1,"",null,9],["zzz","Deadly Assault","cycle",14,"days",1,"",null,2],
+ ["endfield","Weekly Routine","week",0,"amount",10,"points"],["endfield","Etchspace Salvage: Focus Commissions","week",0,"amount",3,"commissions"],
+ ["wuwa","Weekly Challenge","week",0,"amount",3,"claims"],["wuwa","Pioneer Podcast weekly EXP","week",0,"amount",12000,"EXP"],
+ ["wuwa","Weekly Activities","week",0,"amount",6000,"points"],["wuwa","Tower of Adversity","cycle",28,"days",1,"",null,11],
+ ["nte","Season Pass weekly EXP","week",0,"amount",12000,"EXP"],["nte","Anomaly Pilgrimage","week",0,"amount",3,"claims"],
+ ["nte","City Stamina","week",0,"amount",700,"stamina"],["nte","Realm of Greed","week",0,"days",1,""],
+ ["nte","Special City Commission","week",0,"days",1,""],["nte","Beyond the Rails","cycle",14,"days",1,"",null,4],
+ ["nte","Tycoon Incentive Fund","cycle",14,"amount",1000000,"fons",null,4],
+];
+const slug=s=>s.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+const ROUT = R.map(([game,title,unit,days,kind,target,u,pulls,left])=>({id:`routine:${game}:${slug(title)}`,game,title,unit,days,kind,target,u,pulls:pulls||null,left:left??null}));
+const EVENTS = [
+ ["genshin","Anniversary Memories Album","2026-09-28","2026-10-18"],["zzz","Clink, Clank, Pinball Knight!","2026-09-10","2026-10-19"],
+ ["zzz","Diary of an Orbie Parent","2026-09-30","2026-10-19"],["zzz","Chronicles of the Hobbling Crow","2026-10-03","2026-10-19"],
+ ["nte","Stamina Recharge","2026-10-05","2026-10-19"],["zzz","Data Bounty - Combat Simulation","2026-10-14","2026-10-19"],
+ ["zzz","All-New Program","2026-09-09","2026-10-20"],["genshin","Predictive Victory Dynamics","2026-10-12","2026-10-20"],
+ ["wuwa","Bountiful Crescendo","2026-10-15","2026-10-22"],["hsr","4.6 Planar Fissure","2026-10-12","2026-10-25"],
+ ["wuwa","Artisan's Search","2026-10-08","2026-10-26"],["wuwa","Waking Moon Fishing","2026-10-15","2026-11-01"],
+ ["genshin","To Temper Thyself and Journey Far","2026-08-10","2026-11-02"],["genshin","Battle Pass - Moontrace","2026-09-23","2026-11-02"],
+ ["hsr","Astral Imagea","2026-09-28","2026-11-11"],["hsr","Love, Ghosts & Robots","2026-09-28","2026-11-11"],
+ ["hsr","Wishpower UP! Down with Voracity!","2026-09-28","2026-11-11"],["nte","Pukaland Travelogue","2026-09-30","2026-11-11"],
+ ["wuwa","3.7 Moonlit Path","2026-09-30","2026-11-11"],["wuwa","Ascendant Aces","2026-09-30","2026-11-11"],
+ ["nte","Coal Lumps Treasure","2026-10-08","2026-11-11"],["hsr","Free Gilgamesh or Archer","2026-07-24",null],
+ ["endfield","Originium Supply Run","2026-10-09","2026-10-23"],["arknights","Lingering Echoes Rerun","2026-10-13","2026-10-27"],
+].map(([game,title,s,e])=>({id:`${game}:${slug(title)}:${s}`,game,title,start:Date.parse(s+"T00:00:00Z"),end:e?Date.parse(e+"T00:00:00Z"):null}));
+
+/* ---------- presets: the four steps every profile offers ---------- */
+const PRESETS = [
+  {id:"events",name:"Just events",sub:"No chores, no tasks"},
+  {id:"dailies",name:"Dailies",sub:"Today's chores"},
+  {id:"weeklies",name:"Dailies + weeklies",sub:"Adds the weekly reset"},
+  {id:"all",name:"Everything",sub:"Monthlies, cycles, pulls"},
+];
+const routinesOf = g => ROUT.filter(r=>r.game===g);
+function applyPreset(p, preset){
+  p.chores = preset!=="events";
+  for (const r of routinesOf(p.game)) {
+    p.routines[r.id] = preset==="all" ? r.pulls!=="standard" : preset==="weeklies" ? (r.unit==="week" && !r.pulls) : false;
+  }
+  if (preset!=="all") p.standardPulls=false;
+}
+function presetOf(p){
+  for (const pr of PRESETS){
+    const t={game:p.game,routines:{},chores:false,standardPulls:p.standardPulls};
+    applyPreset(t,pr.id);
+    if (t.chores===p.chores && routinesOf(p.game).every(r=> r.pulls==="standard" ? true : !!t.routines[r.id]===!!p.routines[r.id])) return pr.id;
+  }
+  return "custom";
+}
+
+/* ---------- state: one GameProfile per game is the single source ---------- */
+let S;
+function fresh(kind){
+  const followed = ["genshin","hsr","zzz","wuwa","endfield","nte"];
+  const start = {genshin:"weeklies",hsr:"all",zzz:"dailies",wuwa:"weeklies",endfield:"dailies",nte:"events"};
+  const profiles = {};
+  for (const g of GAMES){
+    const p = {game:g.id,followed:followed.includes(g.id),chores:false,routines:{},standardPulls:false,placement:"rail"};
+    applyPreset(p, start[g.id]||"events");
+    profiles[g.id]=p;
+  }
+  profiles.nte.placement="focus";
+  return {
+    view:"main", sel:"zzz", focus:"all", sheet:null, open:{hsr:true}, returning:kind==="returning", callout:false,
+    profiles,
+    chores:{genshin:true,hsr:false},
+    prog:{"routine:genshin:weekly-bosses":2,"routine:genshin:battle-pass-exp":6400,"routine:genshin:reputation-bounties":3,"routine:hsr:echo-of-war":3,"routine:hsr:nameless-honor-weekly-exp":8000,"routine:hsr:pure-fiction":1,"routine:hsr:divergent-universe-currency-wars-points":11200,"routine:wuwa:weekly-challenge":1},
+    tasks:[{id:"mytask:a",game:"genshin",title:"Weekly co-op with friends",unit:"week",kind:"days",target:1},{id:"mytask:b",game:"zzz",title:"Hollow Zero run with the group",unit:"week",kind:"days",target:1}],
+    ownGames:[{name:"Snowbreak: Containment Zone",hue:"#9ad1ff"}],
+    ownEvents:[{title:"Snowbreak anniversary login",game:"Snowbreak: Containment Zone",end:"Oct 30"}],
+    archive:{"zzz:diary-of-an-orbie-parent:2026-09-30":{k:"done",at:"Oct 14"},"wuwa:artisan-s-search:2026-10-08":{k:"done",at:"Oct 15"},"hsr:free-gilgamesh-or-archer:2026-07-24":{k:"ignored",at:"Aug 2"},"nte:coal-lumps-treasure:2026-10-08":{k:"ignored",at:"Oct 9"}},
+    archFilter:"all", archGame:"all",
+    ob:{step:1,picked:[],idx:0,choice:{}},
+    addOpen:false,
+  };
+}
+S = fresh("main");
+
+/* ---------- helpers ---------- */
+const ic = {
+  gear:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/></svg>',
+  chev:'<svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3.5 10.5 8 6 12.5"/></svg>',
+  check:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3.5 8.5 6.5 11.5 12.5 4.5"/></svg>',
+  plus:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3v10M3 8h10"/></svg>',
+  x:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4l8 8M12 4l-8 8"/></svg>',
+  list:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5.5 4h8M5.5 8h8M5.5 12h8M2.5 4h.5M2.5 8h.5M2.5 12h.5"/></svg>',
+  bars:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h7M5 8h9M3 12h6"/></svg>',
+  box:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="3" rx="1"/><path d="M3 6v6.5h10V6M6.5 9h3"/></svg>',
+};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const hue=id=>G[id]?.hue||"#9aa3b8";
+function left(ms){const h=ms/36e5; if(h<24) return `${Math.floor(h)}h ${Math.floor((ms%36e5)/6e4)}m`; const d=Math.floor(h/24); return `${d}d ${Math.floor(h%24)}h`;}
+function heat(ms){ if(ms==null) return "var(--faint)"; const h=ms/36e5; return h<24?"var(--critical)":h<72?"var(--soon)":h<168?"var(--near)":"var(--calm)"; }
+function meter(e,n=24){
+  if(e.end==null) return `<div class="meter unknown" aria-label="End date unknown"></div>`;
+  const tot=e.end-e.start, rem=Math.max(0,e.end-NOW); const lit=Math.max(1,Math.round(n*rem/tot));
+  return `<div class="meter" style="--tick:${heat(rem)}">${Array.from({length:n},(_,i)=>`<i class="${i<lit?"on":""}"></i>`).join("")}</div>`;
+}
+const fmtDay=t=>new Date(t).toLocaleDateString("en-GB",{day:"numeric",month:"short",timeZone:"UTC"});
+const P = id => S.profiles[id];
+const followed = () => GAMES.filter(g=>P(g.id).followed);
+const visibleHere = id => P(id).followed && (P(id).placement==="rail" || S.focus===id);
+const onRoutines = id => routinesOf(id).filter(r=>P(id).routines[r.id] && (r.pulls!=="standard"||P(id).standardPulls));
+const tasksOf = id => S.tasks.filter(t=>t.game===id);
+const val = id => S.prog[id]||0;
+const met = r => val(r.id) >= r.target;
+const periodLeft = r => r.unit==="week"?"3d":r.unit==="month"?"16d":`${r.left}d`;
+const unitWord = {week:"this week",month:"this month",cycle:"this cycle"};
+function profileSummary(id){
+  const p=P(id); if(!p.followed) return "Not followed";
+  const pr=presetOf(p); const n=onRoutines(id).length+tasksOf(id).length;
+  const name = pr==="custom"?"Custom":PRESETS.find(x=>x.id===pr).name;
+  return `${name}${n?` · ${n} task${n>1?"s":""}`:""}${p.placement==="focus"?" · focus only":""}`;
+}
+
+/* ---------- views ---------- */
+function mockbar(){
+  const items=[["main","Main"],["add","Add & choose systems"],["settings","Settings"],["onboard","Onboarding (new user)"],["returning","Returning user"],["archive","Archive"]];
+  const cur = S.mode==="returning"&&S.view==="main"?"returning":S.sheet?.kind==="add"?"add":S.view;
+  document.getElementById("mock").innerHTML = `<b>A · Every game has its own setup</b>${items.map(([k,l])=>`<button data-jump="${k}" aria-current="${cur===k}">${l}</button>`).join("")}<span class="sep"></span><button data-jump="reset">Reset demo</button><button class="why" data-jump="why">Why / foundation</button>`;
+}
+function header(){
+  const tabs=[["main","Checklist",ic.list],["timeline","Timeline",ic.bars],["archive","Archive",ic.box]];
+  return `<header class="top"><div><div class="wordmark">EVENT<span>CLOCK</span></div><div class="sub tnum">${liveEvents().length} running · ${followed().length} games</div></div>
+  <div class="tabs" role="tablist">${tabs.map(([k,l,i])=>`<button role="tab" data-view="${k}" aria-label="${l}" aria-selected="${S.view===k}">${i}<span class="tl">${l}</span></button>`).join("")}<span class="divider"></span>
+  <button role="tab" data-view="settings" aria-label="Settings" aria-selected="${S.view==="settings"}" class="${S.callout?"hl":""}">${ic.gear}<span class="tl">Settings</span></button>
+  ${S.callout?`<div class="callout" role="dialog"><b>Your games are set up here now.</b> Each game has one page for its dailies, weeklies, monthlies, cycles and pulls, plus your own tasks for it. The gear next to any heading in the left column opens the right game's page directly.<br><button class="qbtn" data-act="callout-off">Got it</button></div>`:""}</div></header>`;
+}
+function liveEvents(){ return EVENTS.filter(e=>visibleHere(e.game) && !S.archive[e.id] && (S.focus==="all"||S.focus===e.game)).sort((a,b)=>(a.end??9e15)-(b.end??9e15)); }
+
+function railToday(){
+  const gs=followed().filter(g=>visibleHere(g.id)&&P(g.id).chores&&(S.focus==="all"||S.focus===g.id));
+  const done=gs.filter(g=>S.chores[g.id]).length;
+  return `<section><div class="legend">TODAY <span class="tnum">${gs.length?`${done}/${gs.length}`:""}</span><span class="r"><span class="tnum">resets in 3h 38m</span><button class="gear" data-act="gear" data-game="${gs[0]?.id||S.sel}" aria-label="Set up dailies">${ic.gear}</button></span></div>
+  ${gs.length?`<div class="glines">${gs.map(g=>`<div class="gline" style="--hue:${g.hue}"><span class="rail3"></span><div><div class="nm">${g.short}</div><div class="what">${g.chores}</div></div><div class="end"><button class="tick ${S.chores[g.id]?"done":""}" data-act="chore" data-game="${g.id}" aria-label="${g.short} dailies done" aria-pressed="${!!S.chores[g.id]}">${ic.check}</button></div></div>`).join("")}</div>`
+  :`<p class="empty">No dailies yet. Turn them on for a game in its <button class="link" data-act="gear" data-game="${S.sel}">setup</button>.</p>`}</section>`;
+}
+function railPeriod(){
+  const gs=followed().filter(g=>visibleHere(g.id)&&(onRoutines(g.id).length||tasksOf(g.id).length)&&(S.focus==="all"||S.focus===g.id));
+  return `<section><div class="legend">THIS WEEK, MONTH AND CYCLE<span class="r"><button class="gear" data-act="gear" data-game="${gs[0]?.id||S.sel}" aria-label="Set up weekly tasks">${ic.gear}</button></span></div>
+  ${gs.length?`<div class="glines">${gs.map(g=>{
+    const rs=onRoutines(g.id), ts=tasksOf(g.id);
+    const wk=rs.filter(r=>r.unit==="week"), mo=rs.filter(r=>r.unit==="month"), cy=rs.filter(r=>r.unit==="cycle");
+    const wkDone=wk.filter(met).length+ts.filter(t=>val(t.id)>=t.target).length, wkAll=wk.length+ts.length;
+    const bits=[]; if(wkAll) bits.push(`${wkDone} of ${wkAll} this week`); if(mo.length) bits.push(`${mo.filter(met).length}/${mo.length} month`);
+    if(cy.length){const soon=cy.filter(r=>!met(r)).sort((a,b)=>a.left-b.left)[0]; bits.push(soon?`cycle ${soon.left}d`:"cycles done");}
+    const open=S.open[g.id];
+    return `<div class="gline ${open?"open":""}" style="--hue:${g.hue}"><span class="rail3"></span>
+      <button class="btn" style="text-align:left" data-act="expand" data-game="${g.id}" aria-expanded="${!!open}"><div class="nm">${g.short}</div><div class="what go tnum">${bits.join(" · ")}</div></button>
+      <div class="end"><button data-act="expand" data-game="${g.id}" aria-label="Show ${g.short} tasks">${ic.chev}</button></div>
+      ${open?`<div class="expand">${[...rs,...ts.map(t=>({...t,mine:true}))].map(item).join("")}
+        <button class="addhere" data-act="quickadd" data-game="${g.id}">${ic.plus} Add to ${g.short}</button></div>`:""}
+    </div>`;}).join("")}</div>`
+  :`<p class="empty">Nothing on a weekly or longer reset yet. Each game's setup has its weeklies, monthlies and cycles: <button class="link" data-act="gear" data-game="${S.sel}">choose some</button>.</p>`}</section>`;
+}
+function item(r){
+  const v=val(r.id), done=v>=r.target;
+  const when = r.unit==="cycle"?`${r.left}d left`:r.unit==="month"?"month":"week";
+  const ctl = r.kind==="days"
+    ? `<button class="tick ${done?"done":""}" data-act="tickr" data-id="${r.id}" aria-pressed="${done}" aria-label="${esc(r.title)} done">${ic.check}</button>`
+    : `<span class="amt tnum"><input inputmode="numeric" data-act="amt" data-id="${r.id}" value="${v}" aria-label="${esc(r.title)} amount">/ ${r.target.toLocaleString("en")}</span>`;
+  return `<div class="item ${done?"met":""}"><span class="lbl">${esc(r.title)}${r.mine?'<span class="mine">yours</span>':""}<small class="tnum">${when}${r.u?` · ${r.u}`:""}</small></span>${ctl}</div>`;
+}
+function headline(){
+  const ev=liveEvents(); const e=ev.find(x=>x.end!=null);
+  if(!e) return `<section><div class="legend">NEXT TO EXPIRE</div><p class="empty">Nothing running for the games on show.</p></section>`;
+  const rem=e.end-NOW;
+  return `<section class="headline" style="--heat:${heat(rem)}"><div class="wash"></div><div class="legend">NEXT TO EXPIRE</div>
+  <h2>${esc(e.title)}</h2><div class="game" style="color:${hue(e.game)}">${G[e.game].name}</div>
+  <div class="numeral tnum" style="color:${heat(rem)}">${left(rem)}<small>left<br>ends ${fmtDay(e.end)}</small></div>${meter(e,22)}
+  <ul class="then">${ev.filter(x=>x!==e).slice(0,2).map(x=>`<li><span class="dot" style="background:${hue(x.game)}"></span>${esc(x.title)}<span class="t tnum" style="color:${heat(x.end&&x.end-NOW)}">${x.end?left(x.end-NOW):"end unknown"}</span></li>`).join("")}</ul></section>`;
+}
+function mainView(){
+  const fs=followed().filter(g=>P(g.id).followed);
+  const ev=liveEvents();
+  const all=EVENTS.filter(e=>P(e.game).followed&&P(e.game).placement==="rail"&&!S.archive[e.id]).length;
+  return `<div class="cols"><aside class="rail">${headline()}${railToday()}${railPeriod()}</aside>
+  <main>${S.returning?`<div class="banner"><p><b>Dailies, weeklies, monthlies and cycles are now set up one game at a time.</b> We kept everything you had switched on. Games and the old "What you see" options are in Settings now.</p><button class="cbtn" data-act="showme">Show me</button><button class="qbtn" data-act="dismiss">Dismiss</button></div>`:""}
+  <div class="listhead"><div class="legend" style="min-height:0">RUNNING NOW</div><div class="focus" role="group" aria-label="Focus on a game">
+   <button data-act="focus" data-game="all" aria-pressed="${S.focus==="all"}">All<span class="n">${all}</span></button>
+   ${fs.map(g=>`<button data-act="focus" data-game="${g.id}" aria-pressed="${S.focus===g.id}" style="--fh:${g.hue}">${g.short}<span class="n">${EVENTS.filter(e=>e.game===g.id&&!S.archive[e.id]).length}</span></button>`).join("")}</div></div>
+  ${ev.map(e=>{const rem=e.end&&e.end-NOW; return `<button class="erow" data-act="event" data-id="${e.id}" style="--hue:${hue(e.game)}"><span class="rail3"></span><div><div class="eyebrow">${G[e.game].short.toUpperCase()}</div><div class="etitle"><span>${esc(e.title)}</span><span class="rd tnum" style="color:${heat(rem)}">${e.end?left(rem):"end date unknown"}</span></div>${meter(e,30)}<div class="emeta tnum">${fmtDay(e.start)} – ${e.end?fmtDay(e.end):"?"}</div></div>${ic.chev}</button>`}).join("")}
+  ${followed().some(g=>P(g.id).placement==="focus")&&S.focus==="all"?`<p class="mutednote">${followed().filter(g=>P(g.id).placement==="focus").map(g=>g.short).join(", ")} only show${followed().filter(g=>P(g.id).placement==="focus").length>1?"":"s"} when you focus on ${followed().filter(g=>P(g.id).placement==="focus").length>1?"them":"it"}. Change that in its setup.</p>`:""}
+  </main></div>`;
+}
+
+function settingsView(){
+  const fl=GAMES.filter(g=>P(g.id).followed), nf=GAMES.filter(g=>!P(g.id).followed);
+  const sel=S.sel;
+  const row=g=>`<button class="srow ${P(g.id).followed?"":"off"}" data-act="sel" data-game="${g.id}" aria-current="${sel===g.id}" style="--hue:${g.hue}"><span class="rail3"></span><span><span class="nm">${g.name}</span><br><span class="what">${profileSummary(g.id)}</span></span>${ic.chev}</button>`;
+  const gen=[["general","Region and appearance"],["lists","Lists"],["own","Your own events and games"],["backup","Backup"]];
+  return `<div class="settings"><nav class="slist" aria-label="Settings">
+   <h4>YOUR GAMES</h4>${fl.map(row).join("")}
+   <h4>OTHER GAMES</h4>${nf.slice(0,S.allGames?99:3).map(row).join("")}${!S.allGames&&nf.length>3?`<button class="more" data-act="allgames">Show ${nf.length-3} more games</button>`:""}
+   <h4>GENERAL</h4>${gen.map(([k,l])=>`<button class="srow" data-act="sel" data-game="${k}" aria-current="${sel===k}" style="--hue:transparent"><span class="rail3"></span><span class="nm">${l}</span>${ic.chev}</button>`).join("")}
+  </nav><div class="profile" id="profile">${G[sel]?profile(sel):generalPane(sel)}</div></div>`;
+}
+function profile(id){
+  const g=G[id], p=P(id), pr=presetOf(p), rs=routinesOf(id);
+  const groups=[["Weekly","resets Monday",rs.filter(r=>r.unit==="week"&&!r.pulls)],["Monthly","resets on the 1st",rs.filter(r=>r.unit==="month"&&!r.pulls)],["Cycles","endgame modes on their own clock",rs.filter(r=>r.unit==="cycle")]];
+  const pulls=rs.filter(r=>r.pulls==="premium"), std=rs.filter(r=>r.pulls==="standard");
+  const t=r=>`<div class="trow"><span class="lbl">${esc(r.title)}<small class="tnum">${r.kind==="amount"?`${r.target.toLocaleString("en")} ${r.u}`:"Once"}${r.unit==="cycle"?` · every ${r.days} days · ${r.left}d left now`:""}</small></span><button class="sw" role="switch" data-act="rt" data-id="${r.id}" aria-checked="${!!p.routines[r.id]}" aria-label="${esc(r.title)}"></button></div>`;
+  return `<div style="--hue:${g.hue}">
+  <div class="ptitle"><h2>${g.name}</h2><span class="studio">${g.studio}</span><label class="switch">Following<button class="sw" role="switch" data-act="follow" data-game="${id}" aria-checked="${p.followed}" aria-label="Follow ${g.name}"></button></label></div>
+  ${!p.followed?`<p class="pdesc">You're not following ${g.name}, so none of its events, chores or tasks show anywhere. Follow it to set it up.</p>`:`
+  <p class="pdesc">Everything ${g.short} adds to your page is chosen here. Start from a level, then switch single items on or off.</p>
+  <div class="ladder" role="group" aria-label="How much to track">${PRESETS.map(x=>`<button data-act="preset" data-p="${x.id}" aria-pressed="${pr===x.id}"><span class="ln">${x.name}</span><span class="ls">${x.sub}</span></button>`).join("")}</div>
+  <div class="ladnote">${pr==="custom"?"Custom: you've changed single items. Pick a level to start over.":""}</div>
+  <div class="grp"><h3>DAILY<span>resets 04:00 server time</span></h3><div class="trow"><span class="lbl">Daily chores<small>${g.chores}</small></span><button class="sw" role="switch" data-act="chores" aria-checked="${p.chores}" aria-label="Daily chores"></button></div></div>
+  ${groups.filter(x=>x[2].length).map(([n,s,list])=>`<div class="grp"><h3>${n.toUpperCase()}<span>${s}</span><span class="r tnum">${list.filter(r=>p.routines[r.id]).length} of ${list.length}</span></h3>${list.map(t).join("")}</div>`).join("")}
+  ${pulls.length?`<div class="grp"><h3>PULLS<span>shop items that buy gacha pulls</span></h3>${pulls.map(t).join("")}
+   ${std.length?`<div class="trow sub"><span class="lbl">Also standard-banner pulls<small>${std.map(r=>esc(r.title)).join(", ")}</small></span><button class="sw" role="switch" data-act="std" aria-checked="${p.standardPulls}" aria-label="Standard pulls"></button></div>`:""}</div>`:""}
+  <div class="grp" id="yourtasks"><h3>YOUR OWN TASKS FOR ${g.short.toUpperCase()}<span>things the game doesn't track for you</span></h3>
+   ${tasksOf(id).map(t=>`<div class="trow"><span class="lbl">${esc(t.title)}<small>Once ${unitWord[t.unit]}</small></span><button class="qbtn" data-act="deltask" data-id="${t.id}">Remove</button></div>`).join("")||`<p class="empty" style="margin:8px 0">None yet.</p>`}
+   ${S.addOpen?taskForm(id):`<button class="addhere" data-act="addtask">${ic.plus} Add a task</button>`}</div>
+  <div class="grp"><h3>WHERE ${g.short.toUpperCase()} SHOWS</h3>
+   <button class="radio" role="radio" data-act="place" data-v="rail" aria-checked="${p.placement==="rail"}"><span class="dot"></span><span class="lbl">Everywhere<small>Its events in the list, its chores and tasks in the left column.</small></span></button>
+   <button class="radio" role="radio" data-act="place" data-v="focus" aria-checked="${p.placement==="focus"}"><span class="dot"></span><span class="lbl">Only when I focus on it<small>Out of the way until you pick ${g.short} in the focus row.</small></span></button></div>`}
+  </div>`;
+}
+function taskForm(id){
+  return `<div class="form"><input class="input" id="tt" placeholder="What do you do?" style="flex:1;min-width:180px" aria-label="Task name"><select class="input" id="tu" aria-label="How often"><option value="week">Every week</option><option value="month">Every month</option></select><button class="cbtn" data-act="savetask" data-game="${id}">Add task</button><button class="qbtn" data-act="canceltask">Cancel</button></div>`;
+}
+function generalPane(k){
+  if(k==="general") return `<div style="--hue:var(--near)"><div class="ptitle"><h2 style="color:var(--ink)">Region and appearance</h2></div>
+   <div class="grp"><h3>SERVER REGION</h3><p class="pdesc" style="margin:8px 0 12px">Daily resets and event ends follow this server.</p><div class="seg">${["Asia","America","Europe"].map(r=>`<button aria-pressed="${r==="Europe"}">${r}</button>`).join("")}</div></div>
+   <div class="grp"><h3>THEME</h3><div class="seg" style="margin-top:12px">${["Dark","Light","System"].map(r=>`<button aria-pressed="${r==="Dark"}">${r}</button>`).join("")}</div></div></div>`;
+  if(k==="lists") return `<div style="--hue:var(--near)"><div class="ptitle"><h2 style="color:var(--ink)">Lists</h2></div><p class="pdesc">The few choices that are about the lists, not about any one game.</p>
+   <div class="grp"><div class="trow"><span class="lbl">Show events that haven't started<small>As their own section under what's running.</small></span><button class="sw" role="switch" aria-checked="false"></button></div>
+   <div class="trow"><span class="lbl">Guess which events repeat daily<small>Reads the source's wording, and is sometimes wrong.</small></span><button class="sw" role="switch" aria-checked="false"></button></div>
+   <div class="trow"><span class="lbl">Finished and ignored events<small>Leave the lists and wait in the Archive tab.</small></span><button class="qbtn" data-view="archive">Open Archive</button></div></div></div>`;
+  if(k==="own") return `<div style="--hue:var(--near)"><div class="ptitle"><h2 style="color:var(--ink)">Your own events and games</h2></div><p class="pdesc">Only what you typed in yourself. Built-in chores and tasks never show up here; they live on each game's page.</p>
+   <div class="grp"><h3>YOUR GAMES</h3>${S.ownGames.map(o=>`<div class="trow" style="--hue:${o.hue}"><span class="lbl">${esc(o.name)}<small>Added by you</small></span><button class="qbtn">Edit</button></div>`).join("")}<button class="addhere">${ic.plus} Add a game</button></div>
+   <div class="grp"><h3>YOUR EVENTS</h3>${S.ownEvents.map(o=>`<div class="trow"><span class="lbl">${esc(o.title)}<small>${esc(o.game)} · ends ${o.end}</small></span><button class="qbtn">Edit</button></div>`).join("")}<button class="addhere">${ic.plus} Add an event</button></div>
+   <div class="grp"><h3>YOUR TASKS</h3>${S.tasks.map(t=>`<div class="trow"><span class="lbl">${esc(t.title)}<small>${G[t.game].short} · once ${unitWord[t.unit]}</small></span><button class="qbtn" data-act="sel" data-game="${t.game}">Open ${G[t.game].short}</button></div>`).join("")}</div></div>`;
+  return `<div style="--hue:var(--near)"><div class="ptitle"><h2 style="color:var(--ink)">Backup</h2></div><p class="pdesc">Everything lives in this browser. Save it to a file to move it to another device.</p><div class="btnrow"><button class="cbtn">Save to a file</button><button class="qbtn">Load a file</button></div></div>`;
+}
+
+function archiveView(){
+  const rows=EVENTS.filter(e=>S.archive[e.id]).filter(e=>S.archFilter==="all"||S.archive[e.id].k===S.archFilter).filter(e=>S.archGame==="all"||e.game===S.archGame);
+  const games=[...new Set(EVENTS.filter(e=>S.archive[e.id]).map(e=>e.game))];
+  return `<div class="arch"><h2>Archive</h2><p class="pdesc" style="margin:0 0 18px">Events you finished or chose to ignore. They stay out of your lists until you restore them.</p>
+  <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center"><div class="seg">${[["all","All"],["done","Finished"],["ignored","Ignored"]].map(([k,l])=>`<button data-act="af" data-v="${k}" aria-pressed="${S.archFilter===k}">${l}</button>`).join("")}</div>
+  <div class="focus"><button data-act="ag" data-game="all" aria-pressed="${S.archGame==="all"}">Every game</button>${games.map(g=>`<button data-act="ag" data-game="${g}" aria-pressed="${S.archGame===g}" style="--fh:${hue(g)}">${G[g].short}</button>`).join("")}</div></div>
+  <div style="margin-top:12px">${rows.map(e=>{const a=S.archive[e.id];return `<div class="arow ${a.k}" style="--hue:${hue(e.game)}"><span class="rail3"></span><div><div class="eyebrow">${G[e.game].short.toUpperCase()}</div><div class="t">${esc(e.title)}</div><div class="emeta"><span class="tag ${a.k==="done"?"d":"i"}">${a.k==="done"?"Finished":"Ignored"}</span>${a.at}${e.end&&e.end<NOW?" · event over":e.end?` · still running, ${left(e.end-NOW)} left`:""}</div></div><button class="qbtn" data-act="restore" data-id="${e.id}">Restore</button></div>`}).join("")||`<p class="empty">Nothing here. Finish or ignore an event from its details and it moves here.</p>`}</div></div>`;
+}
+
+function onboardView(){
+  const o=S.ob;
+  const steps=`<div class="steps">${[1,2,3].map(i=>`<i class="${i<=o.step?"on":""}"></i>`).join("")}</div>`;
+  if(o.step===1) return `<div class="ob"><div class="wordmark">EVENT<span>CLOCK</span></div>${steps}<h1>Which games do you play?</h1><p class="lead">You'll see events only for these. Next, you'll choose how much of each game to track.</p>
+   <div class="pick">${GAMES.map(g=>`<button data-act="obpick" data-game="${g.id}" aria-pressed="${o.picked.includes(g.id)}" style="--hue:${g.hue}"><span class="box">${ic.check}</span>${g.name}</button>`).join("")}</div>
+   <div class="obfoot"><button class="cbtn" data-act="ob1" ${o.picked.length?"":"disabled"}>${o.picked.length?`Continue with ${o.picked.length}`:"Pick at least one game"}</button></div></div>`;
+  if(o.step===2){
+    const id=o.picked[o.idx], g=G[id], ch=o.choice[id]||"events", rs=routinesOf(id);
+    const peek=pid=>{const t={game:id,routines:{},chores:false,standardPulls:false};applyPreset(t,pid);const on=rs.filter(r=>t.routines[r.id]);
+      const bits=[]; if(t.chores) bits.push(g.chores.toLowerCase()+" each day"); if(on.length) bits.push(`${on.length} task${on.length>1?"s":""}: ${on.slice(0,3).map(r=>r.title).join(", ")}${on.length>3?", and more":""}`);
+      return pid==="events"?"Only its events, with countdowns. Nothing to tick.": (pid!=="events"&&!rs.length&&pid!=="dailies")?`Same as Dailies: ${g.short} has no built-in weekly tasks yet.`:`Adds ${bits.join("; ")}.`;};
+    return `<div class="ob" style="--hue:${g.hue}"><div class="wordmark">EVENT<span>CLOCK</span></div>${steps}
+     <div class="legend" style="margin-top:28px">GAME ${o.idx+1} OF ${o.picked.length}</div><h1 style="margin-top:8px;color:${g.hue}">How much of ${g.name} do you want to track?</h1><p class="lead">You can change this later in Settings, item by item.</p>
+     ${PRESETS.map(x=>`<button class="pre" data-act="obpre" data-p="${x.id}" aria-pressed="${ch===x.id}"><div class="pn">${x.name}</div><div class="pp">${peek(x.id)}</div></button>`).join("")}
+     <div class="obfoot"><button class="cbtn" data-act="ob2">${o.idx<o.picked.length-1?`Next: ${G[o.picked[o.idx+1]].short}`:"Continue"}</button>${o.picked.length-o.idx>1?`<button class="q" data-act="obsame">Use this for the remaining ${o.picked.length-o.idx-1}</button>`:""}<button class="q" data-act="obback">Back</button></div></div>`;
+  }
+  return `<div class="ob"><div class="wordmark">EVENT<span>CLOCK</span></div>${steps}<h1>Where things live</h1><p class="lead">Three places, so you always know where to look.</p>
+   <div class="map"><div class="row"><span class="ic">${ic.list}</span><p><b>Checklist</b>What's ending soon on the right. Today's chores and your weekly tasks on the left, one line per game.</p></div>
+   <div class="row"><span class="ic">${ic.gear}</span><p><b>Settings, and the gears</b>Each game has its own page for what it tracks. The gear next to a heading in the left column takes you straight there.</p></div>
+   <div class="row"><span class="ic">${ic.box}</span><p><b>Archive</b>Events you finish or ignore wait here, and you can put any of them back.</p></div></div>
+   <div class="obfoot"><button class="cbtn" data-act="ob3">Show my events</button><button class="q" data-act="obback">Back</button></div></div>`;
+}
+
+function sheet(){
+  if(!S.sheet) return "";
+  if(S.sheet.kind==="event"){
+    const e=EVENTS.find(x=>x.id===S.sheet.id);
+    return `<div class="scrim center" data-act="close"><div class="sheet" style="--hue:${hue(e.game)}" data-stop><button class="x" data-act="close" aria-label="Close">${ic.x}</button><div class="eyebrow">${G[e.game].short.toUpperCase()}</div><h3 style="color:var(--ink)">${esc(e.title)}</h3><p class="tnum">${fmtDay(e.start)} – ${e.end?fmtDay(e.end):"end date unknown"}</p>${meter(e,24)}<div class="btnrow"><button class="cbtn" data-act="arch" data-k="done" data-id="${e.id}">Mark done</button><button class="qbtn" data-act="arch" data-k="ignored" data-id="${e.id}">Ignore</button></div><p style="margin-top:14px;font-size:12px;color:var(--faint)">Either one moves it to the Archive.</p></div></div>`;
+  }
+  const id=S.sheet.game, g=G[id], p=P(id);
+  const off=routinesOf(id).filter(r=>!p.routines[r.id]&&(r.pulls!=="standard"||p.standardPulls));
+  return `<div class="scrim" data-act="close"><div class="sheet" style="--hue:${g.hue}" data-stop><button class="x" data-act="close" aria-label="Close">${ic.x}</button>
+   <div class="legend">ADD TO</div><h3>${g.name}</h3><p>Built-in tasks you're not tracking yet. Switching one on puts it in the left column straight away.</p>
+   ${off.length?off.map(r=>`<div class="trow"><span class="lbl">${esc(r.title)}<small class="tnum">${r.unit==="cycle"?`Every ${r.days} days`:r.unit==="week"?"Weekly":"Monthly"}${r.kind==="amount"?` · ${r.target.toLocaleString("en")} ${r.u}`:""}</small></span><button class="sw" role="switch" data-act="rt" data-id="${r.id}" aria-checked="false" aria-label="${esc(r.title)}"></button></div>`).join(""):`<p class="empty">You're tracking every built-in task ${g.short} has.</p>`}
+   <div class="grp"><h3>OR YOUR OWN</h3>${taskForm(id).replace('data-act="canceltask"','data-act="close"')}</div>
+   <div class="btnrow"><button class="qbtn" data-act="gear" data-game="${id}">Open ${g.short}'s full setup</button></div></div></div>`;
+}
+
+function why(){
+  document.getElementById("why").innerHTML = `
+  <h3>The idea</h3><p>The game is the unit you customise. Every game you follow has one page that holds everything it adds to your screen: its events, its daily chores, each weekly, monthly and cycle task, its pulls, your own tasks for it, and where it shows up. A four-step level ("Just events" → "Everything") gets you most of the way in one click, and single switches handle the rest. New readers start on "Just events" for every game, so the page starts quiet.</p>
+  <h3>The foundation</h3><p>Today about fifteen preferences each answer part of "what do I see for this game": <code>hiddenGames</code>, <code>knownGames</code>, <code>showChores</code> / <code>choresOn</code> / <code>choresOff</code>, <code>showRoutines</code> / <code>routineGames</code> / <code>routinesOff</code> / <code>routinesAsked</code> / <code>routinesHidden</code>, <code>showWeeklyTasks</code> / <code>showMonthlyTasks</code> / <code>showCycleTasks</code>, and <code>standardPulls</code>. They're spread across four settings panels, which is why turning one thing back on is hard to find. In this model they collapse into one record per game:</p>
+<pre>GameProfile {
+  game: LaneId
+  followed: boolean
+  chores: boolean
+  routines: { [routineId]: boolean }  // explicit, opt-in
+  standardPulls: boolean
+  placement: "everywhere" | "focus-only"
+}
+prefs.profiles: Record&lt;LaneId, GameProfile&gt;</pre>
+  <p>Every view reads from <code>profiles</code> only: the rail, the lists, the timeline, the counts. A preset is just a function that writes a profile. It's never stored, and "Custom" means the profile doesn't match any preset. Your own tasks keep their own key space and attach to a game by <code>game</code>, so they show on that game's page without being mixed in with the built-in ones.</p>
+  <h3>How it scales</h3><ul><li><b>A new game</b> gets a profile on "Just events", unfollowed, the same thing <code>knownGames</code> does today, but in one place.</li><li><b>A new built-in routine</b> starts off; for readers on a preset that includes its kind, a one-line "New for ZZZ: …" offer appears on that game's page instead of it turning on silently.</li><li><b>A new kind of system</b> (say, a seasonal pass) is one more group on the game page and one more rule in the presets. No new global switch.</li><li>Migration is one pass: work out each game's profile from the old fifteen fields, then drop them.</li></ul>
+  <h3>Tradeoffs</h3><ul><li>Changing things across many games means visiting each one. There's no "turn off monthlies everywhere" here. A bulk row could be added, but it reintroduces a global switch.</li><li>Settings becomes a real page, which is one more place to learn. The gears and the onboarding map are there to soften that.</li><li>The rail stays quieter by collapsing tasks to one line per game. Ticking a task takes one extra tap to expand the game.</li><li>"Only when I focus on it" is a new idea readers have to learn.</li></ul>`;
+}
+
+function render(){
+  mockbar();
+  const app=document.getElementById("app");
+  if(S.view==="onboard"){ app.innerHTML=`<div class="shell">${onboardView()}</div>`; return; }
+  const body = S.view==="settings"?settingsView():S.view==="archive"?archiveView():S.view==="timeline"?`<p class="mutednote" style="padding:40px 16px">The timeline isn't part of this mockup. It reads the same game profiles as the checklist, so a game set to "Just events" shows only its event bars.</p>`:mainView();
+  app.innerHTML = `<div class="shell">${header()}${body}</div>${sheet()}`;
+}
+
+/* ---------- interaction ---------- */
+document.addEventListener("click",ev=>{
+  const j=ev.target.closest("[data-jump]");
+  if(j){ const k=j.dataset.jump;
+    if(k==="why"){document.getElementById("why").classList.toggle("open");return;}
+    if(k==="reset"){S=fresh("main");}
+    else if(k==="main"){S.view="main";S.returning=false;S.sheet=null;S.callout=false;}
+    else if(k==="returning"){S=fresh("returning");}
+    else if(k==="settings"){S.view="settings";S.sheet=null;}
+    else if(k==="archive"){S.view="archive";S.sheet=null;}
+    else if(k==="add"){S.view="main";S.sheet={kind:"add",game:"zzz"};}
+    else if(k==="onboard"){S=fresh("main");S.view="onboard";}
+    S.mode=k; render();return; }
+  const v=ev.target.closest("[data-view]");
+  if(v){S.view=v.dataset.view;S.sheet=null;S.callout=false;S.addOpen=false;render();window.scrollTo(0,0);return;}
+  const a=ev.target.closest("[data-act]"); if(!a) return;
+  if(a.dataset.act==="close" && ev.target.closest("[data-stop]") && a.classList.contains("scrim")) return;
+  const act=a.dataset.act, g=a.dataset.game, id=a.dataset.id;
+  const p=S.profiles[S.sheet?.kind==="add"?S.sheet.game:S.sel];
+  switch(act){
+    case "gear": S.view="settings";S.sel=g;S.sheet=null;S.addOpen=false;break;
+    case "chore": S.chores[g]=!S.chores[g];break;
+    case "expand": S.open[g]=!S.open[g];break;
+    case "tickr": S.prog[id]=val(id)>=1?0:1;break;
+    case "focus": S.focus=g;break;
+    case "event": S.sheet={kind:"event",id};break;
+    case "arch": S.archive[id]={k:a.dataset.k,at:"Oct 16"};S.sheet=null;break;
+    case "close": S.sheet=null;break;
+    case "quickadd": S.sheet={kind:"add",game:g};break;
+    case "sel": S.sel=g;S.addOpen=false;if(G[g])S.view="settings";break;
+    case "allgames": S.allGames=true;break;
+    case "follow": P(g).followed=!P(g).followed; if(!P(g).followed&&S.focus===g)S.focus="all"; break;
+    case "preset": applyPreset(p,a.dataset.p);break;
+    case "chores": p.chores=!p.chores;break;
+    case "rt": p.routines[id]=!p.routines[id]; if(S.sheet?.kind==="add") S.open[p.game]=true; break;
+    case "std": p.standardPulls=!p.standardPulls; for(const r of routinesOf(p.game)) if(r.pulls==="standard") p.routines[r.id]=p.standardPulls; break;
+    case "place": p.placement=a.dataset.v;break;
+    case "addtask": S.addOpen=true;break;
+    case "canceltask": S.addOpen=false;break;
+    case "savetask": { const t=document.getElementById("tt").value.trim(); if(!t) return; S.tasks.push({id:"mytask:"+Math.random().toString(36).slice(2,8),game:g,title:t,unit:document.getElementById("tu").value,kind:"days",target:1}); S.addOpen=false; S.open[g]=true; if(S.sheet) S.sheet=null; break; }
+    case "deltask": S.tasks=S.tasks.filter(t=>t.id!==id);break;
+    case "restore": delete S.archive[id];break;
+    case "af": S.archFilter=a.dataset.v;break;
+    case "ag": S.archGame=g;break;
+    case "showme": S.returning=false;S.callout=true;break;
+    case "dismiss": S.returning=false;break;
+    case "callout-off": S.callout=false;S.view="settings";break;
+    case "obpick": { const l=S.ob.picked; S.ob.picked=l.includes(g)?l.filter(x=>x!==g):[...l,g]; break; }
+    case "ob1": S.ob.step=2;S.ob.idx=0;break;
+    case "obpre": S.ob.choice[S.ob.picked[S.ob.idx]]=a.dataset.p;break;
+    case "ob2": if(S.ob.idx<S.ob.picked.length-1)S.ob.idx++;else S.ob.step=3;break;
+    case "obsame": { const c=S.ob.choice[S.ob.picked[S.ob.idx]]||"events"; S.ob.picked.slice(S.ob.idx).forEach(x=>S.ob.choice[x]=c); S.ob.step=3; break; }
+    case "obback": if(S.ob.step===3){S.ob.step=2;S.ob.idx=S.ob.picked.length-1;} else if(S.ob.idx>0)S.ob.idx--; else S.ob.step=1; break;
+    case "ob3": { for(const gm of GAMES){ const pp=S.profiles[gm.id]; pp.followed=S.ob.picked.includes(gm.id); pp.placement="rail"; applyPreset(pp,S.ob.choice[gm.id]||"events"); }
+      S.tasks=[];S.prog={};S.chores={};S.archive={};S.open={};S.view="main";S.focus="all";S.sel=S.ob.picked[0]; break; }
+    default: return;
+  }
+  render();
+  if(act==="gear"){ const pf=document.getElementById("profile"); pf&&pf.classList.add("flash"); }
+  if(act==="addtask"){ document.getElementById("tt")?.focus(); }
+});
+document.addEventListener("change",ev=>{
+  const t=ev.target; if(t.dataset.act==="amt"){ S.prog[t.dataset.id]=Math.max(0,parseInt(t.value.replace(/\D/g,""))||0); render(); }
+});
+document.addEventListener("keydown",ev=>{ if(ev.key==="Escape"&&S.sheet){S.sheet=null;render();} });
+why(); render();
+</script>
+</body>
+</html>

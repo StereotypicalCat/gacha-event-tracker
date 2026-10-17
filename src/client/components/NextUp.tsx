@@ -1,3 +1,4 @@
+import { REGION_LABEL } from "../../shared/time.ts";
 import { useGameMeta } from "../state/gameMeta.tsx";
 import { formatRemaining } from "../../shared/time.ts";
 import type { RowEvent } from "./EventRow.tsx";
@@ -17,6 +18,7 @@ export function NextUp({
   rows,
   focused,
   onOpen,
+  onOpenRow,
 }: {
   /**
    * The soonest-expiring events the reader has neither finished nor ignored,
@@ -27,6 +29,7 @@ export function NextUp({
   rows: RowEvent[];
   /** Name of the game being focused on, when the page is narrowed to one. */
   focused: string | null;
+  onOpenRow?: ((row: RowEvent) => void) | undefined;
   onOpen: (id: string) => void;
 }) {
   const gameMeta = useGameMeta();
@@ -69,14 +72,14 @@ export function NextUp({
             inert and read as a heading rather than a way in. */}
         <button
           type="button"
-          onClick={() => onOpen(event.id)}
+          onClick={() => onOpenRow ? onOpenRow(rows[0]!) : onOpen(event.id)}
           className="group mt-2 block max-w-full text-left"
         >
           <h1 className="font-display text-[1.75rem] font-semibold leading-[1.15] tracking-tight transition-colors duration-150 group-hover:text-ink-strong">
             {event.title}
           </h1>
           <p className="mt-1 text-sm" style={{ color: game.hue }}>
-            {game.name}
+            {game.name}{rows[0]?.region ? ` · ${REGION_LABEL[rows[0].region]}` : ""}
           </p>
         </button>
 
@@ -107,7 +110,7 @@ export function NextUp({
             <p className="eyebrow">Then</p>
             <ul className="mt-1.5">
               {rest.map((row) => (
-                <QueuedRow key={row.event.id} row={row} onOpen={onOpen} />
+                <QueuedRow key={(row.accountId ?? "") + row.event.id} row={row} onOpen={id => onOpenRow ? onOpenRow(row) : onOpen(id)} />
               ))}
             </ul>
           </div>

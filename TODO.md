@@ -10,9 +10,12 @@ note only says where to start.
   ([spec](docs/superpowers/specs/2026-10-14-built-in-routines-design.md)), every-N-days cycles for
   tasks and built-ins ([spec](docs/superpowers/specs/2026-10-16-cycle-routines-design.md)), and
   battle pass windows as feed events ([spec](docs/superpowers/specs/2026-10-16-pass-windows-design.md),
-  see its § Outcome). Plans are beside them in `docs/superpowers/plans/`. Nothing is in flight: no
-  open branches or worktrees.
-- **No next task has been chosen.** The open items below are the candidates; the owner decides.
+  see its § Outcome). Plans are beside them in `docs/superpowers/plans/`. The redesign attempt is uncommitted and was rejected for substantial markup divergence.
+  **Start with [the replacement-agent handoff](docs/handoffs/2026-10-16-redesign-fidelity-handoff.md).**
+  The existing plan/ledger contain superseded completion claims; no extra branch/worktree.
+- **Redesign rejected for markup divergence; presentation correction pending.** See docs/design-reviews/2026-10-16-redesign-implementation.md.
+  The assigned follow-up is to faithfully port the approved markup and finish the redesign.
+  Unrelated open items below remain separate.
   The ones that need the owner in the game first are marked as checks.
 - **How the owner works** (their standing instructions, also in their personal Claude settings):
   once they approve a design, carry it through spec → plan → execution with no extra review stops,
@@ -30,6 +33,17 @@ note only says where to start.
 
 ## Open items
 
+- [ ] **Redesign Settings → Your own events and games** (owner, 2026-10-17: “the split-up from
+  the mockup is nice, but I guess it needs a bigger design”). Deferred on purpose: it works as well
+  as it does today, which is enough for now. Direction from the owner: a heading per game you
+  created, with that game's events listed under it, taking inspiration from the Routines tab —
+  possibly reusing the routine editor (`components/redesign/RoutineDrawer.tsx`, the right-docked
+  create/edit shelf) as the base for an event editor. Not in the Round 6/7 mockups, so it needs its
+  own short design (brainstorm → spec → plan; owner approves once, then carry it through). Keep the
+  current behaviour (`components/YourOwn.tsx`) working until the replacement is accepted.
+  - Owner, same day, an alternative to weigh in that design: drop the separate settings page and
+    put an **Add** button on the Settings sidebar's “Your games” list, opening an event editor
+    there (a new game, or a new event under a game).
 - [ ] Make it clear which game each *This week & month* chip belongs to (owner, 2026-10-16: "it can
   become a bit unclear"). With built-ins for seven games, that row now holds many chips whose
   titles do not name their game — "Weekly Routine", "Weekly Challenge", "City Stamina",
@@ -235,3 +249,20 @@ note only says where to start.
     `EventForm`, `src/client/components/TaskForm.tsx`). Review them as a reader would — field
     order, defaults, copy, validation messages, how a cadence and a measure are chosen, phone
     width — against `docs/DESIGN.md` and `docs/PRODUCT.md`.
+- [ ] Follow up the 2026-10-18 pre-ship review of the v1→v2 reader migration. A schema-guardian review
+  found nothing blocking: event IDs, day keys and the feed contract are unchanged, and v1 keys are
+  never removed, so a rollback finds them byte-identical. These gaps remain, all low severity:
+  - Orphaned v1 entries (marks or amounts for a deleted `myevent:`/`mytask:`, or any entry whose game
+    can't be resolved) are not carried into v2 account data (`state/reader/migration.ts`,
+    `gameOf`). They survive in `legacyRaw`, `gacha-tracker:v2:migration-recovery` and the untouched v1
+    keys. Consider a catch-all bucket so a restored custom item finds them.
+  - Importing a v1 file whose region differs from the reader's account lands its marks in a new
+    `account:import-N`, not the visible account (`state/reader/import.ts`, `export.ts`). Kept, but
+    out of sight.
+  - `initializeReader` reconciles and writes back outside `withReaderLock`, with no compare-and-set
+    (`state/reader/store.ts`). A second tab's write in that window can be overwritten.
+  - Storage pressure: every save carries `legacyRaw`, and every automatic backup embeds the state,
+    `legacyRaw` and the v1 keys again, with no size cap (only manual backups are capped). Heavy
+    readers could reach the ~5 MB quota. Failures are reported, not silent.
+  - After a rollback, anything done in the new build lives only in v2 and isn't shown by the old app.
+    It's stranded, not lost.

@@ -1,4 +1,4 @@
-import { Fragment, useLayoutEffect, useRef } from "react";
+import { Fragment, useLayoutEffect, useRef, type ReactNode } from "react";
 import { useGameMeta } from "../state/gameMeta.tsx";
 import type { LaneId } from "../../shared/custom.ts";
 import { DAY, endingSoonestFirst } from "../../shared/time.ts";
@@ -21,12 +21,6 @@ import { canStep, stepDayWidth, weekLabelStep } from "../state/zoom.ts";
 const PIN = 8;
 
 /**
- * A sliver of time before now, so the "now" rule reads as a line in the view
- * rather than merging with the border.
- */
-const HALF_DAY_LEAD = 12 * 60 * 60 * 1000;
-
-/**
  * How far back the view can be scrolled beyond the oldest running event, so
  * "when did this start?" is answerable without the window being unbounded.
  */
@@ -47,7 +41,7 @@ const PAST_LEAD = 7 * DAY;
  */
 const PAST_LIMIT = 60 * DAY;
 
-/** Where the now rule sits when the board opens: a little in from the edge. */
+/** Room left of the earliest start the board opens on, so its edge is seen. */
 const OPEN_INSET = 28;
 
 /**
@@ -116,8 +110,16 @@ export function Timeline({
   splitUpcoming,
   gameOrder,
   onOpen,
+  onOpenRow,
+  isDoneRow,
   isDone,
   expand,
+  routines = [],
+  routinesInline = false,
+  label,
+  controls,
+  afterHeader,
+  servers = () => true,
 }: {
   rows: RowEvent[];
   now: number;
@@ -161,6 +163,8 @@ export function Timeline({
    */
   gameOrder?: readonly LaneId[];
   onOpen: (id: string) => void;
+  onOpenRow?: (row: RowEvent) => void;
+  isDoneRow?: (row: RowEvent) => boolean;
   /**
    * Asked rather than derived from the progress store: an entry exists there
    * the moment a reader records an effort or a note, and dimming a bar for
@@ -179,6 +183,21 @@ export function Timeline({
    * terminate.
    */
   expand?: ((minMs: number, maxMs: number) => RowEvent[]) | undefined;
+  /**
+   * Routine periods drawn in their own section under the event lanes, behind a
+   * divider. They never move the board's window: a period is clamped to it.
+   */
+  routines?: readonly ClassicRoutine[];
+  /** Routines at the end of each game's lane instead of their own section. */
+  routinesInline?: boolean;
+  /** Short text at a bar's right end, such as time left or the end date. */
+  label?: (row: RowEvent) => string | null;
+  /** More pill toggles for the board's header, after the stacking pills. */
+  controls?: ReactNode;
+  /** Drawn between the header and the board, such as the focus bar. */
+  afterHeader?: ReactNode;
+  /** Whether a game is on several servers, so its bars name the server. */
+  servers?: (game: string) => boolean;
 }) {
   const gameMeta = useGameMeta();
   const scroller = useRef<HTMLDivElement>(null);
@@ -218,9 +237,23 @@ export function Timeline({
   // still on screen — an event that began three days ago is context, not
   // history. Keyed on the rounded offset so it runs when the range changes,
   // not every second: re-scrolling on each tick would fight the reader.
-  const openAt = Math.round(Math.max(0, x(now - HALF_DAY_LEAD) - OPEN_INSET));
+  // Opens far enough back that most running bars show their start, and so
+  // their names: back to the median running start, keeping now between a
+  // quarter and half of the way across.
+  const liveStarts = plotted
+    .filter((r) => r.clock.live)
+    .map((r) => x(r.clock.startsMs))
+    .sort((a, b) => a - b);
+  const nowX = x(now);
+  const medianStart = liveStarts[Math.floor(liveStarts.length / 2)] ?? nowX;
+  const openFor = (viewport: number) =>
+    Math.round(Math.max(0, openingLeft(nowX, medianStart, viewport)));
+  const openAt = `${Math.round(nowX)}:${Math.round(medianStart)}`;
   const jumpToNow = (behavior: ScrollBehavior) =>
-    scroller.current?.scrollTo({ left: openAt, behavior });
+    scroller.current?.scrollTo({
+      left: openFor(scroller.current.clientWidth),
+      behavior,
+    });
 
   /**
    * A moment in time to hold still through the next re-render, and where in the
@@ -265,16 +298,28 @@ export function Timeline({
     // Open at today rather than at the far past: it is what they came for.
     // Keyed on the rounded offset so it runs when the range changes, not every
     // second — re-scrolling on each tick would fight the reader's own scrolling.
-    el.scrollTo({ left: openAt, behavior: "instant" });
+    el.scrollTo({ left: openFor(el.clientWidth), behavior: "instant" });
     trackScroll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openAt]);
 
-  if (rows.length === 0) {
+  if (rows.length === 0 && routines.length === 0) {
     return (
-      <p className="px-4 py-10 text-sm text-muted">
-        Nothing to plot. Switch a game back on to see its schedule.
-      </p>
+      <>
+        <BoardHeader
+          group={group}
+          onGroup={onGroup}
+          controls={controls}
+          canOut={canStep(dayWidth, -1)}
+          canIn={canStep(dayWidth, 1)}
+          onZoom={zoom}
+          onToday={() => jumpToNow("smooth")}
+        />
+        {afterHeader}
+        <p className="px-4 py-10 text-sm text-muted">
+          Nothing to plot. Switch a game back on to see its schedule.
+        </p>
+      </>
     );
   }
 
@@ -283,6 +328,49 @@ export function Timeline({
   // `expand` added, and a start-marker label counting only the base rows
   // under-counts what is actually drawn there.
   const marks = startMarkers(drawn, x);
+
+  const routineBar = (r: ClassicRoutine) => {
+    const game = gameMeta(r.game);
+    const left = Math.max(x(r.start), 0);
+    const width = Math.max(Math.min(x(r.end), chartWidth) - left, MIN_BAR);
+    return (
+      <button
+        key={r.key}
+        type="button"
+        onClick={r.onOpen}
+        title={`${r.title} · ${r.detail}`}
+        className={`relative flex h-9 items-center gap-2 rounded-[5px] px-3 text-left text-[0.75rem] font-medium transition-opacity hover:opacity-100 ${
+          r.done ? "opacity-35" : "opacity-90"
+        }`}
+        style={{
+          marginLeft: left,
+          width,
+          background: `color-mix(in srgb, ${game.hue} 14%, var(--color-surface))`,
+          borderLeft: `3px dashed ${game.hue}`,
+          color: "var(--color-ink)",
+        }}
+      >
+        <span
+          className="sticky flex min-w-0 flex-wrap content-start items-center gap-x-2 overflow-hidden"
+          style={{
+            left: PIN,
+            maxWidth: nameFits(left, left + width),
+            height: NAME_LINE,
+          }}
+        >
+          <span className="min-w-0 truncate">{r.title}</span>
+          <span className="tnum shrink-0 whitespace-nowrap text-[0.6875rem] text-muted">
+            {r.detail}
+          </span>
+          {r.label && (
+            <span className="tnum shrink-0 whitespace-nowrap text-[0.6875rem] text-muted">
+              {r.label}
+            </span>
+          )}
+        </span>
+      </button>
+    );
+  };
 
   const months = monthBoundaries(min, max);
   const weeks = weekBoundaries(min, max);
@@ -295,38 +383,18 @@ export function Timeline({
       {/* The board's own header. The jump control lives out here rather than
           floating over the chart: pinned inside, it would sit on top of the
           calendar and cover the very dates it sends you back to. */}
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-hairline px-4 py-2.5">
-        <StackControl value={group} onChange={onGroup} />
+      <BoardHeader
+        group={group}
+        onGroup={onGroup}
+        controls={controls}
+        canOut={canStep(dayWidth, -1)}
+        canIn={canStep(dayWidth, 1)}
+        onZoom={zoom}
+        onToday={() => jumpToNow("smooth")}
+      />
+      {afterHeader}
 
-        <div className="flex items-center gap-3">
-          <div role="group" aria-label="Scale" className="flex items-center gap-1">
-            <ScaleButton
-              label="Show a longer stretch of time"
-              disabled={!canStep(dayWidth, -1)}
-              onClick={() => zoom(-1)}
-            >
-              −
-            </ScaleButton>
-            <ScaleButton
-              label="Show a shorter stretch of time in more detail"
-              disabled={!canStep(dayWidth, 1)}
-              onClick={() => zoom(1)}
-            >
-              +
-            </ScaleButton>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => jumpToNow("smooth")}
-            className="text-[0.6875rem] font-medium text-faint transition-colors duration-150 hover:text-ink"
-          >
-            Jump to today
-          </button>
-        </div>
-      </div>
-
-      {plotted.length === 0 ? (
+      {plotted.length === 0 && routines.length === 0 ? (
         /* Not the same emptiness as no rows at all: everything the reader can
            see is still ahead of them, and the board is hiding it on purpose.
            Say which, or the control above reads as broken. */
@@ -344,9 +412,11 @@ export function Timeline({
         /*
          * The pane scrolls, not the page — which is what lets the axis stay
          * put. Capped rather than fixed: three lanes take the height they need
-         * and nothing scrolls vertically at all.
+         * and nothing scrolls vertically at all. Capped at the window's height,
+         * so a full board fills the screen and the page footer stays below it
+         * until the reader scrolls past the board's end.
          */
-        className="scroll-pane relative max-h-[72vh] overflow-auto overscroll-x-contain"
+        className="scroll-pane relative max-h-[100dvh] overflow-auto overscroll-x-contain"
         onScroll={trackScroll}
       >
         <div className="relative" style={{ width: chartWidth, minWidth: "100%" }}>
@@ -374,7 +444,18 @@ export function Timeline({
             className="pointer-events-none absolute bottom-0 top-10 z-10 w-px bg-critical/80"
             style={{ left: x(now) }}
           >
-            <span className="eyebrow absolute top-1 -translate-x-1/2 rounded-[3px] bg-critical px-1 py-px text-[0.5625rem] leading-none text-ground">
+            {/* Not `.eyebrow`: its faint ink left the word unreadable on
+                the chip. */}
+            <span
+              className="absolute top-0.5 -translate-x-1/2 rounded px-2 py-[3px] text-[0.75rem] font-bold uppercase leading-none"
+              style={{
+                fontFamily: "var(--font-display)",
+                background: NOW_RED,
+                color: "#fff",
+                letterSpacing: "0.1em",
+                boxShadow: "0 0 0 2px var(--color-ground)",
+              }}
+            >
               now
             </span>
           </div>
@@ -453,7 +534,8 @@ export function Timeline({
                   )}
 
                   <div className="relative space-y-2">
-                    {lane.rows.map(({ event, clock }, i) => {
+                    {lane.rows.map((row, i) => {
+                      const { event, clock } = row;
                       const game = gameMeta(event.game);
                       const unknownEnd = clock.endsMs === null;
                       const notStarted = clock.upcoming;
@@ -477,13 +559,13 @@ export function Timeline({
                         chartWidth,
                       );
                       const width = Math.max(right - left, MIN_BAR);
-                      const done = isDone(event.id);
+                      const done = isDoneRow ? isDoneRow(row) : isDone(event.id);
                       return (
-                        <Fragment key={event.id}>
+                        <Fragment key={JSON.stringify([row.accountId ?? "", event.id])}>
                         {i === breakAt && <NotStarted />}
                         <button
                           type="button"
-                          onClick={() => onOpen(event.id)}
+                          onClick={() => onOpenRow ? onOpenRow(row) : onOpen(event.id)}
                           // The game is in the tooltip on the merged board
                           // because the bar can be too narrow to show the tag
                           // it carries, and colour alone is not an answer once
@@ -491,7 +573,7 @@ export function Timeline({
                           title={
                             (heading === null
                               ? `${game.name} — ${event.title}`
-                              : event.title) +
+                              : event.title) + (row.region && servers(event.game) ? ` · ${row.region} server` : "") +
                             (notStarted
                               ? ` — not started yet, begins ${dayLabel(clock.startsMs)}`
                               : "")
@@ -526,8 +608,8 @@ export function Timeline({
                           {/* Sticky clamps to the bar's own box, so a name can
                               never wander outside the event it belongs to. */}
                           <span
-                            className="sticky flex min-w-0 items-center gap-1.5 truncate"
-                            style={{ left: PIN, maxWidth: nameFits(left, left + width) }}
+                            className="sticky flex min-w-0 flex-wrap content-start items-center gap-x-1.5 overflow-hidden"
+                            style={{ left: PIN, maxWidth: nameFits(left, left + width), height: NAME_LINE }}
                           >
                             {heading === null && width >= TAG_FROM && (
                               <span
@@ -537,7 +619,16 @@ export function Timeline({
                                 {game.short}
                               </span>
                             )}
-                            <span className="min-w-0 truncate">{event.title}</span>
+                            <span className="min-w-0 truncate">{event.title}{heading === null && row.region && servers(event.game) ? ` · ${row.region}` : ""}</span>
+                            {/* Inside the pinned name, after the title. It never
+                                shrinks: when it does not fit whole beside the
+                                title it wraps to a second line, which the
+                                one-line name hides, so the title always wins. */}
+                            {label?.(row) && (
+                              <span className="tnum shrink-0 whitespace-nowrap text-[0.6875rem] font-normal text-muted">
+                                {label(row)}
+                              </span>
+                            )}
                             {notStarted && (
                               /* The dashed edge and the labelled rule above it
                                  say this to a reader looking at the board; a
@@ -559,15 +650,137 @@ export function Timeline({
                         </Fragment>
                       );
                     })}
+                    {routinesInline &&
+                      routines
+                        .filter((r) => heading === null || r.game === lane.game)
+                        .map(routineBar)}
                   </div>
                 </div>
               );
             })}
+            {!routinesInline && routines.length > 0 && (
+              <section aria-label="Routines" className="space-y-7">
+                <div className="routine-divider border-t border-hairline pt-3">
+                  <p
+                    className="eyebrow sticky left-0 w-fit bg-ground pr-2 text-[0.625rem] text-muted"
+                    style={{ paddingLeft: PIN }}
+                  >
+                    Routines
+                  </p>
+                </div>
+                {[...new Set(routines.map((r) => r.game))].map((g) => (
+                  <div key={g}>
+                    <p
+                      className="eyebrow sticky left-0 z-20 mb-2.5 w-fit bg-ground pr-2 text-[0.625rem]"
+                      style={{ color: gameMeta(g).hue, paddingLeft: PIN }}
+                      title={gameMeta(g).name}
+                    >
+                      {gameMeta(g).short}
+                    </p>
+                    <div className="relative space-y-2">
+                      {routines.filter((r) => r.game === g).map(routineBar)}
+                    </div>
+                  </div>
+                ))}
+              </section>
+            )}
           </div>
         </div>
       </div>
       )}
     </>
+  );
+}
+
+/** One routine period for the classic board's own section. */
+export interface ClassicRoutine {
+  key: string;
+  game: string;
+  title: string;
+  /** Short progress, such as "1/3". */
+  detail: string;
+  start: number;
+  end: number;
+  done: boolean;
+  /** Time to reset or the reset date, when the reader asked for bar labels. */
+  label?: string;
+  onOpen: () => void;
+}
+
+/**
+ * The now chip's fill: one strong red in every theme, under white text (5:1),
+ * because the themed critical tone is tuned as text and washes out as a fill.
+ */
+const NOW_RED = "#d42a47";
+
+/** One line of a bar's name; anything that wraps past it is hidden. */
+const NAME_LINE = "1.125rem";
+
+/** Where the board opens: back to `startX`, with now 25–50% across. */
+export function openingLeft(
+  nowX: number,
+  startX: number,
+  viewport: number,
+): number {
+  return Math.max(
+    nowX - viewport * 0.5,
+    Math.min(nowX - viewport * 0.25, startX - OPEN_INSET),
+  );
+}
+
+/**
+ * The board's header: stacking pills, any extra toggle pills, then the scale
+ * and today controls. Shared by both Timeline looks so their options match.
+ */
+export function BoardHeader({
+  group,
+  onGroup,
+  controls,
+  canOut,
+  canIn,
+  onZoom,
+  onToday,
+}: {
+  group: TimelineGroup;
+  onGroup: (group: TimelineGroup) => void;
+  controls?: ReactNode;
+  canOut: boolean;
+  canIn: boolean;
+  onZoom: (by: 1 | -1) => void;
+  onToday: () => void;
+}) {
+  return (
+    <div className="board-header flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-hairline px-4 py-2.5">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <StackControl value={group} onChange={onGroup} />
+        {controls}
+      </div>
+      <div className="flex items-center gap-3">
+        <div role="group" aria-label="Scale" className="flex items-center gap-1">
+          <ScaleButton
+            label="Show a longer stretch of time"
+            disabled={!canOut}
+            onClick={() => onZoom(-1)}
+          >
+            −
+          </ScaleButton>
+          <ScaleButton
+            label="Show a shorter stretch of time in more detail"
+            disabled={!canIn}
+            onClick={() => onZoom(1)}
+          >
+            +
+          </ScaleButton>
+        </div>
+        <button
+          type="button"
+          onClick={onToday}
+          className="text-[0.6875rem] font-medium text-faint transition-colors duration-150 hover:text-ink"
+        >
+          Jump to today
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -613,23 +826,51 @@ function StackControl({
   onChange: (group: TimelineGroup) => void;
 }) {
   return (
-    <div role="group" aria-label="Stack the timeline" className="flex gap-1">
-      {TIMELINE_GROUPS.map((mode) => {
-        const on = value === mode.id;
+    <PillChoice
+      label="Stack the timeline"
+      value={value}
+      options={TIMELINE_GROUPS}
+      onChange={onChange}
+    />
+  );
+}
+
+/**
+ * An either/or choice drawn as two pills sharing one outline, the chosen side
+ * filled. Every option in the board's header uses it, so each reads as one
+ * question with two answers rather than a switch to be found and undone.
+ */
+export function PillChoice<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: readonly { id: T; label: string; hint?: string }[];
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={label}
+      className="inline-flex rounded-full border border-hairline p-0.5"
+    >
+      {options.map((option) => {
+        const on = value === option.id;
         return (
           <button
-            key={mode.id}
+            key={option.id}
             type="button"
-            onClick={() => onChange(mode.id)}
+            onClick={() => onChange(option.id)}
             aria-pressed={on}
-            title={mode.hint}
-            className={`rounded-full border px-2.5 py-1 text-[0.6875rem] font-medium transition-colors ${
-              on
-                ? "border-ink/60 text-ink"
-                : "border-transparent text-faint hover:text-muted"
+            title={option.hint}
+            className={`rounded-full px-2.5 py-0.5 text-[0.6875rem] font-medium transition-colors ${
+              on ? "bg-raised text-ink" : "text-faint hover:text-muted"
             }`}
           >
-            {mode.label}
+            {option.label}
           </button>
         );
       })}

@@ -364,3 +364,56 @@ other, so `test/update.test.tsx` pins both ends of the `skip-waiting` handshake 
   cleanly because state is in SQLite.
 - **No server-side rendering.** The feed is small and cacheable; a static SPA is enough.
 - **No websockets.** Events change on a scale of hours; a 5-minute cache is more than adequate.
+
+## Reader application (2026-10-16 redesign)
+
+`App.tsx` exports `ReaderApp`; only the v2 reader store writes production progress. Legacy hooks
+remain as compatibility helpers, validators and tests, not mounted writers. ReaderContent coordinates
+shared Checklist/Timeline/Routines/Archive/Settings, account-aware detail adapters and timed archive
+transitions. `components/redesign/` contains the feature pages. `redesign.css` scopes Relaxed and
+Structured via data-interface, with one application tree and independent theme/density.
+
+`state/reader/` owns migration, schema, reducer, store, clocks, accounts, archive, backups, restore,
+imports, routines and event selectors. Operations re-read the persisted envelope under Web Locks;
+an IndexedDB readwrite transaction serializes browsers without Web Locks. Failed locking/storage
+never publishes an optimistic success. Storage events update other tabs. Field timestamps protect
+newer edits and tombstones; account writes rebase changed routine choices. Legacy deltas reconcile
+on startup into the original migrated accounts; raw keys remain preserved.
+
+Clock revisions freeze automatic metadata and overrides. Imported historical clocks are excluded
+from active clock resolution; history resolves each explicit revision. Display timezone lives in
+DisplayTimeContext and never changes the feed.
+
+Events and redeem codes use separate validated static feeds. `build-codes.ts` reads pinned snapshots
+or fixtures offline and preserves firstObservedAt in snapshots/codes-first-seen.json. The refresh
+runner combines event adapters and count-only code sources while sharing robots, floors, per-host
+spacing and snapshot gates. No fake GachaEvents represent codes. Both feeds are network-first in
+the worker; manual refresh bypasses the browser cache. Shell update waiting/activation is unchanged.
+
+Backups are outside the reader envelope. Restore validates first, writes a recovery export, prepares
+a pending transaction, then replaces live state. Startup finishes an interrupted transaction before
+opening the reader. Browser UI restore uses the same cross-tab lock as ordinary edits.
+
+
+### Ordinary HTTP / WireGuard hosts
+
+Reader identity minting uses `state/reader/ids.ts`: 128-bit `crypto.getRandomValues` tokens for
+accounts, operations, reset revisions and backups. The redesign's initial `randomUUID` calls were a
+startup bug on ordinary HTTP network hosts; unlike localhost, these are not browser secure contexts,
+even when reached through a WireGuard tunnel. Existing IDs are unchanged and valid. Initialization
+preserves migration recovery before minting, so the failed first visit did not discard legacy bytes.
+
+Regression verification uses a Chrome test hostname mapped to loopback with isSecureContext false,
+randomUUID unavailable and actual getRandomValues/IndexedDB available. Existing-save migration,
+new setup, editing, additional servers, reset override/revert, backup and reload all pass there.
+
+
+### Presentation correction (2026-10-17)
+
+`ChecklistEvent`/`NextDeadline` render the approved list hierarchy; `TimelinePage` owns the shared
+axis for event spans and routine periods. `RoutinesPage` groups by reset or account, with native
+`RoutineEditor` dialogs. `ArchiveDetail` reads saved archive snapshots and never routes historical
+progress through the live event editor. Settings keeps one shared tree for both interfaces, with
+separate default-view/custom-content pages and direct game profiles. Structured is the absent-value
+default at prepaint, preference normalization, setup and appearance application. No state keys,
+event identities or stored clock revisions changed for this presentation correction.

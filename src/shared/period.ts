@@ -31,6 +31,8 @@ const DayKey = z
   });
 
 export const PeriodSchema = z.union([
+  /** Every game-day: a reader's own daily, rolling on its reset. */
+  z.object({ unit: z.literal("day") }),
   z.object({ unit: z.literal("week"), startsOn: WeekdaySchema }),
   /** Day of month; 31 means "the last day" in a shorter month. */
   z.object({ unit: z.literal("month"), startsOn: z.number().int().min(1).max(31) }),
@@ -73,7 +75,10 @@ export function periodOf(
 ): { start: string; days: string[] } {
   let start: string;
   let next: string;
-  if (period.unit === "week") {
+  if (period.unit === "day") {
+    start = today;
+    next = addDays(today, 1);
+  } else if (period.unit === "week") {
     start = addDays(today, -((isoWeekday(today) - period.startsOn + 7) % 7));
     next = addDays(start, 7);
   } else if (period.unit === "cycle") {

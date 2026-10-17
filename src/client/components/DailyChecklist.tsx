@@ -1,3 +1,4 @@
+import type { ResetTiming } from "../../shared/time.ts";
 import {
   CATCH_UP_DAYS,
   catchUpDays,
@@ -33,7 +34,9 @@ export function DailyChecklist({
   logged,
   onToggleDay,
   goal,
+  timing,
 }: {
+  timing?: ResetTiming | undefined;
   startsMs: number;
   endsMs: number | null;
   region: Region;
@@ -49,7 +52,7 @@ export function DailyChecklist({
    */
   goal?: GoalStatus | undefined;
 }) {
-  const summary = dailySummary({ startsMs, endsMs, region, game, now, logged });
+  const summary = dailySummary({ startsMs, endsMs, region, game, now, logged, ...(timing === undefined ? {} : { timing }) });
   const { days, today, doneToday, todayInWindow } = summary;
   const started = now >= startsMs;
 
@@ -58,7 +61,7 @@ export function DailyChecklist({
       <div className="flex items-baseline justify-between gap-3">
         <p className="eyebrow">Daily checklist</p>
         <p className="tnum text-[0.6875rem] text-faint">
-          resets in {formatRemaining(msUntilReset(now, region, game))}
+          resets in {formatRemaining(msUntilReset(now, region, game, timing))}
         </p>
       </div>
 
@@ -113,7 +116,7 @@ export function DailyChecklist({
               yesterday could never say so. Only the past, and only as far back
               as `catchUpDays` goes. */}
           <div className="mt-3 flex flex-wrap gap-1">
-            {catchUpDays(now, region, game, startsMs).map((day) => (
+            {catchUpDays(now, region, game, startsMs, undefined, timing).map((day) => (
               <DayPip
                 key={day}
                 day={day}

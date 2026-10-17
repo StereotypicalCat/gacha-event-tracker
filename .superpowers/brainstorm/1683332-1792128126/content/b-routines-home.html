@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>B · Routines get their own home</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ground:#0e1117; --panel:#141923; --raised:#1c2230; --rule:#232a38; --rule-strong:#323b4e;
+  --ink:#e4e7ef; --ink-strong:#fff; --muted:#8b93a7; --faint:#5d6579;
+  --calm:#55607f; --near:#5b8def; --soon:#e8b33c; --critical:#ff4d6a;
+  --fill:#c9cedb;
+  --chrome-bg:#e9e4d4; --chrome-ink:#2a2a2a;
+}
+:root[data-theme="light"]{
+  --ground:#eef0f5; --panel:#ffffff; --raised:#e2e6ef; --rule:#d3d8e3; --rule-strong:#b9c0cf;
+  --ink:#151824; --ink-strong:#000; --muted:#525a70; --faint:#757d92;
+  --calm:#8a92a8; --near:#2b62c6; --soon:#8a6008; --critical:#c81e3c; --fill:#3a4152;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--ground);color:var(--ink);font:400 14px/1.5 Barlow,system-ui,sans-serif;font-variant-numeric:tabular-nums;padding-top:40px;min-height:100vh}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+input,select{font:inherit;color:var(--ink);background:var(--ground);border:1px solid var(--rule-strong);border-radius:3px;padding:6px 8px}
+:focus-visible{outline:2px solid var(--near);outline-offset:2px}
+.cond{font-family:"Barlow Condensed",Barlow,sans-serif}
+
+/* ---------- prototype chrome ---------- */
+#chrome{position:fixed;inset:0 0 auto 0;height:40px;z-index:50;background:var(--chrome-bg);color:var(--chrome-ink);display:flex;align-items:center;gap:6px;padding:0 12px;font:500 12px/1 system-ui,sans-serif;border-bottom:2px dashed #b9b29a;overflow-x:auto;white-space:nowrap}
+#chrome b{font-weight:700;margin-right:8px}
+#chrome button{padding:5px 8px;border-radius:3px;border:1px solid #c4bda4;background:#f6f2e6}
+#chrome button[aria-pressed="true"]{background:#2a2a2a;color:#f6f2e6;border-color:#2a2a2a}
+#chrome .sp{flex:1}
+
+/* ---------- app shell ---------- */
+.shell{max-width:1320px;margin:0 auto;border-inline:1px solid var(--rule);min-height:calc(100vh - 40px)}
+header.top{display:flex;align-items:flex-end;gap:28px;padding:18px 24px 0;border-bottom:1px solid var(--rule)}
+.mark{font:700 20px/1 "Barlow Condensed";letter-spacing:.04em;padding-bottom:14px}
+.mark span{color:var(--near)}
+nav.tabs{display:flex;gap:2px;flex:1}
+nav.tabs button{padding:10px 14px 12px;font:600 15px/1 "Barlow Condensed";letter-spacing:.03em;color:var(--faint);border-bottom:2px solid transparent;margin-bottom:-1px;display:flex;gap:6px;align-items:baseline}
+nav.tabs button:hover{color:var(--muted)}
+nav.tabs button[aria-current="page"]{color:var(--ink);border-color:var(--ink)}
+nav.tabs .n{font:500 12px Barlow;color:var(--faint)}
+nav.tabs .gear{margin-left:auto}
+nav.tabs svg{width:15px;height:15px;align-self:center}
+
+/* ---------- events screen ---------- */
+.ev{display:grid;grid-template-columns:340px 1fr;min-height:calc(100vh - 100px)}
+.rail{border-right:1px solid var(--rule)}
+.head{padding:22px 24px 20px;border-bottom:1px solid var(--rule)}
+.legend{font-size:12px;color:var(--faint);margin:0 0 6px}
+.head h2{font:600 30px/1.05 "Barlow Condensed";margin:0 0 6px;letter-spacing:.005em}
+.head .game{font-weight:500;font-size:14px}
+.big{font:700 64px/1 "Barlow Condensed";letter-spacing:-.01em;margin:16px 0 4px}
+.big small{font-size:18px;font-weight:600;color:var(--muted);margin-left:6px;letter-spacing:0}
+.exact{font-size:12px;color:var(--faint);margin-bottom:12px}
+.meter{display:flex;gap:2px;height:9px}
+.meter i{flex:1;background:var(--rule);border-radius:1px}
+.meter i.on{background:var(--h)}
+.meter.unknown{background:repeating-linear-gradient(135deg,var(--rule) 0 3px,transparent 3px 6px);}
+.meter.unknown i{background:transparent}
+.then{list-style:none;margin:16px 0 0;padding:12px 0 0;border-top:1px solid var(--rule)}
+.then li{display:flex;gap:8px;align-items:baseline;font-size:13px;padding:3px 0;color:var(--muted)}
+.then .dot{width:7px;height:7px;border-radius:50%;background:var(--g);flex:none;transform:translateY(-1px)}
+.then .t{flex:1}
+.then .r{font:600 14px "Barlow Condensed"}
+
+.rstrip{display:block;width:100%;text-align:left;padding:18px 24px;border-bottom:1px solid var(--rule)}
+.rstrip:hover{background:var(--panel)}
+.rstrip .row1{display:flex;justify-content:space-between;align-items:baseline}
+.rstrip .lbl{font:600 16px "Barlow Condensed";letter-spacing:.02em}
+.rstrip .go{font-size:12px;color:var(--near)}
+.rstrip .nums{display:flex;gap:18px;margin-top:8px}
+.rstrip .nums div{font-size:12px;color:var(--faint)}
+.rstrip .nums b{display:block;font:600 22px/1.1 "Barlow Condensed";color:var(--ink)}
+.rstrip .nums b.due{color:var(--soon)}
+.rstrip.empty .lbl{color:var(--muted)}
+.rstrip p{margin:6px 0 0;font-size:13px;color:var(--muted)}
+
+.mine{padding:18px 24px}
+.mine h3{font:600 16px "Barlow Condensed";letter-spacing:.02em;margin:0 0 8px;display:flex;justify-content:space-between}
+.mine h3 button{font:500 12px Barlow;color:var(--near)}
+.mine p{font-size:13px;color:var(--muted);margin:0}
+
+.main{min-width:0}
+.notice{margin:0;padding:14px 24px;border-bottom:1px solid var(--rule);background:color-mix(in srgb,var(--near) 9%,transparent);display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.notice p{margin:0;flex:1;min-width:220px}
+.notice strong{font-weight:600}
+.btn{padding:7px 12px;border:1px solid var(--rule-strong);border-radius:3px;font-weight:500;font-size:13px;color:var(--muted)}
+.btn:hover{color:var(--ink);border-color:var(--muted)}
+.btn.solid{background:var(--ink);color:var(--ground);border-color:var(--ink)}
+.btn.solid:hover{background:var(--ink-strong)}
+.btn.link{border:0;padding:7px 4px;color:var(--near)}
+
+.ledger-h{display:flex;justify-content:space-between;align-items:baseline;padding:20px 24px 10px;gap:12px;flex-wrap:wrap}
+.ledger-h h2{font:600 22px "Barlow Condensed";margin:0;letter-spacing:.02em}
+.ledger-h .sub{font-size:12px;color:var(--faint)}
+.seg{display:inline-flex;border:1px solid var(--rule-strong);border-radius:3px}
+.seg button{padding:5px 10px;font-size:12px;color:var(--faint)}
+.seg button[aria-pressed="true"]{background:var(--raised);color:var(--ink)}
+table.led{width:100%;border-collapse:collapse}
+table.led th{font:500 12px Barlow;color:var(--faint);text-align:left;padding:6px 12px;border-bottom:1px solid var(--rule-strong);white-space:nowrap}
+table.led td{padding:12px 12px;border-bottom:1px solid var(--rule);vertical-align:middle}
+table.led th:first-child,table.led td:first-child{padding-left:24px}
+table.led th:last-child,table.led td:last-child{padding-right:24px}
+table.led tbody tr{cursor:pointer}
+table.led tbody tr:hover{background:var(--panel)}
+.gcell{display:flex;align-items:center;gap:10px;white-space:nowrap;font-weight:600;font-size:13px;color:var(--g)}
+.gcell::before{content:"";width:3px;height:26px;border-radius:2px;background:var(--g)}
+.tcell{font-weight:500;font-size:15px}
+.tcell .tag{font-size:11px;color:var(--faint);border:1px solid var(--rule-strong);border-radius:2px;padding:0 5px;margin-left:8px;font-weight:500;vertical-align:2px}
+.tcell .tag.own{color:var(--g);border-color:color-mix(in srgb,var(--g) 45%,transparent)}
+.mcell{width:34%}
+.cd{font:600 20px "Barlow Condensed";text-align:right;white-space:nowrap}
+.cd.calm{color:var(--calm)}.cd.near{color:var(--near)}.cd.soon{color:var(--soon)}.cd.critical{color:var(--critical)}.cd.unk{color:var(--faint);font-size:14px}
+tr.done{opacity:.4}
+tr.done .tcell{text-decoration:line-through}
+.more{padding:12px 24px;font-size:13px;color:var(--muted)}
+
+/* ---------- routines board ---------- */
+.rt-top{display:flex;align-items:flex-end;gap:16px;padding:22px 24px 16px;border-bottom:1px solid var(--rule);flex-wrap:wrap}
+.rt-top h1{font:700 34px/1 "Barlow Condensed";margin:0;letter-spacing:.01em}
+.rt-top .sum{font-size:13px;color:var(--muted);flex:1;min-width:200px}
+.band{border-bottom:1px solid var(--rule)}
+.band-h{display:grid;grid-template-columns:1fr auto;align-items:end;padding:22px 24px 10px;gap:12px;border-bottom:1px solid var(--rule-strong)}
+.band-h h2{font:700 26px/1 "Barlow Condensed";margin:0;letter-spacing:.02em}
+.band-h .meta{font-size:12px;color:var(--faint);margin-top:4px}
+.band-h .reset{text-align:right}
+.band-h .reset .k{font-size:12px;color:var(--faint)}
+.band-h .reset .v{font:700 34px/1 "Barlow Condensed"}
+table.rt{width:100%;border-collapse:collapse;table-layout:fixed}
+table.rt td:nth-child(4){width:150px;text-align:right}
+table.rt td{padding:10px 12px;border-bottom:1px solid var(--rule);vertical-align:middle}
+table.rt td:first-child{padding-left:24px;width:150px}
+table.rt td:last-child{padding-right:24px;text-align:right;width:44px}
+table.rt tr:last-child td{border-bottom:0}
+.rtitle{font-weight:500;font-size:15px}
+.rtitle .src{display:block;font-size:12px;color:var(--faint);font-weight:400}
+.prog{width:34%}
+.amt{display:flex;align-items:center;gap:12px;width:100%;text-align:left}
+.amt .bar{flex:1;height:6px;background:var(--rule);position:relative;border-radius:1px;overflow:hidden}
+.amt .bar i{position:absolute;inset:0 auto 0 0;background:var(--fill)}
+.amt .bar.full i{background:var(--g)}
+.amt .num{font:600 15px "Barlow Condensed";min-width:120px;text-align:right;color:var(--muted)}
+.amt .num b{color:var(--ink);font-weight:600}
+.amt input{width:90px;padding:3px 6px}
+.tick{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.tick .box{width:18px;height:18px;border:1px solid var(--rule-strong);border-radius:3px;display:grid;place-items:center}
+.tick[aria-pressed="true"]{color:var(--ink)}
+.tick[aria-pressed="true"] .box{background:var(--g);border-color:var(--g)}
+.tick svg{width:12px;height:12px;stroke:var(--ground);stroke-width:3;fill:none;opacity:0}
+.tick[aria-pressed="true"] svg{opacity:1}
+.cyc{font:600 14px "Barlow Condensed";color:var(--muted);white-space:nowrap}
+.kebab{width:28px;height:28px;border-radius:3px;display:inline-grid;place-items:center;color:var(--faint);position:relative}
+.kebab:hover{background:var(--raised);color:var(--ink)}
+.menu{position:absolute;right:0;top:30px;z-index:20;background:var(--panel);border:1px solid var(--rule-strong);border-radius:4px;min-width:180px;text-align:left;padding:4px;box-shadow:0 8px 24px rgb(0 0 0 / .35)}
+.menu button{display:block;width:100%;text-align:left;padding:7px 10px;font-size:13px;color:var(--muted);border-radius:3px}
+.menu button:hover{background:var(--raised);color:var(--ink)}
+.menu button.danger:hover{color:var(--critical)}
+tr.met .rtitle{color:var(--muted)}
+.empty-band{padding:14px 24px;font-size:13px;color:var(--faint)}
+.empty-state{padding:72px 24px;max-width:560px}
+.empty-state h2{font:700 30px/1.1 "Barlow Condensed";margin:0 0 10px}
+.empty-state p{color:var(--muted);margin:0 0 20px;max-width:46ch}
+
+/* ---------- library drawer ---------- */
+.scrim{position:fixed;inset:40px 0 0 0;background:rgb(8 10 14 / .6);z-index:30}
+:root[data-theme="light"] .scrim{background:rgb(26 31 48 / .35)}
+.drawer{position:fixed;top:40px;right:0;bottom:0;width:min(560px,100vw);background:var(--panel);border-left:1px solid var(--rule-strong);z-index:31;display:flex;flex-direction:column}
+.drawer-h{padding:20px 24px 14px;border-bottom:1px solid var(--rule)}
+.drawer-h .r1{display:flex;justify-content:space-between;align-items:center}
+.drawer-h h2{font:700 28px/1 "Barlow Condensed";margin:0}
+.drawer-h p{margin:6px 0 12px;font-size:13px;color:var(--muted)}
+.drawer-h input{width:100%}
+.close{width:32px;height:32px;display:grid;place-items:center;border-radius:3px;color:var(--muted)}
+.close:hover{background:var(--raised);color:var(--ink)}
+.drawer-b{overflow:auto;flex:1}
+.lg{border-bottom:1px solid var(--rule)}
+.lg-h{display:flex;align-items:center;gap:10px;padding:16px 24px 8px;flex-wrap:wrap}
+.lg-h .nm{font:700 18px "Barlow Condensed";color:var(--g);letter-spacing:.02em;flex:1}
+.lg-h .cnt{font-size:12px;color:var(--faint)}
+.bulk{display:flex;gap:6px;padding:0 24px 10px;flex-wrap:wrap}
+.bulk button{font-size:12px;color:var(--muted);border:1px solid var(--rule-strong);border-radius:2px;padding:3px 8px}
+.bulk button:hover{color:var(--ink);border-color:var(--muted)}
+.li{display:grid;grid-template-columns:1fr auto;gap:12px;padding:9px 24px;border-top:1px solid var(--rule);align-items:center}
+.li .t{font-weight:500}
+.li .d{font-size:12px;color:var(--faint)}
+.fol{font-size:12px;font-weight:600;padding:5px 10px;border-radius:3px;border:1px solid var(--rule-strong);color:var(--muted);min-width:92px}
+.fol:hover{color:var(--ink);border-color:var(--muted)}
+.fol[aria-pressed="true"]{background:color-mix(in srgb,var(--g) 16%,transparent);border-color:color-mix(in srgb,var(--g) 60%,transparent);color:var(--ink)}
+.others summary{padding:14px 24px;cursor:pointer;color:var(--muted);font-size:13px}
+.create{padding:18px 24px 28px;border-top:1px solid var(--rule-strong);background:var(--ground)}
+.create h3{font:700 20px "Barlow Condensed";margin:0 0 4px}
+.create p{font-size:13px;color:var(--muted);margin:0 0 12px}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--faint)}
+.form .full{grid-column:1/-1}
+.pills{display:flex;gap:4px;flex-wrap:wrap}
+.pills button{font-size:12px;padding:5px 9px;border:1px solid var(--rule-strong);border-radius:2px;color:var(--muted)}
+.pills button[aria-pressed="true"]{border-color:var(--near);color:var(--ink);background:color-mix(in srgb,var(--near) 14%,transparent)}
+
+/* ---------- settings ---------- */
+.set{max-width:820px;padding:8px 24px 60px}
+.set h1{font:700 34px/1 "Barlow Condensed";margin:22px 0 6px}
+.set .intro{color:var(--muted);margin:0 0 18px;max-width:60ch}
+.sec{display:grid;grid-template-columns:200px 1fr;gap:24px;padding:22px 0;border-top:1px solid var(--rule)}
+.sec>*{align-self:start}
+.sec .seg{justify-self:start}
+.sec h2{font:700 20px "Barlow Condensed";margin:0;letter-spacing:.02em}
+.sec .hint{font-size:12px;color:var(--faint);margin-top:4px}
+.grow{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--rule)}
+.grow:last-child{border-bottom:0}
+.grow .sw{width:10px;height:10px;border-radius:2px;background:var(--g)}
+.grow .nm{flex:1}
+.grow.off .nm{color:var(--faint)}
+.grow .ord{width:26px;height:26px;border-radius:3px;color:var(--faint);display:grid;place-items:center}
+.grow .ord:hover{background:var(--raised);color:var(--ink)}
+.chk{display:flex;gap:10px;align-items:flex-start;padding:6px 0;cursor:pointer}
+.chk input{margin-top:3px;accent-color:var(--near)}
+.chk small{display:block;color:var(--faint);font-size:12px}
+.pointer{font-size:13px;color:var(--muted);border-left:2px solid var(--rule-strong);padding:4px 0 4px 12px;margin-top:4px}
+
+/* ---------- archive ---------- */
+.arc-sum{display:flex;gap:32px;padding:20px 24px;border-bottom:1px solid var(--rule);flex-wrap:wrap}
+.arc-sum div{font-size:12px;color:var(--faint)}
+.arc-sum b{display:block;font:700 30px/1.1 "Barlow Condensed";color:var(--ink)}
+.filters{display:flex;gap:12px;padding:14px 24px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--rule-strong)}
+.st{font-size:12px;font-weight:500;padding:1px 6px;border-radius:2px}
+.st.c{color:var(--near);background:color-mix(in srgb,var(--near) 15%,transparent)}
+.st.i{color:var(--muted);border:1px solid var(--rule-strong)}
+
+/* ---------- timeline (stub) ---------- */
+.tl{padding:20px 24px}
+.tl-row{display:grid;grid-template-columns:120px 1fr;align-items:center;border-bottom:1px solid var(--rule);height:40px}
+.tl-row .n{font-weight:600;font-size:13px;color:var(--g)}
+.tl-track{position:relative;height:100%}
+.tl-bar{position:absolute;top:8px;height:24px;border-radius:3px;background:color-mix(in srgb,var(--g) 24%,var(--panel));border-left:3px solid var(--g);font-size:12px;padding:3px 8px;white-space:nowrap;overflow:hidden}
+.tl-now{position:absolute;top:0;bottom:0;width:1px;background:var(--critical)}
+
+/* ---------- onboarding ---------- */
+.ob{max-width:760px;margin:0 auto;padding:40px 24px 80px}
+.ob .step{font-size:12px;color:var(--faint);margin-bottom:8px}
+.ob h1{font:700 44px/1.02 "Barlow Condensed";margin:0 0 10px}
+.ob .lede{color:var(--muted);max-width:54ch;margin:0 0 24px}
+.gpick{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--rule)}
+.gpick button{display:flex;align-items:center;gap:10px;padding:11px 12px;border-bottom:1px solid var(--rule);text-align:left;color:var(--muted)}
+.gpick button:nth-child(odd){border-right:1px solid var(--rule)}
+.gpick button .sw{width:12px;height:12px;border-radius:2px;border:1px solid var(--g)}
+.gpick button[aria-pressed="true"]{color:var(--ink);background:color-mix(in srgb,var(--g) 9%,transparent)}
+.gpick button[aria-pressed="true"] .sw{background:var(--g)}
+.gpick button:hover{color:var(--ink)}
+.ob-foot{display:flex;gap:12px;align-items:center;margin-top:28px;flex-wrap:wrap}
+.ob-foot .cnt{color:var(--faint);font-size:13px;flex:1}
+.ob-g{border-top:1px solid var(--rule-strong);margin-top:6px}
+.ob-g .lg-h{padding-left:0;padding-right:0}
+.ob-g .li{padding-left:0;padding-right:0}
+
+/* ---------- detail sheet ---------- */
+.sheet{position:fixed;z-index:31;left:50%;top:50%;transform:translate(-50%,-50%);width:min(480px,calc(100vw - 32px));background:var(--panel);border:1px solid var(--rule-strong);border-radius:6px;padding:22px 24px}
+.sheet h2{font:700 26px/1.05 "Barlow Condensed";margin:4px 0 8px}
+.sheet .acts{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
+
+/* ---------- why panel ---------- */
+.why{position:fixed;top:40px;left:0;bottom:0;width:min(460px,100vw);z-index:40;background:#f6f2e6;color:#232323;border-right:2px dashed #b9b29a;overflow:auto;padding:22px 24px 40px;font:400 14px/1.55 system-ui,sans-serif}
+.why h2{font:700 18px system-ui;margin:0 0 8px}
+.why h3{font:700 14px system-ui;margin:20px 0 6px}
+.why code,.why pre{font:12px/1.5 ui-monospace,Menlo,monospace;background:#ebe5d3;border-radius:3px}
+.why code{padding:1px 4px}
+.why pre{padding:10px;overflow:auto;white-space:pre}
+.why ul{padding-left:18px;margin:6px 0}
+.why .x{float:right;border:1px solid #c4bda4;border-radius:3px;padding:3px 8px;background:#fff}
+
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--raised);border:1px solid var(--rule-strong);border-radius:4px;padding:10px 14px;z-index:45;font-size:13px;display:flex;gap:12px;box-shadow:0 8px 24px rgb(0 0 0 / .35)}
+
+@media (max-width:860px){
+  .ev{grid-template-columns:1fr}
+  .rail{border-right:0}
+  .mcell,table.led .h-meter{display:none}
+  table.led .h-game,table.led td.gc{display:none}
+  .tcell .gsm{display:block;font-size:12px;font-weight:600;color:var(--g)}
+  table.rt{table-layout:auto}
+  table.rt td:first-child,table.rt td:nth-child(4){display:none}
+  nav.tabs button{white-space:nowrap}
+  .rt-top h1{width:100%}
+  table.rt td:nth-child(2){padding-left:24px}
+  .rtitle .gsm{display:block;font-size:12px;font-weight:600;color:var(--g)}
+  .prog{width:auto}
+  .amt .bar{display:none}
+  .amt .num{min-width:0}
+  .sec{grid-template-columns:1fr;gap:10px}
+  .gpick{grid-template-columns:1fr}
+  .gpick button:nth-child(odd){border-right:0}
+  header.top{gap:12px;padding:12px 16px 0;flex-wrap:wrap}
+  .mark{padding-bottom:4px}
+  nav.tabs{overflow-x:auto;width:100%}
+  nav.tabs button{padding:10px 10px 12px}
+  .big{font-size:52px}
+  .band-h .reset .v{font-size:26px}
+  .ob h1{font-size:34px}
+}
+@media (min-width:861px){ .gsm{display:none} }
+@media (prefers-reduced-motion:no-preference){
+  .drawer{animation:slide .18s ease-out}
+  @keyframes slide{from{transform:translateX(24px);opacity:.6}}
+}
+</style>
+</head>
+<body>
+<div id="chrome"></div>
+<div id="app"></div>
+<div id="overlay"></div>
+
+<script>
+// ---------- real content (from the feed and src/shared/routines.ts) ----------
+const NOW = Date.parse("2026-10-16T12:00:00Z");
+const GAMES = [{"id":"genshin","name":"Genshin Impact","short":"Genshin","hue":"#4EA8DE","chores":"Commissions, resin"},{"id":"hsr","name":"Honkai: Star Rail","short":"Star Rail","hue":"#7B8CFF","chores":"Daily training, Trailblaze Power"},{"id":"zzz","name":"Zenless Zone Zero","short":"ZZZ","hue":"#F2A03D","chores":"Daily missions, battery"},{"id":"wuwa","name":"Wuthering Waves","short":"Wuwa","hue":"#3DD6A0","chores":"Daily activity, waveplate"},{"id":"arknights","name":"Arknights","short":"Arknights","hue":"#9AA3B8","chores":"Daily missions, sanity"},{"id":"endfield","name":"Arknights: Endfield","short":"Endfield","hue":"#E8635A","chores":"Daily missions"},{"id":"nte","name":"Neverness to Everness","short":"NTE","hue":"#C77DFF","chores":"Daily tasks"},{"id":"nikki","name":"Infinity Nikki","short":"Nikki","hue":"#F27BB0","chores":"Daily tasks, Vital Energy"},{"id":"p5x","name":"Persona 5: The Phantom X","short":"P5X","hue":"#D62246","chores":"Daily missions, stamina"},{"id":"r1999","name":"Reverse: 1999","short":"R1999","hue":"#C9A227","chores":"Daily missions"},{"id":"ba","name":"Blue Archive","short":"Blue Archive","hue":"#3FCBDD","chores":"Daily missions, AP"},{"id":"fgo","name":"Fate/Grand Order","short":"FGO","hue":"#6F8BE0","chores":"Daily Quests, AP"},{"id":"gfl2","name":"Girls' Frontline 2: Exilium","short":"GFL2","hue":"#A9C23F","chores":"Daily missions"},{"id":"stellasora","name":"Stella Sora","short":"Stella Sora","hue":"#2E9E9E","chores":"Daily missions"},{"id":"czn","name":"Chaos Zero Nightmare","short":"CZN","hue":"#B84A9C","chores":"Daily missions"},{"id":"nikke","name":"Goddess of Victory: Nikke","short":"Nikke","hue":"#E4572E","chores":"Daily missions, outpost"},{"id":"uma","name":"Umamusume: Pretty Derby","short":"Umamusume","hue":"#6FBF44","chores":"Daily races, missions"},{"id":"hi3","name":"Honkai Impact 3rd","short":"Honkai 3rd","hue":"#8B5CF6","chores":"Daily missions, stamina"},{"id":"pgr","name":"Punishing: Gray Raven","short":"PGR","hue":"#CC292B","chores":"Daily missions, serum"}];
+const G = Object.fromEntries(GAMES.map(g=>[g.id,g]));
+const RAW_ROUTINES = [["routine:genshin:weekly-bosses","genshin","Weekly Bosses",{"unit":"week"},{"kind":"amount","target":3,"unit":"runs"}],["routine:genshin:battle-pass-exp","genshin","Battle Pass weekly EXP",{"unit":"week"},{"kind":"amount","target":10000,"unit":"EXP"}],["routine:genshin:bounties","genshin","Reputation Bounties",{"unit":"week"},{"kind":"amount","target":3,"unit":"bounties"}],["routine:genshin:requests","genshin","Reputation Requests",{"unit":"week"},{"kind":"amount","target":3,"unit":"requests"}],["routine:genshin:realm-depot","genshin","Realm Depot: Realm Treasures",{"unit":"week"},{"kind":"days","required":1}],["routine:genshin:paimons-bargains","genshin","Paimon's Bargains: Intertwined Fates",{"unit":"month"},{"kind":"amount","target":5,"unit":"fates"},"premium"],["routine:genshin:paimons-bargains-acquaint","genshin","Paimon's Bargains: Acquaint Fates",{"unit":"month"},{"kind":"amount","target":5,"unit":"fates"},"standard"],["routine:genshin:spiral-abyss","genshin","Spiral Abyss",{"unit":"month","startsOn":16},{"kind":"days","required":1}],["routine:genshin:imaginarium-theater","genshin","Imaginarium Theater",{"unit":"month"},{"kind":"days","required":1}],["routine:hsr:echo-of-war","hsr","Echo of War",{"unit":"week"},{"kind":"amount","target":3,"unit":"runs"}],["routine:hsr:nameless-honor-exp","hsr","Nameless Honor weekly EXP",{"unit":"week"},{"kind":"amount","target":8000,"unit":"EXP"}],["routine:hsr:embers-exchange","hsr","Embers Exchange: Star Rail Special Pass",{"unit":"month"},{"kind":"amount","target":5,"unit":"passes"},"premium"],["routine:hsr:embers-exchange-standard","hsr","Embers Exchange: Star Rail Pass",{"unit":"month"},{"kind":"amount","target":5,"unit":"passes"},"standard"],["routine:hsr:points","hsr","Divergent Universe & Currency Wars points",{"unit":"week"},{"kind":"amount","target":18000,"unit":"points"}],["routine:hsr:pure-fiction","hsr","Pure Fiction",{"unit":"cycle","days":42,"from":"2026-10-19"},{"kind":"days","required":1}],["routine:hsr:memory-of-chaos","hsr","Memory of Chaos",{"unit":"cycle","days":42,"from":"2026-11-02"},{"kind":"days","required":1}],["routine:hsr:apocalyptic-shadow","hsr","Apocalyptic Shadow",{"unit":"cycle","days":42,"from":"2026-11-16"},{"kind":"days","required":1}],["routine:zzz:ridu-weekly","zzz","Ridu Weekly",{"unit":"week"},{"kind":"amount","target":2100,"unit":"points"}],["routine:zzz:bounty-commissions","zzz","Bounty Commissions",{"unit":"week"},{"kind":"amount","target":8000,"unit":"points"}],["routine:zzz:notorious-hunt","zzz","Notorious Hunt",{"unit":"week"},{"kind":"amount","target":3,"unit":"runs"}],["routine:zzz:city-fund-exp","zzz","New Eridu City Fund weekly EXP",{"unit":"week"},{"kind":"amount","target":10000,"unit":"EXP"}],["routine:zzz:signal-shop-tapes","zzz","Signal Shop: Encrypted Master Tapes",{"unit":"month"},{"kind":"amount","target":5,"unit":"tapes"},"premium"],["routine:zzz:signal-shop-master-tapes","zzz","Signal Shop: Master Tapes",{"unit":"month"},{"kind":"amount","target":5,"unit":"tapes"},"standard"],["routine:zzz:signal-shop-boopons","zzz","Signal Shop: Boopons",{"unit":"month"},{"kind":"amount","target":5,"unit":"Boopons"},"premium"],["routine:zzz:shiyu-defense","zzz","Shiyu Defense",{"unit":"cycle","days":14,"from":"2026-10-16"},{"kind":"days","required":1}],["routine:zzz:deadly-assault","zzz","Deadly Assault",{"unit":"cycle","days":14,"from":"2026-10-23"},{"kind":"days","required":1}],["routine:endfield:weekly-routine","endfield","Weekly Routine",{"unit":"week"},{"kind":"amount","target":10,"unit":"points"}],["routine:endfield:focus-commissions","endfield","Etchspace Salvage: Focus Commissions",{"unit":"week"},{"kind":"amount","target":3,"unit":"commissions"}],["routine:wuwa:weekly-challenge","wuwa","Weekly Challenge",{"unit":"week"},{"kind":"amount","target":3,"unit":"claims"}],["routine:wuwa:pioneer-podcast-exp","wuwa","Pioneer Podcast weekly EXP",{"unit":"week"},{"kind":"amount","target":12000,"unit":"EXP"}],["routine:wuwa:weekly-activities","wuwa","Weekly Activities",{"unit":"week"},{"kind":"amount","target":6000,"unit":"points"}],["routine:wuwa:tower-of-adversity","wuwa","Tower of Adversity",{"unit":"cycle","days":28,"from":"2026-11-09"},{"kind":"days","required":1}],["routine:nikki:mira-journey-exp","nikki","Mira Journey weekly EXP",{"unit":"week"},{"kind":"amount","target":8000,"unit":"Journey EXP"}],["routine:nikki:realm-of-breakthrough","nikki","Realm of Breakthrough",{"unit":"week"},{"kind":"amount","target":2,"unit":"trials"}],["routine:nikki:resonance-revelation","nikki","Resonance Store: Revelation Crystals",{"unit":"month"},{"kind":"amount","target":5,"unit":"crystals"},"premium"],["routine:nikki:resonance-resonite","nikki","Resonance Store: Resonite Crystals",{"unit":"month"},{"kind":"amount","target":5,"unit":"crystals"},"standard"],["routine:nte:season-pass-exp","nte","Season Pass weekly EXP",{"unit":"week"},{"kind":"amount","target":12000,"unit":"EXP"}],["routine:nte:anomaly-pilgrimage","nte","Anomaly Pilgrimage",{"unit":"week"},{"kind":"amount","target":3,"unit":"claims"}],["routine:nte:city-stamina","nte","City Stamina",{"unit":"week"},{"kind":"amount","target":700,"unit":"stamina"}],["routine:nte:realm-of-greed","nte","Realm of Greed",{"unit":"week"},{"kind":"days","required":1}],["routine:nte:special-city-commission","nte","Special City Commission",{"unit":"week"},{"kind":"days","required":1}],["routine:nte:beyond-the-rails","nte","Beyond the Rails",{"unit":"cycle","days":14,"from":"2026-10-22"},{"kind":"days","required":1}],["routine:nte:tycoon-fund","nte","Tycoon Incentive Fund",{"unit":"cycle","days":14,"from":"2026-10-26"},{"kind":"amount","target":1000000,"unit":"fons"}]];
+// Daily chores become routines too: one per game, from games.ts `dailyTasks`.
+const BUILTINS = [
+  ...GAMES.map(g=>({id:`routine:${g.id}:daily`,game:g.id,title:`Dailies: ${g.chores}`,period:{unit:"day"},measure:{kind:"days",required:1},src:"games.ts, the game's standing chores",builtin:true})),
+  ...RAW_ROUTINES.map(([id,game,title,period,measure,pulls])=>({id,game,title,period,measure,pulls,src:"Community wiki, checked 14 Oct 2026",builtin:true})),
+];
+const EVENTS = [["genshin","Anniversary Memories Album","2026-09-28","2026-10-18"],["zzz","Clink, Clank, Pinball Knight!","2026-09-10","2026-10-19"],["zzz","Diary of an Orbie Parent","2026-09-30","2026-10-19"],["nte","Stamina Recharge","2026-10-05","2026-10-19"],["zzz","Data Bounty - Combat Simulation","2026-10-14","2026-10-19"],["zzz","All-New Program","2026-09-09","2026-10-20"],["genshin","Predictive Victory Dynamics","2026-10-12","2026-10-20"],["wuwa","Bountiful Crescendo","2026-10-15","2026-10-22"],["hsr","4.6 Planar Fissure","2026-10-12","2026-10-25"],["wuwa","Artisan's Search","2026-10-08","2026-10-26"],["wuwa","Waking Moon Fishing","2026-10-15","2026-11-01"],["genshin","Battle Pass - Moontrace","2026-09-23","2026-11-02"],["genshin","To Temper Thyself and Journey Far","2026-08-10","2026-11-02"],["hsr","Love, Ghosts & Robots","2026-09-28","2026-11-11"],["hsr","Astral Imagea","2026-09-28","2026-11-11"],["nte","Pukaland Travelogue","2026-09-30","2026-11-11"],["wuwa","3.7 Moonlit Path","2026-09-30","2026-11-11"],["nte","Coal Lumps Treasure","2026-10-08","2026-11-11"],["hsr","Free Gilgamesh or Archer","2026-07-24",null]].map(([game,title,s,e],i)=>({id:"e"+i,game,title,start:Date.parse(s+"T03:00:00Z"),end:e?Date.parse(e+"T03:00:00Z"):null}));
+const OWN_EVENTS_SEED = [{id:"own1",game:"genshin",title:"Photo contest with the guild",start:Date.parse("2026-10-10T00:00:00Z"),end:Date.parse("2026-10-24T20:00:00Z"),own:true}];
+const ARCHIVE_SEED = [
+  {game:"zzz",title:"Hollow Zero: Lost Void – Season 3",end:"12 Oct",status:"done"},
+  {game:"genshin",title:"Overflowing Mastery",end:"9 Oct",status:"done"},
+  {game:"wuwa",title:"Ascendant Aces",end:"running",status:"ignored"},
+  {game:"hsr",title:"Garden of Plenty",end:"6 Oct",status:"done"},
+  {game:"nte",title:"Neon Nights Photo Hunt",end:"4 Oct",status:"ignored"},
+  {game:"genshin",title:"Moontrace",end:"running",status:"ignored"},
+  {game:"zzz",title:"Hollow Zero: Lost Void – Season 2",end:"28 Sep",status:"done"},
+];
+
+// ---------- clock ----------
+const DAY=864e5, H=36e5;
+const RESET_UTC_HOUR=3; // Europe server, 04:00 local
+function nextDaily(){let d=new Date(NOW);d.setUTCHours(RESET_UTC_HOUR,0,0,0);if(+d<=NOW)d=new Date(+d+DAY);return +d}
+function nextWeekly(){let t=nextDaily();while(new Date(t).getUTCDay()!==1)t+=DAY;return t}
+function nextMonthly(startsOn=1){const n=new Date(NOW);let d=Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),startsOn,RESET_UTC_HOUR);if(d<=NOW)d=Date.UTC(n.getUTCFullYear(),n.getUTCMonth()+1,startsOn,RESET_UTC_HOUR);return d}
+function nextCycle(p){const from=Date.parse(p.from+"T03:00:00Z"),len=p.days*DAY;let k=Math.floor((NOW-from)/len)+1;return from+k*len}
+function resetOf(r){const p=r.period;return p.unit==="day"?nextDaily():p.unit==="week"?nextWeekly():p.unit==="month"?nextMonthly(p.startsOn||1):nextCycle(p)}
+function dur(ms){if(ms<H)return Math.max(1,Math.round(ms/6e4))+"m";const d=Math.floor(ms/DAY),h=Math.floor(ms%DAY/H),m=Math.floor(ms%H/6e4);return d?`${d}d ${h}h`:`${h}h ${String(m).padStart(2,"0")}m`}
+function heat(ms){return ms==null?"unk":ms<DAY?"critical":ms<3*DAY?"soon":ms<7*DAY?"near":"calm"}
+const HEAT={calm:"var(--calm)",near:"var(--near)",soon:"var(--soon)",critical:"var(--critical)"};
+const fmt=n=>n.toLocaleString("en-GB");
+const dateStr=t=>new Date(t).toLocaleString("en-GB",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",timeZone:"UTC"})+" UTC";
+const PERIOD_LABEL={day:"Daily",week:"Weekly",month:"Monthly",cycle:"Cycle"};
+function periodWords(p){return p.unit==="day"?"Every day":p.unit==="week"?"Every Monday":p.unit==="month"?(p.startsOn&&p.startsOn!==1?`Every month on the ${p.startsOn}th`:"Every month on the 1st"):`Every ${p.days} days`}
+
+// ---------- state ----------
+const DEFAULT_GAMES=["genshin","hsr","zzz","wuwa","endfield","nte"];
+const DEFAULT_FOLLOWED=["routine:genshin:daily","routine:hsr:daily","routine:zzz:daily","routine:wuwa:daily","routine:genshin:weekly-bosses","routine:genshin:battle-pass-exp","routine:genshin:spiral-abyss","routine:hsr:echo-of-war","routine:hsr:points","routine:hsr:pure-fiction","routine:zzz:ridu-weekly","routine:zzz:notorious-hunt","routine:zzz:shiyu-defense","routine:wuwa:weekly-activities","routine:wuwa:tower-of-adversity","routine:endfield:weekly-routine","routine:nte:beyond-the-rails","mytask:a1"];
+const OWN_ROUTINES_SEED=[{id:"mytask:a1",game:"endfield",title:"Protocol Space weekly clear",period:{unit:"week"},measure:{kind:"days",required:1},src:"Yours",own:true}];
+const PROGRESS_SEED={"routine:genshin:daily":1,"routine:hsr:daily":1,"routine:genshin:weekly-bosses":2,"routine:genshin:battle-pass-exp":10000,"routine:hsr:echo-of-war":1,"routine:hsr:points":11200,"routine:zzz:ridu-weekly":1900,"routine:zzz:notorious-hunt":3,"routine:wuwa:weekly-activities":2400,"routine:endfield:weekly-routine":6};
+
+function fresh(){return{
+  tab:"events", group:"horizon", drawer:false, ob:null, returning:false, why:false,
+  games:[...DEFAULT_GAMES], followed:new Set(DEFAULT_FOLLOWED), own:[...OWN_ROUTINES_SEED],
+  ownEvents:[...OWN_EVENTS_SEED], progress:{...PROGRESS_SEED}, status:{}, archive:[...ARCHIVE_SEED],
+  q:"", editing:null, menu:null, sheet:null, region:"europe", theme:"dark", showUpcoming:false, showCompleted:true,
+  arcGame:"all", arcStatus:"all", toast:null, standardPulls:false, firstVisitRoutines:false,
+  form:{title:"",game:"genshin",unit:"week",days:14,kind:"days",target:1}
+}}
+let S=fresh();
+const all=()=>[...BUILTINS,...S.own];
+const byId=id=>all().find(r=>r.id===id);
+const followedList=()=>[...S.followed].map(byId).filter(r=>r&&S.games.includes(r.game));
+function isMet(r){const v=S.progress[r.id]||0;return r.measure.kind==="days"?v>=1:v>=r.measure.target}
+function counts(){const f=followedList();const today=f.filter(r=>r.period.unit==="day");return{total:f.length,left:f.filter(r=>!isMet(r)).length,todayLeft:today.filter(r=>!isMet(r)).length,today:today.length,weekLeft:f.filter(r=>r.period.unit==="week"&&!isMet(r)).length}}
+
+// ---------- render helpers ----------
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const gv=g=>`--g:${G[g]?.hue||"#9aa3b8"}`;
+const ICON={
+  gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+  dots:'<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>',
+  x:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  check:'<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></svg>',
+  up:'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 15l6-6 6 6"/></svg>',
+  down:'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>',
+};
+function meter(ev,n=24){if(ev.end==null)return `<div class="meter unknown">${"<i></i>".repeat(n)}</div>`;const frac=Math.max(0,(ev.end-NOW)/(ev.end-ev.start));const lit=Math.max(1,Math.round(frac*n));const h=HEAT[heat(ev.end-NOW)];return `<div class="meter" style="--h:${h}">${Array.from({length:n},(_,i)=>`<i class="${i<lit?"on":""}"></i>`).join("")}</div>`}
+
+// ---------- chrome ----------
+const JUMPS=[["main","Main"],["add","Add & choose systems"],["settings","Settings"],["onboard","Onboarding (new user)"],["returning","Returning user"],["archive","Archive"]];
+function currentJump(){if(S.ob)return"onboard";if(S.drawer)return"add";if(S.returning&&S.tab==="events")return"returning";if(S.tab==="settings")return"settings";if(S.tab==="archive")return"archive";if(S.tab==="events")return"main";return""}
+function renderChrome(){const c=currentJump();document.getElementById("chrome").innerHTML=`<b>B · Routines get their own home</b>${JUMPS.map(([k,l])=>`<button data-jump="${k}" aria-pressed="${c===k}">${l}</button>`).join("")}<span class="sp"></span><button data-act="why" aria-pressed="${S.why}">Why / foundation</button><button data-act="reset">Reset demo</button>`}
+function jump(k){S.drawer=false;S.ob=null;S.returning=false;S.sheet=null;S.menu=null;
+  if(k==="main")S.tab="events";
+  if(k==="add"){S.tab="routines";S.drawer=true}
+  if(k==="settings")S.tab="settings";
+  if(k==="archive")S.tab="archive";
+  if(k==="returning"){S.tab="events";S.returning=true}
+  if(k==="onboard"){S.ob={step:1,games:[],picks:new Set()}}
+}
+
+// ---------- screens ----------
+function tabs(){const c=counts();const t=[["events","Events",[...EVENTS,...S.ownEvents].filter(e=>S.games.includes(e.game)&&!S.status[e.id]).length],["timeline","Timeline",""],["routines","Routines",c.total?`${c.left} left`:""],["archive","Archive",S.archive.length]];
+  return `<header class="top"><div class="mark">EVENT<span>CLOCK</span></div><nav class="tabs" aria-label="Sections">${t.map(([k,l,n])=>`<button data-tab="${k}" ${S.tab===k?'aria-current="page"':""}>${l}${n!==""?` <span class="n">${n}</span>`:""}</button>`).join("")}<button class="gear" data-tab="settings" ${S.tab==="settings"?'aria-current="page"':""}>${ICON.gear}Settings</button></nav></header>`}
+
+function eventsScreen(){
+  const evs=[...EVENTS,...S.ownEvents].filter(e=>S.games.includes(e.game)).sort((a,b)=>(a.end??9e15)-(b.end??9e15));
+  const live=evs.filter(e=>S.status[e.id]!=="ignored"&&(S.showCompleted||S.status[e.id]!=="done"));
+  const next=live.find(e=>S.status[e.id]!=="done"&&e.end);const then=live.filter(e=>e!==next&&S.status[e.id]!=="done").slice(0,3);
+  const c=counts();
+  const strip=c.total?`<button class="rstrip" data-tab="routines"><div class="row1"><span class="lbl">Routines</span><span class="go">Open Routines</span></div>
+      <div class="nums"><div><b class="${c.todayLeft?"due":""}">${c.todayLeft}/${c.today}</b>left today</div><div><b>${c.weekLeft}</b>left this week</div><div><b>${dur(nextDaily()-NOW)}</b>to daily reset</div></div></button>`
+    :`<button class="rstrip empty" data-tab="routines"><div class="row1"><span class="lbl">Routines</span><span class="go">Browse the library</span></div><p>Follow dailies, weeklies and endgame cycles. They live on their own tab and stay out of this list.</p></button>`;
+  const rail=`<aside class="rail">${next?`<section class="head"><p class="legend">Next to expire</p><h2>${esc(next.title)}</h2><div class="game" style="color:${G[next.game].hue}">${G[next.game].name}${next.own?" · yours":""}</div>
+      <div class="big cond" style="color:${HEAT[heat(next.end-NOW)]}">${dur(next.end-NOW)}<small>left</small></div><div class="exact">Ends ${dateStr(next.end)}</div>${meter(next)}
+      <ul class="then">${then.map(e=>`<li style="${gv(e.game)}"><span class="dot"></span><span class="t">${esc(e.title)}</span><span class="r" style="color:${e.end?HEAT[heat(e.end-NOW)]:"var(--faint)"}">${e.end?dur(e.end-NOW):"no end"}</span></li>`).join("")}</ul></section>`:""}
+    ${strip}
+    <section class="mine"><h3>Your own events<button data-act="newevent">Add an event</button></h3><p>${S.ownEvents.length?`${S.ownEvents.length} of yours, mixed into the list and tagged “yours”.`:"None yet."} Built-in routines never show up here.</p></section></aside>`;
+  const notice=S.returning?`<div class="notice"><p><strong>Routines moved to their own tab.</strong> The ${c.total} you followed came with you, and nothing you ticked was lost. This list now holds events only.</p><button class="btn solid" data-act="takeme">Take me there</button><button class="btn link" data-act="dismiss">Got it</button></div>`:"";
+  const rows=live.map(e=>{const ms=e.end?e.end-NOW:null;const h=heat(ms);const st=S.status[e.id];return `<tr data-ev="${e.id}" class="${st==="done"?"done":""}" style="${gv(e.game)}"><td class="gc"><span class="gcell">${G[e.game].short}</span></td><td class="tcell"><span class="gsm">${G[e.game].short}</span>${esc(e.title)}${e.own?'<span class="tag own">yours</span>':""}</td><td class="mcell">${meter(e,30)}</td><td class="cd ${h}">${ms==null?"End unknown":dur(ms)}</td></tr>`}).join("");
+  return `<div class="ev">${rail}<section class="main">${notice}<div class="ledger-h"><div><h2>Running now</h2><div class="sub">${live.length} events in ${S.games.length} games · sorted by what ends first</div></div><div class="seg"><button aria-pressed="true">Ending soonest</button><button aria-pressed="false">Doing first</button></div></div>
+    <table class="led"><thead><tr><th class="h-game">Game</th><th>Event</th><th class="h-meter">Time left</th><th style="text-align:right">Ends in</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="more">Completed and ignored events move to the Archive tab.</div></section></div>`;
+}
+
+function routineRow(r){
+  const met=isMet(r);const v=S.progress[r.id]||0;let prog;
+  if(r.measure.kind==="days"){prog=`<button class="tick" data-tick="${r.id}" aria-pressed="${met}"><span class="box">${ICON.check}</span>${met?"Done":"To do"}</button>`}
+  else if(S.editing===r.id){prog=`<form class="amt" data-amtform="${r.id}"><input type="number" min="0" name="v" value="${v}" autofocus aria-label="Amount"><span class="num">/ ${fmt(r.measure.target)} ${esc(r.measure.unit||"")}</span><button class="btn" type="submit">Save</button></form>`}
+  else{const f=Math.min(1,v/r.measure.target);prog=`<button class="amt" data-amt="${r.id}" title="Enter an amount"><span class="bar ${f>=1?"full":""}"><i style="width:${f*100}%"></i></span><span class="num"><b>${fmt(v)}</b> / ${fmt(r.measure.target)} ${esc(r.measure.unit||"")}</span></button>`}
+  const cyc=r.period.unit==="cycle"?`<span class="cyc">${dur(resetOf(r)-NOW)} left in cycle</span>`:"";
+  const menu=S.menu===r.id?`<div class="menu" role="menu">${r.measure.kind==="amount"?`<button data-amt="${r.id}">Edit amount</button>`:""}<button data-act="target" data-id="${r.id}">Change target</button>${r.builtin?`<button data-act="mine" data-id="${r.id}">Make it mine</button>`:`<button data-act="editown" data-id="${r.id}">Edit</button>`}<button class="danger" data-unfollow="${r.id}">${r.own?"Delete":"Unfollow"}</button></div>`:"";
+  return `<tr class="${met?"met":""}" style="${gv(r.game)}"><td><span class="gcell">${G[r.game].short}</span></td><td class="rtitle"><span class="gsm">${G[r.game].short}</span>${esc(r.title)}${r.own?'<span class="tag own" style="font-size:11px;margin-left:8px;border:1px solid;border-radius:2px;padding:0 5px">yours</span>':""}${S.group==="game"?`<span class="src">${PERIOD_LABEL[r.period.unit]} · resets in ${dur(resetOf(r)-NOW)}</span>`:""}</td><td class="prog">${prog}</td><td>${cyc}</td><td><button class="kebab" data-menu="${r.id}" aria-label="More for ${esc(r.title)}" aria-expanded="${S.menu===r.id}">${ICON.dots}${menu}</button></td></tr>`;
+}
+function routinesScreen(){
+  const f=followedList();const c=counts();
+  const top=`<div class="rt-top"><h1>Routines</h1><div class="sum">${f.length?`${c.left} of ${c.total} still to do across ${new Set(f.map(r=>r.game)).size} games. Each one rolls on its own game's reset.`:"Things that reset: dailies, weeklies, monthlies and endgame cycles."}</div>${f.length?`<div class="seg"><button data-group="horizon" aria-pressed="${S.group==="horizon"}">By reset</button><button data-group="game" aria-pressed="${S.group==="game"}">By game</button></div>`:""}<button class="btn solid" data-act="library">Browse the library</button></div>`;
+  if(!f.length)return top+`<div class="empty-state"><h2>You're not following any routines yet</h2><p>Pick the dailies, weekly bosses, shop restocks and endgame modes you actually do. Nothing is on until you choose it, and your events list stays clean either way.</p><button class="btn solid" data-act="library">Browse the library</button> <button class="btn link" data-act="library-create">Create your own</button></div>`;
+  const order=r=>S.games.indexOf(r.game);
+  if(S.group==="game"){
+    return top+S.games.filter(g=>f.some(r=>r.game===g)).map(g=>{const rs=f.filter(r=>r.game===g);const left=rs.filter(r=>!isMet(r)).length;return `<section class="band"><div class="band-h" style="${gv(g)}"><div><h2 style="color:var(--g)">${G[g].name}</h2><div class="meta">${left} of ${rs.length} to do</div></div><div class="reset"><div class="k">Daily reset</div><div class="v cond">${dur(nextDaily()-NOW)}</div></div></div><table class="rt"><tbody>${rs.sort((a,b)=>resetOf(a)-resetOf(b)).map(routineRow).join("")}</tbody></table></section>`}).join("");
+  }
+  const bands=[["day","Today","Daily chores"],["week","This week","Rolls every Monday"],["month","This month","Shop restocks and monthly modes"],["cycle","Cycles","Endgame modes on their own clocks"]];
+  return top+bands.map(([u,name,meta])=>{const rs=f.filter(r=>r.period.unit===u).sort((a,b)=>u==="cycle"?resetOf(a)-resetOf(b):order(a)-order(b));const left=rs.filter(r=>!isMet(r)).length;
+    const nxt=u==="day"?nextDaily():u==="week"?nextWeekly():u==="month"?nextMonthly():rs.length?Math.min(...rs.map(resetOf)):null;
+    const left_ms=nxt?nxt-NOW:0;const bandCol=!rs.length||!left?"var(--faint)":left_ms<3*H?"var(--critical)":left_ms<DAY&&u!=="day"?"var(--soon)":"var(--ink)";
+    return `<section class="band"><div class="band-h"><div><h2>${name}</h2><div class="meta">${meta} · ${rs.length?`${left} of ${rs.length} to do`:"none followed"}</div></div><div class="reset"><div class="k">${u==="cycle"?"Next cycle ends":"Resets in"}</div><div class="v cond" style="color:${bandCol}">${nxt?dur(nxt-NOW):"—"}</div></div></div>${rs.length?`<table class="rt"><tbody>${rs.map(routineRow).join("")}</tbody></table>`:`<div class="empty-band">Nothing here. <button class="btn link" data-act="library">Add from the library</button></div>`}</section>`}).join("");
+}
+
+function libraryDrawer(){
+  const q=S.q.trim().toLowerCase();
+  const match=r=>!q||r.title.toLowerCase().includes(q)||G[r.game].name.toLowerCase().includes(q);
+  const vis=r=>S.standardPulls||r.pulls!=="standard";
+  const group=g=>{const rs=BUILTINS.filter(r=>r.game===g&&match(r)&&vis(r));if(!rs.length)return"";const n=rs.filter(r=>S.followed.has(r.id)).length;
+    const weekly=rs.filter(r=>r.period.unit==="week"),cyc=rs.filter(r=>r.period.unit==="cycle");
+    return `<section class="lg" style="${gv(g)}"><div class="lg-h"><span class="nm">${G[g].name}</span><span class="cnt">${n} of ${rs.length} followed</span></div>
+      <div class="bulk">${weekly.length?`<button data-bulk="${g}:week">${weekly.every(r=>S.followed.has(r.id))?"Unfollow":"Follow"} all weeklies</button>`:""}${cyc.length?`<button data-bulk="${g}:cycle">${cyc.every(r=>S.followed.has(r.id))?"Unfollow":"Follow"} all cycles</button>`:""}<button data-bulk="${g}:all">${n===rs.length?"Unfollow everything":"Follow everything"}</button></div>
+      ${rs.map(r=>{const on=S.followed.has(r.id);return `<div class="li"><div><div class="t">${esc(r.title)}</div><div class="d">${periodWords(r.period)} · ${r.measure.kind==="amount"?`${fmt(r.measure.target)} ${esc(r.measure.unit||"")}`:"tick when done"}${r.pulls==="standard"?" · standard banner":""} · ${esc(r.src)}</div></div><button class="fol" data-follow="${r.id}" aria-pressed="${on}">${on?"Following":"Follow"}</button></div>`}).join("")}</section>`};
+  const others=GAMES.map(g=>g.id).filter(g=>!S.games.includes(g));
+  const F=S.form;
+  return `<div class="scrim" data-act="closedrawer"></div><aside class="drawer" role="dialog" aria-label="Routine library"><div class="drawer-h"><div class="r1"><h2>Library</h2><button class="close" data-act="closedrawer" aria-label="Close">${ICON.x}</button></div><p>Built-in routines for your games, each from a dated source. Follow what you do; it appears on the Routines tab straight away.</p><input type="search" id="libq" placeholder="Search routines or games" value="${esc(S.q)}" aria-label="Search the library"></div>
+    <div class="drawer-b">${S.games.map(group).join("")}
+      ${others.length?`<details class="others"><summary>${others.length} games you don't follow</summary>${others.map(group).join("")}</details>`:""}
+      <section class="create" id="create"><h3>Create your own routine</h3><p>For anything the library doesn't have. It sits beside the built-ins and is marked as yours.</p>
+        <form class="form" id="createform"><label class="full">What is it<input name="title" required placeholder="Protocol Space weekly clear" value="${esc(F.title)}"></label>
+        <label>Game<select name="game">${S.games.map(g=>`<option value="${g}" ${F.game===g?"selected":""}>${G[g].name}</option>`).join("")}</select></label>
+        <label>Repeats<span class="pills">${[["day","Daily"],["week","Weekly"],["month","Monthly"],["cycle","Every N days"]].map(([u,l])=>`<button type="button" data-fu="${u}" aria-pressed="${F.unit===u}">${l}</button>`).join("")}</span></label>
+        ${F.unit==="cycle"?`<label>Days in a cycle<input name="days" type="number" min="2" max="366" value="${F.days}"></label>`:""}
+        <label>Done when<span class="pills"><button type="button" data-fk="days" aria-pressed="${F.kind==="days"}">I tick it</button><button type="button" data-fk="amount" aria-pressed="${F.kind==="amount"}">I reach a number</button></span></label>
+        ${F.kind==="amount"?`<label>Target<input name="target" type="number" min="1" value="${F.target}"></label>`:""}
+        <div class="full"><button class="btn solid" type="submit">Create and follow</button></div></form></section></div></aside>`;
+}
+
+function settingsScreen(){
+  const rows=[...S.games,...GAMES.map(g=>g.id).filter(g=>!S.games.includes(g))];
+  return `<div class="set"><h1>Settings</h1><p class="intro">Everything here is stored in this browser only. Routines aren't set here: you follow and unfollow them on the Routines tab, where they live.</p>
+    <section class="sec"><div><h2>Games</h2><div class="hint">${S.games.length} of ${GAMES.length} on. The order is used on every tab.</div></div><div>${rows.map((g,i)=>{const on=S.games.includes(g);return `<div class="grow ${on?"":"off"}" style="${gv(g)}"><input type="checkbox" data-game="${g}" ${on?"checked":""} aria-label="Follow ${G[g].name}" style="accent-color:${G[g].hue}"><span class="sw"></span><span class="nm">${G[g].name}</span>${on?`<button class="ord" data-ord="${g}:-1" aria-label="Move up">${ICON.up}</button><button class="ord" data-ord="${g}:1" aria-label="Move down">${ICON.down}</button>`:""}</div>`}).join("")}</div></section>
+    <section class="sec"><div><h2>Server region</h2><div class="hint">Sets every game's daily reset.</div></div><div class="seg">${["asia","america","europe"].map(r=>`<button data-region="${r}" aria-pressed="${S.region===r}">${r[0].toUpperCase()+r.slice(1)}</button>`).join("")}</div></section>
+    <section class="sec"><div><h2>Appearance</h2></div><div class="seg">${["dark","light"].map(t=>`<button data-theme="${t}" aria-pressed="${S.theme===t}">${t[0].toUpperCase()+t.slice(1)}</button>`).join("")}</div></section>
+    <section class="sec"><div><h2>Events list</h2><div class="hint">What the Events tab shows.</div></div><div><label class="chk"><input type="checkbox" data-pref="showUpcoming" ${S.showUpcoming?"checked":""}><span>Show events that haven't started<small>Off keeps the list to what you can play now.</small></span></label><label class="chk"><input type="checkbox" data-pref="showCompleted" ${S.showCompleted?"checked":""}><span>Keep completed events in the list, struck through<small>Off moves them straight to the Archive.</small></span></label><label class="chk"><input type="checkbox" data-pref="standardPulls" ${S.standardPulls?"checked":""}><span>Offer standard-banner pulls in the library<small>Premium pulls are always offered.</small></span></label></div></section>
+    <section class="sec"><div><h2>Backup</h2><div class="hint">Moves your ticks, routines and settings to another browser.</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn">Export to a file</button><button class="btn">Import a file</button></div></section>
+    <section class="sec"><div><h2>Routines</h2></div><div class="pointer">You follow ${counts().total}. Manage them on the Routines tab. <button class="btn link" data-tab="routines">Open Routines</button></div></section></div>`;
+}
+
+function archiveScreen(){
+  const list=S.archive.filter(a=>(S.arcGame==="all"||a.game===S.arcGame)&&(S.arcStatus==="all"||a.status===S.arcStatus));
+  const done=S.archive.filter(a=>a.status==="done").length,ign=S.archive.length-done;
+  const games=[...new Set(S.archive.map(a=>a.game))];
+  return `<div class="rt-top"><h1>Archive</h1><div class="sum">Events you finished or chose to ignore. Restoring one puts it back in the Events list if it's still running.</div></div>
+  <div class="arc-sum"><div><b>${done}</b>completed</div><div><b>${ign}</b>ignored</div><div><b>${games.length}</b>games</div></div>
+  <div class="filters"><select id="arcgame" aria-label="Game"><option value="all">All games</option>${games.map(g=>`<option value="${g}" ${S.arcGame===g?"selected":""}>${G[g].name}</option>`).join("")}</select><div class="seg">${[["all","All"],["done","Completed"],["ignored","Ignored"]].map(([k,l])=>`<button data-arcst="${k}" aria-pressed="${S.arcStatus===k}">${l}</button>`).join("")}</div></div>
+  <table class="led"><thead><tr><th class="h-game">Game</th><th>Event</th><th>Ended</th><th>Status</th><th></th></tr></thead><tbody>${list.map(a=>`<tr style="${gv(a.game)};cursor:default"><td class="gc"><span class="gcell">${G[a.game].short}</span></td><td class="tcell"><span class="gsm">${G[a.game].short}</span>${esc(a.title)}</td><td style="color:var(--muted);white-space:nowrap">${a.end==="running"?"Still running":a.end}</td><td><span class="st ${a.status==="done"?"c":"i"}">${a.status==="done"?"Completed":"Ignored"}</span></td><td style="text-align:right"><button class="btn" data-restore="${esc(a.title)}">Restore</button></td></tr>`).join("")||`<tr><td colspan="5" style="color:var(--faint)">Nothing matches.</td></tr>`}</tbody></table>`;
+}
+
+function timelineScreen(){
+  const span=30*DAY,start=NOW-7*DAY;const x=t=>Math.max(0,Math.min(100,(t-start)/span*100));
+  return `<div class="rt-top"><h1>Timeline</h1><div class="sum">Unchanged in this mockup. Events only; routines stay on their own tab.</div></div><div class="tl">${S.games.map(g=>{const es=EVENTS.filter(e=>e.game===g).slice(0,1);return `<div class="tl-row" style="${gv(g)}"><span class="n">${G[g].short}</span><div class="tl-track">${es.map(e=>`<div class="tl-bar" style="left:${x(e.start)}%;width:${x(e.end??start+span)-x(e.start)}%">${esc(e.title)}</div>`).join("")}<div class="tl-now" style="left:${x(NOW)}%"></div></div></div>`}).join("")}</div>`;
+}
+
+function onboarding(){
+  const o=S.ob;
+  if(o.step===1)return `<div class="ob"><div class="step">Step 1 of 2</div><h1>Which games do you play?</h1><p class="lede">You'll only see events for these. You can change it any time in Settings.</p>
+    <div class="gpick">${GAMES.map(g=>`<button data-obg="${g.id}" aria-pressed="${o.games.includes(g.id)}" style="${gv(g.id)}"><span class="sw"></span>${g.name}</button>`).join("")}</div>
+    <div class="ob-foot"><span class="cnt">${o.games.length?`${o.games.length} chosen`:"Pick at least one"}</span><button class="btn link" data-act="obskip">Show everything instead</button><button class="btn solid" data-act="obnext" ${o.games.length?"":"disabled style='opacity:.4'"}>Continue</button></div></div>`;
+  const usual=()=>BUILTINS.filter(r=>o.games.includes(r.game)&&(r.period.unit==="week"||r.period.unit==="day")&&r.pulls!=="standard");
+  return `<div class="ob"><div class="step">Step 2 of 2 · optional</div><h1>Do you also want to track resets?</h1><p class="lede">Dailies, weekly bosses, shop restocks and endgame cycles get their own Routines tab, so your events list stays short. Nothing is followed unless you tick it here or later.</p>
+    <div class="ob-foot" style="margin:0 0 8px"><span class="cnt">${o.picks.size} picked</span><button class="btn" data-act="obusual">Add the usual dailies and weeklies</button>${o.picks.size?`<button class="btn link" data-act="obclear">Clear</button>`:""}</div>
+    ${o.games.map(g=>`<section class="ob-g" style="${gv(g)}"><div class="lg-h"><span class="nm">${G[g].name}</span></div>${BUILTINS.filter(r=>r.game===g&&r.pulls!=="standard").map(r=>`<div class="li"><div><div class="t">${esc(r.title)}</div><div class="d">${periodWords(r.period)}</div></div><button class="fol" data-obpick="${r.id}" aria-pressed="${o.picks.has(r.id)}">${o.picks.has(r.id)?"Following":"Follow"}</button></div>`).join("")}</section>`).join("")}
+    <div class="ob-foot"><button class="btn link" data-act="obback">Back</button><span class="cnt"></span><button class="btn solid" data-act="obdone">${o.picks.size?`Start with ${o.picks.size} routines`:"Skip, events only"}</button></div></div>`;
+}
+
+function sheet(){const e=[...EVENTS,...S.ownEvents].find(x=>x.id===S.sheet);if(!e)return"";const st=S.status[e.id];
+  return `<div class="scrim" data-act="closesheet"></div><div class="sheet" role="dialog" style="${gv(e.game)}"><p class="legend" style="color:var(--g)">${G[e.game].name}</p><h2>${esc(e.title)}</h2><div class="exact">${e.end?"Ends "+dateStr(e.end):"End date not announced"}</div>${meter(e)}
+  <div class="acts"><button class="btn solid" data-evst="${e.id}:done">${st==="done"?"Mark not done":"Mark done"}</button><button class="btn" data-evst="${e.id}:ignored">Ignore</button><button class="btn link" data-act="closesheet">Close</button></div></div>`}
+
+function whyPanel(){return `<aside class="why"><button class="x" data-act="why">Close</button><h2>B · Routines get their own home</h2>
+<p>Events and routines are different jobs. An event has an end date you're racing; a routine resets and comes back. Today both share the left rail, so a few followed weeklies crowd out the deadlines. B gives routines a tab of their own, ordered by when they reset, and makes every routine opt-in from one library. The Events list goes back to holding events only.</p>
+<h3>The foundation</h3>
+<p>One idea replaces about fifteen prefs: <b>a routine is anything that resets, and you follow it or you don't.</b> Daily chores, built-in weeklies, monthly shops, endgame cycles and your own tasks are all the same shape.</p>
+<pre>prefs = {
+  games: LaneId[]          // followed games, in order
+  followed: RoutineId[]    // one subscription list
+  ...region, theme, display
+}
+Routine = { id, game, title, period, measure,
+            source: builtin | yours }</pre>
+<p>It retires <code>showChores</code>, <code>choresOn/Off</code>, <code>showRoutines</code>, <code>routineGames</code>, <code>routinesOff</code>, <code>routinesAsked</code>, <code>routinesHidden</code>, <code>showWeekly/Monthly/CycleTasks</code> and <code>hiddenGames</code>/<code>knownGames</code> (now just <code>games</code>). <code>standardPulls</code> stays, as a library filter only. The board, the rail counts and the tab badge are each a pure query: <code>followed ∩ games</code>, grouped by period. Ticks keep their existing <code>routine:</code>/<code>mytask:</code> keys, so a migration only has to compute the first <code>followed</code> list from the old switches.</p>
+<h3>How it scales</h3>
+<ul><li>A new game adds its rows to the library and changes nothing for anyone until they follow them. Nobody's screen fills up on its own.</li>
+<li>A new kind of system, like a pass window or a rotating shop, is a new period unit or band. The follow model doesn't change.</li>
+<li>“Make it mine” copies a built-in into your own routines and swaps the id in <code>followed</code>.</li></ul>
+<h3>Trade-offs</h3>
+<ul><li>A fourth tab is one more place to look. Someone who only does dailies has to leave the events list to tick them, though the rail strip softens that.</li>
+<li>Opt-in means a new reader sees nothing until they choose, so step 2 of onboarding carries a lot of weight.</li>
+<li>Per-game nuance, like “all of Genshin but none of NTE”, is only expressible as a list of followed items. That's fine for the library's bulk buttons, but there's no single per-game switch to flip.</li>
+<li>The ledger look is denser. It's harder to scan on a phone, where the game column collapses into the title.</li></ul></aside>`}
+
+function render(){
+  document.documentElement.dataset.theme=S.theme;
+  renderChrome();
+  const app=document.getElementById("app");
+  if(S.ob){app.innerHTML=`<div class="shell"><header class="top" style="border:0"><div class="mark">EVENT<span>CLOCK</span></div></header>${onboarding()}</div>`}
+  else{const body=S.tab==="events"?eventsScreen():S.tab==="routines"?routinesScreen():S.tab==="settings"?settingsScreen():S.tab==="archive"?archiveScreen():timelineScreen();app.innerHTML=`<div class="shell">${tabs()}${body}</div>`}
+  document.getElementById("overlay").innerHTML=(S.drawer?libraryDrawer():"")+(S.sheet?sheet():"")+(S.why?whyPanel():"")+(S.toast?`<div class="toast" role="status">${S.toast}</div>`:"");
+  const a=document.querySelector("[autofocus]");if(a){a.focus();a.select?.()}
+}
+let toastT;function toast(m){S.toast=m;clearTimeout(toastT);toastT=setTimeout(()=>{S.toast=null;render()},2600)}
+
+// ---------- events ----------
+document.addEventListener("click",ev=>{
+  const t=ev.target.closest("button,[data-ev],[data-act]");if(!t)return;
+  const d=t.dataset;
+  if(d.jump)jump(d.jump);
+  else if(d.tab){S.tab=d.tab;S.drawer=false;S.menu=null;if(S.tab!=="events")S.returning=false}
+  else if(d.group)S.group=d.group;
+  else if(d.tick){S.progress[d.tick]=isMet(byId(d.tick))?0:1}
+  else if(d.amt){S.editing=d.amt;S.menu=null}
+  else if(d.menu!==undefined&&t.classList.contains("kebab")&&!ev.target.closest(".menu")){S.menu=S.menu===d.menu?null:d.menu}
+  else if(d.unfollow){const r=byId(d.unfollow);S.followed.delete(d.unfollow);if(r.own)S.own=S.own.filter(x=>x.id!==r.id);S.menu=null;toast(`${r.own?"Deleted":"Unfollowed"} ${esc(r.title)}. Find it again in the library.`)}
+  else if(d.follow){S.followed.has(d.follow)?S.followed.delete(d.follow):S.followed.add(d.follow)}
+  else if(d.bulk){const[g,u]=d.bulk.split(":");const rs=BUILTINS.filter(r=>r.game===g&&(u==="all"||r.period.unit===u)&&(S.standardPulls||r.pulls!=="standard"));const allOn=rs.every(r=>S.followed.has(r.id));rs.forEach(r=>allOn?S.followed.delete(r.id):S.followed.add(r.id));toast(`${allOn?"Unfollowed":"Followed"} ${rs.length} for ${G[g].short}`)}
+  else if(d.fu){S.form.unit=d.fu}
+  else if(d.fk){S.form.kind=d.fk}
+  else if(d.ev){S.sheet=d.ev}
+  else if(d.evst){const[id,st]=d.evst.split(":");const e=[...EVENTS,...S.ownEvents].find(x=>x.id===id);if(S.status[id]===st)delete S.status[id];else{S.status[id]=st;if(st==="ignored"||!S.showCompleted)S.archive.unshift({game:e.game,title:e.title,end:"running",status:st==="done"?"done":"ignored",ref:id})}S.sheet=null;if(st==="ignored")toast("Ignored. It's in the Archive if you want it back.")}
+  else if(d.restore){const a=S.archive.find(x=>x.title===d.restore);S.archive=S.archive.filter(x=>x!==a);if(a.ref)delete S.status[a.ref];toast(`Restored ${esc(a.title)}`)}
+  else if(d.arcst)S.arcStatus=d.arcst;
+  else if(d.region)S.region=d.region;
+  else if(d.theme)S.theme=d.theme;
+  else if(d.ord){const[g,dir]=d.ord.split(":");const i=S.games.indexOf(g),j=i+ +dir;if(j>=0&&j<S.games.length){[S.games[i],S.games[j]]=[S.games[j],S.games[i]]}}
+  else if(d.obg){const o=S.ob;o.games=o.games.includes(d.obg)?o.games.filter(x=>x!==d.obg):[...o.games,d.obg]}
+  else if(d.obpick){const p=S.ob.picks;p.has(d.obpick)?p.delete(d.obpick):p.add(d.obpick)}
+  else if(d.act){switch(d.act){
+    case"why":S.why=!S.why;break;
+    case"reset":S=fresh();break;
+    case"library":S.drawer=true;S.tab="routines";break;
+    case"library-create":S.drawer=true;setTimeout(()=>document.getElementById("create")?.scrollIntoView(),0);break;
+    case"closedrawer":S.drawer=false;break;
+    case"closesheet":S.sheet=null;break;
+    case"takeme":S.tab="routines";S.returning=false;break;
+    case"dismiss":S.returning=false;break;
+    case"mine":{const r=byId(d.id);const id="mytask:"+Math.random().toString(36).slice(2,8);S.own.push({...r,id,builtin:false,own:true,src:"Yours, copied from the built-in"});S.followed.delete(r.id);S.followed.add(id);S.progress[id]=S.progress[r.id];S.menu=null;toast(`${esc(r.title)} is now yours to edit`);break}
+    case"target":case"editown":S.menu=null;toast("Mockup: opens the routine editor");break;
+    case"newevent":toast("Mockup: opens Add an event (your own events stay under Events)");break;
+    case"obnext":if(S.ob.games.length)S.ob.step=2;break;
+    case"obback":S.ob.step=1;break;
+    case"obskip":S.ob.games=GAMES.map(g=>g.id);S.ob.step=2;break;
+    case"obusual":BUILTINS.filter(r=>S.ob.games.includes(r.game)&&(r.period.unit==="week"||r.period.unit==="day")&&r.pulls!=="standard").forEach(r=>S.ob.picks.add(r.id));break;
+    case"obclear":S.ob.picks.clear();break;
+    case"obdone":S.games=[...S.ob.games];S.followed=new Set(S.ob.picks);S.own=[];S.progress={};S.ownEvents=[];S.ob=null;S.tab="events";toast(S.followed.size?`Following ${S.followed.size} routines. They're on the Routines tab.`:"Events only. Add routines from the Routines tab any time.");break;
+  }}
+  else return;
+  render();
+});
+document.addEventListener("submit",ev=>{ev.preventDefault();const f=ev.target;
+  if(f.dataset.amtform){S.progress[f.dataset.amtform]=Math.max(0,+f.v.value||0);S.editing=null;render()}
+  if(f.id==="createform"){const fd=new FormData(f);const F=S.form;const title=String(fd.get("title")||"").trim();if(!title)return;const id="mytask:"+Math.random().toString(36).slice(2,8);
+    const period=F.unit==="cycle"?{unit:"cycle",days:+fd.get("days")||14,from:"2026-10-16"}:{unit:F.unit};
+    S.own.push({id,game:String(fd.get("game")),title,period,measure:F.kind==="amount"?{kind:"amount",target:+fd.get("target")||1}:{kind:"days",required:1},src:"Yours",own:true});S.followed.add(id);S.form={title:"",game:F.game,unit:"week",days:14,kind:"days",target:1};toast(`Created and following ${esc(title)}`);render()}
+});
+document.addEventListener("input",ev=>{
+  if(ev.target.id==="libq"){S.q=ev.target.value;const pos=ev.target.selectionStart;render();const i=document.getElementById("libq");i.focus();i.setSelectionRange(pos,pos)}
+  if(ev.target.closest("#createform")&&ev.target.name==="title")S.form.title=ev.target.value;
+});
+document.addEventListener("change",ev=>{const t=ev.target;
+  if(t.dataset.game){const g=t.dataset.game;S.games=t.checked?[...S.games,g]:S.games.filter(x=>x!==g);render()}
+  if(t.dataset.pref){S[t.dataset.pref]=t.checked;render()}
+  if(t.id==="arcgame"){S.arcGame=t.value;render()}
+  if(t.closest("#createform")&&t.name==="game")S.form.game=t.value;
+});
+document.addEventListener("keydown",ev=>{if(ev.key==="Escape"){S.drawer=false;S.sheet=null;S.menu=null;S.editing=null;render()}});
+render();
+</script>
+</body>
+</html>

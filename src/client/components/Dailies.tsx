@@ -227,7 +227,8 @@ export function tasksShown<T extends Pick<StripTask, "period">>(
   shown: { weekly: boolean; monthly: boolean; cycle: boolean },
 ): T[] {
   const on = { week: shown.weekly, month: shown.monthly, cycle: shown.cycle } as const;
-  return tasks.filter((t) => on[t.period.unit]);
+  // A reader's own daily sits with the standing dailies, not these strips.
+  return tasks.filter((t) => t.period.unit !== "day" && on[t.period.unit]);
 }
 
 /**

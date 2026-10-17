@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { DisplayTimeContext } from "../state/displayTime.ts";
+import { useContext, useState } from "react";
 import {
   isCustomGameId,
   type CustomEvent,
@@ -351,9 +352,13 @@ export function GameForm({
 }
 
 /** Split a stored instant back into the date and time a form field wants. */
-function fields(iso: string | null): { date: string; time: string } {
+function fields(iso: string | null, timezone?: string | null): { date: string; time: string } {
   if (iso === null) return { date: "", time: "" };
   const d = new Date(iso);
+  if (timezone) {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", hourCycle:"h23" }).formatToParts(d).map(p => [p.type, p.value]));
+    return { date: `${parts.year}-${parts.month}-${parts.day}`, time: `${parts.hour}:${parts.minute}` };
+  }
   const pad = (n: number) => String(n).padStart(2, "0");
   return {
     date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
@@ -475,7 +480,7 @@ export function eventStillNeeded(s: {
  * can be proved to complete into a saveable event without a click, and so the
  * still-needed line and Save's disabled state read the same answer.
  */
-export function eventFormState(v: EventFormValues, existingUntil: string | null) {
+export function eventFormState(v: EventFormValues, existingUntil: string | null, timezone?: string | null) {
   // A preset's period is its window, so it has no end to state. The end the
   // reader may have typed under a different cadence is kept in state rather
   // than cleared — hiding a field and quietly discarding what is in it is how
@@ -483,11 +488,11 @@ export function eventFormState(v: EventFormValues, existingUntil: string | null)
   const preset = v.cadence === "daily" || v.cadence === "weekly" || v.cadence === "monthly";
   const datedWindow = v.cadence === "one-off" || v.cadence === "custom";
 
-  const startsAt = v.startDate === "" ? null : readerInstant(v.startDate, v.startTime, "start");
+  const startsAt = v.startDate === "" ? null : readerInstant(v.startDate, v.startTime, "start", timezone);
   const endsAt =
     !datedWindow || !v.endKnown || v.endDate === ""
       ? null
-      : readerInstant(v.endDate, v.endTime, "end");
+      : readerInstant(v.endDate, v.endTime, "end", timezone);
 
   const endMissing = datedWindow && v.endKnown && v.endDate !== "" && endsAt === null;
   const backwards = startsAt !== null && endsAt !== null && endsAt <= startsAt;
@@ -625,6 +630,7 @@ export function EventForm({
   strandedBy?: ((draft: EventDraft) => number) | undefined;
 }) {
   const gameMeta = useGameMeta();
+  const timezone = useContext(DisplayTimeContext);
 
   // The reader's own games first, and so the default too. Someone filling this
   // in by hand is usually doing it *because* the game isn't tracked; making
@@ -635,8 +641,8 @@ export function EventForm({
   );
 
   const [v, setV] = useState<EventFormValues>(() => {
-    const start = fields(initial?.startsAt ?? null);
-    const end = fields(initial?.endsAt ?? null);
+    const start = fields(initial?.startsAt ?? null, timezone);
+    const end = fields(initial?.endsAt ?? null, timezone);
     // Round-tripped through the same fields-then-readerInstant path the live
     // form uses, rather than read straight off the record. The two disagree: a
     // day-precision end is stored as whatever instant it was written at, and
@@ -647,11 +653,11 @@ export function EventForm({
     const startTime = initial?.startPrecision === "exact" ? start.time : "";
     const endTime = initial?.endPrecision === "exact" ? end.time : "";
     const initialStartsAt =
-      start.date === "" ? null : (readerInstant(start.date, startTime, "start") ?? null);
+      start.date === "" ? null : (readerInstant(start.date, startTime, "start", timezone) ?? null);
     const initialEndsAt =
       initial?.endsAt == null || end.date === ""
         ? null
-        : (readerInstant(end.date, endTime, "end") ?? null);
+        : (readerInstant(end.date, endTime, "end", timezone) ?? null);
     const opening = openingControls(
       initialStartsAt,
       initialEndsAt,
@@ -697,7 +703,7 @@ export function EventForm({
   const set = (patch: Partial<EventFormValues>) => setV((prev) => ({ ...prev, ...patch }));
   const [chosen, setChosen] = useState<EventTemplate | null>(null);
 
-  const s = eventFormState(v, initial?.repeat?.until ?? null);
+  const s = eventFormState(v, initial?.repeat?.until ?? null, timezone);
   const { preset, datedWindow, endMs, measured, measuring, repeat, draft } = s;
 
   // Only a schedule change re-keys anything. Renaming does not — the token is
@@ -735,6 +741,7 @@ export function EventForm({
         onSave(draft);
       }}
     >
+      <p className="help">Dates and times use {timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone}.</p>
       {initial === undefined && (
         <ExampleRow
           examples={EVENT_TEMPLATES}

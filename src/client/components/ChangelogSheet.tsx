@@ -39,23 +39,20 @@ export function ChangelogSheet({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const loose = entries.filter((e) => e.note === undefined);
-  const months = [...new Set(loose.map((e) => e.date.slice(0, 7)))];
-
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-      <button
-        type="button"
-        aria-label="Close changelog"
-        onClick={onClose}
-        className="absolute inset-0 bg-scrim backdrop-blur-sm"
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Changelog"
-        className="relative max-h-[88vh] w-full overflow-y-auto rounded-t-2xl border border-hairline bg-surface p-5 sm:max-w-lg sm:rounded-2xl"
-      >
+      <button type="button" aria-label="Close changelog" onClick={onClose} className="absolute inset-0 bg-scrim backdrop-blur-sm" />
+      <div role="dialog" aria-modal="true" aria-label="Changelog" className="relative max-h-[88vh] w-full overflow-y-auto rounded-t-2xl border border-hairline bg-surface p-5 sm:max-w-lg sm:rounded-2xl">
+        <ChangelogContent notes={notes} entries={entries} />
+      </div>
+    </div>
+  );
+}
+
+export function ChangelogContent({ notes, entries }: { notes: readonly Note[]; entries: readonly Entry[] }) {
+  const loose = entries.filter((e) => e.note === undefined);
+  const months = [...new Set(loose.map((e) => e.date.slice(0, 7)))];
+  return (<>
         <h2 className="font-display text-xl font-semibold">Changelog</h2>
         <p className="mt-1 text-xs leading-relaxed text-faint">
           What changed, summarised from the project's history and design notes. Each links to the
@@ -122,9 +119,7 @@ export function ChangelogSheet({
             ))}
           </section>
         )}
-      </div>
-    </div>
-  );
+  </>);
 }
 
 function EntryLine({ entry }: { entry: Entry }) {

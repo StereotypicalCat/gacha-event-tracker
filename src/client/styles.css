@@ -492,3 +492,5 @@ body {
   scrollbar-width: thin;
   scrollbar-color: var(--color-hairline) transparent;
 }
+
+@import "./redesign.css";

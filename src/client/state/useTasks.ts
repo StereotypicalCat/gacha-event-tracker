@@ -12,6 +12,9 @@ export interface TaskDraft {
   measure: Measure;
   /** The built-in this copies, when it does (routines.ts). */
   from?: string | undefined;
+  resetHour?: number | undefined;
+  note?: string | undefined;
+  link?: string | undefined;
 }
 
 /** The store as it sits on disk, every record kept whether or not this build reads it. */

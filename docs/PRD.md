@@ -111,14 +111,9 @@ few pixels apart the board is being asked the one question it exists to answer a
 reader to squint. It also gives a one-day event a bar to read and to tap rather than the 34px
 minimum every short bar collapses to.
 
-**What has not started yet is shown to a new reader, and either can switch it** — `prefs.showUpcoming`,
-which governs **both views**: the board plots them, and the checklist keeps its "Not started yet"
-section (F2). One question, asked once, because they are the same events. It was off by default,
-because this app answers *what expires next* and a reader with fourteen lanes has a next patch queued
-behind every one of them. Since 2026-10-13 (repository owner) first-run setup turns it **on**: a new
-reader should see what is coming before deciding they do not want it. The stored default is still
-`false`, so an existing install whose saved prefs predate the field keeps today's answer rather than
-having it switched on underneath its reader.
+**Upcoming events are optional and off initially.** New setup asks “Show events that haven't
+started” under “What do you want to track?”. The same saved answer governs Checklist and Timeline;
+Checklist separates them under “Upcoming events”. Existing saved choices survive migration.
 
 On the board that is structural as well as editorial: the window is drawn from what is plotted, so
 showing the future stretches the right edge weeks past today and squeezes the running bars the
@@ -129,10 +124,8 @@ quiet fortnight, and this app does not leave a reader to infer what it is not sh
 page header states `N live · N upcoming` whatever the setting says, and either view left with
 nothing to show says so in words and names the setting rather than rendering an empty column.
 
-The switch is in settings (F4), with the two other answers to *what am I allowed to look at* —
-`showCompleted` and `showIgnored` — and **not** in the board's own header beside the stacking and
-scale controls. That is the line those two draw: they reshape what is already on the board, which is
-why they are reached for while reading it, and this one decides what is on it at all.
+The switch lives in Settings → Lists, because it decides which events enter both main views.
+Done and ignored events live in Archive; Lists has no redundant Archive link or reveal switches.
 
 **Switched on, the board says in words where they begin.** A bar drawn to the right of the "now"
 rule is only *implicitly* in the future, and implicitly is not a standard this product holds itself
@@ -198,42 +191,17 @@ an explicit "show all N". This truncates the *view* only: the order is untouched
 the cut are still counted in the header, still on the timeline, and one tap away.
 
 **F3 — Mark completed.**
-A toggle on every event, in both views. State is written to `localStorage` immediately and
-optimistically — there is no server round trip and no failure case. Completed events stay visible
-but de-emphasized; a filter toggles them out entirely.
+Done writes durable progress and a metadata snapshot immediately. A confirmation remains for about
+1.5 seconds before the row fades/collapses into Archive. Undo is available for eight seconds;
+Archive Restore remains available afterwards. A failed write is disclosed and never presented as
+saved. Reduced motion removes the fade.
 
-**F4 — Filters.**
-Filter by game (multi-select, persisted) and by event type. Hiding a game hides it from both views.
-Preferences persist in `localStorage`.
-
-The panel holding them is **six collapsed groups, each stating its own answer on the summary line**
-— games, server region, appearance, what you see, your own games and events, your progress. It was
-one open block of everything, laid out in two columns on a wide screen, which read fine at four games
-and stopped working at eighteen: the game list alone is eighteen rows of four controls, and it sat
-above the checkbox a reader had come down here to tick. Collapsing on its own would only trade that
-friction for another, though — a group that shows nothing but its name turns *what is my region set
-to?* into a click — so each summary answers its group's question, and the closed panel is a six-line
-report of how the app is configured. Opening one is for changing an answer, not for reading it.
-
-Three things follow. **The groups ship closed**, including the one holding the filters that other
-copy points at: the empty states name both the switch and the group it is in, which is more findable
-than a checkbox in a wall was. **The summary states are derived, never stored** — they are a reading
-of `prefs`, so they cannot disagree with the controls inside. And **a group answers one question**.
-The region and the theme began as one group called *Reading*, on the argument that both are "how do I
-read this?" — which summarised as `Europe · Dark`, two unrelated answers joined by a dot, under a
-name for neither. The region is not a reading preference: it is which server the reader's account is
-on, and region-scoped ends, undated deadlines and every daily streak are read off that server's
-clock, so it is the one control in this panel that can make a countdown wrong. It gets its own line,
-and says as much when opened.
-
-**The panel uses the page's width**, like every other block on it. The rows were held to a narrower
-measure on the argument that a name and its state stop reading as one line across a wide screen, but
-the panel's own rule spans the shell, so the rules inside it stopped a third of the column short and
-the panel became the one thing on a desktop page not using the width — sitting between a two-column
-checklist and a three-column footer that both do. A title at one end of a full-width row and its
-countdown at the other is what "running now" does directly above it. Prose inside a group keeps a
-readable measure, and the game list takes two columns of its own on a wide screen once there are nine
-or more games, because eighteen rows in one column is a thousand pixels of ribbon down the left.
+**F4 — Settings and visibility.**
+Settings has named pages: General, Your games, Appearance, Lists, Region & time, Data & sources,
+Backup, About Event Clock, and Changelog. Your games controls visibility/order, tracking choices,
+servers, reset overrides and colours; Lists controls upcoming events and timeline grouping.
+Routines owns follows and independent Checklist/Timeline pins. Utility navigation does not replace
+the saved default main view. Empty states name where to change the relevant choice.
 
 **F4a — Focus one game at a time.**
 Switching games on and off says *which games the reader plays*, and is set once. It is the wrong
@@ -253,15 +221,26 @@ has left the feed is ignored rather than obeyed, so it can never strand the read
 whose cause is elsewhere. Each chip carries that game's outstanding count, so a game with nothing
 waiting says so before it is visited.
 
-**F5 — Region selection.**
-A user picks Asia / America / Europe once. For events where `regionScoped` is true, all displayed
-end times resolve to that region's server reset. This is stored in `localStorage` and defaults to a
-guess from the browser timezone, shown as a dismissible "showing America server times — change".
+**F5 — Servers and display timezone.**
+Default server is chosen in setup and Region & time. Each locally tracked game/server has its own
+stable account identity and progress. “Add another server” is for simultaneously playing multiple
+servers: it starts fresh tracking choices and never clones marks. Server/reset changes append clock
+revisions so history stays on its original clock. Overrides can revert to Automatic. Display timezone
+is Automatic by default or a searchable IANA zone; it changes printed dates and manual date entry,
+never a source's exact timestamps or game-day keys.
 
-**F6 — Export / import.**
-Because there are no accounts, moving between devices is manual: download a JSON file of completed
-IDs and preferences, upload it elsewhere. Import merges rather than replaces, and never removes a
-completion the user already has.
+**F6 — Export / import and backup.**
+No login is involved. Export progress / Import progress merges per game/server, retaining local
+preferences and active reset configuration. Day logs union; newer records/amounts win conflicts.
+Imported clock revisions remain accessible as historical clocks. Unknown extensions are retained in
+the envelope. Export all / Import all restores the complete validated envelope through a preview,
+with a recovery copy before replacement. Undo last restore reverses it. Version-1 exports remain
+convertible; original v1 browser keys are retained after migration.
+
+Local backup history keeps seven daily, four weekly and six monthly snapshots while the app is
+used. UTC buckets keep their latest snapshot; backups never contain other backups. View backup
+opens the preview; Restore this backup is the separate committing action. Storage failures are
+visible. Browser deletion removes local history; export is the way to keep an external copy.
 
 **F12 — Record your own progress and effort.**
 Three states, not two: untouched, doing it, done. Plus an optional effort estimate — quick, short,
@@ -418,15 +397,16 @@ the one after it — because they answer "what ends soonest". The timeline draws
 every occurrence in view, because it answers "what is the rhythm".
 
 **F8 — First-run setup.**
-Before any events are shown, the reader picks which games they play, and how they want to read
-them. A calendar full of games they
-don't play is worse than an empty one — it buries the thing they came for. Nothing is preselected
-and the button stays disabled until something is chosen; guessing on their behalf and hoping they
-notice is worse than asking. **The games are listed alphabetically by name**, not in feed order:
-everywhere else a lane's position carries meaning, but here the reader is scanning for the two or
-three names they already know, and a list ordered by which game happened to hold the first event row
-gives them nothing to scan by. The choice is stored as *hidden* games, the inverse — which is a storage
-shape, not a policy: what happens to a game added later is decided separately, below.
+Before events are shown, a four-step wizard asks for games, default server and preferred appearance,
+tracking kinds, and the default main view. Games are alphabetical, nothing selected. Events are the
+only initially selected tracking kind. Dailies, weekly/monthly and cycles have short descriptions;
+unavailable kinds remain selectable and say nothing is currently detected. Upcoming visibility
+belongs to that tracking step and starts off. Server and appearance can be changed later.
+
+Returning readers get a one-time introduction and optional four-step tour. Skipping or finishing
+preserves progress and the saved main view; General can replay it.
+
+
 
 **A game added later arrives switched off.** Adding a source is our decision, not the reader's, and
 someone who plays two games did not ask for the other twelve; a calendar that fills itself up is the
@@ -447,10 +427,13 @@ The view question (F2) sits under it, with each option drawn rather than only de
 it arrives already answered, and the screen says where to change it afterwards: the tabs are small
 text in a corner, which is the one control a first-time reader will not find on their own.
 
-**F9 — Ignore an event.**
-Distinct from completing one. "Done" keeps an event visible and counted; "not interested" removes it
-from both views entirely. Ignored events stay recoverable: a count and a reveal toggle appear in
-settings once there is something to reveal.
+**F9 — Ignore and Archive.**
+Ignore saves immediately and follows the same confirmation/Undo transition as Done. Both move to
+Archive with event metadata, notes, goals, logs, resolved end and clock revision. Previously seen
+followed events that expire unfinished also enter Archive; unknown-end events never expire by a
+guessed date. Per-game history is default, with an alternate chronological history. Story statistics
+include completion, check-ins and shortfalls where known; ignored events are excluded from success
+rates. Restore recovers saved progress without pretending an expired event is live.
 
 **F10 — Works offline.**
 The reader's question is answered entirely by data already on the device, and countdowns run off the
@@ -459,9 +442,9 @@ the last feed it downloaded. Offline is disclosed in the header and above the fo
 data must never be presented as current.
 
 **F11 — Credit and disclaimer.**
-The sources that compile these calendars, and the studios that make the games, are named on the same
-screen as the data rather than one navigation step away. The page states plainly that it is
-unofficial and unaffiliated, and that the source page is the authority when the two disagree.
+Settings → About Event Clock preserves the full colophon, source credits, unofficial/unaffiliated
+disclaimer and feedback links. The footer links About. Each game's About lists the real data sources,
+links and thanks; event detail links its authoritative source.
 
 **F14 — Say when a new version of the app is ready.**
 F10 caches the shell so the app survives losing signal, and the same cache is why a reader who never
@@ -483,42 +466,29 @@ arrive without a reload, and calling that a new version would train readers to d
 unread.
 
 **F7 — Freshness disclosure.**
-The footer shows when the feed was last updated, per game. If a game's data is more than 48 hours
-stale, its lane carries a warning badge. Never present stale data as current — the whole value
-proposition is trust in the dates.
+The footer always states data age, never build age. Only tracked games with stale data produce a
+compact “Event data may be out of date” row in the shared updates area. New events and new codes
+remain distinct notices. Data & sources and event detail expose the last successful check, last
+content change, source links and recorded reasons. A successful 304 confirms a check without
+claiming the wiki changed.
 
-**The reader can ask for the newest data.** A reload is not enough — the browser may keep the feed
-for minutes — so *Check for new data* beside the age asks the server past that copy and swaps a newer
-feed in without a reload. It says what happened: updated, nothing newer published yet (sources are
-read about twice a day, and the button cannot make that sooner), or the server could not be reached.
-"Newer" is judged on events and source health, never on the build stamp. Disabled offline; nothing
-polls on its own.
+Check for new data revalidates event and code feeds, compares their content rather than generatedAt,
+and reports updated, unchanged or failure. It does not scrape source sites from the browser.
 
-**The staleness notice names only the games the reader has switched on, and says that it does.**
-The headline age is about the feed and stays whole; the notice under it is an *instruction*, and the
-only remedy it offers is "go and check that game's source page" — which a reader cannot act on for a
-game they turned off and cannot see a single row of. With nineteen lanes and two switched on, naming
-eleven they do not play buries the one they do, and a warning about games nobody reads is a warning
-nobody reads (F8: a game we add is a game they never asked for, and arrives switched off, so an
-untouched install would be warned about the whole catalogue).
+**F15 — Appearance.**
+Relaxed (Round 7) and Structured (Round 6 B rail) share one component/state tree. Structured is the default (owner decision, 2026-10-17); an explicitly saved Relaxed preference is preserved.
+Interface choice, Standard/Compact density, Dark/Light/System theme and Slate/Warm/Plum/Custom
+scheme are independent. Custom stores ground/surface/text/accent separately for light and dark;
+rendered colours derive readable contrast without overwriting the saved choices. Per-game colours
+have a picker, hex field, preview and reset. Checklist dailies can occupy a separate direct-tick panel
+or grouped routines, with collapsed/expanded/always-expanded policies; these controls also live in
+Routines. Numeric routines use native step-one inputs.
 
-Both halves of that are load-bearing. Scoping it silently would be the worse half: "nothing has
-refreshed" is a claim about the whole calendar, so a reader with fourteen of eighteen lanes off would
-read a sentence about four as one about all of them. The notice therefore states whose games it
-counted, in the same words the empty list uses — *the games you have switched on*. Credit in the
-column beside it is owed to every source we read and is not scoped; nor is the "last refreshed" line,
-which reports the feed and feeds the bug form.
-
-**The staleness notice differentiates crawler checks from site updates.** If our crawler successfully
-checked the wiki recently (e.g. confirming HTTP 304) but the site's content has not changed in over
-two days, the notice explicitly distinguishes the two: "data pulled X ago, site updated Y ago", with
-an expandable breakdown detailing each source's check and content update times.
-
-**F15 — Light mode, with dark still the default.**
+The earlier theme rationale below still applies to both interfaces.
 The app is a lit instrument panel and that is what it should be on first sight, but it is also read
 on a train in daylight and by people who find a dark UI harder rather than moodier. A public fork
 worked a theme toggle out first and is credited for the idea in the colophon. So the ground is
-the reader's choice: **Dark**, **Light**, or **System** to follow the device, in settings next to the
+the reader's choice: **Dark**, **Light**, or **System** to follow the device, in Settings → Appearance, separately from the
 region — both are "how do I read this?" and neither changes what the page knows.
 
 Dark is what it ships as, and deliberately not `System`. A reader whose laptop is in light mode has
@@ -571,7 +541,15 @@ placed. It also arrives switched off (F8), so settings is where they meet it, wh
 would move it anyway. **A game's dailies stay together** — a repeating event the reader marked sits
 with the standing chore of the game it came from, because the reader thinks in games and not in kinds.
 
-**F17 — Weekly and monthly tasks.**
+**F17 — Routines.**
+Routines is the library and management page for daily, weekly, monthly and cycle tasks. Follow each
+per server; pin independently to Checklist and Timeline. Built-ins offer Make it mine, copying only
+that account's logs; custom routines remain editable. Catch up & recorded history exposes logs on
+their original reset revisions. A separate Timeline reset strip sits directly after its game's events;
+with strips off, Ending soonest remains a single cross-game deadline queue.
+
+The cadence and goal semantics below remain the domain contract; the redesign moves their controls
+from the former Your own section to Routines.
 Some chores roll weekly or monthly rather than daily — earning ZZZ's weekly activity points,
 finishing Endfield's weekly routine — and no source publishes them, so they were nowhere in the app.
 A reader can now set them up per game in *Your own*: a title, every week (from a weekday they pick),
@@ -624,7 +602,7 @@ instant on every server rolls on that server's reset for every reader.
 The app now says what changed, in two tiers, both tied to git. **Short entries** — one line each,
 tagged New, Fixed, or Games & sources — appear once as *What's new*, above the lists, after a new
 version loads; *Got it* dismisses them. **Release notes** — a few paragraphs per feature or
-milestone, summarised from the history and the design specs — are in the footer's *Changelog*, each
+milestone, summarised from the history and the design specs — are in Settings → *Changelog*, each
 linked to the commits it covers and the specs it draws on. Data refreshes are not changes in this
 sense; the footer already states the data's age.
 

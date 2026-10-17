@@ -1,3 +1,4 @@
+import type { ResetTiming } from "./time.ts";
 import { z } from "zod";
 import type { LaneId } from "./custom.ts";
 import { dailyDays, dayKey } from "./daily.ts";
@@ -73,7 +74,7 @@ export function readGoal(stored: unknown): Goal | undefined {
 
 export interface GoalStatus {
   /** Month and cycle are a task's period (task.ts); an event's goal is a week or the event. */
-  scope: "week" | "month" | "cycle" | "event";
+  scope: "day" | "week" | "month" | "cycle" | "event";
   measure: "days" | "amount";
   /** The period's first game-day: the key an amount is stored under. */
   periodStart: string;
@@ -114,11 +115,12 @@ export function goalStatus(input: {
   logged: readonly string[];
   /** This item's entered numbers, for an amount goal. */
   amounts?: AmountLog | undefined;
+  timing?: ResetTiming;
 }): GoalStatus {
-  const { goal, startsMs, endsMs, region, game, now, logged, amounts } = input;
-  const today = dayKey(now, region, game);
-  const first = dayKey(startsMs, region, game);
-  const run = dailyDays(startsMs, endsMs, region, game);
+  const { goal, startsMs, endsMs, region, game, now, logged, amounts, timing } = input;
+  const today = dayKey(now, region, game, timing);
+  const first = dayKey(startsMs, region, game, timing);
+  const run = dailyDays(startsMs, endsMs, region, game, timing);
 
   let scope: string[];
   let periodStart: string;
@@ -174,9 +176,11 @@ export function goalStatus(input: {
 const days = (n: number) => (n === 1 ? "1 day" : `${n} days`);
 /** Thousands grouped: 2,100 reads as a number of points, 2100 as a year. */
 const num = (n: number) => n.toLocaleString("en-US");
-/** " this week", " this month", " this cycle", or nothing for a whole event. */
-const within = (s: GoalStatus) => (s.scope === "event" ? "" : ` this ${s.scope}`);
-const doneLabel = (s: GoalStatus) => (s.scope === "event" ? "goal reached" : `done this ${s.scope}`);
+/** " today", " this week", " this month", " this cycle", or nothing for a whole event. */
+const within = (s: GoalStatus) =>
+  s.scope === "event" ? "" : s.scope === "day" ? " today" : ` this ${s.scope}`;
+const doneLabel = (s: GoalStatus) =>
+  s.scope === "event" ? "goal reached" : s.scope === "day" ? "done today" : `done this ${s.scope}`;
 
 /**
  * The checklist's line. An unticked past day is not "missed" here: every day

@@ -640,3 +640,22 @@ fixture is the regression test proving the parser still handles the previous for
 guessing, impossible calendar dates are rejected, ranges crossing New Year roll the start year back,
 and abbreviated months parse. `test/merge.test.ts` covers cross-source agreement, disagreement, and
 rerun disambiguation. These are the last line of defense before a wrong date reaches a user.
+
+
+## Redeem codes source (2026-10-16)
+
+Genshin codes use https://game8.co/games/Genshin-Impact/archives/304759, separately from events.
+One descriptive-agent robots request and one page request returned HTTP 200 during capture; no
+access workaround or repeated source fetch was used. The raw page and capture metadata are pinned
+as fixtures/genshin/game8-codes-2026-10-16.*, with ten independently counted current codes. The
+parser reads actual code inputs/current reward rows and excludes expired programme sections; a
+future-dated programme fixture variant verifies that still-current programmes are admitted.
+Unannounced expiry remains null. A printed calendar date is expiresOn, never a fabricated exact
+expiresAt instant. Attribution is retained on every code.
+
+src/ingest/codes/registry.ts registers a count-only refresh source. The existing runner shares robots,
+six-hour floors, conditional requests, per-host spacing and snapshot gates across event/code sources.
+Event adapter schemas are unchanged. scripts/build-codes.ts builds data/codes.v1.json offline from
+snapshots or fixtures and preserves observation timestamps in snapshots/codes-first-seen.json.
+Code newness is per game; redemption is per local game/server account and never clears newness by
+itself. No code row is synthesized into the event feed.
