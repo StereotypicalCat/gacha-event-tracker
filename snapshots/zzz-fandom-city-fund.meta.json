@@ -1,12 +1,12 @@
 {
   "sourceId": "zzz-fandom-city-fund",
   "url": "https://zenless-zone-zero.fandom.com/api.php?action=parse&page=New_Eridu_City_Fund&prop=text&formatversion=2&format=json",
-  "contentHash": "cdddfdda3e279b9ddfbff1679b9ff22dc38ca19157ef6efd1b2789e7bf0430dd",
+  "contentHash": "d4ffdf58b0efd331d4c12b00653773ea4fcf4a56889453c795ae4072bd0251a7",
   "bytes": 86517,
   "etag": null,
   "lastModified": null,
-  "contentChangedAt": "2026-10-17T05:28:10.089Z",
-  "lastConfirmedAt": "2026-10-17T05:28:10.089Z",
+  "contentChangedAt": "2026-10-17T17:28:05.255Z",
+  "lastConfirmedAt": "2026-10-17T17:28:05.255Z",
   "eventCount": 1,
   "charset": "utf-8"
 }
