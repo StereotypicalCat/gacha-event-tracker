@@ -103,7 +103,7 @@ for (const variant of ["structured", "relaxed"])
               let s = JSON.parse(
                 localStorage.getItem("gacha-tracker:v2:reader"),
               );
-              s.prefs.redesignTourSeen = "2026-10-redesign";
+              s.prefs.redesignTourSeen = "2026-10-tour-2";
               s.prefs.interface = variant;
               s.prefs.theme = theme;
               s.prefs.changelogSeen = "9999-12-31";

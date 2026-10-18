@@ -816,6 +816,13 @@ Prefs add interface (structured/default or relaxed), density (standard/default o
 soon or timeline; utility navigation is transient. Future/unreadable records remain exportable even
 when this build cannot offer editing controls.
 
+`prefs.redesignTourSeen` (2026-10-18) records where the reader is with the tour. Its values are
+`"2026-10-tour-2"` (done), `"new"` or `"returning"` (the tour is forced; the value picks the opening
+line), and `"replay"` (optional). Any other value, including the earlier tour's `"2026-10-redesign"`,
+means the reader has not taken this tour: the app moves them to `interface: "relaxed"` and stores
+`"returning"`. A later tour version changes the done value, so every reader takes it once more. See
+`tourMode` in `ReturningTour.tsx`.
+
 
 The fidelity correction adds `prefs.routineGroup` (`reset`, the absent-value default, or `game`)
 for the Routines page's grouping. It changes no routine IDs or placement keys. Structured is the

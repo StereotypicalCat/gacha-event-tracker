@@ -266,14 +266,7 @@ note only says where to start.
     readers could reach the ~5 MB quota. Failures are reported, not silent.
   - After a rollback, anything done in the new build lives only in v2 and isn't shown by the old app.
     It's stranded, not lost.
-- [ ] Get readers to try the layout choices, not just be told about them (owner, 2026-10-18).
-  - Relaxed vs Structured, and the Timeline's new vs classic look. Each is one switch in
-    Settings → Appearance today, which most readers will never open.
-  - Show the difference live, on the reader's own events: a "try it" that switches the page in place,
-    with an easy way back, rather than a description or a static picture.
-  - Aim this especially at returning readers, who arrive on the default (Structured, new Timeline)
-    without having chosen it.
-  - Offer it even to readers who have already done or skipped the returning-user tour (the tour
-    records `redesignTourSeen`; this needs its own "seen" so it isn't swallowed by that).
-  - Open questions: where it appears (a one-time card on the Checklist and Timeline? a tour step?), and
-    whether trying a look saves it or only previews it until confirmed.
+- [x] Get readers to try the layout choices, not just be told about them (owner, 2026-10-18). Done
+  2026-10-18. The tour is now forced once for everyone, including new readers and anyone who saw the
+  earlier tour. Its "Pick a layout" and Timeline steps switch the page behind in place, and the
+  selected look is kept. Returning readers start on Relaxed. See `docs/DESIGN.md` → "The tour".

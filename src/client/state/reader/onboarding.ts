@@ -84,7 +84,9 @@ export function setupReader(
         ? { timelineLook: draft.timelineLook }
         : {}),
       onboarded: true,
-      redesignTourSeen: "2026-10-redesign",
+      // Straight into the tour, which a new reader must finish; setup has
+      // already settled their look.
+      redesignTourSeen: "new",
       hiddenGames: Object.values(accounts)
         .map((a) => a.game)
         .filter((g) => !draft.games.includes(g)),

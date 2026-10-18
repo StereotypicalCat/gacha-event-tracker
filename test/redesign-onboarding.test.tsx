@@ -23,16 +23,79 @@ test("initial preferences follow the Round 6 setup and defer upcoming events to 
     expect(html).toContain(label);
   expect(html).not.toContain("Show events that haven&#x27;t started");
 });
-test("returning readers can browse immediately without restarting setup", () => {
-  const html = render(<ReturningTour onStep={() => {}} onFinish={() => {}} />);
-  expect(html).toContain("Your games, routines and progress are all still here");
-  expect(html).toContain("Keep browsing");
-  expect(html).toContain("Take the quick tour");
-});
+import {
+  TOUR_DONE,
+  TOUR_STEPS,
+  tourMode,
+} from "../src/client/components/redesign/ReturningTour.tsx";
+import { setupReader } from "../src/client/state/reader/onboarding.ts";
 
-import { TOUR_STEPS } from "../src/client/components/redesign/ReturningTour.tsx";
+const tourProps = {
+  looks: { interface: "relaxed", timelineLook: "new" },
+  onLook: () => {},
+  onStep: () => {},
+  onFinish: () => {},
+};
+test("the tour opens on its first step, with no way to skip it when forced", () => {
+  const html = render(
+    <ReturningTour {...tourProps} intro="returning" closable={false} />,
+  );
+  expect(html).toContain("Welcome back. A little has moved");
+  expect(html).toContain("1 of " + TOUR_STEPS.length);
+  expect(html).toContain(TOUR_STEPS[0]!.title);
+  expect(html).not.toContain("Skip");
+  expect(html).not.toContain("Close tour");
+  expect(html).not.toContain("Keep browsing");
+});
+test("a new reader is welcomed, and a replay can be closed", () => {
+  expect(
+    render(<ReturningTour {...tourProps} intro="new" closable={false} />),
+  ).toContain("Welcome to Event Clock");
+  const replay = render(<ReturningTour {...tourProps} closable />);
+  expect(replay).toContain("Close tour");
+  expect(replay).not.toContain("Welcome");
+});
+test("the tour lets the reader try both layouts and both Timeline looks", () => {
+  const choices = TOUR_STEPS.filter((s) => s.choice).map((s) => [
+    s.stop,
+    s.choice,
+  ]);
+  expect(choices).toEqual([
+    ["soon", "interface"],
+    ["timeline", "timelineLook"],
+  ]);
+});
 test("the tour introduces the Timeline right after the Checklist, and codes", () => {
   const stops = TOUR_STEPS.map((s) => s.stop);
-  expect(stops.indexOf("timeline")).toBe(stops.indexOf("soon") + 1);
+  expect(stops.indexOf("timeline")).toBe(stops.lastIndexOf("soon") + 1);
   expect(stops).toContain("codes");
+});
+test("everyone takes this tour once, including readers who saw the last one", () => {
+  expect(tourMode(TOUR_DONE)).toBe("done");
+  for (const seen of [undefined, null, "2026-10-redesign", 7])
+    expect(tourMode(seen)).toBe("unseen");
+  expect(tourMode("new")).toBe("new");
+  expect(tourMode("returning")).toBe("returning");
+  expect(tourMode("replay")).toBe("replay");
+});
+test("finishing setup sends a new reader into the forced tour", () => {
+  const s = migrateLegacy({}, [], "2026-10-16T12:00:00.000Z", () => "a");
+  const next = setupReader(
+    {
+      region: "europe",
+      interface: "structured",
+      theme: "dark",
+      scheme: "default",
+      timezone: null,
+      showUpcoming: true,
+      view: "soon",
+      games: [],
+      tracking: {},
+    },
+    s,
+    "2026-10-16T12:00:00.000Z",
+    () => "account:b",
+  );
+  expect(tourMode(next.prefs.redesignTourSeen)).toBe("new");
+  expect(next.prefs.interface).toBe("structured");
 });

@@ -938,3 +938,15 @@ redesign commit.
   page. See docs/SOURCES.md § Redeem codes for eight more games.
 - **Owner's TODO:** let readers try Relaxed/Structured and the new/classic Timeline live, including
   returning readers who've done the tour.
+
+## Round: the forced tour and trying the looks (2026-10-18)
+
+The owner asked for every reader, new and returning, to be put through the tour before they can use
+the app, and for returning readers to start on Relaxed. "Pick a layout" (Checklist) and the Timeline
+step switch the page behind in place, and the selected look is kept. See `docs/DESIGN.md` → "The tour"
+and `docs/DATA-MODEL.md` for the `redesignTourSeen` values.
+
+Schema review: no data-loss or stuck-state path. Accepted, by the owner's rule: a returning reader who
+had picked Structured on purpose is moved to Relaxed once, and the previous value isn't kept. The tour's
+layout step puts it back in one click. Left as is (low): a stale second tab can re-force the tour
+once, and a save-error banner shown during a forced tour can be read but not clicked.

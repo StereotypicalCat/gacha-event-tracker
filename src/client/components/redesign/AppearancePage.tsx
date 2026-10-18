@@ -249,7 +249,9 @@ export function AppearancePage({
             type="button"
             className="btn"
             onClick={() =>
-              onReplayTour ? onReplayTour() : patch({ redesignTourSeen: null })
+              onReplayTour
+                ? onReplayTour()
+                : patch({ redesignTourSeen: "replay" })
             }
           >
             Replay the introduction

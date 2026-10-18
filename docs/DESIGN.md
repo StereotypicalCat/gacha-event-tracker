@@ -631,6 +631,17 @@ legend on the same baseline as "Next: …".
   (interface, theme, scheme, urgency colours, default view, game order, timeline design, focus bar,
   checklist group), Your own events and games, Backup (tiers plus a manual "Your backups" list), and
   per-game Setup / Codes / About.
-- **Returning-user tour.** Routines → Checklist → Timeline → Redeem codes → Archive → Settings.
-  Continue stays in a fixed place, Back sits beside it, and Skip is apart. "Replay the introduction"
-  starts it at step 1.
+- **The tour (2026-10-18, owner).** Every reader takes it once before using the app: new readers
+  straight after setup, returning readers on their first visit, and readers who saw the earlier tour
+  once more. Routines → Checklist → Pick a layout → Timeline → Redeem codes → Archive → Settings.
+  - It floats over the page it describes. While forced, the page behind is `inert` under a light
+    scrim. It can be scrolled and seen, but not clicked. There is no Skip, and a reload restarts at
+    step 1.
+  - "Pick a layout" (on the Checklist) and the Timeline step each hold a two-way switch, Relaxed /
+    Structured and New / Classic. The switch changes the page behind in place, and the selected one
+    is kept. Readers are shown the difference rather than told about it, because most never open
+    Appearance.
+  - Returning readers are moved to Relaxed as the tour opens. New readers keep the look they chose in
+    setup.
+  - Continue stays in a fixed place and Back sits beside it. Only a replay ("Replay the
+    introduction" in Appearance) has a way out, "Close tour", with no scrim.

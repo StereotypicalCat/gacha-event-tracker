@@ -1158,23 +1158,6 @@ textarea {
   flex-direction: row;
   align-items: center;
 }
-.returning-tour {
-  padding: 20px 24px;
-  border-radius: 12px;
-  background: var(--color-raised);
-  margin-bottom: 24px;
-}
-.returning-tour h2 {
-  margin: 0 0 8px;
-}
-.returning-tour div {
-  display: flex;
-  gap: 20px;
-  margin-top: 14px;
-}
-.returning-tour button {
-  color: var(--color-near);
-}
 .empty-state {
   padding: 32px 28px;
   color: var(--color-muted);
@@ -2010,27 +1993,6 @@ textarea {
 .drawer-head button {
   color: var(--color-muted);
   font-size: 13px;
-}
-.returning-tour {
-  border-radius: 0;
-  margin: 0;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--color-hairline);
-  background: var(--color-surface);
-}
-.returning-tour h2 {
-  font: 600 21px var(--font-display);
-}
-.returning-tour p {
-  font-size: 13px;
-  line-height: 1.65;
-  max-width: 75ch;
-}
-:root[data-interface="relaxed"] .returning-tour {
-  border-radius: 18px;
-  margin-bottom: 24px;
-  padding: 24px 28px;
-  border: 0;
 }
 :root[data-interface="relaxed"] .event-detail-sheet {
   border-radius: 14px;
@@ -5387,4 +5349,100 @@ button.mark {
 }
 .redeem-where p span {
   color: var(--color-muted);
+}
+
+/* The tour floats over the page it describes, so the page stays visible and
+   scrollable behind it. While the tour is forced the page is inert and a light
+   scrim says so; a replay has no scrim. The page gets room at its foot so its
+   last rows can scroll clear of the card. */
+.tour-behind {
+  display: contents;
+}
+.reader-ui[data-touring] {
+  padding-bottom: 300px;
+}
+.tour-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--color-ground) 30%, transparent);
+}
+.returning-tour {
+  position: fixed;
+  z-index: 90;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  width: min(620px, calc(100vw - 2 * var(--edge)));
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 22px 26px 20px;
+  border: 1px solid var(--color-hairline);
+  border-radius: 14px;
+  background: var(--color-raised);
+  box-shadow: 0 18px 48px rgb(0 0 0 / 0.35);
+}
+.returning-tour:focus {
+  outline: none;
+}
+.returning-tour h2 {
+  margin: 0 0 8px;
+  font: 600 21px var(--font-display);
+}
+.returning-tour p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.returning-tour .tour-intro {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-hairline);
+  color: var(--color-ink);
+  font-size: 14px;
+}
+.returning-tour .tour-choice {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+.returning-tour .tour-choice button {
+  display: grid;
+  gap: 2px;
+  padding: 11px 14px;
+  text-align: left;
+  border: 1px solid var(--color-hairline);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+.returning-tour .tour-choice button:hover {
+  border-color: var(--color-muted);
+}
+.returning-tour .tour-choice button[aria-pressed="true"] {
+  border-color: var(--color-near);
+  background: color-mix(in srgb, var(--color-near) 14%, var(--color-surface));
+}
+.returning-tour .tour-choice small {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+.returning-tour .tour-later {
+  margin-top: 8px;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+@media (max-width: 700px) {
+  .returning-tour {
+    bottom: var(--edge);
+    padding: 18px 18px 16px;
+  }
+  .returning-tour .tour-choice {
+    grid-template-columns: 1fr;
+  }
 }
