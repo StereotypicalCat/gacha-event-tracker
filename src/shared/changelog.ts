@@ -51,6 +51,14 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "tour-walkthrough",
+    date: "2026-10-18",
+    kind: "feature",
+    title: "A fuller tour, from getting around to finding your codes",
+    body: "The tour now starts with a welcome, shows the bar along the top, and walks you to a game's codes step by step. It ends by showing where to replay it. Replaying it from Settings looks the same as the first time.",
+    ref: "874d862",
+  },
+  {
     id: "codes-used-section",
     date: "2026-10-18",
     kind: "feature",
