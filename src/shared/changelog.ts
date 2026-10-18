@@ -51,6 +51,14 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "tour-try-layouts",
+    date: "2026-10-18",
+    kind: "feature",
+    title: "A quick tour for everyone, where you pick your layout",
+    body: "Everyone takes the short tour once. Along the way you can try Relaxed and Structured, and the new and classic Timeline, on your own events, and keep the one you like. Returning readers start on Relaxed.",
+    ref: "d8ce442",
+  },
+  {
     id: "codes-more-games",
     date: "2026-10-18",
     kind: "games",
