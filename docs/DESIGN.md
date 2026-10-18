@@ -499,9 +499,11 @@ text. On focus the border moves to faint. The field gets no glow, because a form
   system. Each offers one action.
 
 ### Daily burst
-A small spray of 3px sparks that fires once, when the last daily of the day is ticked. It is purely
-decorative and ignores pointer input. With reduced motion requested it does not render at all,
-rather than being toned down.
+A small spray of 3px sparks that fires once, in the row, when a reader finishes one thing: a daily
+ticked, a routine met, or an event marked completed (in its "Moved to Archive" notice). Finishing a
+whole section gets the grand version instead (see the Checklist's *Celebration*). It is purely
+decorative and ignores pointer input. With reduced motion requested, or with Settings → Appearance →
+Celebrations switched off, it does not render at all, rather than being toned down.
 
 ## Do's and Don'ts
 
@@ -616,11 +618,16 @@ legend on the same baseline as "Next: …".
   or over the target completes it after a 450ms pause.
 - **Completion animation.** The bar fills, the row warms, then the box pops. Unticking undoes it:
   the amount from before goes back, or the editor opens when that value isn't known.
-- **Celebration.** A single completion fires live's small `Fireworks` in the row. Finishing a whole
-  section (every daily, or every routine in a game's group) fires `Fireworks grand`: seven bursts in
-  two waves with the game's hue mixed in, a light sweep, and the "All done" line popping.
+- **Celebration.** A single completion fires live's small `Fireworks` in the row: a daily ticked in
+  the panel, a pinned routine met, an amount typed up to its target. Finishing a whole section
+  (every daily, or every routine in a game's group) fires `Fireworks grand`: seven bursts in two
+  waves with the game's hue mixed in, a light sweep, and the "All done" line popping. The item that
+  finishes the section gets only the grand one, not its own burst on top. Marking an event completed
+  fires the small burst in the "Moved to Archive" notice; ignoring one fires nothing.
 - **When it fires.** Only an action taken now that completes the item or section, never arriving
-  complete. Reduced motion removes all of it.
+  complete. Reduced motion removes all of it, and so does `prefs.celebrations: false` (Settings →
+  Appearance → Celebrations), read through `CelebrationsContext` in `Fireworks.tsx`. The row's own
+  tick animation (wash, pop, check) stays either way: it is feedback, not celebration.
 
 ### Other pages
 

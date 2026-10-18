@@ -9,6 +9,7 @@ import { timelineLook } from "./TimelinePage.tsx";
 import { ViewCards } from "./ViewCards.tsx";
 import { focusBarShown } from "./FocusPicker.tsx";
 import { URGENCY_STEPS, urgencyChoice } from "../../state/appearance.ts";
+import { celebrationsOn } from "../Fireworks.tsx";
 
 /** The live legend's words for each step. */
 const URGENCY_LABEL = {
@@ -352,6 +353,22 @@ export function AppearancePage({
             Show on the {view === "checklist" ? "Checklist" : "Timeline"}
           </label>
         ))}
+      </section>
+      <section className="settings-group">
+        <h2>Celebrations</h2>
+        <p className="help">
+          Fireworks when you finish a daily, a routine or an event, and a bigger
+          show when you finish all your dailies or a game's routines.
+        </p>
+        <label>
+          <input
+            type="checkbox"
+            data-celebrations
+            checked={celebrationsOn(p)}
+            onChange={(e) => patch({ celebrations: e.target.checked })}
+          />
+          Show fireworks
+        </label>
       </section>
       <section className="settings-group checklist-settings">
         <h2>Checklist</h2>

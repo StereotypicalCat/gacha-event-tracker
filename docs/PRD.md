@@ -482,7 +482,9 @@ scheme are independent. Custom stores ground/surface/text/accent separately for 
 rendered colours derive readable contrast without overwriting the saved choices. Per-game colours
 have a picker, hex field, preview and reset. Checklist dailies can occupy a separate direct-tick panel
 or grouped routines, with collapsed/expanded/always-expanded policies; these controls also live in
-Routines. Numeric routines use native step-one inputs.
+Routines. Numeric routines use native step-one inputs. A **Celebrations** switch (on by default)
+covers the fireworks: a small burst for finishing one daily, routine or event, and the grand one for
+finishing every daily or every routine in a game's group. Off means none at all, big or small.
 
 The earlier theme rationale below still applies to both interfaces.
 The app is a lit instrument panel and that is what it should be on first sight, but it is also read

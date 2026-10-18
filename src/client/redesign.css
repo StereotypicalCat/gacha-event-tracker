@@ -539,6 +539,7 @@ body {
   color: var(--color-ink);
 }
 .routine-control {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -4584,8 +4585,9 @@ button.mark {
 
 /* Today's dailies: the whole row ticks, and a tick should feel like one.
    Done rows wash in the game's colour, the box pops and the check draws.
-   Only rows ticked just now (data-fresh) animate; the live fireworks
-   (Fireworks.tsx, styles.css) fire when the last one goes. */
+   Only rows ticked just now (data-fresh) animate, with the live fireworks
+   (Fireworks.tsx, styles.css) in the row; the last one gets the grand
+   celebration over the panel instead. */
 .daily-panel {
   position: relative;
 }
@@ -4624,6 +4626,7 @@ button.mark {
   font-weight: 600;
 }
 .daily-hit {
+  position: relative;
   width: calc(100% + 20px);
   margin: 0 -10px 4px;
   padding: 10px;

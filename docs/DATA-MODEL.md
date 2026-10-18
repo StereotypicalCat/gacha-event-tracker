@@ -828,6 +828,10 @@ means the reader has not taken this tour: the app moves them to `interface: "rel
 `tourMode` in `ReturningTour.tsx`.
 
 
+`prefs.celebrations` (2026-10-18) is the Settings → Appearance switch for fireworks. Absent or
+`true` means on; only `false` turns every celebration off, big and small. See `celebrationsOn` in
+`Fireworks.tsx`.
+
 The fidelity correction adds `prefs.routineGroup` (`reset`, the absent-value default, or `game`)
 for the Routines page's grouping. It changes no routine IDs or placement keys. Structured is the
 interface default as of the owner's 2026-10-17 instruction; explicit saved Relaxed is preserved.

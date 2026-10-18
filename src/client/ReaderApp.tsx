@@ -7,6 +7,11 @@ import { formatInZone } from "./state/displayTime.ts";
 import { aliasesFrom, RETIRED_IDS } from "./state/retiredIds.ts";
 import { PinnedRoutine } from "./components/redesign/PinnedRoutine.tsx";
 import { DisplayTimeContext } from "./state/displayTime.ts";
+import {
+  CelebrationsContext,
+  Fireworks,
+  celebrationsOn,
+} from "./components/Fireworks.tsx";
 import type { CodesFeed } from "../shared/codes.ts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -87,6 +92,7 @@ import { GameSettings } from "./components/redesign/GameSettings.tsx";
 import { RoutinesPage } from "./components/redesign/RoutinesPage.tsx";
 import { DailyPanel } from "./components/redesign/DailyPanel.tsx";
 import { RoutineGroup } from "./components/redesign/RoutineGroup.tsx";
+import { finishesSection } from "./components/redesign/useSectionCelebration.ts";
 import {
   TimelinePage,
   timelineLook,
@@ -686,511 +692,531 @@ function ReaderContent({
   );
   return (
     <DisplayTimeContext value={zone}>
-      <GameMetaProvider value={meta}>
-        <main
-          className="app-shell reader-ui"
-          data-touring={touring || undefined}
-        >
-          {/* During the tour, forced or replayed, the page behind shows each
+      <CelebrationsContext value={celebrationsOn(state.prefs)}>
+        <GameMetaProvider value={meta}>
+          <main
+            className="app-shell reader-ui"
+            data-touring={touring || undefined}
+          >
+            {/* During the tour, forced or replayed, the page behind shows each
               stop but takes no clicks or focus. `display: contents` keeps the
               layout as if this wrapper were not here. */}
-          <div className="tour-behind" inert={touring}>
-            <header className="top">
-              {prefs.onboarded ? (
-                <button
-                  type="button"
-                  className="mark"
-                  aria-label="Event Clock — go to your default view"
-                  onClick={() => changePage(prefs.view)}
-                >
-                  Event<span>Clock</span>
-                </button>
-              ) : (
-                <p className="mark">
-                  Event<span>Clock</span>
-                </p>
-              )}
-              {prefs.onboarded && (
-                <AppNavigation
-                  page={page}
-                  onPage={changePage}
-                  counts={{
-                    soon: outstanding.filter((r) => r.clock.live).length,
-                    routines: accounts
-                      .flatMap((a) => routineRows(state, a.id, now))
-                      .filter((r) => r.placement.followed && !r.status.met)
-                      .length,
-                    archive: Object.keys(state.archive).length,
-                  }}
-                />
-              )}
-            </header>
-            {saveError && !saveError.ok && (
-              <p role="alert" className="save-error">
-                Your last change could not be saved ({saveError.reason}). Your
-                previous data remains available. Try again or export it in
-                Backup.
-              </p>
-            )}
-            {backupError && (
-              <p role="status" className="help">
-                {backupError}
-              </p>
-            )}
-            {!prefs.onboarded ? (
-              <SetupWizard
-                state={state}
-                meta={meta}
-                onFinish={async (draft) => {
-                  const next = setupReader(
-                    draft,
-                    state,
-                    new Date().toISOString(),
-                    mintAccountId,
-                  );
-                  for (const account of Object.values(next.accounts)) {
-                    const result = await dispatch({
-                      type: "account",
-                      account,
-                      ...actionMeta(),
-                    });
-                    if (!result.ok) return;
-                  }
-                  // No navigation here: the tour opens next and leads the way,
-                  // ending on the chosen view.
-                  // Only what setup changed, so a setup finished in a second,
-                  // stale tab leaves alone every setting setup does not set.
-                  await dispatch({
-                    type: "prefs",
-                    patch: Object.fromEntries(
-                      Object.entries(next.prefs).filter(
-                        ([k, v]) =>
-                          JSON.stringify(v) !== JSON.stringify(state.prefs[k]),
-                      ),
-                    ),
-                    ...actionMeta(),
-                  });
-                }}
-              />
-            ) : (
-              <>
-                {page === "soon" && (
-                  <div className="checklist-layout">
-                    <aside className="checklist-rail">
-                      <div className="rail">
-                        {focusBarShown(state.prefs, "soon") && focusBar}
-                        <NextDeadline
-                          row={scoped.find((r) => r.clock.live)}
-                          then={scoped.filter((r) => r.clock.live).slice(1, 4)}
-                          servers={(game) => manyServers(state, game)}
-                          onOpen={setOpen}
-                        />
-                        {separate && (
-                          <DailyPanel
-                            onManage={() => changePage("routines")}
-                            rows={pins.filter((r) => r.cadence === "day")}
-                            state={state}
-                            onAction={dispatch}
-                            now={now}
-                          />
-                        )}
-                        <section className="pinned-routines">
-                          <div className="pinned-heading">
-                            <div>
-                              <h2>Routines</h2>
-                              <p className="sub">Showing only pinned</p>
-                            </div>
-                            <button onClick={() => changePage("routines")}>
-                              Edit pins
-                            </button>
-                          </div>
-                          {accounts
-                            .filter((a) => focus === null || a.game === focus)
-                            .map((a) => {
-                              const rows = pins.filter(
-                                (r) =>
-                                  r.accountId === a.id &&
-                                  (!separate || r.cadence !== "day"),
-                              );
-                              return rows.length ? (
-                                <RoutineGroup
-                                  key={
-                                    a.id +
-                                    focus +
-                                    String(state.prefs.routineDisclosure)
-                                  }
-                                  title={`${meta(a.game).short}${serverSuffix(state, a.game, a.region)}`}
-                                  hue={meta(a.game).hue}
-                                  done={rows.filter((r) => r.status.met).length}
-                                  total={rows.length}
-                                  summary={
-                                    rows.every((r) => r.status.met)
-                                      ? `All ${rows.length} done`
-                                      : `${rows.filter((r) => r.status.met).length} of ${rows.length} completed`
-                                  }
-                                  policy={
-                                    state.prefs.routineDisclosure === "always"
-                                      ? "always"
-                                      : state.prefs.routineDisclosure ===
-                                          "expanded"
-                                        ? "expanded"
-                                        : "collapsed"
-                                  }
-                                  focused={focus !== null}
-                                >
-                                  {rows.map((row) => (
-                                    <PinnedRoutine
-                                      key={row.id}
-                                      row={row}
-                                      hue={meta(a.game).hue}
-                                      onAction={dispatch}
-                                      now={now}
-                                    />
-                                  ))}
-                                </RoutineGroup>
-                              ) : null;
-                            })}
-                          <button
-                            type="button"
-                            className="quiet"
-                            onClick={() => changePage("routines")}
-                          >
-                            Manage routines
-                          </button>
-                        </section>
-                      </div>
-                    </aside>
-                    <div className="checklist-main">
-                      {mainUpdates}
-                      <div className="list-heading running-heading">
-                        <h1>Running now</h1>
-                        <div className="list-tools">
-                          <div className="segmented">
-                            {["standard", "compact"].map((d) => (
-                              <button
-                                type="button"
-                                key={d}
-                                aria-pressed={prefs.density === d}
-                                onClick={() =>
-                                  void dispatch({
-                                    type: "prefs",
-                                    patch: { density: d },
-                                    ...actionMeta(),
-                                  })
-                                }
-                              >
-                                {d === "standard" ? "Standard" : "Compact"}
-                              </button>
-                            ))}
-                          </div>
-                          <div className="segmented" aria-label="Sort events">
-                            {(["ending", "doing"] as const).map((sort) => (
-                              <button
-                                key={sort}
-                                aria-pressed={prefs.sort === sort}
-                                onClick={() =>
-                                  void dispatch({
-                                    type: "prefs",
-                                    patch: { sort },
-                                    ...actionMeta(),
-                                  })
-                                }
-                              >
-                                {sort === "ending"
-                                  ? "Ending soonest"
-                                  : "Doing first"}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        {/* One line under the title and the buttons: the count
-                          on the left, live's legend on the right. */}
-                        <div className="heading-meta">
-                          <p className="sub">
-                            {visible.filter((r) => r.clock.live).length} events
-                            in {new Set(visible.map((r) => r.event.game)).size}{" "}
-                            games · sorted by what ends first
-                            {!online ? " · offline" : ""}
-                          </p>
-                          <UrgencyLegend />
-                        </div>
-                      </div>
-                      {visible.length ? (
-                        <>
-                          {prefs.density === "compact" && <LedgerColumns />}
-                          <ul className="event-list">
-                            {visible
-                              .filter((r) => !r.clock.upcoming)
-                              .map(renderRow)}
-                          </ul>
-                          {visible.some((r) => r.clock.upcoming) && (
-                            <section className="upcoming-events">
-                              <div className="list-heading">
-                                <div>
-                                  <p className="eyebrow">Coming up</p>
-                                  <h2>Not started yet</h2>
-                                  <p className="sub">
-                                    {upcomingSummary(
-                                      visible.filter((r) => r.clock.upcoming),
-                                    )}
-                                  </p>
-                                </div>
-                              </div>
-                              {prefs.density === "compact" && (
-                                <LedgerColumns upcoming />
-                              )}
-                              <ul className="event-list">
-                                {visible
-                                  .filter((r) => r.clock.upcoming)
-                                  .map(renderRow)}
-                              </ul>
-                            </section>
-                          )}
-                        </>
-                      ) : (
-                        <p className="empty-state">
-                          No events to show. Choose another game or change
-                          tracking in Settings → Your games.
-                        </p>
-                      )}
-                      <p className="list-foot">
-                        Done or ignored events leave this list and wait in the{" "}
-                        <button onClick={() => changePage("archive")}>
-                          Archive
-                        </button>
-                        .
-                      </p>
-                    </div>
-                  </div>
+            <div className="tour-behind" inert={touring}>
+              <header className="top">
+                {prefs.onboarded ? (
+                  <button
+                    type="button"
+                    className="mark"
+                    aria-label="Event Clock — go to your default view"
+                    onClick={() => changePage(prefs.view)}
+                  >
+                    Event<span>Clock</span>
+                  </button>
+                ) : (
+                  <p className="mark">
+                    Event<span>Clock</span>
+                  </p>
                 )}
-                {page === "timeline" && (
-                  <>
-                    {mainUpdates}
-                    <TimelinePage
-                      state={state}
-                      focus={focus}
-                      focusBar={
-                        focusBarShown(state.prefs, "timeline") ? focusBar : null
-                      }
-                      rows={visible}
-                      now={now}
-                      onAction={dispatch}
-                      onOpen={setOpen}
-                    />
-                  </>
-                )}
-                {page === "routines" && (
-                  <RoutinesPage state={state} onAction={dispatch} now={now} />
-                )}
-                {page === "archive" && (
-                  <ArchivePage
-                    state={state}
-                    onAction={dispatch}
-                    now={now}
-                    onOpen={setArchivedOpen}
+                {prefs.onboarded && (
+                  <AppNavigation
+                    page={page}
+                    onPage={changePage}
+                    counts={{
+                      soon: outstanding.filter((r) => r.clock.live).length,
+                      routines: accounts
+                        .flatMap((a) => routineRows(state, a.id, now))
+                        .filter((r) => r.placement.followed && !r.status.met)
+                        .length,
+                      archive: Object.keys(state.archive).length,
+                    }}
                   />
                 )}
-                {page === "settings" && (
-                  <SettingsLayout
-                    state={state}
-                    codes={codes}
-                    game={codesGame}
-                    page={settingsPage}
-                    onPage={(p) => {
-                      setCodesGame(undefined);
-                      setSettingsPage(p);
-                    }}
-                    onGame={(g) => {
-                      setCodesGame(g);
-                      setGameTab("setup");
-                      setSettingsPage("games");
+              </header>
+              {saveError && !saveError.ok && (
+                <p role="alert" className="save-error">
+                  Your last change could not be saved ({saveError.reason}). Your
+                  previous data remains available. Try again or export it in
+                  Backup.
+                </p>
+              )}
+              {backupError && (
+                <p role="status" className="help">
+                  {backupError}
+                </p>
+              )}
+              {!prefs.onboarded ? (
+                <SetupWizard
+                  state={state}
+                  meta={meta}
+                  onFinish={async (draft) => {
+                    const next = setupReader(
+                      draft,
+                      state,
+                      new Date().toISOString(),
+                      mintAccountId,
+                    );
+                    for (const account of Object.values(next.accounts)) {
+                      const result = await dispatch({
+                        type: "account",
+                        account,
+                        ...actionMeta(),
+                      });
+                      if (!result.ok) return;
+                    }
+                    // No navigation here: the tour opens next and leads the way,
+                    // ending on the chosen view.
+                    // Only what setup changed, so a setup finished in a second,
+                    // stale tab leaves alone every setting setup does not set.
+                    await dispatch({
+                      type: "prefs",
+                      patch: Object.fromEntries(
+                        Object.entries(next.prefs).filter(
+                          ([k, v]) =>
+                            JSON.stringify(v) !==
+                            JSON.stringify(state.prefs[k]),
+                        ),
+                      ),
+                      ...actionMeta(),
+                    });
+                  }}
+                />
+              ) : (
+                <>
+                  {page === "soon" && (
+                    <div className="checklist-layout">
+                      <aside className="checklist-rail">
+                        <div className="rail">
+                          {focusBarShown(state.prefs, "soon") && focusBar}
+                          <NextDeadline
+                            row={scoped.find((r) => r.clock.live)}
+                            then={scoped
+                              .filter((r) => r.clock.live)
+                              .slice(1, 4)}
+                            servers={(game) => manyServers(state, game)}
+                            onOpen={setOpen}
+                          />
+                          {separate && (
+                            <DailyPanel
+                              onManage={() => changePage("routines")}
+                              rows={pins.filter((r) => r.cadence === "day")}
+                              state={state}
+                              onAction={dispatch}
+                              now={now}
+                            />
+                          )}
+                          <section className="pinned-routines">
+                            <div className="pinned-heading">
+                              <div>
+                                <h2>Routines</h2>
+                                <p className="sub">Showing only pinned</p>
+                              </div>
+                              <button onClick={() => changePage("routines")}>
+                                Edit pins
+                              </button>
+                            </div>
+                            {accounts
+                              .filter((a) => focus === null || a.game === focus)
+                              .map((a) => {
+                                const rows = pins.filter(
+                                  (r) =>
+                                    r.accountId === a.id &&
+                                    (!separate || r.cadence !== "day"),
+                                );
+                                return rows.length ? (
+                                  <RoutineGroup
+                                    key={
+                                      a.id +
+                                      focus +
+                                      String(state.prefs.routineDisclosure)
+                                    }
+                                    title={`${meta(a.game).short}${serverSuffix(state, a.game, a.region)}`}
+                                    hue={meta(a.game).hue}
+                                    done={
+                                      rows.filter((r) => r.status.met).length
+                                    }
+                                    total={rows.length}
+                                    summary={
+                                      rows.every((r) => r.status.met)
+                                        ? `All ${rows.length} done`
+                                        : `${rows.filter((r) => r.status.met).length} of ${rows.length} completed`
+                                    }
+                                    policy={
+                                      state.prefs.routineDisclosure === "always"
+                                        ? "always"
+                                        : state.prefs.routineDisclosure ===
+                                            "expanded"
+                                          ? "expanded"
+                                          : "collapsed"
+                                    }
+                                    focused={focus !== null}
+                                  >
+                                    {rows.map((row) => (
+                                      <PinnedRoutine
+                                        key={row.id}
+                                        row={row}
+                                        hue={meta(a.game).hue}
+                                        onAction={dispatch}
+                                        now={now}
+                                        finishes={finishesSection(
+                                          rows.length,
+                                          rows.filter((r) => r.status.met)
+                                            .length,
+                                        )}
+                                      />
+                                    ))}
+                                  </RoutineGroup>
+                                ) : null;
+                              })}
+                            <button
+                              type="button"
+                              className="quiet"
+                              onClick={() => changePage("routines")}
+                            >
+                              Manage routines
+                            </button>
+                          </section>
+                        </div>
+                      </aside>
+                      <div className="checklist-main">
+                        {mainUpdates}
+                        <div className="list-heading running-heading">
+                          <h1>Running now</h1>
+                          <div className="list-tools">
+                            <div className="segmented">
+                              {["standard", "compact"].map((d) => (
+                                <button
+                                  type="button"
+                                  key={d}
+                                  aria-pressed={prefs.density === d}
+                                  onClick={() =>
+                                    void dispatch({
+                                      type: "prefs",
+                                      patch: { density: d },
+                                      ...actionMeta(),
+                                    })
+                                  }
+                                >
+                                  {d === "standard" ? "Standard" : "Compact"}
+                                </button>
+                              ))}
+                            </div>
+                            <div className="segmented" aria-label="Sort events">
+                              {(["ending", "doing"] as const).map((sort) => (
+                                <button
+                                  key={sort}
+                                  aria-pressed={prefs.sort === sort}
+                                  onClick={() =>
+                                    void dispatch({
+                                      type: "prefs",
+                                      patch: { sort },
+                                      ...actionMeta(),
+                                    })
+                                  }
+                                >
+                                  {sort === "ending"
+                                    ? "Ending soonest"
+                                    : "Doing first"}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          {/* One line under the title and the buttons: the count
+                          on the left, live's legend on the right. */}
+                          <div className="heading-meta">
+                            <p className="sub">
+                              {visible.filter((r) => r.clock.live).length}{" "}
+                              events in{" "}
+                              {new Set(visible.map((r) => r.event.game)).size}{" "}
+                              games · sorted by what ends first
+                              {!online ? " · offline" : ""}
+                            </p>
+                            <UrgencyLegend />
+                          </div>
+                        </div>
+                        {visible.length ? (
+                          <>
+                            {prefs.density === "compact" && <LedgerColumns />}
+                            <ul className="event-list">
+                              {visible
+                                .filter((r) => !r.clock.upcoming)
+                                .map(renderRow)}
+                            </ul>
+                            {visible.some((r) => r.clock.upcoming) && (
+                              <section className="upcoming-events">
+                                <div className="list-heading">
+                                  <div>
+                                    <p className="eyebrow">Coming up</p>
+                                    <h2>Not started yet</h2>
+                                    <p className="sub">
+                                      {upcomingSummary(
+                                        visible.filter((r) => r.clock.upcoming),
+                                      )}
+                                    </p>
+                                  </div>
+                                </div>
+                                {prefs.density === "compact" && (
+                                  <LedgerColumns upcoming />
+                                )}
+                                <ul className="event-list">
+                                  {visible
+                                    .filter((r) => r.clock.upcoming)
+                                    .map(renderRow)}
+                                </ul>
+                              </section>
+                            )}
+                          </>
+                        ) : (
+                          <p className="empty-state">
+                            No events to show. Choose another game or change
+                            tracking in Settings → Your games.
+                          </p>
+                        )}
+                        <p className="list-foot">
+                          Done or ignored events leave this list and wait in the{" "}
+                          <button onClick={() => changePage("archive")}>
+                            Archive
+                          </button>
+                          .
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {page === "timeline" && (
+                    <>
+                      {mainUpdates}
+                      <TimelinePage
+                        state={state}
+                        focus={focus}
+                        focusBar={
+                          focusBarShown(state.prefs, "timeline")
+                            ? focusBar
+                            : null
+                        }
+                        rows={visible}
+                        now={now}
+                        onAction={dispatch}
+                        onOpen={setOpen}
+                      />
+                    </>
+                  )}
+                  {page === "routines" && (
+                    <RoutinesPage state={state} onAction={dispatch} now={now} />
+                  )}
+                  {page === "archive" && (
+                    <ArchivePage
+                      state={state}
+                      onAction={dispatch}
+                      now={now}
+                      onOpen={setArchivedOpen}
+                    />
+                  )}
+                  {page === "settings" && (
+                    <SettingsLayout
+                      state={state}
+                      codes={codes}
+                      game={codesGame}
+                      page={settingsPage}
+                      onPage={(p) => {
+                        setCodesGame(undefined);
+                        setSettingsPage(p);
+                      }}
+                      onGame={(g) => {
+                        setCodesGame(g);
+                        setGameTab("setup");
+                        setSettingsPage("games");
+                      }}
+                    >
+                      {settingsPage === "appearance" ||
+                      (settingsPage === "games" && !codesGame) ? (
+                        <AppearancePage
+                          state={state}
+                          onAction={dispatch}
+                          onReplayTour={() => {
+                            void dispatch({
+                              type: "prefs",
+                              patch: { redesignTourSeen: "replay" },
+                              ...actionMeta(),
+                            });
+                          }}
+                        />
+                      ) : settingsPage === "games" && codesGame ? (
+                        <GameSettings
+                          key={`${codesGame}-${gameTab}`}
+                          initialTab={gameTab}
+                          codes={codes}
+                          initialGame={codesGame}
+                          state={state}
+                          sources={feed.sources}
+                          onAction={dispatch}
+                        />
+                      ) : settingsPage === "time" ? (
+                        <TimeSettings
+                          state={state}
+                          now={now}
+                          onAction={dispatch}
+                        />
+                      ) : settingsPage === "sources" ? (
+                        <DataSourcesPage
+                          sources={feed.sources.filter((s) =>
+                            trackedGames(state).has(s.game),
+                          )}
+                          now={now}
+                          timezone={zone}
+                          online={online}
+                          onRefresh={refreshFeed}
+                          showUpcoming={prefs.showUpcoming}
+                          detectDaily={prefs.detectDaily}
+                          standardPulls={state.prefs.standardPulls === true}
+                          onPrefs={(patch) =>
+                            void dispatch({
+                              type: "prefs",
+                              patch,
+                              ...actionMeta(),
+                            })
+                          }
+                        />
+                      ) : settingsPage === "backup" ? (
+                        <BackupPage state={state} />
+                      ) : settingsPage === "changelog" ? (
+                        <ChangelogPage notes={NOTES} entries={ENTRIES} />
+                      ) : settingsPage === "about" ? (
+                        <AboutPage sources={feed.sources} />
+                      ) : settingsPage === "own" ? (
+                        <section>
+                          <h1>Your own events and games</h1>
+                          <p className="help">
+                            Only what you added yourself. Routines live on the
+                            Routines tab.
+                          </p>
+                          <YourOwn {...ownProps} />
+                        </section>
+                      ) : null}
+                    </SettingsLayout>
+                  )}
+                  <FeedFooter
+                    sources={feed.sources}
+                    now={now}
+                    online={online}
+                    timezone={zone}
+                    onAbout={() => showSettings("about")}
+                    onRefresh={refreshFeed}
+                  />
+                </>
+              )}
+              {transition && (
+                <aside className="archive-toast" role="status">
+                  {/* Completing an event is finishing something; ignoring one is not. */}
+                  {transition.label === "Completed" &&
+                    transition.phase === "hold" && (
+                      <Fireworks key={transition.key} />
+                    )}
+                  {transition.label} “{transition.title}” · Moved to Archive{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void dispatch({
+                        type: "restore",
+                        accountId: transition.accountId,
+                        eventId: transition.eventId,
+                        ...actionMeta(),
+                      });
+                      setTransition(null);
                     }}
                   >
-                    {settingsPage === "appearance" ||
-                    (settingsPage === "games" && !codesGame) ? (
-                      <AppearancePage
-                        state={state}
-                        onAction={dispatch}
-                        onReplayTour={() => {
-                          void dispatch({
-                            type: "prefs",
-                            patch: { redesignTourSeen: "replay" },
-                            ...actionMeta(),
-                          });
-                        }}
-                      />
-                    ) : settingsPage === "games" && codesGame ? (
-                      <GameSettings
-                        key={`${codesGame}-${gameTab}`}
-                        initialTab={gameTab}
-                        codes={codes}
-                        initialGame={codesGame}
-                        state={state}
-                        sources={feed.sources}
-                        onAction={dispatch}
-                      />
-                    ) : settingsPage === "time" ? (
-                      <TimeSettings
-                        state={state}
-                        now={now}
-                        onAction={dispatch}
-                      />
-                    ) : settingsPage === "sources" ? (
-                      <DataSourcesPage
-                        sources={feed.sources.filter((s) =>
-                          trackedGames(state).has(s.game),
-                        )}
-                        now={now}
-                        timezone={zone}
-                        online={online}
-                        onRefresh={refreshFeed}
-                        showUpcoming={prefs.showUpcoming}
-                        detectDaily={prefs.detectDaily}
-                        standardPulls={state.prefs.standardPulls === true}
-                        onPrefs={(patch) =>
-                          void dispatch({
-                            type: "prefs",
-                            patch,
-                            ...actionMeta(),
-                          })
-                        }
-                      />
-                    ) : settingsPage === "backup" ? (
-                      <BackupPage state={state} />
-                    ) : settingsPage === "changelog" ? (
-                      <ChangelogPage notes={NOTES} entries={ENTRIES} />
-                    ) : settingsPage === "about" ? (
-                      <AboutPage sources={feed.sources} />
-                    ) : settingsPage === "own" ? (
-                      <section>
-                        <h1>Your own events and games</h1>
-                        <p className="help">
-                          Only what you added yourself. Routines live on the
-                          Routines tab.
-                        </p>
-                        <YourOwn {...ownProps} />
-                      </section>
-                    ) : null}
-                  </SettingsLayout>
-                )}
-                <FeedFooter
+                    Undo
+                  </button>
+                </aside>
+              )}
+              {archivedOpen && (
+                <ArchiveDetail
+                  record={archivedOpen}
+                  state={state}
+                  onAction={dispatch}
+                  onClose={() => setArchivedOpen(null)}
+                />
+              )}
+              {open && (
+                <ReaderDetail
                   sources={feed.sources}
+                  onSources={() => {
+                    setOpen(null);
+                    showSettings("sources");
+                  }}
+                  row={open}
+                  state={state}
                   now={now}
-                  online={online}
                   timezone={zone}
-                  onAbout={() => showSettings("about")}
-                  onRefresh={refreshFeed}
+                  onAction={dispatch}
+                  onOutcome={(kind) => void outcome(open, kind)}
+                  onClose={() => setOpen(null)}
+                  ownProps={ownProps}
+                />
+              )}
+              {appUpdate.available && (
+                <UpdateNotice
+                  applying={appUpdate.applying}
+                  onApply={appUpdate.apply}
+                  onDismiss={appUpdate.dismiss}
+                />
+              )}
+            </div>
+            {touring && (
+              <>
+                <ReturningTour
+                  intro={tour === "replay" ? undefined : tour}
+                  closable={!tourForced}
+                  looks={{
+                    interface: prefs.interface ?? "structured",
+                    timelineLook: timelineLook(state.prefs),
+                  }}
+                  onLook={(patch) =>
+                    void dispatch({ type: "prefs", patch, ...actionMeta() })
+                  }
+                  onStep={(stop) => {
+                    setOpen(null);
+                    setArchivedOpen(null);
+                    if (stop === "settings" || stop === "replay") {
+                      setCodesGame(undefined);
+                      showSettings("appearance");
+                      return;
+                    }
+                    if (
+                      stop !== "codes-game" &&
+                      stop !== "codes-tab" &&
+                      stop !== "codes"
+                    ) {
+                      setPage(stop);
+                      return;
+                    }
+                    // A tracked game that has codes, else any tracked game:
+                    // its Codes tab says when none are published.
+                    const game =
+                      accounts
+                        .map((a) => a.game)
+                        .find((g) => codes?.codes.some((c) => c.game === g)) ??
+                      accounts[0]?.game;
+                    if (!game) {
+                      setPage("soon");
+                      return;
+                    }
+                    setGameTab(stop === "codes" ? "codes" : "setup");
+                    setCodesGame(game);
+                    showSettings("games");
+                  }}
+                  onFinish={() => {
+                    void dispatch({
+                      type: "prefs",
+                      patch: { redesignTourSeen: TOUR_DONE },
+                      ...actionMeta(),
+                    });
+                    setPage(prefs.view);
+                  }}
                 />
               </>
             )}
-            {transition && (
-              <aside className="archive-toast" role="status">
-                {transition.label} “{transition.title}” · Moved to Archive{" "}
-                <button
-                  type="button"
-                  onClick={() => {
-                    void dispatch({
-                      type: "restore",
-                      accountId: transition.accountId,
-                      eventId: transition.eventId,
-                      ...actionMeta(),
-                    });
-                    setTransition(null);
-                  }}
-                >
-                  Undo
-                </button>
-              </aside>
-            )}
-            {archivedOpen && (
-              <ArchiveDetail
-                record={archivedOpen}
-                state={state}
-                onAction={dispatch}
-                onClose={() => setArchivedOpen(null)}
-              />
-            )}
-            {open && (
-              <ReaderDetail
-                sources={feed.sources}
-                onSources={() => {
-                  setOpen(null);
-                  showSettings("sources");
-                }}
-                row={open}
-                state={state}
-                now={now}
-                timezone={zone}
-                onAction={dispatch}
-                onOutcome={(kind) => void outcome(open, kind)}
-                onClose={() => setOpen(null)}
-                ownProps={ownProps}
-              />
-            )}
-            {appUpdate.available && (
-              <UpdateNotice
-                applying={appUpdate.applying}
-                onApply={appUpdate.apply}
-                onDismiss={appUpdate.dismiss}
-              />
-            )}
-          </div>
-          {touring && (
-            <>
-              <ReturningTour
-                intro={tour === "replay" ? undefined : tour}
-                closable={!tourForced}
-                looks={{
-                  interface: prefs.interface ?? "structured",
-                  timelineLook: timelineLook(state.prefs),
-                }}
-                onLook={(patch) =>
-                  void dispatch({ type: "prefs", patch, ...actionMeta() })
-                }
-                onStep={(stop) => {
-                  setOpen(null);
-                  setArchivedOpen(null);
-                  if (stop === "settings" || stop === "replay") {
-                    setCodesGame(undefined);
-                    showSettings("appearance");
-                    return;
-                  }
-                  if (
-                    stop !== "codes-game" &&
-                    stop !== "codes-tab" &&
-                    stop !== "codes"
-                  ) {
-                    setPage(stop);
-                    return;
-                  }
-                  // A tracked game that has codes, else any tracked game:
-                  // its Codes tab says when none are published.
-                  const game =
-                    accounts
-                      .map((a) => a.game)
-                      .find((g) => codes?.codes.some((c) => c.game === g)) ??
-                    accounts[0]?.game;
-                  if (!game) {
-                    setPage("soon");
-                    return;
-                  }
-                  setGameTab(stop === "codes" ? "codes" : "setup");
-                  setCodesGame(game);
-                  showSettings("games");
-                }}
-                onFinish={() => {
-                  void dispatch({
-                    type: "prefs",
-                    patch: { redesignTourSeen: TOUR_DONE },
-                    ...actionMeta(),
-                  });
-                  setPage(prefs.view);
-                }}
-              />
-            </>
-          )}
-        </main>
-      </GameMetaProvider>
+          </main>
+        </GameMetaProvider>
+      </CelebrationsContext>
     </DisplayTimeContext>
   );
 }

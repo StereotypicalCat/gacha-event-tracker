@@ -8,7 +8,10 @@ import { streakOf } from "../../../shared/daily.ts";
 import { goalCount } from "../../../shared/goal.ts";
 import { chipLabel } from "../Dailies.tsx";
 import { Fireworks } from "../Fireworks.tsx";
-import { useSectionCelebration } from "./useSectionCelebration.ts";
+import {
+  finishesSection,
+  useSectionCelebration,
+} from "./useSectionCelebration.ts";
 
 import type { ReaderState } from "../../state/reader/schema.ts";
 import type { RoutineRow } from "../../state/reader/routines.ts";
@@ -18,19 +21,24 @@ export function RoutineControl({
   row,
   onAction,
   now,
+  finishes = false,
 }: {
   row: RoutineRow;
   onAction: ActionHandler;
   now: number;
+  /** Completing it finishes the section, whose grand celebration goes instead. */
+  finishes?: boolean;
 }) {
   const today = readerDayKey(now, row.clock);
   const [amount, setAmount] = useState(String(row.status.count));
   const editing = useRef(false);
+  const [burst, celebrate] = useBurst();
   useEffect(() => {
     if (!editing.current) setAmount(String(row.status.count));
   }, [row.status.count, row.status.periodStart]);
   return (
     <div className="routine-control">
+      {burst > 0 && <Fireworks key={burst} />}
       <div>
         <strong>{row.title}</strong>
         <small>
@@ -58,16 +66,22 @@ export function RoutineControl({
             onChange={(e) => {
               setAmount(e.target.value);
               const value = e.target.valueAsNumber;
-              if (Number.isInteger(value) && value >= 0)
-                void onAction({
-                  type: "amount",
-                  accountId: row.accountId,
-                  revisionId: row.clock.revision,
-                  itemId: row.id,
-                  period: row.status.periodStart,
-                  value,
-                  ...actionMeta(),
-                });
+              if (!Number.isInteger(value) || value < 0) return;
+              if (
+                !finishes &&
+                row.status.count < row.status.required &&
+                value >= row.status.required
+              )
+                celebrate();
+              void onAction({
+                type: "amount",
+                accountId: row.accountId,
+                revisionId: row.clock.revision,
+                itemId: row.id,
+                period: row.status.periodStart,
+                value,
+                ...actionMeta(),
+              });
             }}
           />
         </label>
@@ -77,7 +91,11 @@ export function RoutineControl({
           className="daily-tick"
           aria-label={`${row.title}, ${row.days.includes(today) ? "done" : "not done"} today`}
           aria-pressed={row.days.includes(today)}
-          onClick={() => toggleToday(row, today, onAction)}
+          onClick={() => {
+            if (!finishes && !row.days.includes(today) && !row.status.met)
+              celebrate();
+            toggleToday(row, today, onAction);
+          }}
         >
           <svg aria-hidden viewBox="0 0 16 16">
             <rect
@@ -103,6 +121,21 @@ export function RoutineControl({
     </div>
   );
 }
+/**
+ * The small burst: fired by an action that completes one item, cleared once
+ * the sparks are done (the live strip's 1400ms). Counts up so a second
+ * completion while one is still showing remounts it.
+ */
+function useBurst(): [number, () => void] {
+  const [burst, setBurst] = useState(0);
+  useEffect(() => {
+    if (burst === 0) return;
+    const id = setTimeout(() => setBurst(0), 1400);
+    return () => clearTimeout(id);
+  }, [burst]);
+  return [burst, () => setBurst((n) => n + 1)];
+}
+
 /** Today's tick for a daily row: on, or off again. */
 function toggleToday(row: RoutineRow, today: string, onAction: ActionHandler) {
   void onAction({
@@ -139,9 +172,10 @@ function doneToday(row: RoutineRow, today: string): boolean {
 /**
  * Today's dailies in the Checklist rail. The whole row is the tick target, as
  * the live strip's pill is. A tick washes the row in the game's colour, pops
- * the box and draws the check. The live strip's fireworks go off when the last
- * one is ticked, under the same rule as live (see `Dailies.tsx`): only a tick
- * made just now that finishes the list counts, not a list that got shorter.
+ * the box and draws the check, with a small burst of fireworks in the row. The
+ * tick that finishes the list gets the grand celebration over the panel instead,
+ * under the same rule as live (see `Dailies.tsx`): only a tick made just now
+ * that finishes the list counts, not a list that got shorter.
  */
 export function DailyPanel({
   rows,
@@ -163,6 +197,16 @@ export function DailyPanel({
   ).length;
   const allDone = total > 0 && done === total;
   const burst = useSectionCelebration(total, done);
+  const finishes = finishesSection(total, done);
+  // The row whose tick just completed it, for its own small burst.
+  const [rowBurst, setRowBurst] = useState<{ key: string; n: number } | null>(
+    null,
+  );
+  useEffect(() => {
+    if (!rowBurst) return;
+    const id = setTimeout(() => setRowBurst(null), 1400);
+    return () => clearTimeout(id);
+  }, [rowBurst]);
   // Rows ticked by a click in this panel; only those animate, so a reload
   // with everything already done doesn't replay every pop.
   const [fresh, setFresh] = useState<ReadonlySet<string>>(new Set());
@@ -231,7 +275,12 @@ export function DailyPanel({
               data-done={isDone || undefined}
             >
               {label}
-              <RoutineControl row={row} onAction={onAction} now={now} />
+              <RoutineControl
+                row={row}
+                onAction={onAction}
+                now={now}
+                finishes={finishes}
+              />
             </div>
           );
         return (
@@ -250,6 +299,8 @@ export function DailyPanel({
               goal ? row.status : undefined,
             )}
             onClick={() => {
+              if (!isDone && !finishes)
+                setRowBurst((b) => ({ key, n: (b?.n ?? 0) + 1 }));
               setFresh((f) => {
                 const n = new Set(f);
                 if (ticked) n.delete(key);
@@ -259,6 +310,7 @@ export function DailyPanel({
               toggleToday(row, today, onAction);
             }}
           >
+            {rowBurst?.key === key && <Fireworks key={rowBurst.n} />}
             {label}
             {/* One counter, as on live: a goal's count answers "is this week
                 done?", so a streak beside it is beside the point. */}

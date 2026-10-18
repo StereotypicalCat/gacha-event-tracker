@@ -1,6 +1,8 @@
+import { createContext, useContext } from "react";
+
 /**
- * A small burst, for the one moment in this app that is unambiguously good
- * news: every daily ticked off before the reset.
+ * A small burst, for finishing something: a daily ticked, a routine met, an
+ * event marked completed. Finishing a whole section gets the grand version.
  *
  * Deliberately tiny and deliberately silent — decorative only, `aria-hidden`,
  * and gone in under a second. The text beside it already says "All done", which
@@ -10,6 +12,17 @@
  * nobody asked for is exactly the kind of motion that setting exists to stop,
  * and the state it celebrates is legible without it.
  */
+
+/**
+ * Whether the reader wants celebrations at all (Settings → Appearance). Off
+ * means none, big or small; absent means on.
+ */
+export function celebrationsOn(prefs: Record<string, unknown>): boolean {
+  return prefs.celebrations !== false;
+}
+
+/** The reader's celebrations switch, provided once at the app's root. */
+export const CelebrationsContext = createContext(true);
 
 /**
  * Fixed spark geometry rather than random: the burst looks the same every time,
@@ -57,6 +70,8 @@ export function Fireworks({
   /** A game's colour to mix into the sparks. */
   hue?: string | undefined;
 } = {}) {
+  const on = useContext(CelebrationsContext);
+  if (!on) return null;
   const bursts = grand ? GRAND_BURSTS : BURSTS,
     sparks = grand ? GRAND_SPARKS : SPARKS,
     colors = hue ? [hue, ...COLORS] : COLORS;

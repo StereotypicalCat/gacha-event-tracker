@@ -34,25 +34,37 @@ export function PinnedRoutine({
   hue,
   onAction,
   now,
+  finishes = false,
 }: {
   row: RoutineRow;
   hue: string;
   onAction: ActionHandler;
   now: number;
+  /** Completing it finishes its group, whose grand celebration goes instead. */
+  finishes?: boolean;
 }) {
   const today = readerDayKey(now, row.clock);
   const amount = row.status.measure === "amount";
   const met = row.status.met;
   const [editing, setEditing] = useState(false);
   const [burst, setBurst] = useState(0);
+  // Whether the burst it is showing finished the group: then the box still
+  // pops, but the group's grand celebration stands in for the sparks.
+  const [quiet, setQuiet] = useState(false);
   // The amount before a completing action, for undo.
   const [before, setBefore] = useState<number | null>(null);
   // Set by an action in this row, so only a completion made here celebrates,
   // never one that arrives with a reload or a new period.
   const acted = useRef(false);
   const wasMet = useRef(met);
+  // As it stood at the completing action: by the time `met` flips, the group
+  // already counts this routine done.
+  const finishesGroup = useRef(false);
   useEffect(() => {
-    if (met && !wasMet.current && acted.current) setBurst((n) => n + 1);
+    if (met && !wasMet.current && acted.current) {
+      setQuiet(finishesGroup.current);
+      setBurst((n) => n + 1);
+    }
     wasMet.current = met;
     acted.current = false;
   }, [met]);
@@ -69,6 +81,7 @@ export function PinnedRoutine({
     required = row.status.required;
   const setAmount = (value: number) => {
     acted.current = true;
+    finishesGroup.current = finishes;
     void onAction({
       type: "amount",
       accountId: row.accountId,
@@ -81,6 +94,7 @@ export function PinnedRoutine({
   };
   const setDay = (day: string, checked: boolean) => {
     acted.current = true;
+    finishesGroup.current = finishes;
     void onAction({
       type: "day",
       accountId: row.accountId,
@@ -127,7 +141,7 @@ export function PinnedRoutine({
       data-burst={burst > 0 || undefined}
       style={{ "--g": hue } as CSSProperties}
     >
-      {burst > 0 && <Fireworks key={burst} />}
+      {burst > 0 && !quiet && <Fireworks key={burst} />}
       <div className="pr-text">
         <strong>{row.title}</strong>
         <small>
