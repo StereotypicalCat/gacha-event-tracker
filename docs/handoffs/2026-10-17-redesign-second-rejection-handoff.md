@@ -924,3 +924,17 @@ committing:
 The owner chose to commit and push, including `design/`, the redesign docs, `docs/design-reviews/` and
 `.superpowers/`. The changelog entry and note follow in their own commit, because they must name the
 redesign commit.
+
+### After shipping: Settings width, redeem links, more code sources (2026-10-18)
+
+- **Settings on large screens.** Content was capped at 900px (760px on game, backup and data pages),
+  and the menu's rule stopped partway down. Content now uses up to 1320px; the changelog keeps its
+  reading column. The menu runs the full height.
+- **Codes tab.** It gains "Redeem on the official site ↗" where the publisher has a web page (Genshin,
+  Star Rail, ZZZ), and the in-game route for every game with codes (`src/shared/redeem.ts`).
+  A redeemed checkbox names the server only when there is more than one.
+- **Code sources.** Eight more games come from Game8: `parseGame8CodeTable`, with fixtures, expected
+  files and tests. Infinity Nikki is skipped because its page is stale, and ten games have no Game8
+  page. See docs/SOURCES.md § Redeem codes for eight more games.
+- **Owner's TODO:** let readers try Relaxed/Structured and the new/classic Timeline live, including
+  returning readers who've done the tour.

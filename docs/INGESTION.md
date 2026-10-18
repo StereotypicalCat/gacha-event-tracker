@@ -659,3 +659,38 @@ Event adapter schemas are unchanged. scripts/build-codes.ts builds data/codes.v1
 snapshots or fixtures and preserves observation timestamps in snapshots/codes-first-seen.json.
 Code newness is per game; redemption is per local game/server account and never clears newness by
 itself. No code row is synthesized into the event feed.
+
+## Redeem codes for eight more games (2026-10-18)
+
+Codes now come from Game8 for Star Rail (archives/410296), ZZZ (435683), Wuthering Waves (453149),
+Endfield (571509), NTE (593718), P5X (531770), Chaos Zero Nightmare (557967) and Umamusume (536130),
+beside Genshin.
+- **Capture.** game8.co's robots.txt has no rule for our User-Agent or these paths. Each page was
+  fetched exactly once with the refresh User-Agent, 2s apart, all HTTP 200, and pinned as
+  `fixtures/<game>/game8-codes-2026-10-18.*`.
+- **Parser.** The pages share Game8's copy-input markup but not their headings or columns.
+  `parseGame8CodeTable` reads the section under each page's own "active codes" heading
+  (`src/ingest/codes/registry.ts`), skips any table there that says its codes have expired
+  (Wuthering Waves keeps one at the top), and reads the reward from the other cells, or from the
+  code's own cell when they share one (Wuthering Waves, P5X).
+- **Expiry stays null.** The pages print "Expires TBA" or a date range without a year, and a guessed
+  year would be a fabricated date.
+- **Umamusume.** The page currently states "No Publicly Released Codes Yet", which is what lets its
+  empty read be stored (`statesNoEvents`). A changed page still fails the gate.
+- **Spot-checked against the live pages:** Star Rail's six codes, WUTHERINGGIFT, Endfield's
+  ENDFIELDSTEAM / ENDFIELDGIFT / ENDFIELD4PC, CZN's NIGHTMARECARNIVAL and P5X's WEBSTORE1YEAR.
+
+**Infinity Nikki is not added.** Game8 stopped updating its Nikki guides and the codes page is still
+titled "All Infinity Nikki Codes (July 2025)", so its twelve "active" codes cannot be presented as
+current. The other games (Arknights, Blue Archive, FGO, hololive Dreams, GFL2, Stella Sora, Nikke,
+Honkai Impact 3rd, PGR, Reverse: 1999) have no Game8 codes page. Searches found only general blogs,
+which are not assessed yet.
+
+**Where to redeem** (`src/shared/redeem.ts`). Each game with a codes source shows its in-game route,
+taken from its Game8 page's "How to redeem" section. An official web page gets a button only when the
+page links one on the publisher's domain. Today that is Genshin, Star Rail and ZZZ on hoyoverse.com.
+Chaos Zero Nightmare names an official coupon page without linking it, and no URL could be confirmed,
+so it shows the in-game route only.
+
+**Refreshing.** These are game8 pages, so the CI caveat in AGENTS.md § Scraping conduct applies: if the
+runner is refused, they refresh by hand like the event pages.

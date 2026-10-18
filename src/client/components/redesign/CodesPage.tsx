@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { freshness } from "../../../shared/feed.ts";
 import type { CodesFeed } from "../../../shared/codes.ts";
+import { REDEEM } from "../../../shared/redeem.ts";
+import type { GameId } from "../../../shared/schema.ts";
 import type { ReaderState } from "../../state/reader/schema.ts";
 import { newCodes } from "../../state/reader/codes.ts";
 import { actionMeta } from "../../state/reader/actions.ts";
@@ -22,6 +24,7 @@ export function CodesPage({
     (a) => a.game === game && !a.retiredAt,
   );
   const codes = feed?.codes.filter((c) => c.game === game) ?? [];
+  const redeem = REDEEM[game as GameId];
   const unseen = feed ? newCodes(feed, state.codeSeen[game] ?? [], game) : [];
   useEffect(() => {
     if (unseen.length)
@@ -40,6 +43,24 @@ export function CodesPage({
         New-code notices are separate from redemption. Mark codes redeemed for
         each account you play.
       </p>
+      {redeem && (
+        <div className="redeem-where">
+          {redeem.url && (
+            <a
+              className="commit"
+              href={redeem.url}
+              target="_blank"
+              rel="noreferrer noopener"
+            >
+              Redeem on the official site ↗
+            </a>
+          )}
+          <p>
+            <span>{redeem.url ? "Or in game:" : "Redeem in game:"}</span>{" "}
+            {redeem.inGame}
+          </p>
+        </div>
+      )}
       <p role="status">{message}</p>
       {feed &&
         freshness(
@@ -104,7 +125,9 @@ export function CodesPage({
                       })
                     }
                   />
-                  Redeemed · {a.region}
+                  Redeemed
+                  {/* The server only when there is more than one to tell apart. */}
+                  {accounts.length > 1 && ` · ${a.region}`}
                 </label>
               ))}
             </div>

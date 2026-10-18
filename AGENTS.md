@@ -387,10 +387,11 @@ Sources are community wikis. Treat them as a guest would:
   with `--only`: forcing twenty sources to re-ask a question they answered an hour ago is the
   behaviour this bullet exists to prevent, whatever flag authorised it. The run names every source it
   asked early, and a run that was due anyway is never reported as forced.
-- **Space requests to one host**, honouring its `Crawl-delay` and defaulting to 2s. Nine of the
-  twenty sources are game8.co pages, so the per-source floor alone still permits one cycle to arrive
-  as nine back-to-back requests to a single site — which is the shape an edge network throttles, and
-  what a burst looks like from the far end regardless of our intent.
+- **Space requests to one host**, honouring its `Crawl-delay` and defaulting to 2s. Nine event
+  sources and nine redeem-code sources (2026-10-18) are game8.co pages, so the per-source floor alone
+  still permits one cycle to arrive as eighteen back-to-back requests to a single site — which is
+  the shape an edge network throttles, and what a burst looks like from the far end regardless of
+  our intent.
 - Send `If-None-Match` / `If-Modified-Since`; treat `304` as "skip, unchanged".
 - Cache raw snapshots so re-parsing never re-fetches. **Iterate against fixtures, not the network.**
 - Record `sourceUrl` on every event and surface attribution in the UI.

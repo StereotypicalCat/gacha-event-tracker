@@ -20,16 +20,14 @@ export async function buildCodes() {
   const sources: SourceHealth[] = [];
   for (const source of CODE_SOURCES) {
     const snapshot = await store.read(source.id),
+      // Until the refresh stores a snapshot, each source builds from its own
+      // pinned page, dated by that capture.
       at = snapshot
         ? freshnessAt(snapshot)
-        : ((
-            await Bun.file(
-              "fixtures/genshin/game8-codes-2026-10-16.meta.json",
-            ).json()
-          ).contentChangedAt as string),
+        : ((await Bun.file(`${source.fixture}.meta.json`).json())
+            .contentChangedAt as string),
       html =
-        snapshot?.html ??
-        (await Bun.file("fixtures/genshin/game8-codes-2026-10-16.html").text());
+        snapshot?.html ?? (await Bun.file(`${source.fixture}.html`).text());
     const parsed = source.parse(html, {
       now: new Date().toISOString(),
       sourceId: source.id,
@@ -51,7 +49,10 @@ export async function buildCodes() {
       contentChangedAt: snapshot?.meta.contentChangedAt ?? at,
       eventCount: parsed.length,
       parsedCount: parsed.length,
-      statesNoEvents: false,
+      statesNoEvents:
+        parsed.length === 0 && "statesNoEvents" in source
+          ? source.statesNoEvents(html)
+          : false,
     });
   }
   const feed = CodesFeedSchema.parse({ schemaVersion: 1, codes, sources });

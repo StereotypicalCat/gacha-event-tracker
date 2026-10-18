@@ -1,0 +1,50 @@
+[
+  {
+    "id": "[\"hsr\",\"PEARLAPPRAISE\"]",
+    "game": "hsr",
+    "code": "PEARLAPPRAISE",
+    "reward": "Traveler's Guide x3 Cold Joke x2",
+    "expiresAt": null,
+    "sourceUrl": "https://game8.co/games/Honkai-Star-Rail/archives/410296"
+  },
+  {
+    "id": "[\"hsr\",\"OMEGA\"]",
+    "game": "hsr",
+    "code": "OMEGA",
+    "reward": "Stellar Jade x60 Fuel x1",
+    "expiresAt": null,
+    "sourceUrl": "https://game8.co/games/Honkai-Star-Rail/archives/410296"
+  },
+  {
+    "id": "[\"hsr\",\"CREATIONNYMPH\"]",
+    "game": "hsr",
+    "code": "CREATIONNYMPH",
+    "reward": "Stellar Jade x60 Fuel x1 Heroic Variable x1",
+    "expiresAt": null,
+    "sourceUrl": "https://game8.co/games/Honkai-Star-Rail/archives/410296"
+  },
+  {
+    "id": "[\"hsr\",\"FAREWELL\"]",
+    "game": "hsr",
+    "code": "FAREWELL",
+    "reward": "Stellar Jade x60 Fuel x1",
+    "expiresAt": null,
+    "sourceUrl": "https://game8.co/games/Honkai-Star-Rail/archives/410296"
+  },
+  {
+    "id": "[\"hsr\",\"IFYOUAREREADINGTHIS\"]",
+    "game": "hsr",
+    "code": "IFYOUAREREADINGTHIS",
+    "reward": "Stellar Jade x60 Fuel x1",
+    "expiresAt": null,
+    "sourceUrl": "https://game8.co/games/Honkai-Star-Rail/archives/410296"
+  },
+  {
+    "id": "[\"hsr\",\"STARRAILGIFT\"]",
+    "game": "hsr",
+    "code": "STARRAILGIFT",
+    "reward": "Stellar Jade x100 Traveler's Guide x4 Bottled Soda x5 Credit x50,000",
+    "expiresAt": null,
+    "sourceUrl": "https://game8.co/games/Honkai-Star-Rail/archives/410296"
+  }
+]

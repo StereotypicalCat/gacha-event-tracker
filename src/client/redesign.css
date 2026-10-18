@@ -5338,3 +5338,53 @@ button.mark {
   font: 500 12px/1.4 var(--font-body);
   color: var(--color-muted);
 }
+
+/* Settings on large screens: the content used to stop at 900px, leaving most
+   of a 1920px screen empty, and the menu's rule ended partway down. Forms and
+   card grids now use up to 1320px (paragraphs keep their 75ch measure), and
+   the menu column runs the full height of the page. */
+.settings-layout {
+  min-height: calc(100vh - 130px);
+}
+.settings-layout > nav {
+  align-self: stretch;
+}
+.settings-content {
+  max-width: 1320px;
+}
+@media (max-width: 700px) {
+  .settings-layout {
+    min-height: 0;
+  }
+}
+/* The form pages fill the wider settings column too; the changelog keeps its
+   reading measure. */
+.game-settings,
+.backup-page,
+.reset-row,
+.sources-page .source-row,
+.sources-page .list-options,
+.sources-page .sources-heading {
+  max-width: none;
+}
+
+/* Where to redeem: the official page as a button when the publisher has one,
+   and the in-game route either way. */
+.redeem-where {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin: 12px 0 16px;
+}
+.redeem-where .commit {
+  text-decoration: none;
+}
+.redeem-where p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-ink);
+}
+.redeem-where p span {
+  color: var(--color-muted);
+}

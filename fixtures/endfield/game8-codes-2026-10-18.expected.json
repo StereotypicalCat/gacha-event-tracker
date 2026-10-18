@@ -1,0 +1,34 @@
+[
+  {
+    "id": "[\"endfield\",\"ENDFIELDSTEAM\"]",
+    "game": "endfield",
+    "code": "ENDFIELDSTEAM",
+    "reward": "T-Creds x8,000 Elementary Cognitive Carrier x2 Arms INSP Set x2 Heat-Driven Cog x1",
+    "expiresAt": null,
+    "sourceUrl": "https://game8.co/games/Arknights-Endfield/archives/571509"
+  },
+  {
+    "id": "[\"endfield\",\"ZAU2SYXHWX5L4ZH\"]",
+    "game": "endfield",
+    "code": "ZAU2SYXHWX5L4ZH",
+    "reward": "T-Creds x5000 Arms INSP Kit x10",
+    "expiresAt": null,
+    "sourceUrl": "https://game8.co/games/Arknights-Endfield/archives/571509"
+  },
+  {
+    "id": "[\"endfield\",\"ENDFIELDGIFT\"]",
+    "game": "endfield",
+    "code": "ENDFIELDGIFT",
+    "reward": "Oroberyl x150 T-Creds x10,000 Intermediate Combat Record x20 Arms INSP Kit x20",
+    "expiresAt": null,
+    "sourceUrl": "https://game8.co/games/Arknights-Endfield/archives/571509"
+  },
+  {
+    "id": "[\"endfield\",\"ENDFIELD4PC\"]",
+    "game": "endfield",
+    "code": "ENDFIELD4PC",
+    "reward": "T-Creds x13,000 Advanced Combat Record x2 Arms INSP Kit x2",
+    "expiresAt": null,
+    "sourceUrl": "https://game8.co/games/Arknights-Endfield/archives/571509"
+  }
+]

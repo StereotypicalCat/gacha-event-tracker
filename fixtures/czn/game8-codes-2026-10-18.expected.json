@@ -1,0 +1,42 @@
+[
+  {
+    "id": "[\"czn\",\"NIGHTMARECARNIVAL\"]",
+    "game": "czn",
+    "code": "NIGHTMARECARNIVAL",
+    "reward": "Crystals x1,000",
+    "expiresAt": null,
+    "sourceUrl": "https://game8.co/games/Chaos-Zero-Nightmare/archives/557967"
+  },
+  {
+    "id": "[\"czn\",\"CZNNEWPDGIFT3RD\"]",
+    "game": "czn",
+    "code": "CZNNEWPDGIFT3RD",
+    "reward": "Signal Amplification Anchor x10",
+    "expiresAt": null,
+    "sourceUrl": "https://game8.co/games/Chaos-Zero-Nightmare/archives/557967"
+  },
+  {
+    "id": "[\"czn\",\"CZNNEWPDGIFT2ND\"]",
+    "game": "czn",
+    "code": "CZNNEWPDGIFT2ND",
+    "reward": "Signal Amplification Anchor x10",
+    "expiresAt": null,
+    "sourceUrl": "https://game8.co/games/Chaos-Zero-Nightmare/archives/557967"
+  },
+  {
+    "id": "[\"czn\",\"CZNNEWPDGIFT1ST\"]",
+    "game": "czn",
+    "code": "CZNNEWPDGIFT1ST",
+    "reward": "Signal Amplification Anchor x10",
+    "expiresAt": null,
+    "sourceUrl": "https://game8.co/games/Chaos-Zero-Nightmare/archives/557967"
+  },
+  {
+    "id": "[\"czn\",\"epicwithczn\"]",
+    "game": "czn",
+    "code": "epicwithczn",
+    "reward": "Rescue Anchor x3 Unit x300,000",
+    "expiresAt": null,
+    "sourceUrl": "https://game8.co/games/Chaos-Zero-Nightmare/archives/557967"
+  }
+]
