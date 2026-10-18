@@ -51,6 +51,14 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "codes-used-section",
+    date: "2026-10-18",
+    kind: "feature",
+    title: "Used codes move out of the way, and new ones are marked",
+    body: "Codes you've redeemed, and codes that have expired, are greyed out in their own section below the ones still to use. In Settings, each game you follow shows how many new codes it has until you open its Codes tab.",
+    ref: "3b29010",
+  },
+  {
     id: "tour-highlights",
     date: "2026-10-18",
     kind: "feature",
