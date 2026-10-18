@@ -41,9 +41,9 @@ test("the tour opens on its first step, with no way to skip it when forced", () 
   const html = render(
     <ReturningTour {...tourProps} intro="returning" closable={false} />,
   );
-  expect(html).toContain("Welcome back. A little has moved");
+  expect(html).toContain("Welcome back");
+  expect(html).toContain("going on a short tour");
   expect(html).toContain("1 of " + TOUR_STEPS.length);
-  expect(html).toContain(TOUR_STEPS[0]!.title);
   expect(html).not.toContain("Skip");
   expect(html).not.toContain("Close tour");
   expect(html).not.toContain("Keep browsing");
@@ -76,11 +76,27 @@ test("a choice holds Continue until both options have been tried", () => {
     "classic",
   ]);
 });
-test("every step highlights what it is about", () => {
-  for (const step of TOUR_STEPS) expect(step.target).toBeTruthy();
+test("the tour opens on a dimmed welcome, then highlights each step", () => {
+  expect(TOUR_STEPS[0]!.target).toBeUndefined();
+  for (const step of TOUR_STEPS.slice(1)) expect(step.target).toBeTruthy();
   expect(TOUR_STEPS.find((s) => s.stop === "routines")!.target).toBe(
     '[data-page="routines"]',
   );
+});
+test("the tour follows the owner's order, walking the way to the codes", () => {
+  expect(TOUR_STEPS.map((s) => s.stop)).toEqual([
+    "soon",
+    "soon",
+    "soon",
+    "timeline",
+    "routines",
+    "archive",
+    "settings",
+    "codes-game",
+    "codes-tab",
+    "codes",
+    "replay",
+  ]);
 });
 test("the tour introduces the Timeline right after the Checklist, and codes", () => {
   const stops = TOUR_STEPS.map((s) => s.stop);

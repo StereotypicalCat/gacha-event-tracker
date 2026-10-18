@@ -640,13 +640,21 @@ legend on the same baseline as "Next: …".
   get no marker.
 - **The tour (2026-10-18, owner).** Every reader takes it once before using the app: new readers
   straight after setup, returning readers on their first visit, and readers who saw the earlier tour
-  once more. Routines → Checklist → Pick a layout → Timeline → Redeem codes → Archive → Settings.
-  - It floats over the page it describes. While forced, the page behind is `inert`. It can be
-    scrolled and seen, but not clicked. There is no Skip, and a reload restarts at step 1.
+  once more. The order is the owner's (2026-10-18): a welcome on its own over the dimmed Checklist,
+  saying things have changed and a tour is starting, so the first highlight is not missed while the
+  reader is still reading → the bar along the top, for getting around → the Checklist with
+  Relaxed / Structured → the Timeline with New /
+  Classic → Routines → Archive → Settings → the way to codes in three steps (the game in Settings →
+  Your games, its Codes tab, the codes) → where to replay the tour (Settings → Appearance → Replay
+  the introduction).
+  - It floats over the page it describes. The page behind is `inert`: it can be scrolled and seen,
+    but not clicked. There is no Skip, and a reload restarts at step 1.
   - Each step rings what it is about (owner, 2026-10-18: greying the page "makes sense, but it should
-    highlight the option"): the nav tab for Routines, Checklist, Archive and Settings, the Checklist
-    or the Timeline board for the two comparing steps, the codes list for codes. While forced, the
-    rest of the page is dimmed around it. The ring is a fixed layer drawn over the target's box
+    highlight the option"): the nav tab for Routines, Archive and Settings, the Checklist or the
+    Timeline board for the two comparing steps, the game's row, its Codes tab and the codes list for
+    codes, and the Replay button. A subject out of sight is scrolled into view. The rest of the page
+    is dimmed around it and inert, in a replay from Settings too (owner, 2026-10-18); a replay differs
+    only in having Close tour. The ring is a fixed layer drawn over the target's box
     (`TourSpotlight`), not the target raised above a scrim, so no stacking context can trap it.
   - "Pick a layout" (on the Checklist) and the Timeline step each hold a two-way switch, Relaxed /
     Structured and New / Classic. The switch changes the page behind in place, and the selected one
@@ -659,4 +667,4 @@ legend on the same baseline as "Next: …".
   - Returning readers are moved to Relaxed as the tour opens. New readers keep the look they chose in
     setup.
   - Continue stays in a fixed place and Back sits beside it. Only a replay ("Replay the
-    introduction" in Appearance) has a way out, "Close tour", with no scrim.
+    introduction" in Appearance) has a way out, "Close tour".

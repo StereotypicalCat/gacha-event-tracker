@@ -691,10 +691,10 @@ function ReaderContent({
           className="app-shell reader-ui"
           data-touring={touring || undefined}
         >
-          {/* While the tour is forced the page behind shows each stop but
-              takes no clicks or focus. `display: contents` keeps the layout
-              as if this wrapper were not here. */}
-          <div className="tour-behind" inert={tourForced}>
+          {/* During the tour, forced or replayed, the page behind shows each
+              stop but takes no clicks or focus. `display: contents` keeps the
+              layout as if this wrapper were not here. */}
+          <div className="tour-behind" inert={touring}>
             <header className="top">
               {prefs.onboarded ? (
                 <button
@@ -1150,21 +1150,31 @@ function ReaderContent({
                 onStep={(stop) => {
                   setOpen(null);
                   setArchivedOpen(null);
-                  if (stop !== "codes") {
-                    if (stop === "settings") showSettings("appearance");
-                    else setPage(stop);
+                  if (stop === "settings" || stop === "replay") {
+                    setCodesGame(undefined);
+                    showSettings("appearance");
                     return;
                   }
-                  // The Codes tab of a tracked game that has codes, else the
-                  // Checklist, where new codes are announced.
-                  const game = accounts
-                    .map((a) => a.game)
-                    .find((g) => codes?.codes.some((c) => c.game === g));
+                  if (
+                    stop !== "codes-game" &&
+                    stop !== "codes-tab" &&
+                    stop !== "codes"
+                  ) {
+                    setPage(stop);
+                    return;
+                  }
+                  // A tracked game that has codes, else any tracked game:
+                  // its Codes tab says when none are published.
+                  const game =
+                    accounts
+                      .map((a) => a.game)
+                      .find((g) => codes?.codes.some((c) => c.game === g)) ??
+                    accounts[0]?.game;
                   if (!game) {
                     setPage("soon");
                     return;
                   }
-                  setGameTab("codes");
+                  setGameTab(stop === "codes" ? "codes" : "setup");
                   setCodesGame(game);
                   showSettings("games");
                 }}

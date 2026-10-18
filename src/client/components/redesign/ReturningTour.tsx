@@ -2,35 +2,53 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 /** Where a step takes the reader; ReaderApp opens the matching page. */
 export type TourStop =
-  "routines" | "soon" | "timeline" | "codes" | "archive" | "settings";
+  | "soon"
+  | "timeline"
+  | "routines"
+  | "archive"
+  | "settings"
+  /** Settings, with a game's page open: its row in the list is the way in. */
+  | "codes-game"
+  /** The same game page, pointing at its Codes tab. */
+  | "codes-tab"
+  /** The game's Codes tab open. */
+  | "codes"
+  /** Settings → Appearance, where the tour can be replayed. */
+  | "replay";
 
 /** A look the reader tries from inside a step, switching the page behind. */
 type TourChoice = "interface" | "timelineLook";
 
+/**
+ * The tour, in the owner's order (2026-10-18). The first step only says a tour
+ * is starting, over a dimmed page, so the first highlight is not missed while
+ * the reader is still reading the welcome; the second shows the bar along the
+ * top that every later step points into. The codes steps walk the way in:
+ * Settings, the game, its Codes tab, the codes.
+ */
 export const TOUR_STEPS: readonly {
   stop: TourStop;
   title: string;
   body: string;
-  /** What the step is about, highlighted on the page behind. */
-  target: string;
+  /** What the step is about, highlighted on the page behind; none dims it all. */
+  target?: string;
   choice?: TourChoice;
 }[] = [
   {
-    stop: "routines",
-    title: "Your routines have a home",
-    body: "Follow your dailies, weeklies and monthlies in the Routines tab, and pin the ones you want beside your Checklist or on the Timeline.",
-    target: '[data-page="routines"]',
+    stop: "soon",
+    title: "A short tour",
+    body: "A quick look at where everything is. Each step highlights what it's about.",
   },
   {
     stop: "soon",
-    title: "Your Checklist",
-    body: "What ends first, at the top. Focus on a game, tick today's dailies and pinned routines beside the list, and switch between Standard and Compact rows.",
-    target: '[data-page="soon"]',
+    title: "Getting around",
+    body: "The bar along the top takes you everywhere: the Checklist and Timeline, your Routines, the Archive and Settings. The numbers beside them count what's still to do. Click Event Clock to go back to your default view.",
+    target: ".reader-ui header.top",
   },
   {
     stop: "soon",
-    title: "Pick a layout",
-    body: "Try both on your own Checklist: the page changes as you switch. Whichever is selected when you continue is the one you keep.",
+    title: "Your Checklist, and its layout",
+    body: "What ends first, at the top, with today's dailies and pinned routines beside it. Try both layouts on your own Checklist: the page changes as you switch, and the one selected when you continue is the one you keep.",
     choice: "interface",
     target: ".checklist-layout",
   },
@@ -43,10 +61,10 @@ export const TOUR_STEPS: readonly {
       ".reader-timeline .timeline-scroller, .reader-timeline .classic-timeline",
   },
   {
-    stop: "codes",
-    title: "Redeem codes",
-    body: "New codes for the games you track show up at the top of the Checklist. Each game's Codes tab lists them with their rewards and expiry, ready to copy, and remembers which you've redeemed.",
-    target: ".codes-page",
+    stop: "routines",
+    title: "Your routines have a home",
+    body: "Follow your dailies, weeklies and monthlies in the Routines tab, and pin the ones you want beside your Checklist or on the Timeline.",
+    target: '[data-page="routines"]',
   },
   {
     stop: "archive",
@@ -59,6 +77,30 @@ export const TOUR_STEPS: readonly {
     title: "Your settings, together",
     body: "Appearance, region and time, each game's servers and colours, data sources and backups. The changelog has its own page here too.",
     target: '[data-page="settings"]',
+  },
+  {
+    stop: "codes-game",
+    title: "Redeem codes: pick the game",
+    body: "Codes live with each game. In Settings, choose the game under Your games; a game with codes you haven't seen says how many.",
+    target: '.settings-layout .settings-row[aria-current="page"]',
+  },
+  {
+    stop: "codes-tab",
+    title: "Redeem codes: open Codes",
+    body: "On the game's page, open the Codes tab.",
+    target: '.subtabs [data-tab="codes"]',
+  },
+  {
+    stop: "codes",
+    title: "Redeem codes: copy and tick",
+    body: "Each code with its rewards and expiry, ready to copy, and where to redeem it. Tick Redeemed once you've used one: it moves down with the expired ones.",
+    target: ".codes-page",
+  },
+  {
+    stop: "replay",
+    title: "Take the tour again",
+    body: "Whenever you want this tour again, it's here: Settings → Appearance → Replay the introduction.",
+    target: '[data-tour="replay"]',
   },
 ];
 
@@ -121,17 +163,19 @@ export function untriedOptions(choice: TourChoice, seen: readonly string[]) {
 }
 
 /**
- * Rings the step's subject and, while the tour is forced, dims the rest of the
+ * Rings the step's subject and dims the rest of the
  * page around it. A fixed layer drawn over the target's box rather than the
  * target raised above a scrim, so no stacking context on the page can trap it;
  * it follows the target as the page scrolls, and takes no clicks.
  */
-function TourSpotlight({ target, dim }: { target: string; dim: boolean }) {
+function TourSpotlight({ target }: { target: string | undefined }) {
   const [box, setBox] = useState<DOMRect | null>(null);
   useLayoutEffect(() => {
     let frame = 0;
     const follow = () => {
-      const next = document.querySelector(target)?.getBoundingClientRect();
+      const next = target
+        ? document.querySelector(target)?.getBoundingClientRect()
+        : undefined;
       setBox((previous) =>
         next &&
         previous &&
@@ -147,22 +191,39 @@ function TourSpotlight({ target, dim }: { target: string; dim: boolean }) {
     follow();
     return () => cancelAnimationFrame(frame);
   }, [target]);
-  if (!box)
-    return dim ? <div className="tour-scrim" aria-hidden="true" /> : null;
-  const pad = 6;
+  if (!box) return <div className="tour-scrim" aria-hidden="true" />;
+  // Padded, but kept 3px inside the window so a full-width subject, such as
+  // the bar along the top, still shows its ring at the edges.
+  const pad = 6,
+    edge = 3,
+    left = Math.max(edge, box.x - pad),
+    top = Math.max(edge, box.y - pad),
+    right = Math.min(window.innerWidth - edge, box.right + pad);
   return (
     <div
-      className={dim ? "tour-spotlight dim" : "tour-spotlight"}
+      className="tour-spotlight"
       aria-hidden="true"
       style={{
-        left: box.x - pad,
-        top: box.y - pad,
-        width: box.width + 2 * pad,
-        height: box.height + 2 * pad,
+        left,
+        top,
+        width: right - left,
+        height: box.bottom + pad - top,
       }}
     />
   );
 }
+
+/** The first step's words when the tour opens on its own; a replay has none. */
+const WELCOME = {
+  returning: {
+    title: "Welcome back",
+    body: "A few things have changed, so we're going on a short tour before you carry on. Your games, routines and progress are all still here. Each step highlights what it's about.",
+  },
+  new: {
+    title: "Welcome to Event Clock",
+    body: "Before you start, we're going on a short tour of where everything is. Each step highlights what it's about.",
+  },
+};
 
 /**
  * The introduction to Event Clock. Continue always sits first, in the same
@@ -178,7 +239,7 @@ export function ReturningTour({
   onStep,
   onFinish,
 }: {
-  /** The opening line on the first step; none on a replay. */
+  /** Who the first step welcomes; a replay opens on the plain first step. */
   intro?: "new" | "returning" | undefined;
   /** A replay can be closed at any step. */
   closable: boolean;
@@ -214,17 +275,22 @@ export function ReturningTour({
   }, [choice]);
   // A choice step brings its subject up to the top of the window, clear of
   // the banners above it, once the page it lives on has rendered, and again
-  // when the look changes it. Two frames: the app scrolls a newly opened page
-  // to its top in the same commit.
+  // when the look changes it. Two frames: the app scrolls a newly opened page to its top in
+  // the same commit.
   useEffect(() => {
-    if (!choice) return;
+    if (!current.target) return;
+    const target = current.target;
     let frame = requestAnimationFrame(() => {
       frame = requestAnimationFrame(() => {
-        const el = document.querySelector(current.target);
-        if (el)
-          window.scrollTo({
-            top: el.getBoundingClientRect().top + window.scrollY - 16,
-          });
+        const el = document.querySelector(target);
+        if (!el) return;
+        const box = el.getBoundingClientRect();
+        // A choice step's subject, and any too tall for the window, goes
+        // to the top; anything else out of sight, to the middle.
+        if (choice || box.height > window.innerHeight - 32)
+          window.scrollTo({ top: box.top + window.scrollY - 16 });
+        else if (box.top < 0 || box.bottom > window.innerHeight)
+          el.scrollIntoView({ block: "center" });
       });
     });
     return () => cancelAnimationFrame(frame);
@@ -233,25 +299,20 @@ export function ReturningTour({
   const last = step === TOUR_STEPS.length - 1;
   return (
     <>
-      <TourSpotlight target={current.target} dim={!closable} />
+      <TourSpotlight target={current.target} />
       <aside
         ref={card}
         tabIndex={-1}
         className={choice ? "returning-tour docked" : "returning-tour"}
         aria-label="Introduction to Event Clock"
       >
-        {step === 0 && intro && (
-          <p className="tour-intro">
-            {intro === "returning"
-              ? "Welcome back. A little has moved, so here's a short tour before you carry on. Your games, routines and progress are all still here."
-              : "Welcome to Event Clock. Here's a short tour before you start."}
-          </p>
-        )}
         <p className="tour-step">
           {step + 1} of {TOUR_STEPS.length}
         </p>
-        <h2>{current.title}</h2>
-        <p>{current.body}</p>
+        <h2>
+          {(step === 0 && intro && WELCOME[intro].title) || current.title}
+        </h2>
+        <p>{(step === 0 && intro && WELCOME[intro].body) || current.body}</p>
         {choice && (
           <div className="tour-choice" role="group" aria-label={current.title}>
             {CHOICES[choice].map((option) => (

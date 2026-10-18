@@ -142,6 +142,7 @@ export function GameSettings({
           <button
             type="button"
             key={id}
+            data-tab={id}
             aria-pressed={tab === id}
             onClick={() => setTab(id)}
           >

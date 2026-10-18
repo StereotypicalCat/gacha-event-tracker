@@ -248,6 +248,7 @@ export function AppearancePage({
           <button
             type="button"
             className="btn"
+            data-tour="replay"
             onClick={() =>
               onReplayTour
                 ? onReplayTour()

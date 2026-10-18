@@ -5401,8 +5401,8 @@ button.mark {
 }
 
 /* The tour floats over the page it describes, so the page stays visible and
-   scrollable behind it. While the tour is forced the page is inert and a light
-   scrim says so; a replay has no scrim. The page gets room at its foot so its
+   scrollable behind it. During the tour, a replay too, the page is inert and
+   dimmed around the step's subject. The page gets room at its foot so its
    last rows can scroll clear of the card. */
 .tour-behind {
   display: contents;
@@ -5444,13 +5444,6 @@ button.mark {
   font-size: 13px;
   line-height: 1.65;
 }
-.returning-tour .tour-intro {
-  margin-bottom: 14px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--color-hairline);
-  color: var(--color-ink);
-  font-size: 14px;
-}
 .returning-tour .tour-choice {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -5486,21 +5479,18 @@ button.mark {
   color: var(--color-muted);
   font-size: 12px;
 }
-/* The step's subject, ringed. While the tour is forced, its shadow is the
-   scrim: the page dims everywhere but here. */
+/* The step's subject, ringed; its shadow is the scrim, so the page dims
+   everywhere but here. */
 .tour-spotlight {
   position: fixed;
   z-index: 80;
   pointer-events: none;
   border-radius: 12px;
-  box-shadow: 0 0 0 2px var(--color-near);
   transition:
     left 220ms ease,
     top 220ms ease,
     width 220ms ease,
     height 220ms ease;
-}
-.tour-spotlight.dim {
   box-shadow:
     0 0 0 2px var(--color-near),
     0 0 0 100vmax color-mix(in srgb, var(--color-ground) 62%, transparent);
