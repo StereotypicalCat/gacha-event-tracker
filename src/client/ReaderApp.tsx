@@ -16,13 +16,9 @@ import {
   type FeedState,
   type RefreshOutcome,
 } from "./api.ts";
-import {
-  initializeReader,
-  createReaderStore,
-  type ReaderStore,
-} from "./state/reader/store.ts";
+import { createReaderStore, type ReaderStore } from "./state/reader/store.ts";
+import { openReader } from "./state/reader/open.ts";
 import { ReaderContext, useReader } from "./state/reader/useReader.ts";
-import { finishPendingRestore } from "./state/reader/restore.ts";
 import { saveBackup } from "./state/reader/backups.ts";
 import {
   pairKey,
@@ -128,15 +124,8 @@ export function ReaderApp() {
       .then(setCodes)
       .catch(() => {});
     void fetchFeed(ac.signal)
-      .then((feed) => {
-        const recovery = finishPendingRestore(localStorage);
-        if (!recovery.ok) {
-          setError(
-            "Your interrupted restore could not be recovered. Free browser storage and reload; saved data has been retained.",
-          );
-          return;
-        }
-        const initialized = initializeReader(
+      .then(async (feed) => {
+        const opened = await openReader(
           localStorage,
           [
             ...new Set([
@@ -147,13 +136,16 @@ export function ReaderApp() {
           new Date().toISOString(),
           mintAccountId,
         );
-        if (!initialized.ok) {
+        if (ac.signal.aborted) return;
+        if (!opened.ok) {
           setError(
-            "Your saved data could not be opened safely. It has been retained. Check browser storage access and reload.",
+            opened.reason === "restore"
+              ? "Your interrupted restore could not be recovered. Free browser storage and reload; saved data has been retained."
+              : "Your saved data could not be opened safely. It has been retained. Check browser storage access and reload.",
           );
           return;
         }
-        const created = createReaderStore(localStorage, initialized.state);
+        const created = createReaderStore(localStorage, opened.state);
         setStore(created);
         setFeed({ status: "ready", feed });
       })

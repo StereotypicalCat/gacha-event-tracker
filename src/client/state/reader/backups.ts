@@ -60,8 +60,19 @@ export function saveBackup(
     [...previous, { id: mintLocalId(), at, payload }],
     Date.parse(at),
   );
+  // Oldest first, but never the newest: one recent copy is worth more than
+  // the room, and past the cap the main save is what would run out.
+  while (next.length > 1 && JSON.stringify(next).length > AUTO_BACKUP_BYTES)
+    next.pop();
   return tryWriteJson(storage, READER_KEYS.backups, next);
 }
+/**
+ * The most the automatic history may take in local storage, in UTF-16 units.
+ * Each snapshot embeds the state, `legacyRaw` and the v1 keys, and up to 17
+ * are retained; for a heavy reader that alone could fill the origin's ~5MB.
+ * Together with `MANUAL_BACKUP_BYTES` this leaves the main save room to grow.
+ */
+export const AUTO_BACKUP_BYTES = 1_500_000;
 /**
  * Which part of the retained history a snapshot belongs to, with the same
  * windows `retainBackups` keeps: the last 7 days, the 4 weeks before them,

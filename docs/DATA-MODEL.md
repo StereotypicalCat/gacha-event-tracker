@@ -797,12 +797,16 @@ importedExtensions as well as mergeable known fields. Existing same-server setti
 Migration preserves raw v1 keys in place and in migration recovery, creates one account per game at
 the saved region and maps old follows/pins/logs. Newly offered games remain off. Startup compares
 legacyRaw with surviving v1 keys to carry older-tab deltas into the original account without
-resurrecting newer v2 deletions. Parser aliases carry progress, ticks, amounts and archive/seen IDs.
+resurrecting newer v2 deletions. Startup (finishing a pending restore, then migrating or reconciling)
+runs under the same reader lock as every save (`state/reader/open.ts`), so another tab's save
+cannot land between its read and its write. Parser aliases carry progress, ticks, amounts and archive/seen IDs.
 
 Keys outside the envelope:
 
 - gacha-tracker:v2:migration-recovery — raw pre-migration bytes.
-- gacha-tracker:v2:backups — at most 7 daily + 4 weekly + 6 monthly UTC bucket snapshots.
+- gacha-tracker:v2:backups — at most 7 daily + 4 weekly + 6 monthly UTC bucket snapshots, and at
+  most `AUTO_BACKUP_BYTES` (1.5M UTF-16 units) together: past it the oldest are dropped, never the
+  newest. Back up now copies (`v2:manual-backups`) have their own 20-copy, 1.5M cap.
 - gacha-tracker:v2:restore-recovery — the complete pre-restore export.
 - gacha-tracker:v2:restore-pending — prepared replacement, resumed before mounting on startup.
 

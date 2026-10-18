@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import {
+  AUTO_BACKUP_BYTES,
   deleteManualBackup,
   MANUAL_BACKUP_BYTES,
   MANUAL_BACKUP_LIMIT,
@@ -87,4 +88,37 @@ test("the list refuses a copy that would push it past its size budget", () => {
     reason: "full",
   });
   expect(readManualBackups(storage)).toEqual([]);
+});
+
+test("the automatic history drops its oldest copies past its size cap, never the newest", () => {
+  const storage = memory();
+  // A heavy reader: about 300k units of v1 data embedded in every snapshot.
+  storage.setItem(
+    "gacha-tracker:v1:progress",
+    JSON.stringify("x".repeat(300_000)),
+  );
+  const day = 86_400_000;
+  for (let i = 0; i < 10; i++)
+    expect(
+      saveBackup(
+        storage,
+        state,
+        new Date(Date.parse(at) + i * day).toISOString(),
+      ).ok,
+    ).toBe(true);
+  const kept = readBackups(storage);
+  expect(storage.getItem(READER_KEYS.backups)!.length).toBeLessThanOrEqual(
+    AUTO_BACKUP_BYTES,
+  );
+  expect(kept.length).toBeGreaterThan(1);
+  expect(kept.length).toBeLessThan(7);
+  expect(kept[0]!.at).toBe(new Date(Date.parse(at) + 9 * day).toISOString());
+
+  storage.setItem(
+    "gacha-tracker:v1:progress",
+    JSON.stringify("x".repeat(AUTO_BACKUP_BYTES)),
+  );
+  const last = new Date(Date.parse(at) + 10 * day).toISOString();
+  expect(saveBackup(storage, state, last).ok).toBe(true);
+  expect(readBackups(storage).map((b) => b.at)).toEqual([last]);
 });

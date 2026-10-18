@@ -249,23 +249,23 @@ note only says where to start.
     `EventForm`, `src/client/components/TaskForm.tsx`). Review them as a reader would — field
     order, defaults, copy, validation messages, how a cadence and a measure are chosen, phone
     width — against `docs/DESIGN.md` and `docs/PRODUCT.md`.
-- [ ] Follow up the 2026-10-18 pre-ship review of the v1→v2 reader migration. A schema-guardian review
+- [x] Follow up the 2026-10-18 pre-ship review of the v1→v2 reader migration. A schema-guardian review
   found nothing blocking: event IDs, day keys and the feed contract are unchanged, and v1 keys are
-  never removed, so a rollback finds them byte-identical. These gaps remain, all low severity:
-  - Orphaned v1 entries (marks or amounts for a deleted `myevent:`/`mytask:`, or any entry whose game
-    can't be resolved) are not carried into v2 account data (`state/reader/migration.ts`,
-    `gameOf`). They survive in `legacyRaw`, `gacha-tracker:v2:migration-recovery` and the untouched v1
-    keys. Consider a catch-all bucket so a restored custom item finds them.
-  - Importing a v1 file whose region differs from the reader's account lands its marks in a new
-    `account:import-N`, not the visible account (`state/reader/import.ts`, `export.ts`). Kept, but
-    out of sight.
-  - `initializeReader` reconciles and writes back outside `withReaderLock`, with no compare-and-set
-    (`state/reader/store.ts`). A second tab's write in that window can be overwritten.
-  - Storage pressure: every save carries `legacyRaw`, and every automatic backup embeds the state,
-    `legacyRaw` and the v1 keys again, with no size cap (only manual backups are capped). Heavy
-    readers could reach the ~5 MB quota. Failures are reported, not silent.
-  - After a rollback, anything done in the new build lives only in v2 and isn't shown by the old app.
-    It's stranded, not lost.
+  never removed, so a rollback finds them byte-identical. Done 2026-10-18:
+  - Start-up (finishing a pending restore, then migrating or reconciling) now runs under the reader
+    lock every save takes (`state/reader/open.ts`), so a second tab's save cannot be overwritten.
+    Where no lock exists (no Web Locks, no IndexedDB) it opens unlocked, as before.
+  - The automatic backups have a size cap, `AUTO_BACKUP_BYTES`, like Back up now's: past it the
+    oldest snapshots are dropped, never the newest (`state/reader/backups.ts`). The main save still
+    carries `legacyRaw`, which reconciling and rollback need.
+  - Left as they are, by the agent's call: orphaned v1 entries (marks for a deleted
+    `myevent:`/`mytask:`, or with no resolvable game) stay out of v2 account data, as nothing can
+    show them; they survive in `legacyRaw`, `v2:migration-recovery` and the v1 keys. After a
+    rollback, anything done in the new build is in v2 only: stranded for the old app, not lost.
+- [ ] Decide where an imported v1 file's marks go when its region differs from the reader's account.
+  Today they land in a new `account:import-N`, kept but out of sight (`state/reader/import.ts`,
+  `export.ts`). Options: merge into the visible account for that game, or show the imported account
+  as a second server. Needs the owner's call (found by the 2026-10-18 migration review).
 - [x] Get readers to try the layout choices, not just be told about them (owner, 2026-10-18). Done
   2026-10-18. The tour is now forced once for everyone, including new readers and anyone who saw the
   earlier tour. Its "Pick a layout" and Timeline steps switch the page behind in place, and the
