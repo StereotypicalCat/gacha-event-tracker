@@ -51,6 +51,14 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "codes-more-games",
+    date: "2026-10-18",
+    kind: "games",
+    title: "Redeem codes for eight more games, with where to redeem them",
+    body: "Star Rail, ZZZ, Wuthering Waves, Endfield, NTE, P5X, Chaos Zero Nightmare and Umamusume now list current codes. Each game's Codes tab links the official redeem page where there is one, or says where to redeem in game.",
+    ref: "254e78f",
+  },
+  {
     id: "redesign",
     date: "2026-10-18",
     kind: "feature",
