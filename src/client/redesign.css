@@ -4206,6 +4206,42 @@ dialog.archive-detail {
   padding: 6px 0 0;
   color: var(--color-near);
 }
+/* A game in the Settings list with codes not yet seen on its Codes tab. */
+.settings-row .settings-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  margin-left: auto;
+  color: var(--color-near);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.settings-row .settings-new::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.codes-used {
+  margin-top: 28px;
+}
+.codes-used > h3 {
+  margin: 0 0 6px;
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.code-row.used {
+  opacity: 0.55;
+}
+.code-row.used code {
+  text-decoration: line-through;
+  text-decoration-color: var(--color-muted);
+}
 .game-settings .new-code {
   margin-left: 6px;
   font-size: 11px;

@@ -631,6 +631,13 @@ legend on the same baseline as "Next: …".
   (interface, theme, scheme, urgency colours, default view, game order, timeline design, focus bar,
   checklist group), Your own events and games, Backup (tiers plus a manual "Your backups" list), and
   per-game Setup / Codes / About.
+- **Redeem codes (2026-10-18, owner).** A game's Codes tab lists the codes still to use first. A
+  code redeemed on every server the reader plays, or past its stated expiry, is greyed and struck
+  through in a "Redeemed or expired" section below, with its Redeemed box still there to undo. A
+  date-only expiry counts as passed only once that date has ended everywhere (12:00 UTC the next
+  day). Settings → Your games marks a followed game with "N new codes" until its Codes tab is opened
+  (`codeSeen`); codes already expired or redeemed are not counted. Games the reader does not follow
+  get no marker.
 - **The tour (2026-10-18, owner).** Every reader takes it once before using the app: new readers
   straight after setup, returning readers on their first visit, and readers who saw the earlier tour
   once more. Routines → Checklist → Pick a layout → Timeline → Redeem codes → Archive → Settings.

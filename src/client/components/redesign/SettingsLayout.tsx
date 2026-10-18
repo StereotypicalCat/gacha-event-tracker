@@ -2,6 +2,8 @@ import type { ReaderState } from "../../state/reader/schema.ts";
 import { useGameMeta } from "../../state/gameMeta.tsx";
 import { orderGames } from "../../state/gameOrder.ts";
 import { useState, type ReactNode } from "react";
+import type { CodesFeed } from "../../../shared/codes.ts";
+import { unseenUsableCodes } from "../../state/reader/codes.ts";
 export type SettingsPage =
   | "own"
   | "games"
@@ -27,8 +29,11 @@ export function SettingsLayout({
   state,
   game,
   onGame,
+  codes,
 }: {
   state?: ReaderState;
+  /** Marks a followed game with codes not yet seen on its Codes tab. */
+  codes?: CodesFeed | null;
   game?: string | undefined;
   onGame?: (game: string) => void;
   page: SettingsPage;
@@ -94,6 +99,18 @@ export function SettingsLayout({
           .filter(([key]) => accounts.some((a) => a.intent[key]))
           .map(([, label]) => label)
           .join(", ") || "Nothing tracked";
+    // Only games the reader follows: codes for the others are not news.
+    const fresh =
+      codes && !isHidden(g)
+        ? unseenUsableCodes(
+            codes,
+            state!.codeSeen[g] ?? [],
+            g,
+            accounts.map((a) => a.id),
+            state!.codeRedeemed,
+            Date.now(),
+          ).length
+        : 0;
     return (
       <button
         key={g}
@@ -113,6 +130,11 @@ export function SettingsLayout({
               : ""}
           </small>
         </span>
+        {fresh > 0 && (
+          <span className="settings-new">
+            {fresh} new {fresh === 1 ? "code" : "codes"}
+          </span>
+        )}
         {chevron}
       </button>
     );

@@ -993,6 +993,7 @@ function ReaderContent({
                 {page === "settings" && (
                   <SettingsLayout
                     state={state}
+                    codes={codes}
                     game={codesGame}
                     page={settingsPage}
                     onPage={(p) => {
