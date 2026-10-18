@@ -1,0 +1,62 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "barlow condensed",
+        "files": [
+          ".superpowers/brainstorm/1683332-1792128126/content/b-routines-home.html"
+        ],
+        "createdAt": "2026-10-16T05:28:50.742Z",
+        "reason": "mockup B brief explicitly allows changing fonts for its ledger direction (parent agent's directive)"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "barlow",
+        "files": [
+          ".superpowers/brainstorm/1683332-1792128126/content/b-routines-home.html"
+        ],
+        "createdAt": "2026-10-16T05:28:50.745Z",
+        "reason": "mockup B brief explicitly allows changing fonts for its ledger direction (parent agent's directive)"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "condensed",
+        "files": [
+          "design/mockups/round6/index.html"
+        ],
+        "createdAt": "2026-10-16T10:29:48.384Z",
+        "reason": "Owner selected mockup B styling in the saved 2026-10-16 review; this comparison index intentionally inherits its Barlow typography."
+      },
+      {
+        "rule": "design-system-font",
+        "value": "barlow",
+        "files": [
+          "design/mockups/round6/index.html"
+        ],
+        "createdAt": "2026-10-16T10:29:48.433Z",
+        "reason": "Owner selected mockup B styling in the saved 2026-10-16 review; this comparison index intentionally inherits its Barlow typography."
+      },
+      {
+        "rule": "design-system-font",
+        "value": "barlow condensed",
+        "files": [
+          "design/mockups/round6/index.html"
+        ],
+        "createdAt": "2026-10-16T10:29:48.481Z",
+        "reason": "Owner selected mockup B styling in the saved 2026-10-16 review; this comparison index intentionally inherits its Barlow typography."
+      },
+      {
+        "rule": "design-system-font",
+        "value": "bricolage grotesque",
+        "files": [
+          "design/mockups/round7/converged.html"
+        ],
+        "createdAt": "2026-10-16T10:55:06.350Z",
+        "reason": "Agent: this unified review intentionally follows the original C typography after the owner requested its airier visual spirit, without a second UI."
+      }
+    ]
+  }
+}
