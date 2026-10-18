@@ -1,12 +1,12 @@
 {
   "sourceId": "nikki-fandom-mira-journey",
   "url": "https://infinity-nikki.fandom.com/api.php?action=parse&page=Version&prop=text&formatversion=2&format=json",
-  "contentHash": "1dc29cdd27dbb30b66945e0fb35d9e2ad1486347c4b4291ed56cd88d8f277622",
-  "bytes": 69266,
+  "contentHash": "c36147bf06098e21dbb80e32de9bf285fb7be107eeebbfb7f274dcc568949942",
+  "bytes": 69254,
   "etag": null,
   "lastModified": null,
-  "contentChangedAt": "2026-10-17T17:28:16.479Z",
-  "lastConfirmedAt": "2026-10-17T17:28:16.479Z",
+  "contentChangedAt": "2026-10-18T05:28:14.634Z",
+  "lastConfirmedAt": "2026-10-18T05:28:14.634Z",
   "eventCount": 1,
   "charset": "utf-8"
 }
