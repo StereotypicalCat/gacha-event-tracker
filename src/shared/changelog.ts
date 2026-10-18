@@ -51,6 +51,22 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "tour-highlights",
+    date: "2026-10-18",
+    kind: "feature",
+    title: "The tour points at what it describes",
+    body: "Each step of the tour now highlights the part of the page it's about. The layout and Timeline steps make room for the page, and ask you to try both looks before you go on.",
+    ref: "5be04a7",
+  },
+  {
+    id: "safer-saves-backups",
+    date: "2026-10-18",
+    kind: "fix",
+    title: "Safer saving with several tabs open, and backups that leave room",
+    body: "Opening Event Clock in a second tab can no longer overwrite what you just saved in another. Automatic backups now stay within a size limit, so they can't crowd out your saved progress.",
+    ref: "94fba4d",
+  },
+  {
     id: "tour-try-layouts",
     date: "2026-10-18",
     kind: "feature",
