@@ -270,8 +270,14 @@ function ReaderContent({
   const tour = prefs.onboarded
     ? tourMode(state.prefs.redesignTourSeen)
     : "done";
+  // At most once per page load, and never after this tab saw the tour
+  // finished: if another tab or a stale write ever put an old marker back,
+  // the reader is not moved to Relaxed and sent round the tour again.
+  const tourSettled = useRef(false);
+  if (tour === "done" && prefs.onboarded) tourSettled.current = true;
   useEffect(() => {
-    if (tour !== "unseen") return;
+    if (tour !== "unseen" || tourSettled.current) return;
+    tourSettled.current = true;
     void dispatch({
       type: "prefs",
       patch: { interface: "relaxed", redesignTourSeen: "returning" },
@@ -752,9 +758,16 @@ function ReaderContent({
                   }
                   // No navigation here: the tour opens next and leads the way,
                   // ending on the chosen view.
+                  // Only what setup changed, so a setup finished in a second,
+                  // stale tab leaves alone every setting setup does not set.
                   await dispatch({
                     type: "prefs",
-                    patch: next.prefs,
+                    patch: Object.fromEntries(
+                      Object.entries(next.prefs).filter(
+                        ([k, v]) =>
+                          JSON.stringify(v) !== JSON.stringify(state.prefs[k]),
+                      ),
+                    ),
                     ...actionMeta(),
                   });
                 }}
@@ -1123,7 +1136,6 @@ function ReaderContent({
           </div>
           {touring && (
             <>
-              {tourForced && <div className="tour-scrim" aria-hidden="true" />}
               <ReturningTour
                 intro={tour === "replay" ? undefined : tour}
                 closable={!tourForced}

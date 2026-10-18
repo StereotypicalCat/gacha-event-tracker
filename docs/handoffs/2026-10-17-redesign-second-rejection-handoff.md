@@ -950,3 +950,21 @@ Schema review: no data-loss or stuck-state path. Accepted, by the owner's rule: 
 had picked Structured on purpose is moved to Relaxed once, and the previous value isn't kept. The tour's
 layout step puts it back in one click. Left as is (low): a stale second tab can re-force the tour
 once, and a save-error banner shown during a forced tour can be read but not clicked.
+
+### Owner feedback on the forced tour (2026-10-18)
+
+- **Highlight, try both, room for the Timeline.** Done; see `docs/DESIGN.md` → "The tour". Each
+  step rings its subject, the comparing steps hold Continue until both options have been on screen,
+  and they dock the card to the side and scroll their subject to the top.
+- **Not reproduced, paused by the owner's call:** the owner saw the layout and Timeline switches snap
+  back ("you have to click like 5 times"), and the tour start again right after Finish tour, without
+  end. It did not reproduce in Chrome with one, two or three tabs, locally or on the live site, from
+  a fresh setup or a returning reader (a save logger showed each click written once, and nothing
+  writing it back). The only code that writes `interface` and `redesignTourSeen` on its own is the
+  "unseen" effect in `ReaderApp.tsx` (Relaxed + `"returning"`), and it would cause both symptoms if
+  it fired in some tab after the tour was finished; it now fires at most once per page load and
+  never after that tab saw the tour done. Setup now saves only the prefs it changed, not the whole
+  object, so a setup finished in a stale second tab leaves every other setting alone (the ones setup
+  sets, `redesignTourSeen` among them, it still writes: at worst that tab shows the tour once more). If it recurs:
+  log every `gacha-tracker:v2:reader` write with a stack (wrap `Storage.prototype.setItem`) in the
+  owner's own browser, with their data, and note which tabs are open and which build each runs.

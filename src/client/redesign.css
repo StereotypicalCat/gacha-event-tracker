@@ -1314,7 +1314,8 @@ textarea {
   font: 700 22px/1 var(--font-display);
   letter-spacing: -0.025em;
   text-transform: none;
-  padding: 0;  top: 0;
+  padding: 0;
+  top: 0;
 }
 :root[data-interface="relaxed"] .app-navigation {
   gap: 6px;
@@ -2660,14 +2661,26 @@ dialog.archive-detail {
   display: block;
   height: 7px;
   border-radius: 1px;
-  background: linear-gradient(90deg, var(--color-soon) 0 18%, var(--color-hairline) 18%);
+  background: linear-gradient(
+    90deg,
+    var(--color-soon) 0 18%,
+    var(--color-hairline) 18%
+  );
 }
 .vprev.list i:nth-child(2) {
-  background: linear-gradient(90deg, var(--color-near) 0 46%, var(--color-hairline) 46%);
+  background: linear-gradient(
+    90deg,
+    var(--color-near) 0 46%,
+    var(--color-hairline) 46%
+  );
   width: 86%;
 }
 .vprev.list i:nth-child(3) {
-  background: linear-gradient(90deg, var(--color-calm) 0 70%, var(--color-hairline) 70%);
+  background: linear-gradient(
+    90deg,
+    var(--color-calm) 0 70%,
+    var(--color-hairline) 70%
+  );
   width: 72%;
 }
 .vprev.tl {
@@ -5366,7 +5379,7 @@ button.mark {
   inset: 0;
   z-index: 80;
   pointer-events: none;
-  background: color-mix(in srgb, var(--color-ground) 30%, transparent);
+  background: color-mix(in srgb, var(--color-ground) 62%, transparent);
 }
 .returning-tour {
   position: fixed;
@@ -5437,6 +5450,52 @@ button.mark {
   color: var(--color-muted);
   font-size: 12px;
 }
+/* The step's subject, ringed. While the tour is forced, its shadow is the
+   scrim: the page dims everywhere but here. */
+.tour-spotlight {
+  position: fixed;
+  z-index: 80;
+  pointer-events: none;
+  border-radius: 12px;
+  box-shadow: 0 0 0 2px var(--color-near);
+  transition:
+    left 220ms ease,
+    top 220ms ease,
+    width 220ms ease,
+    height 220ms ease;
+}
+.tour-spotlight.dim {
+  box-shadow:
+    0 0 0 2px var(--color-near),
+    0 0 0 100vmax color-mix(in srgb, var(--color-ground) 62%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tour-spotlight {
+    transition: none;
+  }
+}
+.returning-tour .tour-actions .commit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+/* A step that asks the reader to compare looks moves its card aside, so the
+   page it changes has the window to itself. */
+@media (min-width: 1100px) {
+  .returning-tour.docked {
+    left: auto;
+    right: 24px;
+    bottom: auto;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 340px;
+  }
+  .returning-tour.docked .tour-choice {
+    grid-template-columns: 1fr;
+  }
+  .reader-ui[data-touring]:has(.returning-tour.docked) {
+    padding-right: 380px;
+  }
+}
 @media (max-width: 700px) {
   .returning-tour {
     bottom: var(--edge);
@@ -5444,5 +5503,20 @@ button.mark {
   }
   .returning-tour .tour-choice {
     grid-template-columns: 1fr;
+  }
+  /* On a phone the card stays at the foot, so a comparing step keeps it
+     short: the options side by side, by name only, leaving the page room. */
+  .returning-tour.docked {
+    padding: 14px 16px 12px;
+  }
+  .returning-tour.docked h2 {
+    font-size: 18px;
+  }
+  .returning-tour.docked .tour-choice {
+    grid-template-columns: 1fr 1fr;
+    margin-top: 10px;
+  }
+  .returning-tour.docked .tour-choice small {
+    display: none;
   }
 }

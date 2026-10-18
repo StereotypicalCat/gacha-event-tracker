@@ -262,6 +262,10 @@ note only says where to start.
     `myevent:`/`mytask:`, or with no resolvable game) stay out of v2 account data, as nothing can
     show them; they survive in `legacyRaw`, `v2:migration-recovery` and the v1 keys. After a
     rollback, anything done in the new build is in v2 only: stranded for the old app, not lost.
+- [ ] Find why the tour's look switches snapped back and the tour restarted after Finish (owner,
+  2026-10-18). Not reproduced; paused by the owner. Guards are in, and the investigation so far is in
+  the [handoff](docs/handoffs/2026-10-17-redesign-second-rejection-handoff.md) → "Owner feedback on
+  the forced tour".
 - [ ] Decide where an imported v1 file's marks go when its region differs from the reader's account.
   Today they land in a new `account:import-N`, kept but out of sight (`state/reader/import.ts`,
   `export.ts`). Options: merge into the visible account for that game, or show the imported account

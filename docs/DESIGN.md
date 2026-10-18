@@ -634,13 +634,21 @@ legend on the same baseline as "Next: …".
 - **The tour (2026-10-18, owner).** Every reader takes it once before using the app: new readers
   straight after setup, returning readers on their first visit, and readers who saw the earlier tour
   once more. Routines → Checklist → Pick a layout → Timeline → Redeem codes → Archive → Settings.
-  - It floats over the page it describes. While forced, the page behind is `inert` under a light
-    scrim. It can be scrolled and seen, but not clicked. There is no Skip, and a reload restarts at
-    step 1.
+  - It floats over the page it describes. While forced, the page behind is `inert`. It can be
+    scrolled and seen, but not clicked. There is no Skip, and a reload restarts at step 1.
+  - Each step rings what it is about (owner, 2026-10-18: greying the page "makes sense, but it should
+    highlight the option"): the nav tab for Routines, Checklist, Archive and Settings, the Checklist
+    or the Timeline board for the two comparing steps, the codes list for codes. While forced, the
+    rest of the page is dimmed around it. The ring is a fixed layer drawn over the target's box
+    (`TourSpotlight`), not the target raised above a scrim, so no stacking context can trap it.
   - "Pick a layout" (on the Checklist) and the Timeline step each hold a two-way switch, Relaxed /
     Structured and New / Classic. The switch changes the page behind in place, and the selected one
     is kept. Readers are shown the difference rather than told about it, because most never open
-    Appearance.
+    Appearance. Continue waits until both options have been on screen (owner: it "should *require*
+    you to have tested both"); the look showing when the step opens counts as one. These two steps
+    move the card to the right edge on wide screens (≥1100px) and scroll their subject to the top of
+    the window, past the code and release banners, so the page has room to show the difference. On a
+    phone the card stays at the foot, shortened, with the options side by side.
   - Returning readers are moved to Relaxed as the tour opens. New readers keep the look they chose in
     setup.
   - Continue stays in a fixed place and Back sits beside it. Only a replay ("Replay the

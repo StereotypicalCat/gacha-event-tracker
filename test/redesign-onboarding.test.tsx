@@ -27,6 +27,7 @@ import {
   TOUR_DONE,
   TOUR_STEPS,
   tourMode,
+  untriedOptions,
 } from "../src/client/components/redesign/ReturningTour.tsx";
 import { setupReader } from "../src/client/state/reader/onboarding.ts";
 
@@ -64,6 +65,22 @@ test("the tour lets the reader try both layouts and both Timeline looks", () => 
     ["soon", "interface"],
     ["timeline", "timelineLook"],
   ]);
+});
+test("a choice holds Continue until both options have been tried", () => {
+  expect(
+    untriedOptions("interface", ["structured"]).map((o) => o.label),
+  ).toEqual(["Relaxed"]);
+  expect(untriedOptions("interface", ["structured", "relaxed"])).toEqual([]);
+  expect(untriedOptions("timelineLook", []).map((o) => o.value)).toEqual([
+    "new",
+    "classic",
+  ]);
+});
+test("every step highlights what it is about", () => {
+  for (const step of TOUR_STEPS) expect(step.target).toBeTruthy();
+  expect(TOUR_STEPS.find((s) => s.stop === "routines")!.target).toBe(
+    '[data-page="routines"]',
+  );
 });
 test("the tour introduces the Timeline right after the Checklist, and codes", () => {
   const stops = TOUR_STEPS.map((s) => s.stop);

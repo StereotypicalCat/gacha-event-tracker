@@ -25,6 +25,7 @@ export function AppNavigation({
         <button
           type="button"
           key={id}
+          data-page={id}
           className={id === "settings" ? "gear" : undefined}
           aria-current={page === id ? "page" : undefined}
           onClick={() => onPage(id)}
