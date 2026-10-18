@@ -51,6 +51,14 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "celebrations",
+    date: "2026-10-18",
+    kind: "fix",
+    title: "Fireworks for every daily, routine and event you finish",
+    body: "Ticking a single daily or routine, or completing an event, sets off fireworks again. Finishing all your dailies or a game's routines gets the big celebration. Turn them all off in Settings → Appearance → Celebrations.",
+    ref: "f17b798",
+  },
+  {
     id: "tour-walkthrough",
     date: "2026-10-18",
     kind: "feature",
