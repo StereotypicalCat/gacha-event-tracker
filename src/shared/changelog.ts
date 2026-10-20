@@ -51,6 +51,22 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "shine",
+    date: "2026-10-20",
+    kind: "feature",
+    title: "Redeemed codes and finished events shine on their way out",
+    body: "A redeemed code or completed event greys with a sweep of the game's colour before it moves on, and events reach the Archive faster. Settings → Appearance → Motion & celebrations adds Reduce motion, which also holds Fireworks and the new Shine switch off.",
+    ref: "54d13d7",
+  },
+  {
+    id: "settings-pills",
+    date: "2026-10-20",
+    kind: "fix",
+    title: "Tidier choice buttons in Settings",
+    body: "The Theme and Timeline design choices now have room below their explanation and match the size of the buttons around them.",
+    ref: "9c22a85",
+  },
+  {
     id: "game-tab-kept",
     date: "2026-10-20",
     kind: "feature",
