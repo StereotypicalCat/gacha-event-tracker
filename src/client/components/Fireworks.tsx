@@ -21,6 +21,15 @@ export function celebrationsOn(prefs: Record<string, unknown>): boolean {
   return prefs.celebrations !== false;
 }
 
+/**
+ * Whether a redeemed code or a completed event shines on its way out
+ * (Settings → Appearance → Celebrations). Separate from fireworks; absent
+ * means on.
+ */
+export function shineOn(prefs: Record<string, unknown>): boolean {
+  return prefs.shine !== false;
+}
+
 /** The reader's celebrations switch, provided once at the app's root. */
 export const CelebrationsContext = createContext(true);
 

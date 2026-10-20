@@ -475,6 +475,21 @@ body {
   }
 }
 
+/* Settings → Appearance → Reduce motion: the reader asks for what the
+   device's prefers-reduced-motion asks for, whatever the device says. Every
+   animation and transition stops, and the fireworks, which are nothing but
+   motion, are not drawn at all. */
+[data-motion="reduce"] *,
+[data-motion="reduce"] *::before,
+[data-motion="reduce"] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+[data-motion="reduce"] .fireworks {
+  display: none !important;
+}
+
 /* Horizontal scrollers keep their gutter but hide the bar chrome. */
 .scroll-x {
   overflow-x: auto;

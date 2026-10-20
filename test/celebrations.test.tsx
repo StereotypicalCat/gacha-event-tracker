@@ -34,7 +34,7 @@ test("the item that finishes a section gets the big celebration, not the small b
   expect(finishesSection(3, 3)).toBe(false);
 });
 
-test("Appearance offers a Celebrations switch, on by default", () => {
+test("Appearance offers a Fireworks card, on by default", () => {
   const s = migrateLegacy(
     {},
     [],
@@ -44,13 +44,15 @@ test("Appearance offers a Celebrations switch, on by default", () => {
   const on = render(
     <AppearancePage state={s} onAction={async () => ({ ok: true })} />,
   );
-  expect(on).toContain("Celebrations");
+  expect(on).toContain("Motion &amp; celebrations");
   expect(on).toMatch(
-    /<input type="checkbox" data-celebrations="true" checked=""/,
+    /<button[^>]*data-celebrations="true"[^>]*aria-pressed="true"|<button[^>]*aria-pressed="true"[^>]*data-celebrations="true"/,
   );
   s.prefs.celebrations = false;
   const off = render(
     <AppearancePage state={s} onAction={async () => ({ ok: true })} />,
   );
-  expect(off).not.toMatch(/data-celebrations="true" checked=""/);
+  expect(off).toMatch(
+    /<button[^>]*aria-pressed="false"[^>]*data-celebrations="true"|<button[^>]*data-celebrations="true"[^>]*aria-pressed="false"/,
+  );
 });

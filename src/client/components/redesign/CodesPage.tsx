@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { freshness } from "../../../shared/feed.ts";
 import type { CodesFeed, RedeemCode } from "../../../shared/codes.ts";
 import { REDEEM } from "../../../shared/redeem.ts";
@@ -8,6 +8,27 @@ import { codeExpired, codeUsed, newCodes } from "../../state/reader/codes.ts";
 import { actionMeta } from "../../state/reader/actions.ts";
 import { formatInZone } from "../../state/displayTime.ts";
 import type { ActionHandler } from "./GameSettings.tsx";
+import { shineOn } from "../Fireworks.tsx";
+import { motionReduced } from "../../state/appearance.ts";
+// A redeemed code shines where it was ticked, then lands among the redeemed.
+const SHINE_MS = 800,
+  LAND_MS = 360;
+/**
+ * The open list and the redeemed-or-expired list. A code still shining from
+ * the tick that redeemed it holds its place in the open list, not greyed yet.
+ */
+export function codeLanes<C extends { id: string }>(
+  codes: readonly C[],
+  done: (c: C) => boolean,
+  shining: ReadonlySet<string>,
+) {
+  const used = (c: C) => done(c) && !shining.has(c.id);
+  return {
+    open: codes.filter((c) => !used(c)),
+    closed: codes.filter(used),
+    used,
+  };
+}
 export function CodesPage({
   game,
   feed,
@@ -34,8 +55,41 @@ export function CodesPage({
       accounts.map((a) => a.id),
       state.codeRedeemed,
     );
-  const open = codes.filter((c) => !done(c)),
-    closed = codes.filter(done);
+  // Only the reader's own ticks animate: a code already redeemed, or one that
+  // expires by itself, never plays on arrival.
+  const [shining, setShining] = useState<ReadonlySet<string>>(new Set());
+  const [landing, setLanding] = useState<ReadonlySet<string>>(new Set());
+  const [fresh, setFresh] = useState<ReadonlySet<string>>(new Set());
+  const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  const settle = (id: string) => {
+    clearTimeout(timers.current.get(id));
+    timers.current.delete(id);
+  };
+  const without = (id: string) => (set: ReadonlySet<string>) => {
+    const next = new Set(set);
+    next.delete(id);
+    return next;
+  };
+  const shine = (id: string) => {
+    settle(id);
+    setShining((set) => new Set(set).add(id));
+    timers.current.set(
+      id,
+      setTimeout(() => {
+        setShining(without(id));
+        setLanding((set) => new Set(set).add(id));
+        timers.current.set(
+          id,
+          setTimeout(() => {
+            timers.current.delete(id);
+            setLanding(without(id));
+          }, LAND_MS),
+        );
+      }, SHINE_MS),
+    );
+  };
+  const { open, closed, used } = codeLanes(codes, done, shining);
   const redeem = REDEEM[game as GameId];
   const unseen = feed ? newCodes(feed, state.codeSeen[game] ?? [], game) : [];
   useEffect(() => {
@@ -49,7 +103,12 @@ export function CodesPage({
       });
   }, [game, feed, onAction]);
   const row = (c: RedeemCode) => (
-    <article className={done(c) ? "code-row used" : "code-row"} key={c.id}>
+    <article
+      className={used(c) ? "code-row used" : "code-row"}
+      key={c.id}
+      data-shine={shining.has(c.id) || undefined}
+      data-landing={landing.has(c.id) || undefined}
+    >
       <div>
         <code>{c.code}</code>
         <button
@@ -86,19 +145,40 @@ export function CodesPage({
       </div>
       <div>
         {accounts.map((a) => (
-          <label key={a.id}>
+          <label key={a.id} data-fresh={fresh.has(a.id + c.id) || undefined}>
             <input
               type="checkbox"
               checked={Boolean(state.codeRedeemed[a.id]?.[c.id])}
-              onChange={(e) =>
+              onChange={(e) => {
+                const redeemed = e.target.checked;
+                setFresh((set) =>
+                  redeemed
+                    ? new Set(set).add(a.id + c.id)
+                    : without(a.id + c.id)(set),
+                );
+                if (!redeemed) {
+                  settle(c.id);
+                  setShining(without(c.id));
+                  setLanding(without(c.id));
+                } else if (
+                  !codeExpired(c, now) &&
+                  // Without the shine, or holding still, it moves straight down.
+                  shineOn(state.prefs) &&
+                  !motionReduced(state.prefs) &&
+                  // This tick is the last server still to redeem it.
+                  accounts.every(
+                    (o) => o.id === a.id || state.codeRedeemed[o.id]?.[c.id],
+                  )
+                )
+                  shine(c.id);
                 void onAction({
                   type: "redeem",
                   accountId: a.id,
                   codeId: c.id,
-                  redeemed: e.target.checked,
+                  redeemed,
                   ...actionMeta(),
-                })
-              }
+                });
+              }}
             />
             Redeemed
             {/* The server only when there is more than one to tell apart. */}
@@ -153,7 +233,12 @@ export function CodesPage({
           {open.length ? (
             open.map(row)
           ) : (
-            <p>Every code here is redeemed or expired.</p>
+            <p
+              className="codes-clear"
+              data-fresh={landing.size > 0 || undefined}
+            >
+              Every code here is redeemed or expired.
+            </p>
           )}
           {closed.length > 0 && (
             <section className="codes-used">

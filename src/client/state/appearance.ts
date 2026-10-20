@@ -192,6 +192,18 @@ export function urgencyTokens(
     ]),
   ) as Record<UrgencyStep, string>;
 }
+/**
+ * Whether to hold still: the reader's Reduce motion switch, or the device's
+ * own setting. The switch can only add to the device's choice, since a
+ * stylesheet cannot undo `prefers-reduced-motion`.
+ */
+export function motionReduced(prefs: Record<string, unknown>): boolean {
+  return (
+    prefs.reduceMotion === true ||
+    (typeof matchMedia === "function" &&
+      matchMedia("(prefers-reduced-motion: reduce)").matches)
+  );
+}
 export function applyAppearance(
   prefs: Record<string, unknown>,
   theme: Theme,
@@ -211,4 +223,8 @@ export function applyAppearance(
     prefs.interface === "relaxed" ? "relaxed" : "structured";
   doc.documentElement.dataset.density =
     prefs.density === "compact" ? "compact" : "standard";
+  // styles.css stops every animation under "reduce"; "system" leaves it to
+  // the device's prefers-reduced-motion.
+  doc.documentElement.dataset.motion =
+    prefs.reduceMotion === true ? "reduce" : "system";
 }

@@ -832,6 +832,13 @@ means the reader has not taken this tour: the app moves them to `interface: "rel
 `true` means on; only `false` turns every celebration off, big and small. See `celebrationsOn` in
 `Fireworks.tsx`.
 
+`prefs.shine` (2026-10-20) is its neighbour for the sweep across a code just redeemed or an event
+just completed: absent or `true` is on, only `false` is off (`shineOn` in `Fireworks.tsx`).
+`prefs.reduceMotion` (2026-10-20) is Appearance → Motion & celebrations → Reduce motion: only `true`
+reduces motion, and it adds to the device's `prefers-reduced-motion` rather than replacing it
+(`motionReduced` in `state/appearance.ts`). Neither changes an ID or a key; an older build ignores
+both.
+
 The fidelity correction adds `prefs.routineGroup` (`reset`, the absent-value default, or `game`)
 for the Routines page's grouping. It changes no routine IDs or placement keys. Structured is the
 interface default as of the owner's 2026-10-17 instruction; explicit saved Relaxed is preserved.

@@ -9,7 +9,7 @@ import { timelineLook } from "./TimelinePage.tsx";
 import { ViewCards } from "./ViewCards.tsx";
 import { focusBarShown } from "./FocusPicker.tsx";
 import { URGENCY_STEPS, urgencyChoice } from "../../state/appearance.ts";
-import { celebrationsOn } from "../Fireworks.tsx";
+import { celebrationsOn, shineOn } from "../Fireworks.tsx";
 
 /** The live legend's words for each step. */
 const URGENCY_LABEL = {
@@ -32,6 +32,8 @@ export function AppearancePage({
   const p = state.prefs,
     patch = (patch: Record<string, unknown>) =>
       void onAction({ type: "prefs", patch, ...actionMeta() });
+  // Reduce motion holds fireworks and shine off: both are nothing but motion.
+  const still = p.reduceMotion === true;
   const hidden = Array.isArray(p.hiddenGames)
     ? (p.hiddenGames as string[])
     : [];
@@ -354,21 +356,44 @@ export function AppearancePage({
           </label>
         ))}
       </section>
-      <section className="settings-group">
-        <h2>Celebrations</h2>
-        <p className="help">
-          Fireworks when you finish a daily, a routine or an event, and a bigger
-          show when you finish all your dailies or a game's routines.
-        </p>
-        <label>
-          <input
-            type="checkbox"
-            data-celebrations
-            checked={celebrationsOn(p)}
-            onChange={(e) => patch({ celebrations: e.target.checked })}
+      <section
+        className="settings-group motion-cards"
+        style={{ "--g": "var(--color-near)" } as CSSProperties}
+      >
+        <h2>Motion &amp; celebrations</h2>
+        <div className="comp" role="group" aria-label="Motion and celebrations">
+          <MotionCard
+            mark="data-reduce-motion"
+            title="Reduce motion"
+            on={still}
+            onToggle={(on) => patch({ reduceMotion: on })}
+            lines={[
+              "Stops pops, sweeps, slides and fireworks, whatever your device says.",
+              "Your device's setting applies either way",
+            ]}
           />
-          Show fireworks
-        </label>
+          {/* Locked, not cleared: the saved choices come back with motion. */}
+          <MotionCard
+            mark="data-celebrations"
+            title="Fireworks"
+            on={!still && celebrationsOn(p)}
+            locked={still}
+            onToggle={(on) => patch({ celebrations: on })}
+            lines={[
+              "For finishing a daily, routine or event, and a bigger show for a whole set.",
+            ]}
+          />
+          <MotionCard
+            mark="data-shine-switch"
+            title="Shine"
+            on={!still && shineOn(p)}
+            locked={still}
+            onToggle={(on) => patch({ shine: on })}
+            lines={[
+              "A sweep of the game's colour across a code you redeem or an event you complete.",
+            ]}
+          />
+        </div>
       </section>
       <section className="settings-group checklist-settings">
         <h2>Checklist</h2>
@@ -391,5 +416,48 @@ export function AppearancePage({
         </p>
       </section>
     </section>
+  );
+}
+
+/** One of the Motion & celebrations cards: a game's What to track card. */
+function MotionCard({
+  mark,
+  title,
+  on,
+  locked = false,
+  onToggle,
+  lines,
+}: {
+  mark: string;
+  title: string;
+  on: boolean;
+  locked?: boolean;
+  onToggle: (on: boolean) => void;
+  lines: string[];
+}) {
+  return (
+    <button
+      type="button"
+      {...{ [mark]: true }}
+      aria-pressed={on}
+      data-st={on ? "on" : "off"}
+      disabled={locked}
+      onClick={() => onToggle(!on)}
+    >
+      <span className="cbx" aria-hidden="true">
+        {on && (
+          <svg viewBox="0 0 24 24">
+            <path d="M5 12.5l4.5 4.5L19 7" />
+          </svg>
+        )}
+      </span>
+      <span className="ln">{title}</span>
+      {lines.map((line) => (
+        <span className="ls" key={line}>
+          {line}
+        </span>
+      ))}
+      {locked && <span className="ls">Off while Reduce motion is on</span>}
+    </button>
   );
 }

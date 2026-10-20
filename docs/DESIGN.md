@@ -626,8 +626,32 @@ legend on the same baseline as "Next: …".
   fires the small burst in the "Moved to Archive" notice; ignoring one fires nothing.
 - **When it fires.** Only an action taken now that completes the item or section, never arriving
   complete. Reduced motion removes all of it, and so does `prefs.celebrations: false` (Settings →
-  Appearance → Celebrations), read through `CelebrationsContext` in `Fireworks.tsx`. The row's own
-  tick animation (wash, pop, check) stays either way: it is feedback, not celebration.
+  Appearance → Motion & celebrations → Fireworks), read through `CelebrationsContext` in
+  `Fireworks.tsx`. The row's own tick animation (wash, pop, check) stays either way: it is feedback,
+  not celebration.
+- **Shine (2026-10-20, owner).** Something leaving the list shines first: the dailies' light sweep
+  (held bright until it has crossed, as `code-sweep`, since a single row is too thin for one that
+  fades as it travels) and ring, in the game's colour. A code redeemed on its last server shines in
+  place for 0.8 s (the sweep 640 ms, the glow 560 ms), fades, and lands in "Redeemed or expired";
+  ticking one of two servers only pops that box, and the code's text greys to 45% while it shines
+  (its Redeemed boxes stay full strength). A completed event's text greys the same while its "Moved
+  to Archive" notice holds, and the row shines; an ignored one greys without the shine. No fireworks
+  on a code: redeeming is a chore cleared, not a finish, and six in a row would be noise. Settings →
+  Appearance → Motion & celebrations → Shine (`prefs.shine: false`) turns the sweep off; the greying
+  stays, since it says where the row is going. Only the reader's own action shines, never a row
+  arriving.
+- **Reduce motion (2026-10-20, owner).** Settings → Appearance → Motion & celebrations.
+  `prefs.reduceMotion: true` sets `data-motion="reduce"` on the root, and `styles.css` stops every
+  animation and transition and hides the fireworks. Off, it follows the device's
+  `prefers-reduced-motion`: a stylesheet cannot undo the device's request, so the switch can only
+  add to it, and its card says so. While it is on, the Fireworks and Shine cards show off, dimmed
+  and unpressable, with "Off while Reduce motion is on"; the saved choices underneath are kept, so
+  they come back as they were.
+- **Motion & celebrations cards (2026-10-20, owner, mockup B of three).** The three switches are a
+  game's What to track cards (`.comp`, shared with `.game-settings` through `:is()`), three across
+  and one per row on phones, Reduce motion first: each explanation inside its own card, rather than
+  checkboxes with help text above and below them. The owner chose it over rows with switches (a
+  control type the app does not otherwise use) and nested checkboxes.
 
 ### Other pages
 

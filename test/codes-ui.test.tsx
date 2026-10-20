@@ -129,3 +129,66 @@ test("a code confirmed dead in game says so, in the redeemed-or-expired section"
   expect(html).toContain("Redeemed or expired");
   expect(html).toContain("Confirmed expired in game, 2026-10-20.");
 });
+
+import { codeLanes } from "../src/client/components/redesign/CodesPage.tsx";
+test("a code just redeemed shines in the open list before it moves, then lands below", () => {
+  const codes = ["a", "b", "c"].map((id) => ({ id }));
+  const done = (c: { id: string }) => c.id !== "a";
+  // "b" was just redeemed: it holds in the open list while it shines.
+  const shining = codeLanes(codes, done, new Set(["b"]));
+  expect(shining.open.map((c) => c.id)).toEqual(["a", "b"]);
+  expect(shining.closed.map((c) => c.id)).toEqual(["c"]);
+  expect(shining.used(codes[1]!)).toBe(false);
+  // Then it lands among the redeemed, greyed like the rest.
+  const landed = codeLanes(codes, done, new Set());
+  expect(landed.open.map((c) => c.id)).toEqual(["a"]);
+  expect(landed.closed.map((c) => c.id)).toEqual(["b", "c"]);
+  expect(landed.used(codes[1]!)).toBe(true);
+});
+
+test("an opened Codes tab plays nothing: no row shines or lands on arrival", () => {
+  const at = "2026-10-18T12:00:00.000Z",
+    s = migrateLegacy({}, ["genshin"], at, () => "account:one");
+  s.codeRedeemed["account:one"] = { done: at };
+  const code = (id: string) => ({
+    id,
+    game: "genshin" as const,
+    code: id.toUpperCase(),
+    reward: null,
+    expiresAt: null,
+    firstObservedAt: at,
+    sourceUrl: "https://example.com",
+  });
+  const html = render(
+    <CodesPage
+      game="genshin"
+      state={s}
+      onAction={async () => ({ ok: true })}
+      feed={{
+        schemaVersion: 1,
+        sources: [],
+        codes: [code("open"), code("done")],
+      }}
+    />,
+  );
+  expect(html).toContain("Redeemed or expired");
+  expect(html).not.toContain("data-shine");
+  expect(html).not.toContain("data-landing");
+  expect(html).not.toContain("data-fresh");
+});
+
+test("a shining code greys its text, as a completed event does on its way out", async () => {
+  const css = await Bun.file(
+    new URL("../src/client/redesign.css", import.meta.url),
+  ).text();
+  const opacity = (selector: RegExp) =>
+    new RegExp(
+      selector.source + String.raw`\s*\{[^}]*opacity:\s*([\d.]+)`,
+      "s",
+    ).exec(css)?.[1];
+  const event = opacity(/\.event-list > li\[data-leaving\] > button > span/);
+  expect(event).toBe("0.45");
+  expect(opacity(/\.code-row\[data-shine\] > div:first-child > \*/)).toBe(
+    event,
+  );
+});

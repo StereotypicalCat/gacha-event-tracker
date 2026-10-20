@@ -52,3 +52,45 @@ test("the next deadline lists the following three, as in the Round 6 rail", () =
   for (const n of [2, 3, 4]) expect(html).toContain(`Event ${n}`);
   expect(html).not.toContain("Event 5");
 });
+
+import { leavingMarks } from "../src/client/components/redesign/ChecklistEvent.tsx";
+test("a completed event shines and greys while it holds, then fades; an ignored one only greys", () => {
+  const done = (phase: "hold" | "fade" | "hidden") => ({
+    key: "row",
+    label: "Completed",
+    phase,
+  });
+  expect(leavingMarks(done("hold"), "row")).toEqual({
+    className: "",
+    "data-leaving": true,
+    "data-shine": true,
+  });
+  expect(leavingMarks(done("fade"), "row")).toEqual({
+    className: "archive-fading",
+    "data-leaving": true,
+    "data-shine": undefined,
+  });
+  expect(
+    leavingMarks({ key: "row", label: "Ignored", phase: "hold" }, "row"),
+  ).toEqual({ className: "", "data-leaving": true, "data-shine": undefined });
+  // Every other row, and every row with nothing moving, is untouched.
+  const still = {
+    className: "",
+    "data-leaving": undefined,
+    "data-shine": undefined,
+  };
+  expect(leavingMarks(done("hold"), "other")).toEqual(still);
+  expect(leavingMarks(null, "row")).toEqual(still);
+});
+
+import {
+  ARCHIVE_COLLAPSE_MS,
+  ARCHIVE_HOLD_MS,
+} from "../src/client/components/redesign/ChecklistEvent.tsx";
+test("a completed event holds under a second, long enough for its shine, then collapses", () => {
+  expect(ARCHIVE_HOLD_MS).toBe(900);
+  // The shine (a 640 ms sweep) finishes before the row starts to fade.
+  expect(ARCHIVE_HOLD_MS).toBeGreaterThan(640);
+  // The collapse waits out the 250 ms max-height transition.
+  expect(ARCHIVE_COLLAPSE_MS - ARCHIVE_HOLD_MS).toBe(250);
+});

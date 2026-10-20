@@ -192,9 +192,9 @@ the cut are still counted in the header, still on the timeline, and one tap away
 
 **F3 — Mark completed.**
 Done writes durable progress and a metadata snapshot immediately. A confirmation remains for about
-1.5 seconds before the row fades/collapses into Archive. Undo is available for eight seconds;
-Archive Restore remains available afterwards. A failed write is disclosed and never presented as
-saved. Reduced motion removes the fade.
+0.9 seconds (1.5 until 2026-10-20, which read as unresponsive) before the row fades/collapses into
+Archive. Undo is available for eight seconds; Archive Restore remains available afterwards. A failed
+write is disclosed and never presented as saved. Reduced motion removes the fade.
 
 **F4 — Settings and visibility.**
 Settings has named pages: General, Your games, Appearance, Lists, Region & time, Data & sources,
@@ -482,9 +482,13 @@ scheme are independent. Custom stores ground/surface/text/accent separately for 
 rendered colours derive readable contrast without overwriting the saved choices. Per-game colours
 have a picker, hex field, preview and reset. Checklist dailies can occupy a separate direct-tick panel
 or grouped routines, with collapsed/expanded/always-expanded policies; these controls also live in
-Routines. Numeric routines use native step-one inputs. A **Celebrations** switch (on by default)
-covers the fireworks: a small burst for finishing one daily, routine or event, and the grand one for
-finishing every daily or every routine in a game's group. Off means none at all, big or small.
+Routines. Numeric routines use native step-one inputs. **Motion & celebrations** holds three cards.
+**Reduce motion** (off by default, and saying what it does) stops every animation whatever the
+device says; off, the device's own setting still applies. **Fireworks** (on by default) covers a
+small burst for finishing one daily, routine or event, and the grand one for finishing every daily
+or every routine in a game's group; off means none at all, big or small. **Shine** (on by default)
+covers the sweep across a code just redeemed or an event just completed. While Reduce motion is on,
+Fireworks and Shine are locked off without forgetting their setting.
 
 The earlier theme rationale below still applies to both interfaces.
 The app is a lit instrument panel and that is what it should be on first sight, but it is also read

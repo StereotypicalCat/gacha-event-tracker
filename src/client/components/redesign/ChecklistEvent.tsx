@@ -50,6 +50,32 @@ export function UrgencyLegend() {
     </div>
   );
 }
+/**
+ * How long a completed or ignored row holds, greyed with its "Moved to Archive"
+ * notice, before it fades (2026-10-20, owner: 1.5 s read as unresponsive), and
+ * when it is gone once the 250 ms collapse has run.
+ */
+export const ARCHIVE_HOLD_MS = 900,
+  ARCHIVE_COLLAPSE_MS = ARCHIVE_HOLD_MS + 250;
+/**
+ * The marks on a checklist row on its way to the Archive. While it holds, its
+ * text greys; a completed one also gets the codes' shine, an ignored one does
+ * not. Then it fades and collapses.
+ */
+export function leavingMarks(
+  transition: { key: string; label: string; phase: string } | null,
+  key: string,
+  shine = true,
+) {
+  const leaving = transition?.key === key ? transition : null;
+  return {
+    className: leaving?.phase === "fade" ? "archive-fading" : "",
+    "data-leaving": (leaving && leaving.phase !== "hidden") || undefined,
+    "data-shine":
+      (shine && leaving?.phase === "hold" && leaving.label === "Completed") ||
+      undefined,
+  };
+}
 export function ChecklistEvent({
   row,
   now,

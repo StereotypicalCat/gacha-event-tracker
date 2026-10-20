@@ -9,6 +9,7 @@ import { PinnedRoutine } from "./components/redesign/PinnedRoutine.tsx";
 import { DisplayTimeContext } from "./state/displayTime.ts";
 import {
   CelebrationsContext,
+  shineOn,
   Fireworks,
   celebrationsOn,
 } from "./components/Fireworks.tsx";
@@ -65,7 +66,10 @@ import { GameMetaProvider } from "./state/gameMeta.tsx";
 import { useAppUpdate } from "./state/useAppUpdate.ts";
 import { ENTRIES, NOTES, newestId, unseen } from "../shared/changelog.ts";
 import {
+  ARCHIVE_COLLAPSE_MS,
+  ARCHIVE_HOLD_MS,
   ChecklistEvent,
+  leavingMarks,
   LedgerColumns,
   UrgencyLegend,
   NextDeadline,
@@ -478,11 +482,11 @@ function ReaderContent({
     if (!transition) return;
     const t = setTimeout(
       () => setTransition((t) => (t ? { ...t, phase: "fade" } : null)),
-      1500,
+      ARCHIVE_HOLD_MS,
     );
     const collapse = setTimeout(
       () => setTransition((t) => (t ? { ...t, phase: "hidden" } : null)),
-      1750,
+      ARCHIVE_COLLAPSE_MS,
     );
     const undo = setTimeout(() => setTransition(null), 8000);
     return () => {
@@ -620,14 +624,7 @@ function ReaderContent({
     const key = pairKey(row.accountId, row.event.id),
       p = progress(row);
     return (
-      <li
-        key={key}
-        className={
-          transition?.key === key && transition.phase === "fade"
-            ? "archive-fading"
-            : ""
-        }
-      >
+      <li key={key} {...leavingMarks(transition, key, shineOn(state.prefs))}>
         <ChecklistEvent
           row={row}
           now={now}
