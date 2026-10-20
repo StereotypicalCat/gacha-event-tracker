@@ -100,3 +100,32 @@ test("with one server, a code's checkbox does not name it", () => {
   expect(html).toContain("Redeemed");
   expect(html).not.toContain("Redeemed · ");
 });
+
+test("a code confirmed dead in game says so, in the redeemed-or-expired section", () => {
+  const at = "2026-10-20T12:00:00.000Z";
+  const html = render(
+    <CodesPage
+      game="genshin"
+      state={migrateLegacy({}, ["genshin"], at, () => "account:t")}
+      onAction={async () => ({ ok: true })}
+      feed={{
+        schemaVersion: 1,
+        sources: [],
+        codes: [
+          {
+            id: "dead",
+            game: "genshin",
+            code: "DEAD",
+            reward: null,
+            expiresAt: null,
+            confirmedDead: "2026-10-20",
+            firstObservedAt: at,
+            sourceUrl: "https://example.com",
+          },
+        ],
+      }}
+    />,
+  );
+  expect(html).toContain("Redeemed or expired");
+  expect(html).toContain("Confirmed expired in game, 2026-10-20.");
+});

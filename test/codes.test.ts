@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
-import { buildCodesFeed } from "../src/ingest/codes/build.ts";
+import { applyCodeChecks, buildCodesFeed } from "../src/ingest/codes/build.ts";
 import { parseGame8Codes } from "../src/ingest/codes/game8.ts";
+import { CODE_CHECKS } from "../src/shared/codeChecks.ts";
 const at = "2026-10-16T12:00:00.000Z",
   ctx = {
     game: "genshin" as const,
@@ -53,4 +54,32 @@ test("special-program codes are included while their stated expiry date is still
   const codes = parseGame8Codes(html, ctx);
   expect(codes).toHaveLength(13);
   expect(codes.some((c) => c.code === "Rekviem")).toBe(true);
+});
+test("a code the owner confirmed dead is stamped, and a check matching nothing is reported", () => {
+  const live = (code: string) => ({
+    id: JSON.stringify(["genshin", code]),
+    game: "genshin" as const,
+    code,
+    reward: null,
+    expiresAt: null,
+    firstObservedAt: at,
+    sourceUrl: ctx.sourceUrl,
+  });
+  const { codes, unmatched } = applyCodeChecks(
+    [live("DEAD"), live("ALIVE")],
+    [
+      { game: "genshin", code: "DEAD", checked: "2026-10-20" },
+      { game: "genshin", code: "GONE", checked: "2026-10-20" },
+    ],
+  );
+  expect(codes.map((c) => c.confirmedDead ?? null)).toEqual([
+    "2026-10-20",
+    null,
+  ]);
+  expect(unmatched.map((c) => c.code)).toEqual(["GONE"]);
+});
+test("every code check names one code once, with a date", () => {
+  const ids = CODE_CHECKS.map((c) => JSON.stringify([c.game, c.code]));
+  expect(new Set(ids).size).toBe(ids.length);
+  for (const c of CODE_CHECKS) expect(c.checked).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 });

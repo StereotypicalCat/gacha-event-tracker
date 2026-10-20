@@ -69,13 +69,15 @@ export function CodesPage({
         </button>
         {c.reward && <p>{c.reward}</p>}
         <small>
-          {codeExpired(c, now)
-            ? "Expired"
-            : c.expiresAt
-              ? `Expires ${formatInZone(c.expiresAt, true, typeof state.prefs.timezone === "string" ? state.prefs.timezone : null)}`
-              : c.expiresOn
-                ? `Expires on ${c.expiresOn} (time not stated)`
-                : "Expiry not announced"}{" "}
+          {c.confirmedDead
+            ? `Confirmed expired in game, ${c.confirmedDead}.`
+            : codeExpired(c, now)
+              ? "Expired"
+              : c.expiresAt
+                ? `Expires ${formatInZone(c.expiresAt, true, typeof state.prefs.timezone === "string" ? state.prefs.timezone : null)}`
+                : c.expiresOn
+                  ? `Expires on ${c.expiresOn} (time not stated)`
+                  : "Expiry not announced"}{" "}
           ·{" "}
           <a href={c.sourceUrl} target="_blank" rel="noreferrer">
             Source

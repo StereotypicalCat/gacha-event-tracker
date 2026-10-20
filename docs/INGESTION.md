@@ -694,3 +694,13 @@ so it shows the in-game route only.
 
 **Refreshing.** These are game8 pages, so the CI caveat in AGENTS.md § Scraping conduct applies: if the
 runner is refused, they refresh by hand like the event pages.
+
+## Codes confirmed dead in game (2026-10-20)
+
+A source can keep a dead code in its active table: on 2026-10-20 Game8 still listed three Genshin
+codes the game refused. `CODE_CHECKS` (`src/shared/codeChecks.ts`) records each code the owner
+tried and found dead, with the date. `scripts/build-codes.ts` runs `applyCodeChecks` after parsing,
+which sets `confirmedDead` on the matching code (by its `["game","CODE"]` id) and returns the checks
+that matched nothing; the build logs those so they can be pruned. Nothing else about the code
+changes, and the check is never used to add a code. The field is optional, so `schemaVersion`
+stays 1.

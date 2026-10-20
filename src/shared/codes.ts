@@ -12,6 +12,15 @@ export const RedeemCodeSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .nullable()
     .optional(),
+  /**
+   * The day the repository owner tried the code in game and it no longer
+   * worked (`codeChecks.ts`). Only ever "dead": the source still supplies the
+   * code, its reward and its link.
+   */
+  confirmedDead: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
   firstObservedAt: z.string().datetime(),
   sourceUrl: z.string().url(),
 });

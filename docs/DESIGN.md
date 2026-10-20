@@ -644,7 +644,8 @@ legend on the same baseline as "Next: …".
   date-only expiry counts as passed only once that date has ended everywhere (12:00 UTC the next
   day). Settings → Your games marks a followed game with "N new codes" until its Codes tab is opened
   (`codeSeen`); codes already expired or redeemed are not counted. Games the reader does not follow
-  get no marker.
+  get no marker. A code the owner confirmed dead in game (2026-10-20) is expired whatever the source
+  says, and reads "Confirmed expired in game, YYYY-MM-DD." in place of its expiry.
 - **The tour (2026-10-18, owner).** Every reader takes it once before using the app: new readers
   straight after setup, returning readers on their first visit, and readers who saw the earlier tour
   once more. The order is the owner's (2026-10-18): a welcome on its own over the dimmed Checklist,

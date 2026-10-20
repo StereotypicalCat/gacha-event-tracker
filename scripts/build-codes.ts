@@ -1,6 +1,7 @@
 import { mkdir, rename } from "node:fs/promises";
 import { CODE_SOURCES } from "../src/ingest/codes/registry.ts";
-import { buildCodesFeed } from "../src/ingest/codes/build.ts";
+import { applyCodeChecks, buildCodesFeed } from "../src/ingest/codes/build.ts";
+import { CODE_CHECKS } from "../src/shared/codeChecks.ts";
 import { CodesFeedSchema, type CodesFeed } from "../src/shared/codes.ts";
 import { SnapshotStore, freshnessAt } from "../src/ingest/snapshots.ts";
 import type { SourceHealth } from "../src/shared/feed.ts";
@@ -55,7 +56,16 @@ export async function buildCodes() {
           : false,
     });
   }
-  const feed = CodesFeedSchema.parse({ schemaVersion: 1, codes, sources });
+  const checked = applyCodeChecks(codes, CODE_CHECKS);
+  for (const c of checked.unmatched)
+    console.log(
+      `build-codes: check ${c.game} ${c.code} (${c.checked}) matches no code; prune it`,
+    );
+  const feed = CodesFeedSchema.parse({
+    schemaVersion: 1,
+    codes: checked.codes,
+    sources,
+  });
   await mkdir(`${out}/data`, { recursive: true });
   await Bun.write(`${out}/data/codes.v1.json`, JSON.stringify(feed));
   await mkdir(root, { recursive: true });

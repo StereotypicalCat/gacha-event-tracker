@@ -11,9 +11,11 @@ export function newCodes(
  * Whether a code's stated expiry has passed. A date with no time ("Expires on
  * 2026-10-20") counts as passed only once that date has ended everywhere, at
  * 12:00 UTC the next day, so a code is never shown expired while it may
- * still redeem somewhere.
+ * still redeem somewhere. A code the owner confirmed dead in game is expired
+ * whatever it states.
  */
 export function codeExpired(code: RedeemCode, now: number): boolean {
+  if (code.confirmedDead) return true;
   if (code.expiresAt) return Date.parse(code.expiresAt) <= now;
   if (code.expiresOn)
     return Date.parse(`${code.expiresOn}T00:00:00Z`) + 36 * 3600_000 <= now;

@@ -69,3 +69,18 @@ test("the Settings marker counts unseen codes that can still be used", () => {
   ).map((c) => c.id);
   expect(ids).toEqual(["fresh"]);
 });
+
+test("a code the owner confirmed dead is expired whatever its stated expiry", () => {
+  expect(codeExpired(code("a", { confirmedDead: "2026-10-20" }), now)).toBe(
+    true,
+  );
+  expect(
+    codeExpired(
+      code("a", {
+        confirmedDead: "2026-10-20",
+        expiresAt: "2026-12-01T00:00:00.000Z",
+      }),
+      now,
+    ),
+  ).toBe(true);
+});

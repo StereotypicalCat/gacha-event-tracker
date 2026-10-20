@@ -243,6 +243,14 @@ These come from how gacha games actually schedule things, and they cause most bu
     `docs/INGESTION.md`, which is specified and **not built**. So the rule is enforced per adapter,
     by a test, against a pinned fixture: a source added without a fixture in that table is a source
     the rule does not cover.
+- **A redeem code is dead when the owner says so, even while its source says active** (owner,
+  2026-10-20). Game8 kept `Y1INABQB6DEX`, `2BJ64QRZ7RT8` and `PLDXIB886Y1S` in Genshin's active
+  table after the game refused them. The owner's in-game check is recorded in `CODE_CHECKS`
+  (`src/shared/codeChecks.ts`): game, code, date. `build-codes` stamps the matching code
+  `confirmedDead`, and the reader sees it expired with "Confirmed expired in game, YYYY-MM-DD." Only
+  "dead" exists; never add a check from a guess, a comment thread or a code's age, and never delete
+  the code instead, because the source still owns the code, its reward and its link. A check whose
+  code the source has dropped is logged at build and pruned when convenient.
 
 ## Working on parsers
 
