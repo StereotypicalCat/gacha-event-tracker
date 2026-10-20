@@ -51,6 +51,14 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "codes-confirmed-dead",
+    date: "2026-10-20",
+    kind: "fix",
+    title: "Codes that no longer work are marked expired",
+    body: "Some codes stop working while guides still list them. Once we've tried one in game and it fails, its Codes tab shows it expired, with the date it was checked.",
+    ref: "b8e8d44",
+  },
+  {
     id: "celebrations",
     date: "2026-10-18",
     kind: "fix",
