@@ -51,6 +51,14 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "game-tab-kept",
+    date: "2026-10-20",
+    kind: "feature",
+    title: "Switching games keeps your tab",
+    body: "In Settings, moving from one game to another now stays on the tab you had open, so going from Genshin's codes to Zenless Zone Zero shows its codes too.",
+    ref: "83a2557",
+  },
+  {
     id: "codes-confirmed-dead",
     date: "2026-10-20",
     kind: "fix",
