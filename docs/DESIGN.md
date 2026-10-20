@@ -637,7 +637,8 @@ legend on the same baseline as "Next: …".
 - **Settings.** About, Changelog, Data & sources (list options first), Region & time, Appearance
   (interface, theme, scheme, urgency colours, default view, game order, timeline design, focus bar,
   checklist group), Your own events and games, Backup (tiers plus a manual "Your backups" list), and
-  per-game Setup / Codes / About.
+  per-game Setup / Codes / About. Switching to another game keeps the open tab (2026-10-20, owner):
+  Codes in one game opens Codes in the next.
 - **Redeem codes (2026-10-18, owner).** A game's Codes tab lists the codes still to use first. A
   code redeemed on every server the reader plays, or past its stated expiry, is greyed and struck
   through in a "Redeemed or expired" section below, with its Redeemed box still there to undo. A

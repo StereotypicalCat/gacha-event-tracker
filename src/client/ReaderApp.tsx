@@ -88,7 +88,10 @@ import {
   type SettingsPage,
 } from "./components/redesign/SettingsLayout.tsx";
 import { ChangelogPage } from "./components/redesign/ChangelogPage.tsx";
-import { GameSettings } from "./components/redesign/GameSettings.tsx";
+import {
+  GameSettings,
+  type GameTab,
+} from "./components/redesign/GameSettings.tsx";
 import { RoutinesPage } from "./components/redesign/RoutinesPage.tsx";
 import { DailyPanel } from "./components/redesign/DailyPanel.tsx";
 import { RoutineGroup } from "./components/redesign/RoutineGroup.tsx";
@@ -292,7 +295,7 @@ function ReaderContent({
   }, [tour]);
   const touring = tour === "new" || tour === "returning" || tour === "replay";
   const tourForced = tour === "new" || tour === "returning";
-  const [gameTab, setGameTab] = useState<"setup" | "codes">("setup");
+  const [gameTab, setGameTab] = useState<GameTab>("setup");
   const [codesGame, setCodesGame] = useState<string | undefined>(
     startRoute?.game,
   );
@@ -1021,8 +1024,8 @@ function ReaderContent({
                         setSettingsPage(p);
                       }}
                       onGame={(g) => {
+                        // The tab stays: Codes in one game opens Codes in the next.
                         setCodesGame(g);
-                        setGameTab("setup");
                         setSettingsPage("games");
                       }}
                     >
@@ -1041,8 +1044,9 @@ function ReaderContent({
                         />
                       ) : settingsPage === "games" && codesGame ? (
                         <GameSettings
-                          key={`${codesGame}-${gameTab}`}
-                          initialTab={gameTab}
+                          key={codesGame}
+                          tab={gameTab}
+                          onTab={setGameTab}
                           codes={codes}
                           initialGame={codesGame}
                           state={state}

@@ -58,3 +58,24 @@ test("Appearance orders only the games being tracked, with up and down buttons",
   expect(html).not.toContain("Move Zenless Zone Zero");
   expect(html).not.toContain("Sort A–Z");
 });
+
+test("game settings shows the tab the parent holds, so switching games keeps it", () => {
+  const at = "2026-10-16T12:00:00.000Z",
+    ids = ["account:one", "account:two"],
+    state = migrateLegacy({}, ["genshin", "zzz"], at, () => ids.shift()!);
+  const html = (game: string) =>
+    render(
+      <GameSettings
+        state={state}
+        initialGame={game}
+        tab="codes"
+        onTab={() => {}}
+        sources={[]}
+        onAction={async () => ({ ok: true })}
+      />,
+    );
+  for (const game of ["genshin", "zzz"]) {
+    expect(html(game)).toContain('data-tab="codes" aria-pressed="true"');
+    expect(html(game)).toContain("Redeem codes");
+  }
+});

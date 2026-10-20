@@ -29,6 +29,8 @@ import { DisplayTimeContext, formatInZone } from "../../state/displayTime.ts";
 import { resolveReaderClock } from "../../../shared/readerClock.ts";
 import { DAY, formatRemaining, resetShiftMs } from "../../../shared/time.ts";
 export type ActionHandler = (action: ReaderAction) => Promise<SaveResult>;
+export const GAME_TABS = ["setup", "codes", "about"] as const;
+export type GameTab = (typeof GAME_TABS)[number];
 const hostOf = (url: string) => {
   try {
     return new URL(url).hostname.replace(/^www\./, "");
@@ -42,14 +44,17 @@ export function GameSettings({
   onAction,
   codes = null,
   initialGame,
-  initialTab = "setup",
+  tab: heldTab,
+  onTab,
 }: {
   state: ReaderState;
   sources: SourceHealth[];
   onAction: ActionHandler;
   codes?: CodesFeed | null;
   initialGame?: string | undefined;
-  initialTab?: "setup" | "codes";
+  // When the parent holds the tab, switching games keeps the reader on it.
+  tab?: GameTab;
+  onTab?: (tab: GameTab) => void;
 }) {
   const renderedMeta = useGameMeta();
   const games = orderGames(
@@ -72,7 +77,9 @@ export function GameSettings({
       games[0] ??
       "",
   );
-  const [tab, setTab] = useState<string>(initialTab);
+  const [ownTab, setOwnTab] = useState<GameTab>("setup");
+  const tab = heldTab ?? ownTab,
+    setTab = onTab ?? setOwnTab;
   const [trackingAccount, setTrackingAccount] = useState<string | null>(null);
   const [addingServer, setAddingServer] = useState(false);
   const [server, setServer] = useState<Region>("asia");
@@ -138,7 +145,7 @@ export function GameSettings({
       ) : null}
 
       <div className="subtabs">
-        {["setup", "codes", "about"].map((id) => (
+        {GAME_TABS.map((id) => (
           <button
             type="button"
             key={id}
