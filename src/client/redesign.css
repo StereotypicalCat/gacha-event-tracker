@@ -1896,6 +1896,31 @@ textarea {
   flex-wrap: wrap;
   margin-top: 16px;
 }
+/* Pills under an explanation get the scheme choices' breathing room; flush
+   against the text they read as part of the sentence. */
+.settings-group .help + .segmented {
+  margin-top: 16px;
+}
+/* In Settings the pills sit beside outlined buttons and selects, so they take
+   those controls' type and height, and in Relaxed a hairline tray rather than
+   the dark well the Checklist's sort pills use: a well among outlines reads as
+   text floating in a hole. */
+.settings-group .segmented button {
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 7px 12px;
+  min-height: 0;
+}
+:root[data-interface="relaxed"] .settings-group .segmented {
+  background: transparent;
+  border: 1px solid var(--color-hairline);
+  border-radius: 8px;
+}
+:root[data-interface="relaxed"] .settings-group .segmented button {
+  padding: 4px 12px;
+  min-height: 0;
+  border-radius: 5px;
+}
 .scheme-option {
   border: 1px solid var(--color-hairline);
   padding: 10px 14px;
