@@ -45,6 +45,17 @@ export const PeriodSchema = z.union([
 ]);
 export type Period = z.infer<typeof PeriodSchema>;
 
+/**
+ * A built-in's period: any of the above, or "until the game's next version"
+ * (`versions.ts`). Code only — never in `PeriodSchema`, so a stored task, an
+ * export and an older cached bundle never meet it (spec 2026-10-22).
+ */
+export const RoutinePeriodSchema = z.union([
+  PeriodSchema,
+  z.object({ unit: z.literal("version") }),
+]);
+export type RoutinePeriod = z.infer<typeof RoutinePeriodSchema>;
+
 const msOf = (key: string) => Date.parse(`${key}T00:00:00Z`);
 const keyOf = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 
