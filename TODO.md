@@ -163,20 +163,25 @@ note only says where to start.
 - [ ] **Record Wuthering Waves 3.8's end** in `VERSIONS` (`src/shared/versions.ts`) once it is
   announced or the shop timer shows it, with the version after it. Until then the shop routines hold
   their count from 11 Nov 2026 and print an estimate (~23 Dec).
-- [ ] **Let readers use "next version" in their own events and routines** (owner, 2026-10-22): an
-  event of their own that ends with the version, and a task of their own that resets with it — which
-  also lets *Make it mine* copy a version routine. Today `{ unit: "version" }` is built-in only and
-  kept out of the stored `PeriodSchema` on purpose (spec 2026-10-22, decision 8), so this changes the
-  stored shape: an older cached bundle must skip such a record rather than refuse it, as it did for
-  cycle tasks (DATA-MODEL § tasks). Run the change past `schema-guardian`.
-- [ ] **Find sources for game version dates** (owner, 2026-10-22), so `VERSIONS` stops depending on
-  hand entry. Per game, a stable page that dates the current version's start and end — never a
-  per-version URL, which changes every patch — checked through the `add-game-source` path (robots,
-  fixture, `docs/SOURCES.md` entry). Leads: Nikki's Fandom `Version` table already parses
-  (`versionTable.ts`); WuWa's Fandom `Version` table stopped at 3.5 and Game8 gave both 11 and
-  12 Nov for 3.8 (pass windows spec § Not shipped); Endfield's `/wiki/Version` lagged a version on
-  2026-10-16. A scraped end must still be a *stated* date, and the owner's in-game hour can refine it.
-- [ ] Move Pioneer Podcast onto the version period once the owner confirms it follows the version.
+- [ ] Version routine follow-ups ([version routines spec](docs/superpowers/specs/2026-10-22-version-routines-design.md)
+  § Not in this change):
+  - [ ] **Let readers use "next version" in their own events and routines** (owner, 2026-10-22): an
+    event of their own that ends with the version, and a task of their own that resets with it —
+    which also lets *Make it mine* copy a version routine. Today `{ unit: "version" }` is built-in
+    only and kept out of the stored `PeriodSchema` on purpose (decision 8), so this changes the
+    stored shape: an older cached bundle must skip such a record rather than refuse it, as it did
+    for cycle tasks (DATA-MODEL § tasks). Run the change past `schema-guardian`.
+  - [ ] **Find sources for game version dates** (owner, 2026-10-22), so `VERSIONS` stops depending
+    on hand entry. Per game, a stable page that dates the current version's start and end — never a
+    per-version URL, which changes every patch — checked through the `add-game-source` path
+    (robots, fixture, `docs/SOURCES.md` entry). Leads: Nikki's Fandom `Version` table already
+    parses (`versionTable.ts`); WuWa's Fandom `Version` table stopped at 3.5 and Game8 gave both
+    11 and 12 Nov for 3.8 (pass windows spec § Not shipped); Endfield's `/wiki/Version` lagged a
+    version on 2026-10-16. A scraped end must still be a *stated* date, and the owner's in-game
+    hour can refine it.
+  - [ ] Move Pioneer Podcast onto the version period once the owner confirms it follows the version.
+  - [ ] Version markers on the timeline, or a version row in the list or *Next up* — left out on
+    the owner's call (decision 4); only if they ask.
 - [ ] Give Genshin's *To Temper Thyself and Journey Far* a check-in goal by default, so a reader
   need not set it by hand. The owner asked on 2026-10-16 to "mark it as a 4/5 wk event"; earlier
   the same day they described it as five days out of seven, and the [check-in goals spec](docs/superpowers/specs/2026-10-03-check-in-goals-design.md)
