@@ -56,6 +56,10 @@ export const RoutinePeriodSchema = z.union([
 ]);
 export type RoutinePeriod = z.infer<typeof RoutinePeriodSchema>;
 
+/** Where a period is grouped and tallied: a version shows with the cycles. */
+export const cadenceOf = (period: RoutinePeriod): Period["unit"] =>
+  period.unit === "version" ? "cycle" : period.unit;
+
 const msOf = (key: string) => Date.parse(`${key}T00:00:00Z`);
 const keyOf = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 

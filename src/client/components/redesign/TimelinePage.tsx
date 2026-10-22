@@ -22,6 +22,7 @@ import { actionMeta } from "../../state/reader/actions.ts";
 import { useGameMeta } from "../../state/gameMeta.tsx";
 import { DAY, formatRemaining, resetShiftMs } from "../../../shared/time.ts";
 import { periodOf } from "../../../shared/period.ts";
+import { versionWindow } from "../../../shared/versions.ts";
 import { routinesFor } from "../../../shared/routines.ts";
 import { canStep, snapDayWidth, stepDayWidth } from "../../state/zoom.ts";
 import { orderGames } from "../../state/gameOrder.ts";
@@ -47,7 +48,12 @@ export const onTimeline = (r: RoutineRow) =>
 export function routinePeriod(row: RoutineRow, now: number) {
   const key = readerDayKey(now, row.clock),
     task = row.task ?? routinesFor(row.game).find((r) => r.id === row.id);
-  const period = task
+  if (task?.period.unit === "version") {
+    // Drawn to the recorded end, else to the estimate: a picture, not a reset.
+    const w = versionWindow(row.game, now);
+    if (w) return { start: w.start, end: w.end ?? w.estimate ?? now + DAY };
+  }
+  const period = task && task.period.unit !== "version"
     ? periodOf(task.period, key)
     : { start: key, days: [key] };
   const shift = resetShiftMs(row.clock.region, row.game, row.clock);

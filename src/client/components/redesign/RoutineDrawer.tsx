@@ -23,6 +23,9 @@ import {
 } from "../../../shared/routines.ts";
 import { asOfLabel, TaskSchema, type Task } from "../../../shared/task.ts";
 import { periodOf, type Period } from "../../../shared/period.ts";
+import { versionCaption, versionWindow } from "../../../shared/versions.ts";
+
+const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 import { AmountTarget } from "../../../shared/goal.ts";
 import {
   DAY,
@@ -376,13 +379,21 @@ function Library({
                 const rows = rowsOf(id),
                   first = rows[0]!,
                   def = builtins.find((b) => b.id === id);
+                const version =
+                  def?.period.unit === "version"
+                    ? versionWindow(def.game, now)
+                    : undefined;
                 const line = def
                   ? [
-                      scheduleWords(
-                        def.period,
-                        first.clock.resetHour,
-                        first.clock.resetMinute,
-                      ),
+                      def.period.unit === "version"
+                        ? version
+                          ? capitalise(versionCaption(version, now))
+                          : "Resets with the version"
+                        : scheduleWords(
+                            def.period,
+                            first.clock.resetHour,
+                            first.clock.resetMinute,
+                          ),
                       measureWords(def),
                       `${sourceLabel(def.source)}, checked ${asOfLabel(def.checked)}`,
                     ]

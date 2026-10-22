@@ -16,6 +16,7 @@ import {
   dailyTally,
   longerHeading,
   tasksShown,
+  type StripTask,
 } from "../src/client/components/Dailies.tsx";
 import type { GoalStatus } from "../src/shared/goal.ts";
 import { Welcome } from "../src/client/components/Welcome.tsx";
@@ -1431,7 +1432,7 @@ describe("weekly and monthly tasks in the dailies strip", () => {
     scope: "cycle", measure: "days", periodStart: "2026-10-02", required: 1, count: 0,
     met: false, needed: 1, open: 1, shortfall: false,
   };
-  const anyStatus = (t: Pick<Task, "period" | "measure">) =>
+  const anyStatus = (t: StripTask) =>
     t.period.unit === "cycle" ? cycleStatus : statusOf(t);
 
   test("the lower row names the periods it holds", () => {

@@ -3,7 +3,9 @@ import { z } from "zod";
 import type { LaneId } from "./custom.ts";
 import { dayKey } from "./daily.ts";
 import { AmountTarget, type AmountLog, type GoalStatus } from "./goal.ts";
-import { periodOf, PeriodSchema } from "./period.ts";
+import { periodOf, PeriodSchema, type RoutinePeriod } from "./period.ts";
+import { versionCaption, versionWindow } from "./versions.ts";
+import { DAY } from "./time.ts";
 import type { Region } from "./schema.ts";
 
 /**
@@ -79,12 +81,12 @@ export type Task = z.infer<typeof TaskSchema>;
  * What the strip and `taskStatus` need from a task — a reader's own, or a
  * built-in routine (routines.ts), which shares this shape under its own id.
  */
-export type TaskShape = Pick<Task, "id" | "game" | "title" | "period" | "measure">;
+export type TaskShape = Pick<Task, "id" | "game" | "title" | "measure"> & { period: RoutinePeriod };
 
 /** Where the reader is with a task this period. Pure; `now` explicit. */
 export function taskStatus(input: {
   /** `clock`: a built-in's server, when it rolls on one server's reset for everyone. */
-  task: Pick<Task, "game" | "period" | "measure"> & { clock?: Region | undefined };
+  task: Pick<Task, "game" | "measure"> & { period: RoutinePeriod; clock?: Region | undefined };
   region: Region;
   now: number;
   logged: readonly string[];
@@ -92,6 +94,7 @@ export function taskStatus(input: {
   timing?: ResetTiming;
 }): GoalStatus {
   const { task, region, now, logged, amounts } = input;
+  if (task.period.unit === "version") return versionStatus(task.game, task.measure, now, amounts);
   const today = dayKey(now, task.clock ?? region, task.game as LaneId, task.clock === undefined ? input.timing : undefined);
   const { start, days } = periodOf(task.period, today);
   const scope = task.period.unit;
@@ -120,6 +123,25 @@ export function taskStatus(input: {
   };
 }
 
+/**
+ * A built-in that resets with its game's version (spec 2026-10-22): the number
+ * under the version's key, and whole days to a **recorded** end — none when
+ * only an estimate exists, since an estimate is never acted on. Amounts only
+ * (routines.test.ts holds every version routine to that); shown as a cycle.
+ */
+function versionStatus(game: string, measure: Measure, now: number, amounts: AmountLog | undefined): GoalStatus {
+  const w = versionWindow(game, now);
+  const key = w?.key ?? "";
+  const count = amounts?.[key]?.value ?? 0;
+  const required = measure.kind === "amount" ? measure.target : measure.required;
+  const daysLeft = w?.end === undefined ? null : Math.ceil((w.end - now) / DAY);
+  return {
+    scope: "cycle", measure: "amount", periodStart: key, required, count,
+    met: count >= required, needed: Math.max(0, required - count),
+    open: daysLeft, shortfall: false, daysLeft,
+  };
+}
+
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 function ordinal(n: number): string {
@@ -137,9 +159,15 @@ export function asOfLabel(day: string): string {
 }
 
 /** One line saying when it rolls and what it wants. */
-export function taskCaption(task: Pick<Task, "period" | "measure">): string {
+export function taskCaption(
+  task: Pick<Task, "measure"> & { period: RoutinePeriod; game?: string },
+  now: number = Date.now(),
+): string {
+  const version = task.period.unit === "version" && task.game !== undefined ? versionWindow(task.game, now) : undefined;
   const when =
-    task.period.unit === "day"
+    task.period.unit === "version"
+      ? version === undefined ? "resets with the version" : versionCaption(version, now)
+      : task.period.unit === "day"
       ? "every day"
       : task.period.unit === "week"
       ? `every week from ${WEEKDAYS[task.period.startsOn - 1]}`

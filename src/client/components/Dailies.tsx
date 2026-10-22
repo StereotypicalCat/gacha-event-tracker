@@ -12,7 +12,7 @@ import { isCustomGameId, type DisplayEvent, type LaneId } from "../../shared/cus
 import type { GameMeta } from "../../shared/games.ts";
 import type { GameId, Region } from "../../shared/schema.ts";
 import { goalCount, goalLabel, type GoalStatus } from "../../shared/goal.ts";
-import { addDays, periodOf, type Period } from "../../shared/period.ts";
+import { addDays, cadenceOf, periodOf, type Period } from "../../shared/period.ts";
 import type { TaskShape } from "../../shared/task.ts";
 import { asOfLabel } from "../../shared/routines.ts";
 import { AmountEditor } from "./AmountEditor.tsx";
@@ -206,8 +206,9 @@ export function dailyGroups(
           ...(clock === undefined ? {} : { clock }),
           notBefore: null,
           goal: taskStatusFor(task),
-          cadence: task.period.unit,
-          period: task.period,
+          cadence: cadenceOf(task.period),
+          // A version has no period before it to catch up on (spec 2026-10-22).
+          period: task.period.unit === "version" ? undefined : task.period,
           unit: task.measure.kind === "amount" ? task.measure.unit : undefined,
         });
       }
@@ -228,7 +229,7 @@ export function tasksShown<T extends Pick<StripTask, "period">>(
 ): T[] {
   const on = { week: shown.weekly, month: shown.monthly, cycle: shown.cycle } as const;
   // A reader's own daily sits with the standing dailies, not these strips.
-  return tasks.filter((t) => t.period.unit !== "day" && on[t.period.unit]);
+  return tasks.filter((t) => t.period.unit !== "day" && on[cadenceOf(t.period) as keyof typeof on]);
 }
 
 /**

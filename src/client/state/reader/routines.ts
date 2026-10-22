@@ -7,6 +7,7 @@ import { metaFor } from "../../../shared/games.ts";
 import { routinesFor, offered } from "../../../shared/routines.ts";
 import { type Task, TaskSchema, taskStatus } from "../../../shared/task.ts";
 import { readableAmounts } from "../useAmounts.ts";
+import { cadenceOf } from "../../../shared/period.ts";
 import {
   resolveReaderClock,
   readerDayKey,
@@ -121,7 +122,7 @@ export function routineRows(
       accountId,
       game: account.game,
       title: task.title,
-      cadence: task.period.unit,
+      cadence: cadenceOf(task.period),
       status: taskStatus({
         task,
         region: account.region,

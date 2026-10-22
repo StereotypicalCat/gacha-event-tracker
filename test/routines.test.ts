@@ -43,6 +43,13 @@ describe("ROUTINES", () => {
     }
   });
 
+  test("a built-in may reset with the version, and then counts an amount", () => {
+    const { period: _p, ...rest } = ROUTINES[0]!;
+    expect(RoutineSchema.safeParse({ ...rest, period: { unit: "version" } }).success).toBe(true);
+    for (const r of ROUTINES)
+      if (r.period.unit === "version") expect(r.measure.kind).toBe("amount");
+  });
+
   test("a routine without a source is refused", () => {
     const { source: _s, ...bare } = ROUTINES[0]!;
     expect(RoutineSchema.safeParse(bare).success).toBe(false);

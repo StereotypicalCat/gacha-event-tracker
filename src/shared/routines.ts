@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { PeriodSchema } from "./period.ts";
+import { RoutinePeriodSchema } from "./period.ts";
 import { GameId, Region } from "./schema.ts";
 import { shownFor, type PerGame } from "./perGame.ts";
 import { MeasureSchema, type TaskShape } from "./task.ts";
@@ -30,7 +30,8 @@ export const RoutineSchema = z.object({
   id: z.string().regex(/^routine:[a-z0-9]+:[a-z0-9-]+$/),
   game: GameId,
   title: z.string().min(1).max(80),
-  period: PeriodSchema,
+  /** A built-in may also reset with its game's version (`versions.ts`). */
+  period: RoutinePeriodSchema,
   measure: MeasureSchema,
   /** The page that states it. */
   source: z.string().url().startsWith("https://"),

@@ -183,3 +183,53 @@ describe("a cycle chip's days left", () => {
     expect(at(["2026-10-29"], "2026-10-29")).toBe("1/1 · 1d");
   });
 });
+
+// Spec 2026-10-22: a built-in can reset with its game's version, at the
+// instant the table records — never at an estimate.
+describe("a task that resets with the version", () => {
+  const shop = {
+    game: "wuwa",
+    period: { unit: "version" as const },
+    measure: { kind: "amount" as const, target: 7, unit: "Radiant Tide" },
+  };
+  const amounts = { "2026-09-30": { value: 3, at: AT } };
+  const status = (iso: string) =>
+    taskStatus({ task: shop, region: "europe", now: Date.parse(iso), logged: [], amounts });
+
+  test("reads the number under the version's key, with whole days to its end", () => {
+    expect(status("2026-10-22T14:30:00Z")).toMatchObject({
+      scope: "cycle",
+      measure: "amount",
+      periodStart: "2026-09-30",
+      count: 3,
+      required: 7,
+      met: false,
+      daysLeft: 20,
+    });
+  });
+
+  test("a minute before the end it still holds; at the end it is a new version", () => {
+    expect(status("2026-11-11T10:29:00Z").count).toBe(3);
+    expect(status("2026-11-11T10:30:00Z")).toMatchObject({
+      periodStart: "2026-11-11",
+      count: 0,
+      daysLeft: null,
+      open: null,
+    });
+  });
+
+  test("the chip drops the days when no end is recorded", () => {
+    expect(goalCount(status("2026-10-22T14:30:00Z"))).toBe("3/7 · 20d");
+    expect(goalCount(status("2026-11-12T00:00:00Z"))).toBe("0/7");
+  });
+
+  test("its caption names the next version", () => {
+    expect(taskCaption(shop, Date.parse("2026-10-22T14:30:00Z"))).toBe(
+      "resets with 3.8 · 11 Nov · reach 7 Radiant Tide",
+    );
+  });
+
+  test("a reader's task cannot hold it", () => {
+    expect(TaskSchema.safeParse(task({ period: { unit: "version" } as never })).success).toBe(false);
+  });
+});
