@@ -79,3 +79,41 @@ test("game settings shows the tab the parent holds, so switching games keeps it"
     expect(html(game)).toContain("Redeem codes");
   }
 });
+
+import { DisplayTimeContext, formatInZone } from "../src/client/state/displayTime.ts";
+// Spec 2026-10-22: a game's version timer sits on its About tab.
+const about = (game: string, at: string, tab: "about" | "setup" = "about") =>
+  render(
+    <DisplayTimeContext.Provider value="UTC">
+      <GameSettings
+        state={migrateLegacy({}, [game], at, () => "account:one")}
+        initialGame={game}
+        sources={[]}
+        onAction={async () => ({ ok: true })}
+        now={Date.parse(at)}
+        tab={tab}
+      />
+    </DisplayTimeContext.Provider>,
+  );
+test("a game's About tab shows its version, when it ends and where that comes from", () => {
+  const html = about("wuwa", "2026-10-22T14:30:00.000Z");
+  expect(html).toContain("Version 3.7");
+  expect(html).toContain(`ends ${formatInZone("2026-11-11T10:30:00Z", true, "UTC")} (in 19d 20h)`);
+  expect(html).toContain('href="https://allthings.how/wuthering-waves-3-7-banners-schedule-hsin-and-suoming-release-dates/"');
+  expect(html).toContain("Confirmed in game, 2026-10-22.");
+});
+test("past the recorded end, the About tab gives the next version and an estimate", () => {
+  const html = about("wuwa", "2026-11-12T00:00:00.000Z");
+  expect(html).toContain("Version 3.8");
+  expect(html).toContain(`next version expected ~${formatInZone("2026-12-23T10:30:00Z", false, "UTC")} (estimate)`);
+});
+test("a game with no version table has no version row", () => {
+  expect(about("genshin", "2026-10-22T14:30:00.000Z")).not.toContain("Version ");
+});
+test("a routine that resets with the version is offered with the cycles", () => {
+  // Spec 2026-10-22, decision 10: Tower of Adversity and the three shop lines
+  // (this count has always included the standard line).
+  const html = about("wuwa", "2026-10-22T14:30:00.000Z", "setup");
+  expect(html).toMatch(/Weeklies &amp; monthlies<\/span><span class="ls">[^<]*<\/span><span class="ls">3 built in/);
+  expect(html).toMatch(/Cycles<\/span><span class="ls">[^<]*<\/span><span class="ls">4 built in/);
+});

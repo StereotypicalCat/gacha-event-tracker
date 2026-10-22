@@ -5,6 +5,7 @@ import { GAMES, metaFor, type GameMeta } from "../../../shared/games.ts";
 import { offered, routinesFor } from "../../../shared/routines.ts";
 import type { ReaderState, TrackingIntent } from "../../state/reader/schema.ts";
 import type { SetupDraft } from "../../state/reader/onboarding.ts";
+import { cadenceOf } from "../../../shared/period.ts";
 
 // A translation of the Round 6 B onboarding (design/mockups/round6/b-rail.html, `onboarding()`):
 // preferences, a two-column game list, one tracking table and view cards.
@@ -87,7 +88,7 @@ export function SetupWizard({
         : routinesFor(g).filter(
             (r) =>
               offered(r, standard) &&
-              (r.period.unit === "cycle") === (k === "cycles"),
+              (cadenceOf(r.period) === "cycle") === (k === "cycles"),
           ).length;
   const withGames = (choose: (current: string[]) => string[]) =>
     set((d) => {

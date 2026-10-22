@@ -28,6 +28,8 @@ import { useContext } from "react";
 import { DisplayTimeContext, formatInZone } from "../../state/displayTime.ts";
 import { resolveReaderClock } from "../../../shared/readerClock.ts";
 import { DAY, formatRemaining, resetShiftMs } from "../../../shared/time.ts";
+import { VERSIONS, versionWindow } from "../../../shared/versions.ts";
+import { cadenceOf } from "../../../shared/period.ts";
 export type ActionHandler = (action: ReaderAction) => Promise<SaveResult>;
 export const GAME_TABS = ["setup", "codes", "about"] as const;
 export type GameTab = (typeof GAME_TABS)[number];
@@ -46,6 +48,7 @@ export function GameSettings({
   initialGame,
   tab: heldTab,
   onTab,
+  now = Date.now(),
 }: {
   state: ReaderState;
   sources: SourceHealth[];
@@ -55,6 +58,8 @@ export function GameSettings({
   // When the parent holds the tab, switching games keeps the reader on it.
   tab?: GameTab;
   onTab?: (tab: GameTab) => void;
+  /** Fixed in tests; the live clock otherwise. */
+  now?: number;
 }) {
   const renderedMeta = useGameMeta();
   const games = orderGames(
@@ -94,7 +99,8 @@ export function GameSettings({
     state.customGames as Parameters<typeof metaFor>[1],
   );
   const zone = useContext(DisplayTimeContext),
-    now = Date.now(),
+    version = versionWindow(selected, now),
+    entry = VERSIONS.find((v) => v.game === selected && version?.number === v.number),
     short = renderedMeta(selected).short;
   const freshCodes = codes
     ? newCodes(codes, state.codeSeen[selected] ?? [], selected).length
@@ -186,6 +192,27 @@ export function GameSettings({
                 </div>
               );
             })}
+            {version && (
+              // Spec 2026-10-22: only a recorded end is a date; the rest is an estimate.
+              <div className="trow">
+                <span>Version {version.number ?? "now"}</span>
+                <span>
+                  {version.end !== undefined
+                    ? `ends ${formatInZone(version.end, true, zone)} (in ${formatRemaining(version.end - now)})`
+                    : version.estimate !== undefined
+                      ? `next version expected ~${formatInZone(version.estimate, false, zone)} (estimate)`
+                      : "next version not yet dated"}
+                  {entry && (
+                    <small>
+                      <a href={entry.source} target="_blank" rel="noreferrer">
+                        Source
+                      </a>
+                      {entry.note !== undefined && ` · ${entry.note}`}
+                    </small>
+                  )}
+                </span>
+              </div>
+            )}
           </div>
           <section className="grp">
             <h3>Data sources</h3>
@@ -600,8 +627,8 @@ function AccountSetup({
   const builtins = routinesFor(a.game);
   const availability = {
     dailies: !a.game.startsWith("mygame:"),
-    weeklyMonthly: builtins.some((r) => r.period.unit !== "cycle"),
-    cycles: builtins.some((r) => r.period.unit === "cycle"),
+    weeklyMonthly: builtins.some((r) => cadenceOf(r.period) !== "cycle"),
+    cycles: builtins.some((r) => cadenceOf(r.period) === "cycle"),
   };
   /**
    * Saved on each click. Only the kind that changed touches its routines, so
@@ -622,7 +649,7 @@ function AccountSetup({
     };
     if (changed.includes("dailies")) place(`dailies:${a.game}`, next.dailies);
     for (const r of builtins) {
-      const kind = r.period.unit === "cycle" ? "cycles" : "weeklyMonthly";
+      const kind = cadenceOf(r.period) === "cycle" ? "cycles" : "weeklyMonthly";
       if (changed.includes(kind)) place(r.id, next[kind]);
     }
     const result = await onAction({
@@ -657,7 +684,7 @@ function AccountSetup({
               about:
                 "Weekly goals and monthly restocks, such as bosses and shop pulls",
               ids: builtins
-                .filter((r) => r.period.unit !== "cycle")
+                .filter((r) => cadenceOf(r.period) !== "cycle")
                 .map((r) => r.id),
             },
             {
@@ -666,7 +693,7 @@ function AccountSetup({
               about:
                 "Routines on a game-specific schedule, such as a 14-day endgame mode",
               ids: builtins
-                .filter((r) => r.period.unit === "cycle")
+                .filter((r) => cadenceOf(r.period) === "cycle")
                 .map((r) => r.id),
             },
           ] as const

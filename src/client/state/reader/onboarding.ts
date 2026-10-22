@@ -3,6 +3,7 @@ import type { View } from "../usePrefs.ts";
 import { routinesFor, offered } from "../../../shared/routines.ts";
 import { createAccount, changeAccountRegion } from "./accounts.ts";
 import type { AccountId, ReaderState, TrackingIntent } from "./schema.ts";
+import { cadenceOf } from "../../../shared/period.ts";
 export interface SetupDraft {
   region: Region;
   interface: "relaxed" | "structured";
@@ -46,7 +47,7 @@ export function setupReader(
     for (const r of routinesFor(game)) {
       const followed =
         offered(r, existing.prefs.standardPulls === true) &&
-        (r.period.unit === "cycle" ? intent.cycles : intent.weeklyMonthly);
+        (cadenceOf(r.period) === "cycle" ? intent.cycles : intent.weeklyMonthly);
       routines[r.id] = { followed, checklist: followed, timeline: followed };
     }
     accounts[a.id] = { ...a, intent, routines };

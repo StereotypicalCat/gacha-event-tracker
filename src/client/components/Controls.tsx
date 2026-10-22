@@ -10,6 +10,7 @@ import { YourOwn } from "./YourOwn.tsx";
 import { isCustomGameId } from "../../shared/custom.ts";
 import { exceptionLine, setFor, shownFor, type PerGame } from "../../shared/perGame.ts";
 import { asOfLabel, offered, routinesFor } from "../../shared/routines.ts";
+import { cadenceOf } from "../../shared/period.ts";
 
 const SettingsFilter = createContext<string | undefined>(undefined);
 const GROUP_PAGE: Record<string, string> = { Games: "games", "Server region": "time", Appearance: "appearance", "What you see": "lists", "Your own games and events": "general", "Your progress": "backup" };
@@ -117,7 +118,7 @@ export function Controls({
     ...(own.tasks ?? []).map((t) => t.period.unit),
     ...routineGames
       .filter((g) => shownFor(routines, g))
-      .flatMap((g) => routinesFor(g).filter((r) => offered(r, standardPulls)).map((r) => r.period.unit)),
+      .flatMap((g) => routinesFor(g).filter((r) => offered(r, standardPulls)).map((r) => cadenceOf(r.period))),
   ];
   const taskPeriods = {
     week: periods.includes("week"),
