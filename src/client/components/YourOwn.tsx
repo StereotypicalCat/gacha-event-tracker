@@ -7,7 +7,7 @@ import { cadenceLabel, EventForm, GameForm } from "./CustomForms.tsx";
 import { taskCaption, type Task } from "../../shared/task.ts";
 import type { TaskDraft } from "../state/useTasks.ts";
 import { TaskForm } from "./TaskForm.tsx";
-import { asOfLabel, type Routine } from "../../shared/routines.ts";
+import { asOfLabel, ownable, type Routine } from "../../shared/routines.ts";
 
 /**
  * The reader's own games and events — a group of the settings panel (PRD F13).
@@ -349,13 +349,15 @@ export function YourOwn({
                   >
                     as of {asOfLabel(routine.asOf)}
                   </a>
-                  <button
-                    type="button"
-                    onClick={() => onMakeItMine(routine)}
-                    className="shrink-0 text-xs text-faint transition-colors hover:text-ink"
-                  >
-                    Make it mine
-                  </button>
+                  {ownable(routine) && (
+                    <button
+                      type="button"
+                      onClick={() => onMakeItMine(routine)}
+                      className="shrink-0 text-xs text-faint transition-colors hover:text-ink"
+                    >
+                      Make it mine
+                    </button>
+                  )}
                   {onTrackRoutine !== undefined && (
                     <button
                       type="button"

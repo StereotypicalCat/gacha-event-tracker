@@ -88,3 +88,10 @@ test("the create shelf asks every mockup question and previews the result", () =
     expect(html).toContain(label);
   expect(html).toContain("Still needed: a name.");
 });
+
+test("a built-in that resets with the version says when, from the version table", () => {
+  // Spec 2026-10-22: the drawer's period line is the version caption.
+  const html = drawer("library", migrateLegacy({}, ["wuwa"], at, () => "account:one"));
+  expect(html).toContain("Oscillated Coral: Radiant Tide");
+  expect(html).toContain("Resets with 3.8 · 11 Nov");
+});

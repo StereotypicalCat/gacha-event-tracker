@@ -6,7 +6,12 @@ import type { CSSProperties } from "react";
 import { RoutineHistory } from "./RoutineHistory.tsx";
 import { useState } from "react";
 
-import { routinesFor, mineFrom } from "../../../shared/routines.ts";
+import { routinesFor, mineFrom, ownable } from "../../../shared/routines.ts";
+
+const builtinOwnable = (game: string, id: string) => {
+  const routine = routinesFor(game).find((r) => r.id === id);
+  return routine !== undefined && ownable(routine);
+};
 import { mintTaskId, type Task } from "../../../shared/task.ts";
 import {
   RoutineDrawer,
@@ -488,9 +493,11 @@ export function RoutinesPage({
                             </a>
                           )}
                           {row.id.startsWith("routine:") ? (
-                            <button onClick={() => void copy(row)}>
-                              Make it mine
-                            </button>
+                            builtinOwnable(row.game, row.id) && (
+                              <button onClick={() => void copy(row)}>
+                                Make it mine
+                              </button>
+                            )
                           ) : (
                             row.task && (
                               <>

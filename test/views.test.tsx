@@ -1442,6 +1442,21 @@ describe("weekly and monthly tasks in the dailies strip", () => {
     expect(longerHeading(new Set(["cycle"]))).toBe("This cycle");
   });
 
+  test("a version task sits with the cycles and has no period to catch up on", () => {
+    // Spec 2026-10-22: there is no "Last version" editor.
+    const shop: StripTask = {
+      id: "routine:wuwa:shop-radiant-tide", game: "wuwa", title: "Oscillated Coral: Radiant Tide",
+      period: { unit: "version" }, measure: { kind: "amount", target: 7, unit: "Radiant Tide" },
+    };
+    const [group] = dailyGroups(["wuwa"], [], NOW, "europe", meta, startOf, false, undefined,
+      [shop], () => cycleStatus);
+    const item = group!.items.find((i) => i.key === shop.id)!;
+    expect(item.cadence).toBe("cycle");
+    expect(item.period).toBeUndefined();
+    expect(tasksShown([shop], { weekly: false, monthly: false, cycle: true })).toEqual([shop]);
+    expect(tasksShown([shop], { weekly: true, monthly: true, cycle: false })).toEqual([]);
+  });
+
   test("cycle tasks sit in the lower row, are tallied apart and switched apart", () => {
     const [group] = dailyGroups(["zzz"], [], NOW, "europe", meta, startOf, true, undefined,
       [points, shiyu], anyStatus);

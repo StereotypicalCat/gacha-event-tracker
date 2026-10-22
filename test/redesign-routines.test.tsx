@@ -118,3 +118,17 @@ test("a finished routine group is marked complete but does not celebrate on arri
   expect(html).not.toContain("data-celebrate");
   expect(html).not.toContain("fireworks");
 });
+
+test("a routine that resets with the version is not offered as Make it mine", () => {
+  // A reader's task cannot hold a version period (spec 2026-10-22).
+  const at = "2026-10-22T14:30:00.000Z";
+  const state = migrateLegacy({}, ["wuwa"], at, () => "account:mine");
+  const pin = { followed: true, checklist: true, timeline: true };
+  state.accounts["account:mine"]!.routines["routine:wuwa:shop-radiant-tide"] = pin;
+  state.accounts["account:mine"]!.routines["routine:wuwa:weekly-challenge"] = pin;
+  const html = render(
+    <RoutinesPage state={state} onAction={async () => ({ ok: true })} now={Date.parse(at)} />,
+  );
+  expect(html).toContain("Oscillated Coral: Radiant Tide");
+  expect(html.split("Make it mine").length - 1).toBe(1);
+});

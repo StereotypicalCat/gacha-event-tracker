@@ -457,6 +457,45 @@ export const ROUTINES: readonly Routine[] = [
     checked: "2026-10-16",
     note: "The Hazard Zone; the source says roughly 28 days.",
   },
+  // The Oscillated Coral shop's pulls: seven of each, restocked with each
+  // version (owner, in game, 2026-10-22; spec 2026-10-22). The page names the
+  // shop and its three Tides, but is from 2024 and says six a month.
+  {
+    id: "routine:wuwa:shop-radiant-tide",
+    game: "wuwa",
+    title: "Oscillated Coral: Radiant Tide",
+    period: { unit: "version" },
+    pulls: "premium",
+    measure: { kind: "amount", target: 7, unit: "Radiant Tide" },
+    source: "https://samurai-gamers.com/wuthering-waves/wuwa-how-to-get-oscillated-coral/",
+    asOf: "2024-05-31",
+    checked: "2026-10-22",
+    note: "The 2024 page says six a month; the shop now sells seven a version. Confirmed in game, 2026-10-22.",
+  },
+  {
+    id: "routine:wuwa:shop-forging-tide",
+    game: "wuwa",
+    title: "Oscillated Coral: Forging Tide",
+    period: { unit: "version" },
+    pulls: "premium",
+    measure: { kind: "amount", target: 7, unit: "Forging Tide" },
+    source: "https://samurai-gamers.com/wuthering-waves/wuwa-how-to-get-oscillated-coral/",
+    asOf: "2024-05-31",
+    checked: "2026-10-22",
+    note: "The 2024 page says six a month; the shop now sells seven a version. Confirmed in game, 2026-10-22.",
+  },
+  {
+    id: "routine:wuwa:shop-lustrous-tide",
+    game: "wuwa",
+    title: "Oscillated Coral: Lustrous Tide",
+    period: { unit: "version" },
+    pulls: "standard",
+    measure: { kind: "amount", target: 7, unit: "Lustrous Tide" },
+    source: "https://samurai-gamers.com/wuthering-waves/wuwa-how-to-get-oscillated-coral/",
+    asOf: "2024-05-31",
+    checked: "2026-10-22",
+    note: "The 2024 page says six a month; the shop now sells seven a version. Confirmed in game, 2026-10-22.",
+  },
 
   // Infinity Nikki. The wiki's Reset page puts the weekly reset on Monday at
   // 04:00 server time and lists both of these among what it renews.
@@ -673,6 +712,13 @@ export function routineToAsk(
  * A reader's own task copied from a built-in, remembering where it came from.
  * The copy is theirs to edit; the original stays hidden while it exists.
  */
+/**
+ * Whether *Make it mine* is offered: not for a routine that resets with the
+ * version, since a reader's task cannot hold that period (spec 2026-10-22).
+ */
+export const ownable = (routine: Pick<Routine, "period">): boolean =>
+  routine.period.unit !== "version";
+
 export function mineFrom(routine: Routine): {
   game: string;
   title: string;

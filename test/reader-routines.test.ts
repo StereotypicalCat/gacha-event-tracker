@@ -58,3 +58,27 @@ test("an event the reader marked daily remains a directly tickable routine", () 
   expect(row?.placement.followed).toBe(true);
   expect(row?.cadence).toBe("day");
 });
+
+// Spec 2026-10-22: WuWa's shop pulls reset with the version and show with the cycles.
+import { routinePeriod } from "../src/client/components/redesign/TimelinePage.tsx";
+test("a routine that resets with the version is a cycle row, banded to its recorded end", () => {
+  const now = "2026-10-22T14:30:00.000Z";
+  const s = migrateLegacy({}, ["wuwa"], now, () => "account:one");
+  s.prefs.standardPulls = true;
+  s.data["account:one"]!.amounts[s.accounts["account:one"]!.clocks.at(-1)!.id] = {
+    "routine:wuwa:shop-radiant-tide": { "2026-09-30": { value: 4, at: now } },
+  };
+  const rows = routineRows(s, "account:one", Date.parse(now));
+  const shop = rows.filter((r) => r.id.startsWith("routine:wuwa:shop-"));
+  expect(shop.map((r) => r.cadence)).toEqual(["cycle", "cycle", "cycle"]);
+  const radiant = shop.find((r) => r.id === "routine:wuwa:shop-radiant-tide")!;
+  expect(radiant.status).toMatchObject({ count: 4, required: 7, daysLeft: 20, periodStart: "2026-09-30" });
+  expect(routinePeriod(radiant, Date.parse(now))).toEqual({
+    start: Date.parse("2026-09-30T03:00:00Z"),
+    end: Date.parse("2026-11-11T10:30:00Z"),
+  });
+  // Past the recorded end, drawn to the estimate — a picture, not a reset.
+  expect(routinePeriod(radiant, Date.parse("2026-11-20T00:00:00Z")).end).toBe(
+    Date.parse("2026-12-23T10:30:00Z"),
+  );
+});

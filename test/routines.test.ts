@@ -102,6 +102,15 @@ describe("ROUTINES", () => {
       ["Pioneer Podcast weekly EXP", week, { kind: "amount", target: 12000, unit: "EXP" }],
       ["Weekly Activities", week, { kind: "amount", target: 6000, unit: "points" }],
       ["Tower of Adversity", { unit: "cycle", days: 28, from: "2026-11-09" }, { kind: "days", required: 1 }],
+      ["Oscillated Coral: Radiant Tide", { unit: "version" }, { kind: "amount", target: 7, unit: "Radiant Tide" }],
+      ["Oscillated Coral: Forging Tide", { unit: "version" }, { kind: "amount", target: 7, unit: "Forging Tide" }],
+      ["Oscillated Coral: Lustrous Tide", { unit: "version" }, { kind: "amount", target: 7, unit: "Lustrous Tide" }],
+    ]);
+    // Limited character and weapon pulls; the standard line only on request.
+    expect(routinesFor("wuwa").filter((r) => r.pulls !== undefined).map((r) => [r.id, r.pulls])).toEqual([
+      ["routine:wuwa:shop-radiant-tide", "premium"],
+      ["routine:wuwa:shop-forging-tide", "premium"],
+      ["routine:wuwa:shop-lustrous-tide", "standard"],
     ]);
     expect(shape("nte")).toEqual([
       ["Season Pass weekly EXP", week, { kind: "amount", target: 12000, unit: "EXP" }],
