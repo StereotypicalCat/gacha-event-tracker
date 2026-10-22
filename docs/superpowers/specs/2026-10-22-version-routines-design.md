@@ -1,6 +1,6 @@
 # Routines that reset with the game's version — design
 
-Date: 2026-10-22. Status: **approved** by the owner, 2026-10-22.
+Date: 2026-10-22. Status: **shipped** on branch `feat/version-routines` (`34ebc40..5896819`), approved by the owner 2026-10-22.
 
 ## Problem
 
