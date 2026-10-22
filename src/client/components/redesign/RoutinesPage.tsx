@@ -364,10 +364,16 @@ export function RoutinesPage({
               <div className="band-reset">
                 <small>Next reset in</small>
                 <strong>
-                  {formatRemaining(
-                    Math.min(...rows.map((r) => routinePeriod(r, now).end)) -
-                      now,
-                  )}
+                  {(() => {
+                    // An estimated end is not a reset (spec 2026-10-22).
+                    const ends = rows
+                      .map((r) => routinePeriod(r, now))
+                      .filter((p) => !p.estimated)
+                      .map((p) => p.end);
+                    return ends.length > 0
+                      ? formatRemaining(Math.min(...ends) - now)
+                      : "not yet dated";
+                  })()}
                 </strong>
               </div>
             </div>

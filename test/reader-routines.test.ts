@@ -76,6 +76,7 @@ test("a routine that resets with the version is a cycle row, banded to its recor
   expect(routinePeriod(radiant, Date.parse(now))).toEqual({
     start: Date.parse("2026-09-30T03:00:00Z"),
     end: Date.parse("2026-11-11T10:30:00Z"),
+    estimated: false,
   });
   // Past the recorded end, drawn to the estimate — a picture, not a reset.
   expect(routinePeriod(radiant, Date.parse("2026-11-20T00:00:00Z")).end).toBe(

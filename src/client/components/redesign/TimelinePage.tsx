@@ -22,7 +22,7 @@ import { actionMeta } from "../../state/reader/actions.ts";
 import { useGameMeta } from "../../state/gameMeta.tsx";
 import { DAY, formatRemaining, resetShiftMs } from "../../../shared/time.ts";
 import { periodOf } from "../../../shared/period.ts";
-import { versionWindow } from "../../../shared/versions.ts";
+import { versionCaption, versionWindow } from "../../../shared/versions.ts";
 import { routinesFor } from "../../../shared/routines.ts";
 import { canStep, snapDayWidth, stepDayWidth } from "../../state/zoom.ts";
 import { orderGames } from "../../state/gameOrder.ts";
@@ -44,22 +44,36 @@ export const timelineLook = (prefs: Record<string, unknown>) =>
 export const onTimeline = (r: RoutineRow) =>
   r.placement.followed && r.placement.timeline && r.cadence !== "day";
 
-/** Periods use each routine's resolved clock, including built-in clock overrides. */
-export function routinePeriod(row: RoutineRow, now: number) {
+/**
+ * Periods use each routine's resolved clock, including built-in clock overrides.
+ * `estimated`: a version with no recorded end — `end` is then only where the
+ * band stops (the estimate, or tomorrow once that has passed), never a reset to
+ * count down to (spec 2026-10-22, decision 3). Say `estimatedReset` instead.
+ */
+export function routinePeriod(
+  row: RoutineRow,
+  now: number,
+): { start: number; end: number; estimated: boolean } {
   const key = readerDayKey(now, row.clock),
     task = row.task ?? routinesFor(row.game).find((r) => r.id === row.id);
   if (task?.period.unit === "version") {
-    // Drawn to the recorded end, else to the estimate: a picture, not a reset.
     const w = versionWindow(row.game, now);
-    if (w) return { start: w.start, end: w.end ?? w.estimate ?? now + DAY };
+    if (w?.end !== undefined) return { start: w.start, end: w.end, estimated: false };
+    if (w) return { start: w.start, end: Math.max(w.estimate ?? 0, now + DAY), estimated: true };
   }
   const period = task && task.period.unit !== "version"
     ? periodOf(task.period, key)
     : { start: key, days: [key] };
   const shift = resetShiftMs(row.clock.region, row.game, row.clock);
   const start = Date.parse(period.start + "T00:00:00Z") - shift;
-  return { start, end: start + period.days.length * DAY };
+  return { start, end: start + period.days.length * DAY, estimated: false };
 }
+
+/** What to print instead of a countdown when `routinePeriod` is estimated. */
+export const estimatedReset = (row: RoutineRow, now: number): string => {
+  const w = versionWindow(row.game, now);
+  return w ? versionCaption(w, now) : "resets with next version";
+};
 export function TimelinePage({
   state,
   focus = null,
@@ -284,12 +298,16 @@ export function TimelinePage({
               />
               <span>
                 {r.status.count}/{r.status.required} ·{" "}
-                {showEnd
-                  ? `resets ${formatInZone(period.end, true, zone)}`
-                  : `${formatRemaining(period.end - now)} to reset`}
+                {period.estimated
+                  ? estimatedReset(r, now)
+                  : showEnd
+                    ? `resets ${formatInZone(period.end, true, zone)}`
+                    : `${formatRemaining(period.end - now)} to reset`}
               </span>
             </button>
-            <i className="reset-mark" style={{ left: pos(period.end) }} />
+            {!period.estimated && (
+              <i className="reset-mark" style={{ left: pos(period.end) }} />
+            )}
           </div>
         </div>
       </div>
@@ -389,9 +407,11 @@ export function TimelinePage({
                 start: period.start,
                 end: period.end,
                 done: r.status.met,
-                label: showEnd
-                  ? `resets ${day(period.end)}`
-                  : `${formatRemaining(period.end - now)} to reset`,
+                label: period.estimated
+                  ? estimatedReset(r, now)
+                  : showEnd
+                    ? `resets ${day(period.end)}`
+                    : `${formatRemaining(period.end - now)} to reset`,
                 onOpen: () => setRoutine(r),
               };
             })}
@@ -547,8 +567,14 @@ function RoutineDetail({
       </div>
       <h2 className="detail-title">{row.title}</h2>
       <p className="help">
-        Resets {formatInZone(period.end, true, zone)} · in{" "}
-        {formatRemaining(period.end - now)}
+        {period.estimated ? (
+          estimatedReset(row, now).replace(/^r/, "R")
+        ) : (
+          <>
+            Resets {formatInZone(period.end, true, zone)} · in{" "}
+            {formatRemaining(period.end - now)}
+          </>
+        )}
       </p>
       <RoutineControl row={row} onAction={onAction} now={now} />
     </dialog>

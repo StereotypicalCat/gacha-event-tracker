@@ -172,3 +172,24 @@ test("the board opens back to the running starts, with now a quarter to half acr
   // In between: opens just before the start.
   expect(openingLeft(1000, 700, 800)).toBe(672);
 });
+
+test("an open-ended version's row says expected, never a countdown or 'ended'", () => {
+  // Review fix (spec 2026-10-22, decision 3), in both looks.
+  const at = "2027-01-02T00:00:00.000Z",
+    s = migrateLegacy({}, ["wuwa"], at, () => "account:test");
+  s.accounts["account:test"]!.routines["routine:wuwa:shop-radiant-tide"] = {
+    followed: true,
+    checklist: true,
+    timeline: true,
+  };
+  for (const look of ["new", "classic"]) {
+    s.prefs.timelineLook = look;
+    const html = render(
+      <TimelinePage state={s} rows={[]} now={Date.parse(at)} onAction={async () => ({ ok: true })} onOpen={() => {}} />,
+    );
+    if (look === "new")
+      expect(html).toContain("resets with next version · expected ~23 Dec, not yet confirmed");
+    expect(html).not.toContain("ended");
+    expect(html).not.toContain("to reset");
+  }
+});

@@ -61,3 +61,37 @@ test("undoing a check-in removes the period's latest tick, not one from before i
     lastDayInPeriod({ ...ticked, days: ["2026-10-08"] }, today),
   ).toBeNull();
 });
+
+// Review fix (spec 2026-10-22, decision 3): with no recorded end, an estimate
+// is shown as one — never as a reset, and never "ended" once it passes.
+import { RoutinesPage } from "../src/client/components/redesign/RoutinesPage.tsx";
+import { routinePeriod } from "../src/client/components/redesign/TimelinePage.tsx";
+const wuwa = (iso: string) => {
+  const state = migrateLegacy({}, ["wuwa"], iso, () => "account:pin");
+  for (const id of ["routine:wuwa:shop-radiant-tide", "routine:wuwa:tower-of-adversity"])
+    state.accounts["account:pin"]!.routines[id] = { followed: true, checklist: true, timeline: true };
+  const rows = routineRows(state, "account:pin", Date.parse(iso));
+  return { state, shop: rows.find((r) => r.id === "routine:wuwa:shop-radiant-tide")! };
+};
+for (const iso of ["2026-11-20T00:00:00.000Z", "2027-01-02T00:00:00.000Z"]) {
+  test(`an open-ended version shows its estimate as one (${iso.slice(0, 10)})`, () => {
+    const t = Date.parse(iso);
+    const { state, shop } = wuwa(iso);
+    const period = routinePeriod(shop, t);
+    expect(period.estimated).toBe(true);
+    expect(period.end).toBeGreaterThan(t); // the band still covers today
+    const pinned = render(<PinnedRoutine row={shop} hue="#3DD6A0" onAction={ok} now={t} />);
+    expect(pinned).toContain("resets with next version · expected ~23 Dec");
+    expect(pinned).not.toContain("resets in");
+    const page = render(<RoutinesPage state={state} onAction={ok} now={t} />);
+    expect(page).not.toContain("ended");
+  });
+}
+test("a recorded version end is still a countdown", () => {
+  const iso = "2026-10-22T14:30:00.000Z";
+  const { shop } = wuwa(iso);
+  expect(routinePeriod(shop, Date.parse(iso)).estimated).toBe(false);
+  expect(render(<PinnedRoutine row={shop} hue="#3DD6A0" onAction={ok} now={Date.parse(iso)} />)).toContain(
+    "resets in 19d 20h",
+  );
+});

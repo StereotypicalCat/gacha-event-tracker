@@ -7,7 +7,7 @@ import type { RoutineRow } from "../../state/reader/routines.ts";
 import { actionMeta } from "../../state/reader/actions.ts";
 import { Fireworks } from "../Fireworks.tsx";
 import type { ActionHandler } from "./GameSettings.tsx";
-import { routinePeriod } from "./TimelinePage.tsx";
+import { estimatedReset, routinePeriod } from "./TimelinePage.tsx";
 
 /** The latest logged day inside the routine's current period, if any. */
 export function lastDayInPeriod(row: RoutineRow, today: string): string | null {
@@ -128,7 +128,10 @@ export function PinnedRoutine({
   };
 
   const period = row.cadence === "day" ? "Today" : `This ${row.cadence}`;
-  const resets = formatRemaining(routinePeriod(row, now).end - now);
+  const span = routinePeriod(row, now);
+  const resets = span.estimated
+    ? estimatedReset(row, now)
+    : `resets in ${formatRemaining(span.end - now)}`;
   const progress = amount
     ? `${count.toLocaleString()} / ${required.toLocaleString()}${unit ? ` ${unit}` : ""}`
     : required > 1
@@ -145,7 +148,7 @@ export function PinnedRoutine({
       <div className="pr-text">
         <strong>{row.title}</strong>
         <small>
-          {met ? `Done ${lower(period)}` : period} · resets in {resets}
+          {met ? `Done ${lower(period)}` : period} · {resets}
         </small>
         {amount && editing ? (
           <AmountEditor
