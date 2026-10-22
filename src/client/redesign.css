@@ -4568,6 +4568,21 @@ dialog.archive-detail {
 .game-about .trow b {
   font-weight: 600;
 }
+/* A version row's source and note sit under its date, not beside it. */
+.game-about .trow .version-end {
+  text-align: right;
+}
+.game-about .trow .version-end small {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+.game-about .trow .version-end a {
+  color: var(--color-near);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .settings-content .game-about .game-source {
   max-width: none;
   margin: 0;

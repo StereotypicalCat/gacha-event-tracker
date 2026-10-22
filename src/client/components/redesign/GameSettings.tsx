@@ -196,7 +196,7 @@ export function GameSettings({
               // Spec 2026-10-22: only a recorded end is a date; the rest is an estimate.
               <div className="trow">
                 <span>Version {version.number ?? "now"}</span>
-                <span>
+                <span className="version-end">
                   {version.end !== undefined
                     ? `ends ${formatInZone(version.end, true, zone)} (in ${formatRemaining(version.end - now)})`
                     : version.estimate !== undefined
