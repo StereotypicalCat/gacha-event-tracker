@@ -156,9 +156,17 @@ note only says where to start.
   (`Sanctuary_of_Ink`) changes URL every patch. endfield.wiki.gg's robots disallow `/api.php` for
   `*`, so only `/wiki/` pages are open. Re-check `/wiki/Version`; once it dates the current version,
   build `endfield-wikigg-protocol-pass` as the spec describes.
-- [ ] Wuthering Waves' Pioneer Podcast and Oscillated Coral, and NTE's Circle Bounty, as pass/shop
-  windows: no page dated them on 2026-10-16 (the [pass windows spec](docs/superpowers/specs/2026-10-16-pass-windows-design.md)
-  § Not shipped has what was found).
+- [ ] Wuthering Waves' Pioneer Podcast and NTE's Circle Bounty, as pass windows: no page dated them
+  on 2026-10-16 (the [pass windows spec](docs/superpowers/specs/2026-10-16-pass-windows-design.md)
+  § Not shipped has what was found). The Oscillated Coral shop shipped 2026-10-22 as three routines
+  that reset with the version ([version routines spec](docs/superpowers/specs/2026-10-22-version-routines-design.md)).
+- [ ] **Record Wuthering Waves 3.8's end** in `VERSIONS` (`src/shared/versions.ts`) once it is
+  announced or the shop timer shows it, with the version after it. Until then the shop routines hold
+  their count from 11 Nov 2026 and print an estimate (~23 Dec).
+- [ ] Version routine follow-ups (spec 2026-10-22 § Not in this change): a scraped version source
+  (Nikki's `Version` table already parses), version periods on a reader's own tasks and *Make it
+  mine* for them, and moving Pioneer Podcast onto the version period once the owner confirms it
+  follows the version.
 - [ ] Give Genshin's *To Temper Thyself and Journey Far* a check-in goal by default, so a reader
   need not set it by hand. The owner asked on 2026-10-16 to "mark it as a 4/5 wk event"; earlier
   the same day they described it as five days out of seven, and the [check-in goals spec](docs/superpowers/specs/2026-10-03-check-in-goals-design.md)

@@ -1257,6 +1257,13 @@ to an open page). Four things hold it up:
   are CSS/layout choices over one feature tree. Theme, palette and row density are independent.
   Do not mount the old v1 persistence hooks alongside ReaderApp's v2 store. See DATA-MODEL for
   account IDs, clock revisions, migration recovery, backups and export validation.
+- **Version timers are hand-kept, cited, and only their recorded ends act.** `VERSIONS`
+  (`src/shared/versions.ts`) is held to the `ROUTINES` bar: an https page, the day it was read, and
+  `Confirmed in game, YYYY-MM-DD.` for a figure the owner read in game. A version ends at an instant
+  (the restock), not a daily reset, which on Asia would roll a shop hours early. A routine on
+  `{ unit: "version" }` resets only at a recorded `end`; the `VERSION_DAYS` estimate is printed and
+  never acted on — the *never invent a date* rule. So **add each version's end when it is announced
+  or read in game**, with the next version's number; until then the shop routines hold their count.
 - **A game's routines stay together.** The separate daily panel keeps direct ticks; grouped
   routines use per-game/server summaries. Collapse policy is configurable and focus can expand a
   group without changing that saved policy. Timeline reset strips sit next to their game's events.

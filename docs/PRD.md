@@ -551,7 +551,11 @@ with the standing chore of the game it came from, because the reader thinks in g
 Routines is the library and management page for daily, weekly, monthly and cycle tasks. Follow each
 per server; pin independently to Checklist and Timeline. Built-ins offer Make it mine, copying only
 that account's logs; custom routines remain editable. Catch up & recorded history exposes logs on
-their original reset revisions. A separate Timeline reset strip sits directly after its game's events;
+their original reset revisions. A built-in can also **reset with its game's version** (WuWa's
+Oscillated Coral pulls, seven of each per version): it counts down to the end the version table
+records, or says *resets with next version (3.8) · expected ~23 Dec* when no end is recorded yet,
+and never resets on that estimate. It sits with the cycles and is not offered as Make it mine. The
+game's About tab in *Your games* shows the version and when it ends. A separate Timeline reset strip sits directly after its game's events;
 with strips off, Ending soonest remains a single cross-game deadline queue.
 
 The cadence and goal semantics below remain the domain contract; the redesign moves their controls

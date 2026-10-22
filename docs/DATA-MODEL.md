@@ -415,6 +415,16 @@ so `from` may be any day a cycle began. A built-in may name a server `clock` (co
 stored): its day keys are then cut on that server's reset for every reader, for a cycle that ends at
 one instant everywhere (NTE's Beyond the Rails, on Asia's).
 
+A built-in may also **reset with its game's version** (`{ unit: "version" }`, 2026-10-22). That
+period is code only — it is in `RoutinePeriodSchema`, never `PeriodSchema`, so no stored task, export
+or older bundle holds one — and it is cut on instants, not day keys: `versionWindow`
+(`src/shared/versions.ts`) finds the version holding `now` in the hand-kept `VERSIONS` table, whose
+`end` is the moment the next version's stock appears on every server. Only a recorded `end` rolls the
+period; past the newest one the window is the version that began there, open until its end is
+recorded, and `VERSION_DAYS` gives an estimate that is printed and never acted on. Its numbers sit in
+`amounts` under the version's start date in UTC (`2026-09-30` for WuWa 3.7), a key that adding the
+next entry never moves. It groups, tallies and switches with the cycles (`cadenceOf`).
+
 **Not every game has a server per region.** `GameMeta.resetOffsets` records the regions where a
 game's server clock differs from `REGION_RESET_UTC_OFFSET`. Endfield is the case this exists for: it
 has two server groups rather than three, and Europe is served off the Americas machine on a fixed
