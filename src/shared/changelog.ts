@@ -51,6 +51,14 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "version-routines",
+    date: "2026-10-22",
+    kind: "feature",
+    title: "Wuthering Waves' Oscillated Coral pulls, each version",
+    body: "Seven of each Tide a version, tracked with the cycles and counted down to the version's end. A game's About tab shows its version and when it ends. If the next end isn't known yet, you see an estimate, and nothing resets on it.",
+    ref: "8cf01b4",
+  },
+  {
     id: "shine",
     date: "2026-10-20",
     kind: "feature",
