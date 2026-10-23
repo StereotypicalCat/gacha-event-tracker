@@ -1,12 +1,12 @@
 {
   "sourceId": "r1999-fandom-events",
   "url": "https://reverse1999.fandom.com/api.php?action=parse&page=Events&prop=text&formatversion=2&format=json",
-  "contentHash": "36e2b6b86fa14330259524cca93877eae592ffcbfae8b0d58a3ef110048bc156",
+  "contentHash": "af86580635c828e5b4664539f6e0af76a75f3d6e87dbd3a819e12c0ec29b5b88",
   "bytes": 151096,
   "etag": null,
   "lastModified": null,
-  "contentChangedAt": "2026-10-18T05:28:06.776Z",
-  "lastConfirmedAt": "2026-10-22T17:28:08.684Z",
+  "contentChangedAt": "2026-10-23T05:28:09.650Z",
+  "lastConfirmedAt": "2026-10-23T05:28:09.650Z",
   "eventCount": 3,
   "charset": "utf-8"
 }

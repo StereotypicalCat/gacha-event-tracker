@@ -1,12 +1,12 @@
 {
   "sourceId": "p5x-game8-events",
   "url": "https://game8.co/games/Persona-5-Phantom-X/archives/532244",
-  "contentHash": "38ca9545f8f8f9565dfaca6567ab8dcc61c7dbcee99b1880a930ede5f1469698",
-  "bytes": 278672,
-  "etag": "W/\"38ca9545f8f8f9565dfaca6567ab8dcc\"",
+  "contentHash": "f382bf392c1d0b1970924663ebc7d38069e847fd0a1120ff47b3c5974cd696e7",
+  "bytes": 278651,
+  "etag": "W/\"f382bf392c1d0b1970924663ebc7d380\"",
   "lastModified": null,
-  "contentChangedAt": "2026-10-22T17:28:03.899Z",
-  "lastConfirmedAt": "2026-10-22T17:28:03.899Z",
+  "contentChangedAt": "2026-10-23T05:28:04.822Z",
+  "lastConfirmedAt": "2026-10-23T05:28:04.822Z",
   "eventCount": 3,
   "charset": "utf-8"
 }
