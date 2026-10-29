@@ -1,12 +1,12 @@
 {
   "sourceId": "nte-game8-events",
   "url": "https://game8.co/games/Neverness-to-Everness/archives/592073",
-  "contentHash": "07bb27d33c3303a6b37d24fe34d6b5e6927b5e4d42afddebaedbe898b6fcf462",
-  "bytes": 359927,
-  "etag": "W/\"07bb27d33c3303a6b37d24fe34d6b5e6\"",
+  "contentHash": "025d241b2f9dfbbf00aafea78383e2a6c4e84bcd6b19133a8c26cb6fec6df310",
+  "bytes": 359599,
+  "etag": "W/\"025d241b2f9dfbbf00aafea78383e2a6\"",
   "lastModified": null,
-  "contentChangedAt": "2026-10-28T17:27:29.225Z",
-  "lastConfirmedAt": "2026-10-28T17:27:29.225Z",
+  "contentChangedAt": "2026-10-29T05:27:24.587Z",
+  "lastConfirmedAt": "2026-10-29T05:27:24.587Z",
   "eventCount": 21,
   "charset": "utf-8"
 }
