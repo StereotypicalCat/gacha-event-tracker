@@ -1,12 +1,12 @@
 {
   "sourceId": "hsr-game8-events",
   "url": "https://game8.co/games/Honkai-Star-Rail/archives/408749",
-  "contentHash": "5b94f399a8a2162154c9c6322088f1e3d39fd5186779ddd68fd7cb240aeb81cf",
-  "bytes": 259739,
-  "etag": "W/\"5b94f399a8a2162154c9c6322088f1e3\"",
+  "contentHash": "22ae6d88a1f9fec3c1b6b445135dfbc2315eef98a5816a803361785c0280b609",
+  "bytes": 259960,
+  "etag": "W/\"22ae6d88a1f9fec3c1b6b445135dfbc2\"",
   "lastModified": null,
-  "contentChangedAt": "2026-10-29T17:27:23.351Z",
-  "lastConfirmedAt": "2026-10-29T17:27:23.351Z",
+  "contentChangedAt": "2026-10-30T05:28:03.008Z",
+  "lastConfirmedAt": "2026-10-30T05:28:03.008Z",
   "eventCount": 7,
   "charset": "utf-8"
 }
