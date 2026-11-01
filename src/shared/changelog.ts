@@ -51,6 +51,15 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "content-classification",
+    date: "2026-11-01",
+    kind: "feature",
+    title: "Miliastra gets its own lane, and battle passes move to Cycles",
+    body: "Follow Miliastra Wonderland separately from Genshin, track battle passes once under Cycles, and choose whether to track TCG events in Genshin's About tab. Existing progress and history are preserved.",
+    ref: "b03a6ed",
+    note: "content-classification",
+  },
+  {
     id: "version-routines",
     date: "2026-10-22",
     kind: "feature",
@@ -649,6 +658,19 @@ export const ENTRIES: Entry[] = [
 ];
 
 export const NOTES: Note[] = [
+  {
+    id: "content-classification",
+    date: "2026-11-01",
+    title: "Separate activities without losing your progress",
+    summary: [
+      "Miliastra Wonderland has its own lane, focus and visibility settings. It starts switched off for existing readers; enable it in Your games. Progress and history from its Genshin entries follow the move.",
+      "Dated battle passes appear under Cycles with independent Checklist and Timeline pins. Each pass keeps its sourced deadline and completion, while the next pass inherits your follow and pin choices. Weekly pass EXP remains a separate routine.",
+      "Genshin's About tab adds Track TCG events. Switching it off removes TCG from live lists and reminders while keeping notes, completion and Archive history. Source classifications drive these distinctions, with event IDs and dates unchanged.",
+    ],
+    from: "5576e5a",
+    to: "b03a6ed",
+    specs: ["docs/superpowers/specs/2026-11-01-content-classification-design.md"],
+  },
   {
     id: "redesign",
     date: "2026-10-18",
