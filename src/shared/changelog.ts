@@ -51,6 +51,14 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "genshin-tcg-setup",
+    date: "2026-11-01",
+    kind: "fix",
+    title: "Genshin's TCG tracking switch is in Setup",
+    body: "Find Track TCG events under Settings → Your games → Genshin Impact → Setup, below What to track. Your saved choice is unchanged.",
+    ref: "2f69038",
+  },
+  {
     id: "genshin-character-trial-merge",
     date: "2026-11-01",
     kind: "fix",
@@ -63,7 +71,7 @@ export const ENTRIES: Entry[] = [
     date: "2026-11-01",
     kind: "feature",
     title: "Miliastra gets its own lane, and battle passes move to Cycles",
-    body: "Follow Miliastra Wonderland separately from Genshin, track battle passes once under Cycles, and choose whether to track TCG events in Genshin's About tab. Existing progress and history are preserved.",
+    body: "Follow Miliastra Wonderland separately from Genshin, track battle passes once under Cycles, and choose whether to track TCG events in Genshin's Setup tab. Existing progress and history are preserved.",
     ref: "b03a6ed",
     note: "content-classification",
   },
@@ -673,7 +681,7 @@ export const NOTES: Note[] = [
     summary: [
       "Miliastra Wonderland has its own lane, focus and visibility settings. It starts switched off for existing readers; enable it in Your games. Progress and history from its Genshin entries follow the move.",
       "Dated battle passes appear under Cycles with independent Checklist and Timeline pins. Each pass keeps its sourced deadline and completion, while the next pass inherits your follow and pin choices. Weekly pass EXP remains a separate routine.",
-      "Genshin's About tab adds Track TCG events. Switching it off removes TCG from live lists and reminders while keeping notes, completion and Archive history. Source classifications drive these distinctions, with event IDs and dates unchanged.",
+      "Genshin's Setup tab adds Track TCG events. Switching it off removes TCG from live lists and reminders while keeping notes, completion and Archive history. Source classifications drive these distinctions, with event IDs and dates unchanged.",
     ],
     from: "5576e5a",
     to: "b03a6ed",
