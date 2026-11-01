@@ -191,6 +191,7 @@ export function parseFandomVersionTable(
       game: ctx.game,
       title: pass.title,
       type: "other",
+      classification: { activity: "battle-pass", family: "mira-journey" },
       summary: `Follows version ${row.number} (${row.name}). ${pass.link}`,
       startsAt: row.start.iso,
       startPrecision: row.start.precision,

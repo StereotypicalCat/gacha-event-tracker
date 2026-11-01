@@ -88,6 +88,10 @@
     "game": "genshin",
     "title": "Frostfarer",
     "type": "other",
+    "classification": {
+      "activity": "battle-pass",
+      "family": "battle-pass"
+    },
     "summary": null,
     "startsAt": "2026-08-12T00:00:00.000Z",
     "startPrecision": "day",
@@ -109,6 +113,11 @@
     "game": "genshin",
     "title": "Phantasmagoric Chronicle",
     "type": "other",
+    "classification": {
+      "lane": "miliastra",
+      "activity": "battle-pass",
+      "family": "miliastra-pass"
+    },
     "summary": null,
     "startsAt": "2026-08-12T00:00:00.000Z",
     "startPrecision": "day",
@@ -130,6 +139,9 @@
     "game": "genshin",
     "title": "Raiment Collection: Gentle Warmth",
     "type": "other",
+    "classification": {
+      "lane": "miliastra"
+    },
     "summary": null,
     "startsAt": "2026-08-12T00:00:00.000Z",
     "startPrecision": "day",
@@ -151,6 +163,11 @@
     "game": "genshin",
     "title": "The Forge Realm's Temper: Game of Wits",
     "type": "other",
+    "classification": {
+      "tags": [
+        "tcg"
+      ]
+    },
     "summary": null,
     "startsAt": "2026-08-12T00:00:00.000Z",
     "startPrecision": "day",
@@ -235,6 +252,11 @@
     "game": "genshin",
     "title": "Heated Battle Mode: Tactical Formation",
     "type": "other",
+    "classification": {
+      "tags": [
+        "tcg"
+      ]
+    },
     "summary": null,
     "startsAt": "2026-08-29T00:00:00.000Z",
     "startPrecision": "day",
@@ -277,6 +299,9 @@
     "game": "genshin",
     "title": "Starlight Voyage: Joyous Moment",
     "type": "other",
+    "classification": {
+      "lane": "miliastra"
+    },
     "summary": null,
     "startsAt": "2026-09-07T00:00:00.000Z",
     "startPrecision": "day",

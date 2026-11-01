@@ -4,6 +4,10 @@
     "game": "nikki",
     "title": "Mira Journey",
     "type": "other",
+    "classification": {
+      "activity": "battle-pass",
+      "family": "mira-journey"
+    },
     "summary": "Follows version 2.10 (The Feather of Justice). That the pass ends with the version was confirmed in game, 2026-10-16.",
     "startsAt": "2026-09-23T00:00:00.000Z",
     "startPrecision": "day",

@@ -191,6 +191,7 @@ export function parseFandomHistoryTable(
         game: ctx.game,
         title,
         type: "other",
+        classification: { activity: "battle-pass", family: ctx.sourceId === "hsr-fandom-nameless-honor" ? "nameless-honor" : "city-fund" },
         summary: null,
         startsAt: startsAt.iso,
         startPrecision: startsAt.precision,

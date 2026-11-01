@@ -22,6 +22,7 @@ import { recordedSame } from "./aliases.ts";
 
 export interface MergeResult {
   events: GachaEvent[];
+  classificationConflicts: Array<{ kept: GachaEvent; rejected: GachaEvent }>;
   /**
    * Pairs that look like the same event but disagree on an end date by more
    * than the tolerance. These are the cases a human should look at; the
@@ -67,6 +68,7 @@ export function mergeEvents(
 
   const kept: GachaEvent[] = [];
   const conflicts: MergeResult["conflicts"] = [];
+  const classificationConflicts: MergeResult["classificationConflicts"] = [];
 
   const all = groups.flat();
   for (const incoming of all) {
@@ -89,7 +91,15 @@ export function mergeEvents(
       incoming.confidence > existing.confidence
         ? ([incoming, existing] as const)
         : ([existing, incoming] as const);
-    const winner = absorb(ranked, loser);
+    let winner = absorb(ranked, loser);
+    if (["lane", "activity", "family"].some(key => {
+      const a = existing.classification?.[key as "lane" | "activity" | "family"];
+      const b = incoming.classification?.[key as "lane" | "activity" | "family"];
+      return a !== undefined && b !== undefined && a !== b;
+    }) || existing.classification?.unresolved || incoming.classification?.unresolved) {
+      winner = { ...winner, classification: { unresolved: true } };
+      classificationConflicts.push({ kept: winner, rejected: loser });
+    }
 
     if (conflict !== null) {
       // Independent sources disagree on when this ends. Do not average, do not
@@ -116,7 +126,7 @@ export function mergeEvents(
       : a.startsAt.localeCompare(b.startsAt),
   );
 
-  return { events: kept, conflicts };
+  return { events: kept, conflicts, classificationConflicts };
 }
 
 /**
@@ -129,12 +139,16 @@ export function mergeEvents(
  * new fusion never needs a hand-edited table to keep a reader's ticks.
  */
 function absorb(winner: GachaEvent, loser: GachaEvent): GachaEvent {
+  // Identity priority must not discard a second source's explicit categories.
+  const classification = { ...loser.classification, ...winner.classification };
+  if (winner.classification?.tags || loser.classification?.tags)
+    classification.tags = [...new Set([...(winner.classification?.tags ?? []), ...(loser.classification?.tags ?? [])])];
   const ids = [
     ...(winner.mergedIds ?? []),
     ...(loser.id === winner.id ? [] : [loser.id]),
     ...(loser.mergedIds ?? []),
   ].filter((id, i, all) => id !== winner.id && all.indexOf(id) === i);
-  return ids.length === 0 ? winner : { ...winner, mergedIds: ids };
+  return { ...winner, ...(Object.keys(classification).length ? { classification } : {}), ...(ids.length ? { mergedIds: ids } : {}) };
 }
 
 function isSameEvent(

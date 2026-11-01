@@ -124,6 +124,8 @@ for (const [, groups] of byGame) {
   const merged = mergeEvents(sorted);
   events.push(...merged.events);
   conflictCount += merged.conflicts.length;
+  conflictCount += merged.classificationConflicts.length;
+  for (const c of merged.classificationConflicts) console.warn(`  ! classification conflict: "${c.kept.title}" between ${c.kept.sourceId} and ${c.rejected.sourceId}; routing left unresolved`);
   for (const c of merged.conflicts) {
     console.warn(
       `  ! conflict: "${c.kept.title}" ${c.field} differs by ${c.deltaHours}h between sources`,

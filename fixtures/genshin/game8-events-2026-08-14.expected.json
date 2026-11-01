@@ -45,6 +45,10 @@
     "id": "genshin:frostfarer:2026-08-12",
     "game": "genshin",
     "title": "Frostfarer",
+    "classification": {
+      "activity": "battle-pass",
+      "family": "battle-pass"
+    },
     "type": "other",
     "summary": "Participate in the free Sojourner's Battle Pass and the for-purchase Gnostic Hymn to receive prizes as you increase your BP Level.",
     "startsAt": "2026-08-12T00:00:00.000Z",

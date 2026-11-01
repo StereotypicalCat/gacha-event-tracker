@@ -704,3 +704,26 @@ which sets `confirmedDead` on the matching code (by its `["game","CODE"]` id) an
 that matched nothing; the build logs those so they can be pruned. Nothing else about the code
 changes, and the check is never used to add a code. The field is optional, so `schemaVersion`
 stays 1.
+
+## Preserving source classifications (2026-11-01)
+
+Genshin's Fandom `Type(s)` column now survives parsing as optional structured
+`classification`: Miliastra Wonderland supplies a destination lane, Battle Pass
+and Miliastra Pass supply a pass family, and the established TCG category families
+supply a `tcg` tag. Pass-only table/version sources also identify their family;
+Game8 retains its explicit Battle Pass prefix as classification while its title
+normalization remains unchanged. Classification never changes an ID or a date.
+
+`mergeEvents` retains metadata from a matched secondary source even when the
+identity-priority winner lacks it. Conflicting explicit lane/activity/family
+claims are reported in `classificationConflicts` and the survivor is marked
+`unresolved`; the build prints those conflicts rather than choosing a destination.
+Current title/date matching and `mergedIds` behavior are unchanged. Classification
+is not evidence that two otherwise distinct events are duplicates.
+
+The wire game's value remains the original source game. Client classification
+resolves Miliastra's logical lane after merging, so Genshin's two sources are still
+fetched once each and old cached bundles can continue validating the feed. A
+small, evidenced article-family resolver supports old feeds/saved snapshots;
+unknown content stays in its original category. See DATA-MODEL's source identity
+section and the 2026-11-01 content-classification design.

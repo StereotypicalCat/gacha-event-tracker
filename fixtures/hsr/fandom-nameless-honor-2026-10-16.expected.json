@@ -4,6 +4,10 @@
     "game": "hsr",
     "title": "Nameless Honor",
     "type": "other",
+    "classification": {
+      "activity": "battle-pass",
+      "family": "nameless-honor"
+    },
     "summary": null,
     "startsAt": "2026-09-28T00:00:00.000Z",
     "startPrecision": "day",

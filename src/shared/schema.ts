@@ -23,6 +23,7 @@ export const GameId = z.enum([
   "nikke", // Goddess of Victory: Nikke
   "hi3", // Honkai Impact 3rd
   "pgr", // Punishing: Gray Raven
+  "miliastra", // Logical lane; source identities remain Genshin.
 ]);
 export type GameId = z.infer<typeof GameId>;
 
@@ -49,6 +50,15 @@ export type Region = z.infer<typeof Region>;
  */
 export const Precision = z.enum(["exact", "day", "unknown"]);
 export type Precision = z.infer<typeof Precision>;
+
+export const EventClassification = z.object({
+  unresolved: z.boolean().optional(),
+  lane: z.literal("miliastra").optional(),
+  activity: z.literal("battle-pass").optional(),
+  family: z.string().min(1).optional(),
+  tags: z.array(z.string()).optional(),
+});
+export type EventClassification = z.infer<typeof EventClassification>;
 
 export const GachaEvent = z
   .object({
@@ -85,6 +95,7 @@ export const GachaEvent = z
      * client's non-strict parse drops it unread.
      */
     mergedIds: z.array(z.string()).optional(),
+    classification: EventClassification.optional(),
   })
   // These invariants are cheap here and prevent a whole class of wrong-date bugs
   // reaching the feed. See docs/INGESTION.md § Stage 4.

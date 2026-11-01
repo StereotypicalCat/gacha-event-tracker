@@ -9,6 +9,7 @@ import {
 import { decodeEntities, text } from "../html.ts";
 import type { ParseContext } from "../adapters/types.ts";
 import { inferType } from "./game8.ts";
+import { classifySourceLabels } from "../../shared/classification.ts";
 import type { SourceParser } from "./types.ts";
 
 /**
@@ -841,6 +842,7 @@ function parseGenshinEvents(
         // "Login" — is a far better signal than a Genshin event title, which
         // is usually a piece of poetry.
         type: inferType(`${title} ${stated}`),
+        ...(Object.keys(classifySourceLabels(stated)).length ? { classification: classifySourceLabels(stated) } : {}),
         // No description column, and the prose lives on each event's own
         // article rather than further down this page — so there is nothing to
         // summarise, and `Type(s)` is a classification rather than a blurb.

@@ -479,6 +479,7 @@ function toEvent(c: Candidate, ctx: ParseContext): GachaEvent {
     id: eventId(ctx.game, title, c.start.iso),
     game: ctx.game,
     title,
+    ...(/^Battle Pass\s*-/i.test(c.title) ? { classification: { activity: "battle-pass" as const, family: "battle-pass" } } : {}),
     type: inferType(title),
     summary: c.summary,
     startsAt: c.start.iso,
