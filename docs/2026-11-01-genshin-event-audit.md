@@ -65,8 +65,14 @@ Battle Pass prefix was addressed by the previous parser change. See
 This walkthrough established no additional duplicate pair requiring a new merge
 rule. It identified content classification and potentially stale display issues:
 Miliastra content under Genshin, pass placement, and older event rows. The older
-Character Test Runs row covers a different banner phase from the current Skirk /
-Escoffier trial, so those two runs must not be fused.
+Character Test Runs row in the initially inspected snapshot covered a different
+banner phase from the current Skirk / Escoffier trial, so those runs must not be
+fused. After the automated refreshes through `4faf3c9`, Game8's row instead
+starts 2026-10-13 and ends 2026-11-03, matching Fandom's named Skirk / Escoffier
+phase. The owner reported both on the live server after the classification
+release. This is now a confirmed same-phase duplicate: merge matches the two
+source-identified trial families under its existing start guard and preserves
+the absorbed ID through `mergedIds`. Different-phase fixture rows stay separate.
 
 Next session should inspect how the current client handles expiration, existing
 cycle/pass windows, and the consequences of a separate Miliastra lane. Game and

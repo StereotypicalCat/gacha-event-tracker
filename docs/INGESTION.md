@@ -503,6 +503,15 @@ Only meaningful when a game has more than one source; a single-source game passe
    **Dates alone never pair two events**: patch day puts about twenty different Genshin events on one
    window.
 
+   **Genshin character trials have a source-identified family match** (2026-11-01).
+   Game8's exact `Character Test Runs` title and Fandom's dated
+   `Test_Run_-_Character_Trial_Event/YYYY-MM-DD` article describe the same trial
+   phase when their starts satisfy the existing 24h guard. The article date must
+   match its parsed start; unrelated challenge pages do not qualify. Character
+   names are never hardcoded, consecutive banner phases stay separate, and an end
+   disagreement still produces a conflict. The survivor records the other ID in
+   `mergedIds`, carrying its saved progress as usual.
+
    **The survivor lists what it absorbed** in `mergedIds`, and the client moves readers' marks off
    those ids when the feed arrives — so a rule that starts fusing two published ids costs nobody a
    tick, with no table to edit (`docs/DATA-MODEL.md` § ID stability).

@@ -179,6 +179,8 @@ function isSameEvent(
   // to be close before treating two entries as one event.
   if (hoursBetween(a.startsAt, b.startsAt) > toleranceHours) return false;
 
+  if (sameGenshinTrial(a, b)) return true;
+
   const titled = (x: GachaEvent, y: GachaEvent) =>
     titleSimilarity(x.title, y.title) >= titleThreshold ||
     titleExtends(x.title, y.title);
@@ -199,6 +201,30 @@ function isSameEvent(
         titled(x, c),
     );
   return !twinIn(a, b.sourceId, b) && !twinIn(b, a.sourceId, a);
+}
+
+/**
+ * Game8 names the trial family; Fandom names its featured characters. Their
+ * shared start identifies a phase (guarded above), while Fandom's dated article
+ * path identifies the activity independently of its changing character list.
+ * Confirmed against both snapshots and the owner's in-game list, 2026-11-01.
+ * End disagreements still go through findConflict; dates are never averaged.
+ */
+function sameGenshinTrial(a: GachaEvent, b: GachaEvent): boolean {
+  if (a.game !== "genshin" || b.game !== "genshin") return false;
+  const generic = (e: GachaEvent) =>
+    e.sourceId === "genshin-game8-events" && /^Character Test Runs?$/i.test(e.title);
+  const named = (e: GachaEvent) => {
+    if (e.sourceId !== "genshin-fandom-events") return false;
+    try {
+      const url = new URL(e.sourceUrl);
+      return url.hostname === "genshin-impact.fandom.com" &&
+        decodeURIComponent(url.pathname) === `/wiki/Test_Run_-_Character_Trial_Event/${e.startsAt.slice(0, 10)}`;
+    } catch {
+      return false;
+    }
+  };
+  return (generic(a) && named(b)) || (named(a) && generic(b));
 }
 
 /**
