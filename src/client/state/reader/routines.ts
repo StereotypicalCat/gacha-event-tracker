@@ -16,6 +16,9 @@ import {
 import { resetHourFor, serverOffsetUtc } from "../../../shared/time.ts";
 import type { GoalStatus } from "../../../shared/goal.ts";
 import type { Account, ReaderState, RoutinePlacement } from "./schema.ts";
+import { classifiedEvent, displayGameFor, passPlacementId, tracksEventCategory } from "../../../shared/classification.ts";
+import { contentEvents } from "./contentRouting.ts";
+import type { DisplayEvent } from "../../../shared/custom.ts";
 export interface RoutineRow {
   id: string;
   accountId: string;
@@ -28,6 +31,10 @@ export interface RoutineRow {
   days: string[];
   source: string | null;
   task: Task | null;
+  /** A source-dated pass; progress is still keyed by this window's event ID. */
+  event?: DisplayEvent;
+  placementId?: string;
+  window?: { start: number; end: number };
 }
 export function placementFor(account: Account, id: string): RoutinePlacement {
   return (
@@ -57,7 +64,7 @@ export function routineRows(
       : [];
   };
   const rows: RoutineRow[] = [];
-  if (!isCustomGameId(account.game)) {
+  if (!isCustomGameId(account.game) && account.game !== "miliastra") {
     const id = `dailies:${account.game}`,
       days = daysFor(id),
       count = days.includes(today) ? 1 : 0;
@@ -146,6 +153,8 @@ export function routineRows(
       goal = readGoal(p.goal),
       window = readerClockFor(event, account, now);
     if (
+      !tracksEventCategory(event, state.prefs) ||
+      passPlacementId(event) !== null ||
       !window.live ||
       state.archive[JSON.stringify([accountId, event.id])] ||
       p.status === "done" ||
@@ -205,6 +214,22 @@ export function routineRows(
       days,
       source: event.sourceUrl,
       task: null,
+    });
+  }
+  for (const raw of contentEvents(state)) {
+    if (displayGameFor(raw) !== account.game) continue;
+    const event = classifiedEvent(raw), placementId = passPlacementId(event);
+    if (!placementId) continue;
+    const window = readerClockFor(event, account, now);
+    if (window.ended || window.endsMs === null || (window.upcoming && !state.prefs.showUpcoming)) continue;
+    const p = recordOf(data.progress[event.id]);
+    const archived = state.archive[JSON.stringify([accountId, event.id])];
+    const met = p.status === "done" || data.ignored[event.id] !== undefined || archived?.outcome === "done" || archived?.outcome === "ignored";
+    rows.push({
+      id: event.id, accountId, game: account.game, title: event.title,
+      cadence: "cycle", status: { scope: "event", measure: "days", periodStart: event.startsAt.slice(0, 10), required: 1, count: met ? 1 : 0, met, needed: met ? 0 : 1, open: met ? 0 : 1, shortfall: false },
+      placement: placementFor(account, placementId), placementId, event,
+      window: { start: window.startsMs, end: window.endsMs }, clock, days: [], source: event.sourceUrl, task: null,
     });
   }
   return rows;

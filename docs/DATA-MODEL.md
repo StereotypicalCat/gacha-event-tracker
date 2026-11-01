@@ -64,6 +64,8 @@ export const GachaEvent = z.object({
   // Other sources' copies merge folded into this one; the client moves marks
   // off them. Optional — see § ID stability.
   mergedIds: z.array(z.string()).optional(),
+  // Additive source categories; game/ID still identify the original source row.
+  classification: EventClassification.optional(),
 });
 
 export type GachaEvent = z.infer<typeof GachaEvent>;
@@ -852,3 +854,38 @@ both.
 The fidelity correction adds `prefs.routineGroup` (`reset`, the absent-value default, or `game`)
 for the Routines page's grouping. It changes no routine IDs or placement keys. Structured is the
 interface default as of the owner's 2026-10-17 instruction; explicit saved Relaxed is preserved.
+
+## Source identity and content destinations (2026-11-01)
+
+`GachaEvent.classification` is optional: `{ lane?: "miliastra", activity?:
+"battle-pass", family?: string, tags?: string[], unresolved?: boolean }`.
+The wire `game` remains the source/identity game, so an existing Miliastra row
+keeps `game: "genshin"` and its `genshin:...` ID. The current client resolves a
+logical game for rendering and saved event snapshots. Older cached clients strip
+the additive classification and still accept the feed; older feeds remain valid.
+`unresolved` suppresses inferred routing after explicit source classifications
+conflict. Reader-authored events do not enter this classifier.
+
+The v2 envelope also retains `contentEvents` (source event inventory, used by
+feed-backed cycles) and `contentRoutes` (origin Genshin account ID → counterpart
+Miliastra account ID). Account extensions `contentOrigin`, `contentPlaceholder`,
+`passTrackingMigrated` and `legacyPassVisibility` record the routing/transition.
+Newly offered, empty Miliastra placeholders may bind to their originating account;
+configured or unrelated same-region accounts are never silently reused. Distinct
+existing origins keep distinct counterparts. Unknown imported origins carrying
+Miliastra records remain separate rather than selecting an account by region.
+
+Routing runs under the reader lock before saves. It moves classified progress,
+ignores, daily/amount logs, unread state, seen and Archive snapshots; IDs, day
+keys, clock revisions and archived resolved boundaries remain unchanged. It
+rebases field timestamps while retaining origin timestamps, routes late actions
+before conflict checks, and preserves deletion tombstones across older imports.
+Import applies timestamps to routed days, amounts, ignores, progress fields and
+Archive records, so a later clear/restore beats an older backup. Full restore
+still replaces state intentionally; startup then normalizes that restored state.
+
+Pass family placement lives in `account.routines["feed-cycle:<lane>:<family>"]`;
+progress/history uses the original event ID for each sourced window. A new
+window inherits pins/following, never completion. No guessed fixed recurrence or
+new task ID is stored. The game-wide `prefs.genshinTcg` defaults to true when
+absent; false hides classified source TCG activities from live tracking only.

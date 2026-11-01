@@ -11,6 +11,7 @@ import {
   type SaveResult,
 } from "./schema.ts";
 import { reduceReader, type ReaderAction } from "./reducer.ts";
+import { routeReaderContent } from "./contentRouting.ts";
 export interface ReaderStore {
   getSnapshot(): ReaderState;
   subscribe(listener: () => void): () => void;
@@ -58,10 +59,10 @@ export function initializeReader(
     if (saved !== null) {
       const parsed = ReaderStateSchema.safeParse(JSON.parse(saved));
       if (!parsed.success) return { ok: false, reason: "invalid" };
-      const next = refreshAutomaticClocks(
+      const next = routeReaderContent(refreshAutomaticClocks(
         reconcileLegacy(parsed.data, readLegacy(storage), at),
         at,
-      );
+      ));
       if (next !== parsed.data) {
         const result = tryWriteJson(storage, READER_KEYS.reader, next);
         if (!result.ok) return result;
@@ -102,7 +103,7 @@ export function createReaderStore(
   const apply = (action: ReaderAction): SaveResult => {
     try {
       const current = persisted() ?? state;
-      const next = reduceReader(current, action);
+      const next = routeReaderContent(reduceReader(current, action));
       if (next === current) {
         state = current;
         notify();

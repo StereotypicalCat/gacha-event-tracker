@@ -139,3 +139,12 @@ The plan settles module boundaries after dumping each page's structure; `fandom.
 `docs/SOURCES.md` (a section per source), `docs/INGESTION.md` (the two templates), AGENTS.md's
 parser list where it counts parsers, TODO.md (sub-project 3 done; the not-shipped three as
 follow-ups), a changelog entry in a follow-up commit.
+
+## Presentation superseded (2026-11-01)
+
+The owner approved source-backed pass windows appearing under Cycles rather
+than as duplicate ordinary events. The new implementation retains the existing
+feed event IDs, dates and sources and reuses their progress, with pass-family
+follow/pin preferences. It does not infer a recurrence. See
+`2026-11-01-content-classification-design.md`; the source/date decisions above
+remain in force.

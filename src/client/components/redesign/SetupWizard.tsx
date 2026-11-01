@@ -1,3 +1,4 @@
+import { passFamiliesForGame } from "../../state/reader/contentRouting.ts";
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { TimezoneSelect } from "./TimezoneSelect.tsx";
 import { ViewCards } from "./ViewCards.tsx";
@@ -84,8 +85,8 @@ export function SetupWizard({
     k === "events"
       ? 0
       : k === "dailies"
-        ? 1
-        : routinesFor(g).filter(
+        ? (g === "miliastra" ? 0 : 1)
+        : (k === "cycles" ? passFamiliesForGame(g).length : 0) + routinesFor(g).filter(
             (r) =>
               offered(r, standard) &&
               (cadenceOf(r.period) === "cycle") === (k === "cycles"),

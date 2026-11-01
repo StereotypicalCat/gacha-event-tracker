@@ -31,8 +31,9 @@ test("game settings explains simultaneous server tracking and credits zero-event
   expect(html).toContain("Reset to default");
   // Tracking choices save on click; there is no separate apply step.
   expect(html).not.toContain("Apply tracking choices");
-  // A kind with no built-in routine is explained and still selectable.
-  expect(html).toContain("none built in");
+  // Pass families are offered with cycles, even without a new source window.
+  expect(html).toContain("Cycles");
+  expect(html).toContain("1 built in");
   expect(html).not.toMatch(/<button[^>]*disabled[^>]*data-st/);
 });
 

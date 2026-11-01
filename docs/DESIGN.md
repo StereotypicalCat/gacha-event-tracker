@@ -705,3 +705,19 @@ legend on the same baseline as "Next: …".
     setup.
   - Continue stays in a fixed place and Back sits beside it. Only a replay ("Replay the
     introduction" in Appearance) has a way out, "Close tour".
+
+## Content tracking additions (2026-11-01)
+
+Genshin's About tab has an Event tracking group before Data sources. The native
+checkbox **Track TCG events** uses the existing settings row, with the copy
+“Show Genius Invokation TCG events in your lists and timeline.” The setting is
+saved immediately; while saving it is disabled, and failure keeps the prior
+value with a visible status message. Nearby copy directs readers to Miliastra's
+own settings. Both interfaces and themes use the same control and tokens.
+
+Miliastra Wonderland is a separate lane, short label Miliastra, with hue
+`#9C83D6`; normal theme contrast resolution applies. Source-backed passes use the
+existing cycle library, progress checkbox, independent pin controls and timeline
+bands. Their boundary captions say “ends”, not “resets”: the next pass is only
+known when a source dates it. Cycle group headers use “Next deadline in” to
+cover passes and resetting routines together.

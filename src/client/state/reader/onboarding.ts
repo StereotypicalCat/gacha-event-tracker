@@ -4,6 +4,7 @@ import { routinesFor, offered } from "../../../shared/routines.ts";
 import { createAccount, changeAccountRegion } from "./accounts.ts";
 import type { AccountId, ReaderState, TrackingIntent } from "./schema.ts";
 import { cadenceOf } from "../../../shared/period.ts";
+import { passFamiliesForGame } from "./contentRouting.ts";
 export interface SetupDraft {
   region: Region;
   interface: "relaxed" | "structured";
@@ -51,6 +52,7 @@ export function setupReader(
       routines[r.id] = { followed, checklist: followed, timeline: followed };
     }
     accounts[a.id] = { ...a, intent, routines };
+    for (const id of passFamiliesForGame(game)) routines[id] = { followed: intent.cycles, checklist: intent.cycles, timeline: intent.cycles };
   }
   for (const [id, a] of Object.entries(accounts))
     if (!draft.games.includes(a.game))

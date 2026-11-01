@@ -20,6 +20,13 @@ export function RoutineProgress({
   now: number;
 }) {
   const [editing, setEditing] = useState(false);
+  if (row.event) return <button type="button" className="tick" aria-pressed={row.status.met}
+    aria-label={`${row.title}, ${row.status.met ? "done. Undo" : "mark complete"}`}
+    onClick={() => void onAction(row.status.met
+      ? { type: "restore", accountId: row.accountId, eventId: row.id, ...actionMeta() }
+      : { type: "outcome", outcome: "done", accountId: row.accountId, eventId: row.id, ...actionMeta() })}>
+    <span className="box" aria-hidden="true"><Check /></span>
+  </button>;
   if (row.status.measure !== "amount") {
     const today = readerDayKey(now, row.clock),
       done = row.days.includes(today),

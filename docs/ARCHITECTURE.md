@@ -417,3 +417,15 @@ progress through the live event editor. Settings keeps one shared tree for both 
 separate default-view/custom-content pages and direct game profiles. Structured is the absent-value
 default at prepaint, preference normalization, setup and appearance application. No state keys,
 event identities or stored clock revisions changed for this presentation correction.
+
+### Classification at the reader boundary (2026-11-01)
+
+`src/shared/classification.ts` preserves source identity while resolving logical
+content destinations, pass families and TCG categories. The wire feed retains
+its original games/IDs. `state/reader/contentRouting.ts` normalizes classified
+state under the existing lock/save path, with persisted origin/counterpart
+mapping and timestamp rebasing. Source inventory is retained in the reader so
+pass cycles work with ordinary Events disabled. Current inventory takes
+precedence over remembered snapshots for live cycles; Archive snapshots keep
+their historical dates and clock references. No new route, fetch, localStorage
+key or server-side reader record is introduced.

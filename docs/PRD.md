@@ -671,3 +671,28 @@ product exists to prevent.
   (Assumption: no — the filter is global.)
 - Is 6 hours the right refresh cadence? (Assumption: yes; events are announced days ahead, so
   sub-hourly refresh buys nothing and is rude to the sources.)
+
+### Content destinations, pass cycles and TCG tracking (2026-11-01)
+
+Miliastra Wonderland is independently selectable from Genshin, with its own
+focus, visibility and lane order. It arrives off for existing readers like other
+new lanes, and is available in new-reader setup. Existing classified progress and
+history follow it without changing event IDs. It shares its supplying Genshin
+sources and server/reset defaults; no new standing daily task is invented.
+
+Source-dated battle-pass windows appear in Routines under Cycles, with independent
+Checklist and Timeline pins. They keep their source deadlines and per-window
+completion; the next sourced pass inherits following/pins. They do not also
+appear as ordinary event-list rows. Followed Checklist passes participate in
+next-deadline guidance; timeline-only passes do not. Weekly pass EXP is separate.
+This supersedes the ordinary-event presentation chosen in the 2026-10-16 pass
+windows spec, without changing its source/date requirements. On transition,
+existing event followers retain pass-family pins in enabled lanes; newly offered
+Miliastra remains hidden until enabled.
+
+Genshin → About → Event tracking provides **Track TCG events**, on by default,
+across that reader's Genshin servers. Off hides classified source TCG activities
+from live lists, timeline, counts, next-deadline guidance and event-derived daily
+instructions. It preserves notes, completion and Archive history; turning it
+back on restores eligible unfinished content. Failed saves retain the prior
+setting. The control does not classify reader-authored events.

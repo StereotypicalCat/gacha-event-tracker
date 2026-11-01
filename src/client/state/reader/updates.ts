@@ -1,5 +1,6 @@
 import { freshness, type EventFeed } from "../../../shared/feed.ts";
 import type { ReaderState } from "./schema.ts";
+import { displayGameFor, passPlacementId, tracksEventCategory } from "../../../shared/classification.ts";
 export type UpdateItem =
   | { kind: "sources"; games: string[] }
   | { kind: "events"; accountId: string; ids: string[] }
@@ -27,9 +28,10 @@ export function updateItems(
 ): UpdateItem[] {
   const items: UpdateItem[] = [],
     tracked = trackedGames(state);
-  const stale = freshness(feed.sources, now).stale.filter((s) =>
-    tracked.has(s.game),
-  );
+  const stale = freshness(feed.sources, now).stale.flatMap(s => [
+    ...(tracked.has(s.game) ? [s] : []),
+    ...(s.game === "genshin" && tracked.has("miliastra") ? [{ ...s, game: "miliastra" as const }] : []),
+  ]);
   if (stale.length && !snoozed(state.prefs.staleSnooze, stale, now))
     items.push({ kind: "sources", games: stale.map((s) => s.game) });
   for (const a of Object.values(state.accounts)) {
@@ -42,7 +44,7 @@ export function updateItems(
       continue;
     const ids = feed.events
       .filter(
-        (e) => e.game === a.game && !state.eventSeen[a.id]!.includes(e.id),
+        (e) => displayGameFor(e) === a.game && !passPlacementId(e) && tracksEventCategory(e, state.prefs) && !state.eventSeen[a.id]!.includes(e.id),
       )
       .map((e) => e.id);
     if (ids.length) items.push({ kind: "events", accountId: a.id, ids });

@@ -1,0 +1,34 @@
+import { expect, test } from "bun:test";
+import { migrateLegacy } from "../src/client/state/reader/migration.ts";
+import { routineRows } from "../src/client/state/reader/routines.ts";
+import { readerEventRows } from "../src/client/state/reader/eventRows.ts";
+import { routeReaderContent } from "../src/client/state/reader/contentRouting.ts";
+import { routinePeriod } from "../src/client/components/redesign/TimelinePage.tsx";
+import { sampleEvent } from "./helpers/reader.ts";
+const at = "2026-11-01T12:00:00.000Z", now = Date.parse(at);
+const pass = { ...sampleEvent, id: "genshin:moontrace:2026-09-23", title: "Moontrace", startsAt: "2026-09-23T00:00:00.000Z", endsAt: "2026-11-02T00:00:00.000Z", sourceUrl: "https://genshin-impact.fandom.com/wiki/Battle_Pass/Moontrace" };
+test("an existing pass becomes a sourced cycle once, with family pins and existing progress", () => {
+  const old = migrateLegacy({}, ["genshin"], at, () => "account:one");
+  old.contentEvents = { [pass.id]: pass };
+  const s = routeReaderContent(old);
+  const r = routineRows(s, "account:one", now).find(r => r.id === pass.id)!;
+  expect(r).toBeDefined();
+  expect(r.cadence).toBe("cycle");
+  expect(r.placementId).toBe("feed-cycle:genshin:battle-pass");
+  expect(r.placement.followed).toBe(true);
+  expect(readerEventRows(s, [pass], now)).toHaveLength(0);
+  expect(routinePeriod(r, now).end).toBe(Date.parse("2026-11-02T03:00:00.000Z"));
+  s.accounts["account:one"]!.intent.events = false;
+  expect(routineRows(s, "account:one", now).find(r => r.id === pass.id)).toBeDefined();
+});
+test("a new sourced pass inherits placement, never the previous run's completion", () => {
+  let s = migrateLegacy({}, ["genshin"], at, () => "account:one");
+  s.contentEvents = { [pass.id]: pass };
+  s = routeReaderContent(s);
+  s.data["account:one"]!.progress[pass.id] = { status: "done", at };
+  const next = { ...pass, id: "genshin:next:2026-11-04", title: "Next", startsAt: "2026-11-04T00:00:00.000Z", endsAt: "2026-12-14T00:00:00.000Z" };
+  s.contentEvents = { [next.id]: next };
+  const row = routineRows(s, "account:one", Date.parse("2026-11-05T12:00:00Z")).find(r => r.id === next.id)!;
+  expect(row.placement.followed).toBe(true);
+  expect(row.status.met).toBe(false);
+});

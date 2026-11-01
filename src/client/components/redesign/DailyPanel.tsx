@@ -17,6 +17,7 @@ import type { ReaderState } from "../../state/reader/schema.ts";
 import type { RoutineRow } from "../../state/reader/routines.ts";
 import { actionMeta } from "../../state/reader/actions.ts";
 import type { ActionHandler } from "./GameSettings.tsx";
+import { RoutineProgress } from "./RoutineProgress.tsx";
 export function RoutineControl({
   row,
   onAction,
@@ -36,6 +37,7 @@ export function RoutineControl({
   useEffect(() => {
     if (!editing.current) setAmount(String(row.status.count));
   }, [row.status.count, row.status.periodStart]);
+  if (row.event) return <div className="routine-control"><strong>{row.title}</strong><RoutineProgress row={row} onAction={onAction} now={now} /></div>;
   return (
     <div className="routine-control">
       {burst > 0 && <Fireworks key={burst} />}

@@ -13,6 +13,7 @@ import {
 import type { RowEvent } from "../../components/EventRow.tsx";
 import type { Region } from "../../../shared/schema.ts";
 import type { ReaderState } from "./schema.ts";
+import { classifiedEvent, passPlacementId, tracksEventCategory } from "../../../shared/classification.ts";
 export type ReaderEventRow = RowEvent & {
   accountId: string;
   region: Region;
@@ -22,6 +23,7 @@ export function readerEventRows(
   state: ReaderState,
   events: readonly DisplayEvent[],
   now: number,
+  includeCycles = false,
 ): ReaderEventRow[] {
   const source = new Map(
     events.filter((e) => e.status === "published").map((e) => [e.id, e]),
@@ -39,7 +41,6 @@ export function readerEventRows(
   for (const a of Object.values(state.accounts)) {
     if (
       a.retiredAt ||
-      !a.intent.events ||
       (Array.isArray(state.prefs.hiddenGames) &&
         state.prefs.hiddenGames.includes(a.game))
     )
@@ -53,8 +54,12 @@ export function readerEventRows(
           state.customEvents[ruleIdOf(seen.event.id)])
       )
         scoped.set(seen.event.id, seen.event);
-    for (const event of scoped.values()) {
+    for (const raw of scoped.values()) {
+      const event = classifiedEvent(raw);
       if (event.game !== a.game) continue;
+      if (!tracksEventCategory(event, state.prefs)) continue;
+      const family = passPlacementId(event);
+      if (family ? !includeCycles || !a.routines[family]?.followed : !a.intent.events) continue;
       const clock = readerClockFor(event, a, now);
       out.push({
         event,

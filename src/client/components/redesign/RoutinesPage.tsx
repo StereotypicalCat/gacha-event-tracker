@@ -39,7 +39,7 @@ export function placementAccounts(
       ...account,
       routines: {
         ...account.routines,
-        [row.id]: { ...row.placement, [key]: value },
+        [row.placementId ?? row.id]: { ...row.placement, [key]: value },
       },
     });
   }
@@ -309,7 +309,7 @@ export function RoutinesPage({
               ...a,
               routines: {
                 ...a.routines,
-                [row.id]: { ...row.placement, [key]: value },
+                [row.placementId ?? row.id]: { ...row.placement, [key]: value },
               },
             },
             ...actionMeta(),
@@ -362,7 +362,7 @@ export function RoutinesPage({
                 </div>
               </div>
               <div className="band-reset">
-                <small>Next reset in</small>
+                <small>Next deadline in</small>
                 <strong>
                   {(() => {
                     // An estimated end is not a reset (spec 2026-10-22).
@@ -441,7 +441,7 @@ export function RoutinesPage({
                               ? "Weekly"
                               : row.cadence === "month"
                                 ? "Monthly"
-                                : "Game cycle"}
+                                : row.event ? "Battle pass" : "Game cycle"}
                         </small>
                       )}
                     </td>

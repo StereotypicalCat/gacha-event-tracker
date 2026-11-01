@@ -106,6 +106,14 @@ export function PinnedRoutine({
     });
   };
   const toggle = () => {
+    if (row.event) {
+      acted.current = true;
+      finishesGroup.current = finishes;
+      void onAction(met
+        ? { type: "restore", accountId: row.accountId, eventId: row.id, ...actionMeta() }
+        : { type: "outcome", outcome: "done", accountId: row.accountId, eventId: row.id, ...actionMeta() });
+      return;
+    }
     if (amount) {
       if (!met) {
         setBefore(count);
@@ -131,7 +139,7 @@ export function PinnedRoutine({
   const span = routinePeriod(row, now);
   const resets = span.estimated
     ? estimatedReset(row, now)
-    : `resets in ${formatRemaining(span.end - now)}`;
+    : `${row.event ? "ends" : "resets"} in ${formatRemaining(span.end - now)}`;
   const progress = amount
     ? `${count.toLocaleString()} / ${required.toLocaleString()}${unit ? ` ${unit}` : ""}`
     : required > 1
@@ -209,9 +217,9 @@ export function PinnedRoutine({
             ? `${row.title}, done ${lower(period)}. Undo`
             : amount
               ? `Mark ${row.title} complete`
-              : `${row.title}, not done ${lower(period)}. Tick today`
+              : row.event ? `Mark ${row.title} complete` : `${row.title}, not done ${lower(period)}. Tick today`
         }
-        title={met ? "Undo" : amount ? "Mark complete" : "Tick today"}
+        title={met ? "Undo" : amount || row.event ? "Mark complete" : "Tick today"}
         onClick={toggle}
       >
         <svg viewBox="0 0 16 16" aria-hidden="true">

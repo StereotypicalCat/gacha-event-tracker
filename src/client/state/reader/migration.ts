@@ -111,7 +111,7 @@ export function migrateLegacy(
       throw new Error("Duplicate minted account identity");
     const revision = "initial";
     const routineRuleValue = routineRule(prefs);
-    const chore = shownFor(choreRule(prefs), game);
+    const chore = game !== "miliastra" && shownFor(choreRule(prefs), game);
     const routines = Object.fromEntries(
       routinesFor(game).map((r) => {
         const followed =
@@ -136,7 +136,7 @@ export function migrateLegacy(
           timeline: shown,
         };
       }
-    if (GameId.safeParse(game).success)
+    if (game !== "miliastra" && GameId.safeParse(game).success)
       routines[`dailies:${game}`] = {
         followed: chore,
         checklist: chore,
@@ -145,6 +145,7 @@ export function migrateLegacy(
     state.accounts[id] = {
       id,
       game,
+      ...(game === "miliastra" ? { contentPlaceholder: true } : {}),
       region: prefs.region,
       intent: {
         events: !prefs.hiddenGames.includes(game),

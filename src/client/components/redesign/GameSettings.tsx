@@ -30,6 +30,8 @@ import { resolveReaderClock } from "../../../shared/readerClock.ts";
 import { DAY, formatRemaining, resetShiftMs } from "../../../shared/time.ts";
 import { VERSIONS, versionWindow } from "../../../shared/versions.ts";
 import { cadenceOf } from "../../../shared/period.ts";
+import { sourceGameFor } from "../../../shared/classification.ts";
+import { passFamiliesForGame } from "../../state/reader/contentRouting.ts";
 export type ActionHandler = (action: ReaderAction) => Promise<SaveResult>;
 export const GAME_TABS = ["setup", "codes", "about"] as const;
 export type GameTab = (typeof GAME_TABS)[number];
@@ -89,6 +91,7 @@ export function GameSettings({
   const [addingServer, setAddingServer] = useState(false);
   const [server, setServer] = useState<Region>("asia");
   const [message, setMessage] = useState("");
+  const [savingTcg, setSavingTcg] = useState(false);
   const accounts = Object.values(state.accounts).filter(
     (a) => a.game === selected && !a.retiredAt,
   );
@@ -214,14 +217,33 @@ export function GameSettings({
               </div>
             )}
           </div>
+          {selected === "genshin" && (
+              <section className="grp">
+                <h3>Event tracking</h3>
+                <label className="trow">
+                  <span>Track TCG events</span>
+                  <input type="checkbox" checked={state.prefs.genshinTcg !== false} disabled={savingTcg}
+                    onChange={async (e) => {
+                      const value = e.target.checked;
+                      setSavingTcg(true);
+                      const result = await onAction({ type: "prefs", patch: { genshinTcg: value }, ...actionMeta() });
+                      setSavingTcg(false);
+                      setMessage(result.ok ? "" : "TCG tracking could not be saved. Your previous setting is kept.");
+                    }} />
+                </label>
+                <p className="help">Show Genius Invokation TCG events in your lists and timeline.</p>
+                <p className="help">Miliastra Wonderland has its own game settings. Enable it in Your games to track its activities separately.</p>
+                {message && <p role="status">{message}</p>}
+              </section>
+            )}
           <section className="grp">
             <h3>Data sources</h3>
-            {sources.filter((s) => s.game === selected).length === 0 ? (
+            {sources.filter((s) => s.game === sourceGameFor(selected)).length === 0 ? (
               <p className="muted-copy">No built-in source for this game.</p>
             ) : (
               <>
                 {sources
-                  .filter((s) => s.game === selected)
+                  .filter((s) => s.game === sourceGameFor(selected))
                   .map((src) => (
                     <p className="game-source" key={src.sourceId}>
                       <a href={src.url} target="_blank" rel="noreferrer">
@@ -241,7 +263,7 @@ export function GameSettings({
                   {[
                     ...new Set(
                       sources
-                        .filter((s) => s.game === selected)
+                        .filter((s) => s.game === sourceGameFor(selected))
                         .map((src) => hostOf(src.url)),
                     ),
                   ].join(" and ")}{" "}
@@ -626,9 +648,9 @@ function AccountSetup({
   const [draft, setDraft] = useState<TrackingIntent>(a.intent);
   const builtins = routinesFor(a.game);
   const availability = {
-    dailies: !a.game.startsWith("mygame:"),
+    dailies: !a.game.startsWith("mygame:") && a.game !== "miliastra",
     weeklyMonthly: builtins.some((r) => cadenceOf(r.period) !== "cycle"),
-    cycles: builtins.some((r) => cadenceOf(r.period) === "cycle"),
+    cycles: builtins.some((r) => cadenceOf(r.period) === "cycle") || passFamiliesForGame(a.game).length > 0,
   };
   /**
    * Saved on each click. Only the kind that changed touches its routines, so
@@ -648,6 +670,7 @@ function AccountSetup({
       placements[id] = { followed, checklist: followed, timeline: followed };
     };
     if (changed.includes("dailies")) place(`dailies:${a.game}`, next.dailies);
+    if (changed.includes("cycles")) for (const id of passFamiliesForGame(a.game)) place(id, next.cycles);
     for (const r of builtins) {
       const kind = cadenceOf(r.period) === "cycle" ? "cycles" : "weeklyMonthly";
       if (changed.includes(kind)) place(r.id, next[kind]);
@@ -694,7 +717,7 @@ function AccountSetup({
                 "Routines on a game-specific schedule, such as a 14-day endgame mode",
               ids: builtins
                 .filter((r) => cadenceOf(r.period) === "cycle")
-                .map((r) => r.id),
+                .map((r) => r.id).concat(passFamiliesForGame(a.game)),
             },
           ] as const
         ).map((k) => {

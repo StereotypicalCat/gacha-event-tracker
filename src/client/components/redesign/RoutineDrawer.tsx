@@ -232,7 +232,7 @@ function Library({
       const a = writes.get(row.accountId) ?? state.accounts[row.accountId]!;
       writes.set(row.accountId, {
         ...a,
-        routines: { ...a.routines, [row.id]: follow(row, on) },
+        routines: { ...a.routines, [row.placementId ?? row.id]: follow(row, on) },
       });
     }
     return write(writes);
@@ -302,7 +302,7 @@ function Library({
               a.id,
               routineRows(state, a.id, now).filter(
                 (r) =>
-                  r.id.startsWith("routine:") || r.id.startsWith("dailies:"),
+                  r.id.startsWith("routine:") || r.id.startsWith("dailies:") || r.event !== undefined,
               ),
             ]),
           );
@@ -313,7 +313,7 @@ function Library({
             .map((r) => r.id)
             .filter(
               (id) =>
-                id.startsWith("dailies:") || builtins.some((b) => b.id === id),
+                id.startsWith("dailies:") || builtins.some((b) => b.id === id) || (byAccount.get(mine[0]!.id) ?? []).some(r => r.id === id && r.event),
             );
           const name = meta(game).name;
           const shown = ids.filter((id) => {
@@ -383,7 +383,7 @@ function Library({
                   def?.period.unit === "version"
                     ? versionWindow(def.game, now)
                     : undefined;
-                const line = def
+                const line = first.event ? ["Battle pass", "Uses its sourced window", "Mark complete when finished"] : def
                   ? [
                       def.period.unit === "version"
                         ? version

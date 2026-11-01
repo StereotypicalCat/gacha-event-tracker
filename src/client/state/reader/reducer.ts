@@ -1,4 +1,8 @@
 import { applyReaderAliases } from "./aliases.ts";
+import { contentEvents, routeContentAction, routeReaderContent } from "./contentRouting.ts";
+import type { DisplayEvent } from "../../../shared/custom.ts";
+import { classificationFor, classifiedEvent } from "../../../shared/classification.ts";
+import { resolveReaderClock } from "../../../shared/readerClock.ts";
 import { archiveOutcome, restoreArchive, reconcileArchive } from "./archive.ts";
 import {
   type Account,
@@ -9,6 +13,7 @@ import {
   pairKey,
 } from "./schema.ts";
 export type ReaderAction = { at: string; opId: string } & (
+  | { type: "content"; events: DisplayEvent[] }
   | {
       type: "outcome";
       accountId: string;
@@ -103,6 +108,8 @@ export function reduceReader(
   state: ReaderState,
   action: ReaderAction,
 ): ReaderState {
+  state = routeReaderContent(state);
+  action = routeContentAction(state, action);
   const operations = Array.isArray(state.operations)
     ? (state.operations as string[])
     : [];
@@ -120,8 +127,14 @@ export function reduceReader(
       ...Object.fromEntries(fields.map((k) => [k, action.at])),
     },
   };
+  if (action.type === "content") return routeReaderContent({ ...next, contentEvents: Object.fromEntries(action.events.filter(e => Object.keys(classificationFor(e)).length > 0).map(e => [e.id, e])) });
   if (action.type === "aliases") return applyReaderAliases(next, action.table);
-  if (action.type === "outcome")
+  if (action.type === "outcome") {
+    const key = pairKey(action.accountId, action.eventId);
+    const a = next.accounts[action.accountId];
+    const event = contentEvents(next).find(e => e.id === action.eventId);
+    if (!next.seenEvents[key] && a && event)
+      next.seenEvents = { ...next.seenEvents, [key]: { accountId: a.id, event: classifiedEvent(event), firstSeenAt: action.at, lastSeenAt: action.at, clockRevision: resolveReaderClock(a, Date.parse(action.at)).revision } };
     return archiveOutcome(
       next,
       action.accountId,
@@ -129,6 +142,7 @@ export function reduceReader(
       action.outcome,
       action.at,
     );
+  }
   if (action.type === "restore")
     return restoreArchive(next, action.accountId, action.eventId);
   if (action.type === "reconcile")

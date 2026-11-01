@@ -12,6 +12,8 @@ export function createAccount(
   return {
     id,
     game,
+    passTrackingMigrated: true,
+    legacyPassVisibility: false,
     region,
     intent: {
       events: true,

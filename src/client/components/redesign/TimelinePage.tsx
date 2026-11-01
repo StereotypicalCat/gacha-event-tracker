@@ -54,6 +54,7 @@ export function routinePeriod(
   row: RoutineRow,
   now: number,
 ): { start: number; end: number; estimated: boolean } {
+  if (row.window) return { ...row.window, estimated: false };
   const key = readerDayKey(now, row.clock),
     task = row.task ?? routinesFor(row.game).find((r) => r.id === row.id);
   if (task?.period.unit === "version") {
@@ -301,8 +302,8 @@ export function TimelinePage({
                 {period.estimated
                   ? estimatedReset(r, now)
                   : showEnd
-                    ? `resets ${formatInZone(period.end, true, zone)}`
-                    : `${formatRemaining(period.end - now)} to reset`}
+                    ? `${r.event ? "ends" : "resets"} ${formatInZone(period.end, true, zone)}`
+                    : `${formatRemaining(period.end - now)} to ${r.event ? "end" : "reset"}`}
               </span>
             </button>
             {!period.estimated && (
@@ -410,8 +411,8 @@ export function TimelinePage({
                 label: period.estimated
                   ? estimatedReset(r, now)
                   : showEnd
-                    ? `resets ${day(period.end)}`
-                    : `${formatRemaining(period.end - now)} to reset`,
+                    ? `${r.event ? "ends" : "resets"} ${day(period.end)}`
+                    : `${formatRemaining(period.end - now)} to ${r.event ? "end" : "reset"}`,
                 onOpen: () => setRoutine(r),
               };
             })}
@@ -571,7 +572,7 @@ function RoutineDetail({
           estimatedReset(row, now).replace(/^r/, "R")
         ) : (
           <>
-            Resets {formatInZone(period.end, true, zone)} · in{" "}
+            {row.event ? "Ends" : "Resets"} {formatInZone(period.end, true, zone)} · in{" "}
             {formatRemaining(period.end - now)}
           </>
         )}

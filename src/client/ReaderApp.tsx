@@ -37,6 +37,7 @@ import {
   type ReaderEventRow,
 } from "./state/reader/eventRows.ts";
 import { routineRows } from "./state/reader/routines.ts";
+import { displayGameFor, passPlacementId, sourceGameFor } from "../shared/classification.ts";
 import { setupReader } from "./state/reader/onboarding.ts";
 import { resolveReaderClock, readerClockFor } from "../shared/readerClock.ts";
 import {
@@ -144,6 +145,7 @@ export function ReaderApp() {
             ...new Set([
               ...feed.sources.map((s) => s.game),
               ...feed.events.map((e) => e.game),
+              "miliastra",
             ]),
           ],
           new Date().toISOString(),
@@ -159,6 +161,7 @@ export function ReaderApp() {
           return;
         }
         const created = createReaderStore(localStorage, opened.state);
+        await created.dispatch({ type: "content", events: feed.events, ...actionMeta() });
         setStore(created);
         setFeed({ status: "ready", feed });
       })
@@ -398,15 +401,19 @@ function ReaderContent({
       void dispatch({ type: "aliases", table, ...actionMeta() });
   }, [feed.events, state.data, state.archive, state.seenEvents, dispatch]);
   const all = useMemo(
-    () => readerEventRows(state, feed.events, now),
+    () => readerEventRows(state, feed.events, now, true),
     [
       state.accounts,
       state.customEvents,
       state.seenEvents,
+      state.prefs.genshinTcg,
       feed.events,
       Math.floor(now / 60000),
     ],
   );
+  useEffect(() => {
+    void dispatch({ type: "content", events: feed.events, ...actionMeta() });
+  }, [feed.events, dispatch]);
   useEffect(() => {
     if (!prefs.onboarded) return;
     const records = all
@@ -439,7 +446,7 @@ function ReaderContent({
       .filter((a) => state.eventSeen[a.id] === undefined)
       .map((a) => ({
         id: a.id,
-        ids: feed.events.filter((e) => e.game === a.game).map((e) => e.id),
+        ids: feed.events.filter((e) => displayGameFor(e) === a.game).map((e) => e.id),
       }));
     if (entries.length)
       void dispatch({ type: "seenBatch", entries, ...actionMeta() });
@@ -547,6 +554,7 @@ function ReaderContent({
   const outstanding = all.filter(
     (r) =>
       !r.clock.ended &&
+      (!passPlacementId(r.event) || state.accounts[r.accountId]?.routines[passPlacementId(r.event)!]?.checklist) &&
       !state.archive[pairKey(r.accountId, r.event.id)] &&
       progress(r).status !== "done" &&
       !state.data[r.accountId]?.ignored[r.event.id],
@@ -568,6 +576,7 @@ function ReaderContent({
   const visible = all.filter(
     (r) =>
       (focus === null || r.event.game === focus) &&
+      !passPlacementId(r.event) &&
       !r.clock.ended &&
       (!r.clock.upcoming || prefs.showUpcoming) &&
       (!state.archive[pairKey(r.accountId, r.event.id)] ||
@@ -1059,7 +1068,7 @@ function ReaderContent({
                       ) : settingsPage === "sources" ? (
                         <DataSourcesPage
                           sources={feed.sources.filter((s) =>
-                            trackedGames(state).has(s.game),
+                            trackedGames(state).has(s.game) || (s.game === "genshin" && trackedGames(state).has("miliastra")),
                           )}
                           now={now}
                           timezone={zone}
@@ -1369,7 +1378,7 @@ function ReaderDetail({
     });
   const own = recordFor(ownProps.events, row.event.id);
   const stale = freshness(
-    sources.filter((s) => s.game === row.event.game),
+    sources.filter((s) => s.game === sourceGameFor(row.event.game)),
     now,
   ).stale;
   return (
