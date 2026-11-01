@@ -51,6 +51,14 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "genshin-character-trial-merge",
+    date: "2026-11-01",
+    kind: "fix",
+    title: "Genshin's character trials appear once per banner phase",
+    body: "Character Test Runs and the trial named after Skirk, Escoffier and the other featured characters now share one entry. Different banner phases stay separate, and saved progress follows the surviving entry.",
+    ref: "0043735",
+  },
+  {
     id: "content-classification",
     date: "2026-11-01",
     kind: "feature",
