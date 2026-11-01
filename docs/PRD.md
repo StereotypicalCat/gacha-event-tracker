@@ -690,7 +690,7 @@ windows spec, without changing its source/date requirements. On transition,
 existing event followers retain pass-family pins in enabled lanes; newly offered
 Miliastra remains hidden until enabled.
 
-Genshin → About → Event tracking provides **Track TCG events**, on by default,
+Genshin → Setup → Event tracking provides **Track TCG events**, on by default,
 across that reader's Genshin servers. Off hides classified source TCG activities
 from live lists, timeline, counts, next-deadline guidance and event-derived daily
 instructions. It preserves notes, completion and Archive history; turning it

@@ -217,25 +217,6 @@ export function GameSettings({
               </div>
             )}
           </div>
-          {selected === "genshin" && (
-              <section className="grp">
-                <h3>Event tracking</h3>
-                <label className="trow">
-                  <span>Track TCG events</span>
-                  <input type="checkbox" checked={state.prefs.genshinTcg !== false} disabled={savingTcg}
-                    onChange={async (e) => {
-                      const value = e.target.checked;
-                      setSavingTcg(true);
-                      const result = await onAction({ type: "prefs", patch: { genshinTcg: value }, ...actionMeta() });
-                      setSavingTcg(false);
-                      setMessage(result.ok ? "" : "TCG tracking could not be saved. Your previous setting is kept.");
-                    }} />
-                </label>
-                <p className="help">Show Genius Invokation TCG events in your lists and timeline.</p>
-                <p className="help">Miliastra Wonderland has its own game settings. Enable it in Your games to track its activities separately.</p>
-                {message && <p role="status">{message}</p>}
-              </section>
-            )}
           <section className="grp">
             <h3>Data sources</h3>
             {sources.filter((s) => s.game === sourceGameFor(selected)).length === 0 ? (
@@ -352,6 +333,25 @@ export function GameSettings({
                   Fine-tune in Routines →
                 </button>
               </div>
+            </section>
+          )}
+          {selected === "genshin" && (
+            <section className="grp">
+              <h3>Event tracking</h3>
+              <label className="trow">
+                <span>Track TCG events</span>
+                <input type="checkbox" checked={state.prefs.genshinTcg !== false} disabled={savingTcg}
+                  onChange={async (e) => {
+                    const value = e.target.checked;
+                    setSavingTcg(true);
+                    const result = await onAction({ type: "prefs", patch: { genshinTcg: value }, ...actionMeta() });
+                    setSavingTcg(false);
+                    setMessage(result.ok ? "" : "TCG tracking could not be saved. Your previous setting is kept.");
+                  }} />
+              </label>
+              <p className="help">Show Genius Invokation TCG events in your lists and timeline.</p>
+              <p className="help">Miliastra Wonderland has its own game settings. Enable it in Your games to track its activities separately.</p>
+              {message && <p role="status">{message}</p>}
             </section>
           )}
           <section className="grp profile-servers">

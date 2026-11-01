@@ -708,7 +708,7 @@ legend on the same baseline as "Next: …".
 
 ## Content tracking additions (2026-11-01)
 
-Genshin's About tab has an Event tracking group before Data sources. The native
+Genshin's Setup tab has an Event tracking group below What to track. The native
 checkbox **Track TCG events** uses the existing settings row, with the copy
 “Show Genius Invokation TCG events in your lists and timeline.” The setting is
 saved immediately; while saving it is disabled, and failure keeps the prior

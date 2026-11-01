@@ -19,8 +19,10 @@ test("TCG defaults on; off hides remembered events and dailies without changing 
   expect(s.data["account:one"]!.progress[event.id]).toHaveProperty("note", "keep");
   expect(s.seenEvents[pairKey("account:one", event.id)]).toBeDefined();
 });
-test("Genshin About offers the TCG tracking preference", () => {
+test("Genshin Setup offers the TCG tracking preference", () => {
   const s = migrateLegacy({}, ["genshin"], at, () => "account:one");
-  const html = renderToStaticMarkup(<GameSettings state={s} sources={[]} initialGame="genshin" tab="about" now={Date.parse(at)} onAction={async () => ({ ok: true })} />);
+  const html = renderToStaticMarkup(<GameSettings state={s} sources={[]} initialGame="genshin" tab="setup" now={Date.parse(at)} onAction={async () => ({ ok: true })} />);
   expect(html).toContain("Track TCG events");
+  const about = renderToStaticMarkup(<GameSettings state={s} sources={[]} initialGame="genshin" tab="about" now={Date.parse(at)} onAction={async () => ({ ok: true })} />);
+  expect(about).not.toContain("Track TCG events");
 });

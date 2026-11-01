@@ -24,7 +24,9 @@ To Temper pairs. ReaderApp already filters ended rows and reconciles previously
 seen ones into Archive: old rows in the feed do not establish a display bug.
 
 The owner chose source-driven classification over a maintained title table, and
-requested a show/track TCG toggle in Genshin's About tab.
+originally requested a show/track TCG toggle in Genshin's About tab, then
+explicitly moved it to Setup after trying the release. The current location is
+Setup, immediately below What to track.
 
 ## Approaches
 
@@ -42,7 +44,7 @@ title classifier or a replacement for source labels.
 
 - Miliastra Wonderland is an independently selectable built-in lane.
 - Source-dated battle passes are tracked through Cycles, once per pass window.
-- Genshin's About tab controls whether its TCG events are tracked.
+- Genshin's Setup tab controls whether its TCG events are tracked.
 - Notes, completion, ignores, daily logs, amounts, history and clock references
   survive reclassification, import/restore and repeated application.
 - Keep IDs, source URLs, source IDs, dates, precision and the current matching
@@ -96,7 +98,7 @@ Like other newly added lanes, it arrives off for existing readers and is
 available in setup for new readers. This lane setting takes precedence over
 preserving a relocated pass's visibility: Silvery Moonlight Chronicle stays
 hidden until Miliastra is enabled, with its follow/pin preferences and progress
-retained. Enabling the lane restores its eligible placements. Genshin's About tab includes a short pointer
+retained. Enabling the lane restores its eligible placements. Genshin's Setup tab includes a short pointer
 to Miliastra's settings so the relocated activities are discoverable.
 
 Reclassification resolves storage as well as presentation. Use a persisted
@@ -149,7 +151,7 @@ routines. Hidden lanes remain hidden, including newly offered Miliastra. New
 readers follow passes through Cycles. An account can follow passes with ordinary
 Events turned off. Silvery Moonlight Chronicle is a pass under Miliastra.
 
-## Genshin About: TCG switch
+## Genshin Setup: TCG switch
 
 Use the existing settings control style, with label **Track TCG events** and
 supporting copy **Show Genius Invokation TCG events in your lists and timeline.**

@@ -55,7 +55,7 @@ Rebase account-scoped `fieldTimes` paths for classified IDs, preserving the late
 **Interfaces:** Reader event rows use logical destination game and existing IDs. Shared category filtering excludes TCG when `prefs.genshinTcg === false`. Retain classified snapshots for migration and source-backed pass rows even when ordinary Events is off. Freshness/source lookup maps logical Miliastra to supplying Genshin sources.
 
 - [x] Add failing tests for lane independence, hidden-lane policy, cached snapshots, source attribution and unchanged Genshin rows.
-- [x] Route row rendering and lane discovery; offer Miliastra independently without synthetic dailies; point to its settings from Genshin About.
+- [x] Route row rendering and lane discovery; offer Miliastra independently without synthetic dailies; point to its settings from Genshin Setup.
 - [x] Run focused reader/view tests and typecheck.
 
 ### Task 4: Feed-backed battle-pass cycles
@@ -72,7 +72,7 @@ Rebase account-scoped `fieldTimes` paths for classified IDs, preserving the late
 
 **Files:** `src/client/components/redesign/GameSettings.tsx`, `src/client/state/reader/eventRows.ts`, `routines.ts`, `test/reader-tcg.test.tsx` (new).
 
-**Interfaces:** `prefs.genshinTcg` absent means true. Genshin About renders Track TCG events, supporting copy from spec, immediate save and failure rollback. All live surfaces use the shared reader classification predicate; history remains readable.
+**Interfaces:** `prefs.genshinTcg` absent means true. Genshin Setup renders Track TCG events, supporting copy from spec, immediate save and failure rollback. All live surfaces use the shared reader classification predicate; history remains readable.
 
 - [x] Add failing tests for default/on/off/cached snapshot behavior, multiple accounts, saved-history preservation and rejected save.
 - [x] Implement existing-style accessible toggle and shared filtering; no ignored/completed writes.
