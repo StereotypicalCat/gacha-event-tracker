@@ -1,4 +1,5 @@
 import { useGameMeta } from "../../state/gameMeta.tsx";
+import { orderGameItems } from "../../state/gameOrder.ts";
 import { serverSuffix } from "../../state/reader/servers.ts";
 import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
@@ -193,6 +194,11 @@ export function DailyPanel({
   now: number;
 }) {
   const meta = useGameMeta();
+  rows = orderGameItems(
+    rows,
+    Array.isArray(state.prefs.gameOrder) ? state.prefs.gameOrder as string[] : undefined,
+    (game) => meta(game).name,
+  );
   const total = rows.length;
   const done = rows.filter((r) =>
     doneToday(r, readerDayKey(now, r.clock)),

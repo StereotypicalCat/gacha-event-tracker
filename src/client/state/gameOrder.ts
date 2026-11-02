@@ -64,6 +64,16 @@ export function orderGames(
   return [...placed, ...alphabetical(lanes.filter((id) => !seen.has(id)))];
 }
 
+/** Apply the same display order to accounts or tasks, keeping ties stable. */
+export function orderGameItems<T extends { game: LaneId }>(
+  items: readonly T[],
+  stored: readonly LaneId[] | undefined,
+  nameOf: (id: LaneId) => string,
+): T[] {
+  const games = orderGames([...new Set(items.map((item) => item.game))], stored, nameOf);
+  return [...items].sort((a, b) => games.indexOf(a.game) - games.indexOf(b.game));
+}
+
 /**
  * Move one entry, shifting the rest.
  *

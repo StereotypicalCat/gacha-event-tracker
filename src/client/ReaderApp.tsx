@@ -52,7 +52,7 @@ import {
 import { metaFor } from "../shared/games.ts";
 import { readGoal } from "../shared/goal.ts";
 import { isDaily, resolveDaily } from "../shared/daily.ts";
-import { orderGames } from "./state/gameOrder.ts";
+import { orderGameItems, orderGames } from "./state/gameOrder.ts";
 import { advanceFocus } from "./state/lens.ts";
 import { restorePrefsValue } from "./state/usePrefs.ts";
 import { readableAmounts } from "./state/useAmounts.ts";
@@ -532,12 +532,12 @@ function ReaderContent({
     setSettingsPage(next);
     setPage("settings");
   };
-  const accounts = Object.values(state.accounts).filter(
+  const accounts = orderGameItems(Object.values(state.accounts).filter(
     (a) =>
       !a.retiredAt &&
       !prefs.hiddenGames.includes(a.game) &&
       (a.intent.events || Object.values(a.routines).some((r) => r.followed)),
-  );
+  ), prefs.gameOrder, (game) => meta(game).name);
   const ordered = orderGames(
     [...new Set(accounts.map((a) => a.game))],
     prefs.gameOrder,

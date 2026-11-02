@@ -2,6 +2,7 @@ import { routinePeriod } from "./TimelinePage.tsx";
 import { manyServers, serverSuffix } from "../../state/reader/servers.ts";
 import { formatRemaining } from "../../../shared/time.ts";
 import { useGameMeta } from "../../state/gameMeta.tsx";
+import { orderGameItems } from "../../state/gameOrder.ts";
 import type { CSSProperties } from "react";
 import { RoutineHistory } from "./RoutineHistory.tsx";
 import { useState } from "react";
@@ -120,14 +121,15 @@ export function RoutinesPage({
     setEditing(task);
     setDrawer(pane);
   };
-  const accounts = Object.values(state.accounts).filter(
+  const accounts = orderGameItems(Object.values(state.accounts).filter(
     (a) =>
       !a.retiredAt &&
       !(
         Array.isArray(state.prefs.hiddenGames) &&
         state.prefs.hiddenGames.includes(a.game)
       ),
-  );
+  ), Array.isArray(state.prefs.gameOrder) ? state.prefs.gameOrder as string[] : undefined,
+  (game) => meta(game).name);
   const save = async (draft: TaskDraft, placement: CreatePlacement) => {
     const at = new Date().toISOString(),
       id = editing ? editing.id : mintTaskId();

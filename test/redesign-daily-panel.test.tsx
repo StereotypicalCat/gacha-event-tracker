@@ -7,6 +7,26 @@ import { readerDayKey } from "../src/shared/readerClock.ts";
 
 const at = "2026-10-16T12:00:00.000Z";
 const now = Date.parse(at);
+
+test.each([
+  { order: ["zzz", "genshin", "hsr"], expected: ["ZZZ", "Genshin", "Star Rail"] },
+  { order: undefined, expected: ["Genshin", "Star Rail", "ZZZ"] },
+  { order: ["zzz"], expected: ["ZZZ", "Genshin", "Star Rail"] },
+])("dailies and progress pips follow game order $order", ({ order, expected }) => {
+  let id = 0;
+  const state = migrateLegacy({}, ["hsr", "genshin", "zzz"], at, () => `account:${++id}`);
+  state.prefs.gameOrder = order;
+  const rows = Object.values(state.accounts).flatMap((account) =>
+    routineRows(state, account.id, now).filter((r) => r.id === `dailies:${account.game}`),
+  );
+  const html = render(<DailyPanel rows={rows} state={state} now={now} onAction={async () => ({ ok: true })} />);
+  expect([...html.matchAll(/<strong>(.*?)<\/strong>/g)].map((m) => m[1])).toEqual([...expected]);
+  const pips = [...html.matchAll(/<i[^>]*style="([^"]*)"/g)].map((m) => m[1]);
+  const rowHues = [...html.matchAll(/class="daily-row daily-hit"[^>]*style="([^"]*)"/g)].map((m) => m[1]);
+  expect(pips).toHaveLength(3);
+  expect(pips).toEqual(rowHues);
+});
+
 function setup() {
   const state = migrateLegacy({}, ["genshin"], at, () => "account:daily");
   state.accounts["account:daily"]!.routines["dailies:genshin"] = {

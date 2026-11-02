@@ -45,6 +45,17 @@ test("bulk pins combine changes per account and preserve the other placement", (
 });
 
 import { RoutinesPage } from "../src/client/components/redesign/RoutinesPage.tsx";
+test.each(["game", "reset"])("routines follow Game order when grouped by %s", (group) => {
+  const at = "2026-10-16T12:00:00.000Z";
+  let id = 0;
+  const state = migrateLegacy({}, ["hsr", "genshin", "zzz"], at, () => `account:${++id}`);
+  state.prefs.gameOrder = ["zzz", "genshin", "hsr"];
+  state.prefs.routineGroup = group;
+  const html = render(<RoutinesPage state={state} now={Date.parse(at)} onAction={async () => ({ ok: true })} />);
+  const cells = [...html.matchAll(/class="gcell"><span>([^<]*)/g)].map((m) => m[1]);
+  expect(cells).toEqual(["ZZZ", "Genshin", "Star Rail"]);
+});
+
 test("the routines table shows progress as text with an edit affordance, not inputs", () => {
   const at = "2026-10-16T12:00:00.000Z";
   const state = migrateLegacy({}, ["genshin"], at, () => "account:table");

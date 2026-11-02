@@ -1,7 +1,21 @@
 import { describe, expect, test } from "bun:test";
-import { moveGame, orderGames } from "../src/client/state/gameOrder.ts";
+import { moveGame, orderGames, orderGameItems } from "../src/client/state/gameOrder.ts";
 import { metaFor } from "../src/shared/games.ts";
 import type { LaneId } from "../src/shared/custom.ts";
+
+test("ordering tasks keeps a game's servers and tasks stable without changing its input", () => {
+  const items = [
+    { game: "hsr", id: "first" },
+    { game: "genshin", id: "asia-daily" },
+    { game: "hsr", id: "second" },
+    { game: "genshin", id: "asia-weekly" },
+    { game: "genshin", id: "europe-daily" },
+  ];
+  const original = items.slice();
+  expect(orderGameItems(items, ["genshin", "hsr"], (g) => metaFor(g, {}).name).map((r) => r.id))
+    .toEqual(["asia-daily", "asia-weekly", "europe-daily", "first", "second"]);
+  expect(items).toEqual(original);
+});
 
 /**
  * The reader's game order.

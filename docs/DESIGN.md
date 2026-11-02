@@ -609,7 +609,8 @@ legend on the same baseline as "Next: …".
 
 ### Ticking things off
 
-- **Today's dailies.** The whole row is the target. A tick washes the row in its game's hue, pops the
+- **Today's dailies.** Rows and progress pips follow Game order, falling back to A–Z by game name;
+  each game's servers and tasks keep their relative order. The whole row is the target. A tick washes the row in its game's hue, pops the
   box and draws the check. A pip bar and "N of M done" sit under the heading. A check-in goal (for
   example "5/5 wk") counts as done once met, with a dotted check, and shows its goal count instead of
   a streak.
@@ -655,7 +656,9 @@ legend on the same baseline as "Next: …".
 
 ### Other pages
 
-- **Routines.** Bands by reset (Dailies, Weeklies, Monthlies, Cycles) or by game. The table has tick
+- **Routines.** Bands by reset (Dailies, Weeklies, Monthlies, Cycles) or by game. Game groups,
+  rows within each reset band, history and Checklist pins follow Game order with the same A–Z fallback.
+  The table has tick
   and click-to-edit amount cells. The library and create/edit drawers are shelves.
 - **Timeline.** Two looks (new and classic) chosen in Appearance. Dailies are not on the timeline.
 - **Settings.** About, Changelog, Data & sources (list options first), Region & time, Appearance
