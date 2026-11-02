@@ -51,6 +51,22 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "nte-lost-exchange",
+    date: "2026-11-02",
+    kind: "games",
+    title: "NTE's monthly Lost Exchange pulls are in the routine library",
+    body: "Track 5 Solid Dice, 5 Fabricated Dice and 20 Tri-Keys each month. Fabricated Dice appear when standard-banner pulls are enabled; follow and pin each shop item separately.",
+    ref: "0c965e3",
+  },
+  {
+    id: "daily-routine-game-order",
+    date: "2026-11-02",
+    kind: "fix",
+    title: "Dailies and routines follow your Game order",
+    body: "Today's dailies, progress pips, pinned routines and both Routines grouping modes now use your saved Game order, or A–Z when you haven't set one. Each game's servers and tasks stay together.",
+    ref: "dd5d374",
+  },
+  {
     id: "genshin-tcg-setup",
     date: "2026-11-01",
     kind: "fix",
