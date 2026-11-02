@@ -1,12 +1,12 @@
 {
   "sourceId": "nikki-fandom-events",
   "url": "https://infinity-nikki.fandom.com/api.php?action=parse&page=Event&prop=text&formatversion=2&format=json",
-  "contentHash": "3a28e2399d56a9ac086e36b454f1c38703fd368513add7ef3a79af36624442de",
+  "contentHash": "0dbaf178d1d609a6342e7c34fe14397aca14672243f58a88d60ef5279ce5e050",
   "bytes": 429072,
   "etag": null,
   "lastModified": null,
-  "contentChangedAt": "2026-11-02T05:27:51.670Z",
-  "lastConfirmedAt": "2026-11-02T05:27:51.670Z",
+  "contentChangedAt": "2026-11-02T17:27:53.766Z",
+  "lastConfirmedAt": "2026-11-02T17:27:53.766Z",
   "eventCount": 11,
   "charset": "utf-8"
 }
