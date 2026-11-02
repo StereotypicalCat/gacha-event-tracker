@@ -113,6 +113,9 @@ describe("ROUTINES", () => {
       ["routine:wuwa:shop-lustrous-tide", "standard"],
     ]);
     expect(shape("nte")).toEqual([
+      ["Lost Exchange: Solid Dice", { unit: "month", startsOn: 1 }, { kind: "amount", target: 5, unit: "dice" }],
+      ["Lost Exchange: Fabricated Dice", { unit: "month", startsOn: 1 }, { kind: "amount", target: 5, unit: "dice" }],
+      ["Lost Exchange: Tri-Keys", { unit: "month", startsOn: 1 }, { kind: "amount", target: 20, unit: "keys" }],
       ["Season Pass weekly EXP", week, { kind: "amount", target: 12000, unit: "EXP" }],
       ["Anomaly Pilgrimage", week, { kind: "amount", target: 3, unit: "claims" }],
       ["City Stamina", week, { kind: "amount", target: 700, unit: "stamina" }],
@@ -120,6 +123,11 @@ describe("ROUTINES", () => {
       ["Special City Commission", week, { kind: "days", required: 1 }],
       ["Beyond the Rails", { unit: "cycle", days: 14, from: "2026-10-22" }, { kind: "days", required: 1 }],
       ["Tycoon Incentive Fund", { unit: "cycle", days: 14, from: "2026-10-26" }, { kind: "amount", target: 1000000, unit: "fons" }],
+    ]);
+    expect(routinesFor("nte").filter((r) => r.pulls !== undefined).map((r) => [r.id, r.pulls])).toEqual([
+      ["routine:nte:lost-exchange-solid-dice", "premium"],
+      ["routine:nte:lost-exchange-fabricated-dice", "standard"],
+      ["routine:nte:lost-exchange-tri-keys", "premium"],
     ]);
     expect(shape("nikki")).toEqual([
       ["Mira Journey weekly EXP", week, { kind: "amount", target: 8000, unit: "Journey EXP" }],
