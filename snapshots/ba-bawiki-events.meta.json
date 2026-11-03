@@ -1,12 +1,12 @@
 {
   "sourceId": "ba-bawiki-events",
   "url": "https://bluearchive.wiki/wiki/Events",
-  "contentHash": "99c11d9e94b8893ba83de1cf5667777ed56d8defe148e16f3f320f9bfb2f4623",
-  "bytes": 656327,
+  "contentHash": "795891df9359502e2855916c10ec27bbe28d299d9377cb2a3e048add2695ec08",
+  "bytes": 658535,
   "etag": null,
-  "lastModified": "Mon, 02 Nov 2026 04:26:57 GMT",
-  "contentChangedAt": "2026-11-02T05:27:47.070Z",
-  "lastConfirmedAt": "2026-11-03T05:28:09.031Z",
-  "eventCount": 3,
+  "lastModified": "Tue, 03 Nov 2026 11:48:17 GMT",
+  "contentChangedAt": "2026-11-03T17:28:08.579Z",
+  "lastConfirmedAt": "2026-11-03T17:28:08.579Z",
+  "eventCount": 2,
   "charset": "utf-8"
 }
