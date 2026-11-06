@@ -51,6 +51,15 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "catch-up-section",
+    date: "2026-11-06",
+    kind: "feature",
+    title: "Catch up is easier to find and shows one game at a time",
+    body: "A Catch up button on the Checklist takes you straight to it. Pick a game from its named chip, then tick missed days on a strip showing weekday and date. Routines show their real titles.",
+    ref: "3296784",
+    note: "catch-up-section",
+  },
+  {
     id: "endfield-aic-quota-permits",
     date: "2026-11-06",
     kind: "games",
@@ -698,6 +707,19 @@ export const ENTRIES: Entry[] = [
 ];
 
 export const NOTES: Note[] = [
+  {
+    id: "catch-up-section",
+    date: "2026-11-06",
+    title: "Catch up, one game at a time",
+    summary: [
+      "Catch up is now a section of its own on the Routines page, and the Catch up buttons in Today's dailies and Routines on the Checklist take you straight to it. It replaces a stack of identical dropdowns that never said which game they belonged to.",
+      "Named chips show one game at a time. Each row has the routine's real title, its type and a 14-day strip with weekday and date; routines counted in numbers list their recent values instead. Ended items and days from before a reset change sit under Older records.",
+      "A game's count covers only what is expected every day, starting from your first tick of that item, and leaves out today. Your saved ticks have not changed.",
+    ],
+    from: "99af24e",
+    to: "bbd0267",
+    specs: ["docs/superpowers/specs/2026-11-06-catch-up-section-design.md"],
+  },
   {
     id: "content-classification",
     date: "2026-11-01",
