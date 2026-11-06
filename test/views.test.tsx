@@ -1457,6 +1457,18 @@ describe("weekly and monthly tasks in the dailies strip", () => {
     expect(tasksShown([shop], { weekly: true, monthly: true, cycle: false })).toEqual([]);
   });
 
+  test("a banner task sits with the cycles and has no period to catch up on", () => {
+    const permits: StripTask = {
+      id: "routine:endfield:aic-quota-permits", game: "endfield", title: "AIC Quota Exchange",
+      period: { unit: "banner" }, measure: { kind: "amount", target: 5, unit: "permits" },
+    };
+    const [group] = dailyGroups(["endfield"], [], NOW, "europe", meta, startOf, false, undefined,
+      [permits], () => cycleStatus);
+    const item = group!.items.find((i) => i.key === permits.id)!;
+    expect(item.cadence).toBe("cycle");
+    expect(item.period).toBeUndefined();
+  });
+
   test("cycle tasks sit in the lower row, are tallied apart and switched apart", () => {
     const [group] = dailyGroups(["zzz"], [], NOW, "europe", meta, startOf, true, undefined,
       [points, shiyu], anyStatus);

@@ -22,8 +22,8 @@ import {
   type Routine,
 } from "../../../shared/routines.ts";
 import { asOfLabel, TaskSchema, type Task } from "../../../shared/task.ts";
-import { periodOf, type Period } from "../../../shared/period.ts";
-import { versionCaption, versionWindow } from "../../../shared/versions.ts";
+import { isTimerPeriod, periodOf, type Period } from "../../../shared/period.ts";
+import { timerWindow, versionCaption } from "../../../shared/versions.ts";
 
 const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 import { AmountTarget } from "../../../shared/goal.ts";
@@ -379,16 +379,16 @@ function Library({
                 const rows = rowsOf(id),
                   first = rows[0]!,
                   def = builtins.find((b) => b.id === id);
-                const version =
-                  def?.period.unit === "version"
-                    ? versionWindow(def.game, now)
+                const timer =
+                  def && isTimerPeriod(def.period)
+                    ? timerWindow(def.period, def.game, now)
                     : undefined;
                 const line = first.event ? ["Battle pass", "Uses its sourced window", "Mark complete when finished"] : def
                   ? [
-                      def.period.unit === "version"
-                        ? version
-                          ? capitalise(versionCaption(version, now))
-                          : "Resets with the version"
+                      isTimerPeriod(def.period)
+                        ? timer
+                          ? capitalise(versionCaption(timer, now))
+                          : `Resets with the ${def.period.unit}`
                         : scheduleWords(
                             def.period,
                             first.clock.resetHour,

@@ -427,6 +427,12 @@ recorded, and `VERSION_DAYS` gives an estimate that is printed and never acted o
 `amounts` under the version's start date in UTC (`2026-09-30` for WuWa 3.7), a key that adding the
 next entry never moves. It groups, tallies and switches with the cycles (`cadenceOf`).
 
+A built-in may instead **reset with its game's banners** (`{ unit: "banner" }`, 2026-11-06), for a
+shop that restocks when the character and weapon banners change together. Same rule, same code path
+and same storage (Endfield's AIC Quota Exchange counts under `2026-11-05`), read from the `BANNERS`
+table in the same file. It has its own table because a rotation is not a version: `VERSIONS` feeds
+the version line in *Your games*, and Endfield's real versions must be able to join it later.
+
 **Not every game has a server per region.** `GameMeta.resetOffsets` records the regions where a
 game's server clock differs from `REGION_RESET_UTC_OFFSET`. Endfield is the case this exists for: it
 has two server groups rather than three, and Europe is served off the Americas machine on a fixed

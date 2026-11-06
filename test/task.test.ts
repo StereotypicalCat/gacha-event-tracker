@@ -233,3 +233,34 @@ describe("a task that resets with the version", () => {
     expect(TaskSchema.safeParse(task({ period: { unit: "version" } as never })).success).toBe(false);
   });
 });
+
+// A built-in that follows the banner table rather than the version table.
+describe("a task that resets with the banner", () => {
+  const permits = {
+    game: "endfield",
+    period: { unit: "banner" as const },
+    measure: { kind: "amount" as const, target: 5, unit: "permits" },
+  };
+  const amounts = { "2026-11-05": { value: 2, at: AT } };
+  const status = (iso: string) =>
+    taskStatus({ task: permits, region: "europe", now: Date.parse(iso), logged: [], amounts });
+
+  test("counts under the rotation's key until the recorded end, then starts over", () => {
+    expect(status("2026-11-24T21:59:00Z")).toMatchObject({
+      scope: "cycle", periodStart: "2026-11-05", count: 2, required: 5, daysLeft: 1,
+    });
+    expect(status("2026-11-24T22:00:00Z")).toMatchObject({
+      periodStart: "2026-11-24", count: 0, daysLeft: null,
+    });
+  });
+
+  test("its caption names the banner", () => {
+    expect(taskCaption(permits, Date.parse("2026-11-06T12:00:00Z"))).toBe(
+      "resets with next banner · 24 Nov · reach 5 permits",
+    );
+  });
+
+  test("a reader's task cannot hold it", () => {
+    expect(TaskSchema.safeParse(task({ period: { unit: "banner" } as never })).success).toBe(false);
+  });
+});

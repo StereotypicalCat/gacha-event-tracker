@@ -53,12 +53,19 @@ export type Period = z.infer<typeof PeriodSchema>;
 export const RoutinePeriodSchema = z.union([
   PeriodSchema,
   z.object({ unit: z.literal("version") }),
+  /** "Until the game's next banners": the same rule, on `BANNERS`. Code only too. */
+  z.object({ unit: z.literal("banner") }),
 ]);
 export type RoutinePeriod = z.infer<typeof RoutinePeriodSchema>;
 
-/** Where a period is grouped and tallied: a version shows with the cycles. */
+/** A period that ends at a recorded instant in a hand-kept table, not on a day key. */
+export type TimerPeriod = Extract<RoutinePeriod, { unit: "version" | "banner" }>;
+export const isTimerPeriod = (period: RoutinePeriod): period is TimerPeriod =>
+  period.unit === "version" || period.unit === "banner";
+
+/** Where a period is grouped and tallied: a timer shows with the cycles. */
 export const cadenceOf = (period: RoutinePeriod): Period["unit"] =>
-  period.unit === "version" ? "cycle" : period.unit;
+  isTimerPeriod(period) ? "cycle" : period.unit;
 
 const msOf = (key: string) => Date.parse(`${key}T00:00:00Z`);
 const keyOf = (ms: number) => new Date(ms).toISOString().slice(0, 10);

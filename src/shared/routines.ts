@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { RoutinePeriodSchema } from "./period.ts";
+import { isTimerPeriod, RoutinePeriodSchema } from "./period.ts";
 import { GameId, Region } from "./schema.ts";
 import { shownFor, type PerGame } from "./perGame.ts";
 import { MeasureSchema, type TaskShape } from "./task.ts";
@@ -30,7 +30,7 @@ export const RoutineSchema = z.object({
   id: z.string().regex(/^routine:[a-z0-9]+:[a-z0-9-]+$/),
   game: GameId,
   title: z.string().min(1).max(80),
-  /** A built-in may also reset with its game's version (`versions.ts`). */
+  /** A built-in may also reset with its game's version or banners (`versions.ts`). */
   period: RoutinePeriodSchema,
   measure: MeasureSchema,
   /** The page that states it. */
@@ -408,6 +408,20 @@ export const ROUTINES: readonly Routine[] = [
     checked: "2026-10-14",
     note: "Unlocks after Aberrant Exploration III.",
   },
+  {
+    id: "routine:endfield:aic-quota-permits",
+    game: "endfield",
+    title: "AIC Quota Exchange: Limited-Time HH Permits",
+    // Restocks when the character and weapon banners change, which they do
+    // together (owner, 2026-11-06); no page states this, so it is the owner's.
+    period: { unit: "banner" },
+    pulls: "premium",
+    measure: { kind: "amount", target: 5, unit: "permits" },
+    source: "https://game8.co/games/Arknights-Endfield/archives/575906",
+    asOf: "2026-08-24",
+    checked: "2026-11-06",
+    note: "Under Quota Exchange. Restocks with the next character and weapon banners. Confirmed in game, 2026-11-06.",
+  },
 
   // Wuthering Waves. Game8 is the fresher source here: the wiki's per-season
   // pages stop in early 2026.
@@ -750,10 +764,11 @@ export function routineToAsk(
  */
 /**
  * Whether *Make it mine* is offered: not for a routine that resets with the
- * version, since a reader's task cannot hold that period (spec 2026-10-22).
+ * version or the banner, since a reader's task cannot hold those periods
+ * (spec 2026-10-22).
  */
 export const ownable = (routine: Pick<Routine, "period">): boolean =>
-  routine.period.unit !== "version";
+  !isTimerPeriod(routine.period);
 
 export function mineFrom(routine: Routine): {
   game: string;

@@ -21,8 +21,8 @@ import { routineRows, type RoutineRow } from "../../state/reader/routines.ts";
 import { actionMeta } from "../../state/reader/actions.ts";
 import { useGameMeta } from "../../state/gameMeta.tsx";
 import { DAY, formatRemaining, resetShiftMs } from "../../../shared/time.ts";
-import { periodOf } from "../../../shared/period.ts";
-import { versionCaption, versionWindow } from "../../../shared/versions.ts";
+import { isTimerPeriod, periodOf } from "../../../shared/period.ts";
+import { timerWindow, versionCaption } from "../../../shared/versions.ts";
 import { routinesFor } from "../../../shared/routines.ts";
 import { canStep, snapDayWidth, stepDayWidth } from "../../state/zoom.ts";
 import { orderGames } from "../../state/gameOrder.ts";
@@ -57,12 +57,12 @@ export function routinePeriod(
   if (row.window) return { ...row.window, estimated: false };
   const key = readerDayKey(now, row.clock),
     task = row.task ?? routinesFor(row.game).find((r) => r.id === row.id);
-  if (task?.period.unit === "version") {
-    const w = versionWindow(row.game, now);
+  if (task && isTimerPeriod(task.period)) {
+    const w = timerWindow(task.period, row.game, now);
     if (w?.end !== undefined) return { start: w.start, end: w.end, estimated: false };
     if (w) return { start: w.start, end: Math.max(w.estimate ?? 0, now + DAY), estimated: true };
   }
-  const period = task && task.period.unit !== "version"
+  const period = task && !isTimerPeriod(task.period)
     ? periodOf(task.period, key)
     : { start: key, days: [key] };
   const shift = resetShiftMs(row.clock.region, row.game, row.clock);
@@ -72,8 +72,10 @@ export function routinePeriod(
 
 /** What to print instead of a countdown when `routinePeriod` is estimated. */
 export const estimatedReset = (row: RoutineRow, now: number): string => {
-  const w = versionWindow(row.game, now);
-  return w ? versionCaption(w, now) : "resets with next version";
+  const task = routinesFor(row.game).find((r) => r.id === row.id),
+    period = task && isTimerPeriod(task.period) ? task.period : ({ unit: "version" } as const),
+    w = timerWindow(period, row.game, now);
+  return w ? versionCaption(w, now) : `resets with next ${period.unit}`;
 };
 export function TimelinePage({
   state,

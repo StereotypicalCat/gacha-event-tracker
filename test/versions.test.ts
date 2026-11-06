@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { DAY } from "../src/shared/time.ts";
 import {
+  BANNERS,
+  bannerWindow,
   VERSION_DAYS,
   VERSIONS,
   versionCaption,
@@ -15,11 +17,11 @@ import {
 
 const at = (iso: string) => Date.parse(iso);
 
-describe("VERSIONS", () => {
-  test("each game's versions are in order and meet end to start", () => {
-    const games = new Set(VERSIONS.map((v) => v.game));
+describe.each([["VERSIONS", VERSIONS], ["BANNERS", BANNERS]] as const)("%s", (_name, table) => {
+  test("each game's entries are in order and meet end to start", () => {
+    const games = new Set(table.map((v) => v.game));
     for (const game of games) {
-      const list = VERSIONS.filter((v) => v.game === game);
+      const list = table.filter((v) => v.game === game);
       list.forEach((v, i) => {
         expect(Number.isFinite(at(v.start))).toBe(true);
         if (v.end !== undefined) expect(at(v.end)).toBeGreaterThan(at(v.start));
@@ -34,7 +36,7 @@ describe("VERSIONS", () => {
   });
 
   test("every one cites an https page and the day it was read", () => {
-    for (const v of VERSIONS) {
+    for (const v of table) {
       expect(v.source.startsWith("https://")).toBe(true);
       expect(v.checked).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       if (v.note?.toLowerCase().includes("in game") === true)
@@ -134,5 +136,38 @@ describe("versionCaption", () => {
 
   test("no estimate at all", () => {
     expect(versionCaption(base, at("2026-11-20T00:00:00Z"))).toBe("resets with next version");
+  });
+});
+
+// A shop that restocks when the character and weapon banners change together:
+// the same rule as a version, on a table of its own (Endfield, owner, 2026-11-06).
+describe("bannerWindow", () => {
+  test("holds the rotation up to the end the game states", () => {
+    // In game: "Ending at 11-24 17:00 (UTC-5)", read on 2026-11-06.
+    expect(bannerWindow("endfield", at("2026-11-24T21:59:00Z"))).toMatchObject({
+      key: "2026-11-05",
+      end: at("2026-11-24T22:00:00Z"),
+      noun: "banner",
+    });
+  });
+
+  test("past the recorded end it opens the next rotation and only estimates its end", () => {
+    const w = bannerWindow("endfield", at("2026-11-24T22:00:00Z"))!;
+    expect(w.key).toBe("2026-11-24");
+    expect(w.end).toBeUndefined();
+    expect(w.estimate).toBe(at("2026-12-14T22:00:00Z"));
+  });
+
+  test("a banner table says nothing about the game's version", () => {
+    expect(versionWindow("endfield", at("2026-11-06T12:00:00Z"))).toBeUndefined();
+    expect(bannerWindow("wuwa", at("2026-11-06T12:00:00Z"))).toBeUndefined();
+  });
+
+  test("its caption says banner, not version", () => {
+    const held = at("2026-11-06T12:00:00Z"), open = at("2026-11-25T00:00:00Z");
+    expect(versionCaption(bannerWindow("endfield", held)!, held)).toBe("resets with next banner · 24 Nov");
+    expect(versionCaption(bannerWindow("endfield", open)!, open)).toBe(
+      "resets with next banner · expected ~14 Dec",
+    );
   });
 });

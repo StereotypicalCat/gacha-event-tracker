@@ -12,7 +12,7 @@ import { isCustomGameId, type DisplayEvent, type LaneId } from "../../shared/cus
 import type { GameMeta } from "../../shared/games.ts";
 import type { GameId, Region } from "../../shared/schema.ts";
 import { goalCount, goalLabel, type GoalStatus } from "../../shared/goal.ts";
-import { addDays, cadenceOf, periodOf, type Period } from "../../shared/period.ts";
+import { addDays, cadenceOf, isTimerPeriod, periodOf, type Period } from "../../shared/period.ts";
 import type { TaskShape } from "../../shared/task.ts";
 import { asOfLabel } from "../../shared/routines.ts";
 import { AmountEditor } from "./AmountEditor.tsx";
@@ -207,8 +207,8 @@ export function dailyGroups(
           notBefore: null,
           goal: taskStatusFor(task),
           cadence: cadenceOf(task.period),
-          // A version has no period before it to catch up on (spec 2026-10-22).
-          period: task.period.unit === "version" ? undefined : task.period,
+          // A timer has no period before it to catch up on (spec 2026-10-22).
+          period: isTimerPeriod(task.period) ? undefined : task.period,
           unit: task.measure.kind === "amount" ? task.measure.unit : undefined,
         });
       }

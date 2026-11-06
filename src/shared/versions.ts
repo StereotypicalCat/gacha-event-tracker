@@ -1,3 +1,4 @@
+import type { TimerPeriod } from "./period.ts";
 import type { GameId } from "./schema.ts";
 import { DAY } from "./time.ts";
 
@@ -57,6 +58,36 @@ export const VERSION_DAYS: Partial<Record<GameId, number>> = {
   wuwa: 42,
 };
 
+/**
+ * Banner rotations, for a shop that restocks when a game's character and weapon
+ * banners change together rather than with its version. Same shape and same rule
+ * as `VERSIONS`: only a recorded `end` rolls anything, and each new entry's `start`
+ * is the last one's `end`, so amounts already stored stay where they are. It gets
+ * a table of its own so that a rotation is never reported as a game version, and
+ * so Endfield's real versions can be added to `VERSIONS` later without colliding.
+ * `number` here is a label and is not shown.
+ */
+export const BANNERS: readonly GameVersion[] = [
+  {
+    game: "endfield",
+    number: "Argent Flow",
+    // The day Pocket Tactics gives, at the hour the wiki opens this rotation's events.
+    start: "2026-11-05T04:00:00Z",
+    // The weapon banner's in-game details: "Ending at 11-24 17:00 (UTC-5)". The
+    // AIC Quota Exchange's timer read 18d alongside it; it shows days only.
+    end: "2026-11-24T22:00:00Z",
+    source: "https://www.pockettactics.com/arknights-endfield-banner",
+    checked: "2026-11-06",
+    note: "The page gives 5 to 25 Nov; the instant is the banner's own. Confirmed in game, 2026-11-06.",
+  },
+];
+
+/** A rotation's usual length in days, for the estimate only. */
+export const BANNER_DAYS: Partial<Record<GameId, number>> = {
+  // 15 Oct to 5 Nov was 21 and 5 to 24 Nov is 19 (Pocket Tactics, above; the game).
+  endfield: 20,
+};
+
 export interface VersionWindow {
   /** The version holding `now`; undefined when no page or reading names it. */
   number?: string | undefined;
@@ -68,6 +99,8 @@ export interface VersionWindow {
   /** start + the usual length, when no end is recorded. Shown, never acted on. */
   estimate?: number | undefined;
   nextNumber?: string | undefined;
+  /** What the caption says resets it. Absent means a version. */
+  noun?: "banner";
 }
 
 const keyOf = (ms: number) => new Date(ms).toISOString().slice(0, 10);
@@ -105,6 +138,16 @@ export function versionWindow(
   return undefined;
 }
 
+/** The banner rotation holding `now`, or undefined for a game with none listed. */
+export function bannerWindow(game: string, now: number): VersionWindow | undefined {
+  const w = versionWindow(game, now, BANNERS, BANNER_DAYS);
+  return w && { ...w, noun: "banner" };
+}
+
+/** The window a timer period is counting down, whichever table it reads. */
+export const timerWindow = (period: TimerPeriod, game: string, now: number): VersionWindow | undefined =>
+  period.unit === "banner" ? bannerWindow(game, now) : versionWindow(game, now);
+
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 /** `11 Nov`, in UTC — the same wherever it is read, like `asOfLabel`. */
 const dayLabel = (ms: number) => {
@@ -114,9 +157,10 @@ const dayLabel = (ms: number) => {
 
 /** "resets with 3.8 · 11 Nov", or the next-version form with its estimate. */
 export function versionCaption(w: VersionWindow, now: number): string {
+  const next = `next ${w.noun ?? "version"}`;
   if (w.end !== undefined)
-    return `resets with ${w.nextNumber ?? "next version"} · ${dayLabel(w.end)}`;
-  const head = `resets with next version${w.nextNumber ? ` (${w.nextNumber})` : ""}`;
+    return `resets with ${w.nextNumber ?? next} · ${dayLabel(w.end)}`;
+  const head = `resets with ${next}${w.nextNumber ? ` (${w.nextNumber})` : ""}`;
   if (w.estimate === undefined) return head;
   return `${head} · expected ~${dayLabel(w.estimate)}${now > w.estimate ? ", not yet confirmed" : ""}`;
 }

@@ -3,8 +3,8 @@ import { z } from "zod";
 import type { LaneId } from "./custom.ts";
 import { dayKey } from "./daily.ts";
 import { AmountTarget, type AmountLog, type GoalStatus } from "./goal.ts";
-import { periodOf, PeriodSchema, type RoutinePeriod } from "./period.ts";
-import { versionCaption, versionWindow } from "./versions.ts";
+import { isTimerPeriod, periodOf, PeriodSchema, type RoutinePeriod } from "./period.ts";
+import { timerWindow, versionCaption, type VersionWindow } from "./versions.ts";
 import { DAY } from "./time.ts";
 import type { Region } from "./schema.ts";
 
@@ -94,7 +94,7 @@ export function taskStatus(input: {
   timing?: ResetTiming;
 }): GoalStatus {
   const { task, region, now, logged, amounts } = input;
-  if (task.period.unit === "version") return versionStatus(task.game, task.measure, now, amounts);
+  if (isTimerPeriod(task.period)) return timerStatus(timerWindow(task.period, task.game, now), task.measure, now, amounts);
   const today = dayKey(now, task.clock ?? region, task.game as LaneId, task.clock === undefined ? input.timing : undefined);
   const { start, days } = periodOf(task.period, today);
   const scope = task.period.unit;
@@ -124,13 +124,12 @@ export function taskStatus(input: {
 }
 
 /**
- * A built-in that resets with its game's version (spec 2026-10-22): the number
- * under the version's key, and whole days to a **recorded** end — none when
- * only an estimate exists, since an estimate is never acted on. Amounts only
- * (routines.test.ts holds every version routine to that); shown as a cycle.
+ * A built-in that resets with its game's version or banners (spec 2026-10-22):
+ * the number under the window's key, and whole days to a **recorded** end — none
+ * when only an estimate exists, since an estimate is never acted on. Amounts only
+ * (routines.test.ts holds every such routine to that); shown as a cycle.
  */
-function versionStatus(game: string, measure: Measure, now: number, amounts: AmountLog | undefined): GoalStatus {
-  const w = versionWindow(game, now);
+function timerStatus(w: VersionWindow | undefined, measure: Measure, now: number, amounts: AmountLog | undefined): GoalStatus {
   const key = w?.key ?? "";
   const count = amounts?.[key]?.value ?? 0;
   const required = measure.kind === "amount" ? measure.target : measure.required;
@@ -163,10 +162,10 @@ export function taskCaption(
   task: Pick<Task, "measure"> & { period: RoutinePeriod; game?: string },
   now: number = Date.now(),
 ): string {
-  const version = task.period.unit === "version" && task.game !== undefined ? versionWindow(task.game, now) : undefined;
+  const timer = isTimerPeriod(task.period) && task.game !== undefined ? timerWindow(task.period, task.game, now) : undefined;
   const when =
-    task.period.unit === "version"
-      ? version === undefined ? "resets with the version" : versionCaption(version, now)
+    isTimerPeriod(task.period)
+      ? timer === undefined ? `resets with the ${task.period.unit}` : versionCaption(timer, now)
       : task.period.unit === "day"
       ? "every day"
       : task.period.unit === "week"

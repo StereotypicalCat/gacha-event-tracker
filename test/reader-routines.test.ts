@@ -60,7 +60,7 @@ test("an event the reader marked daily remains a directly tickable routine", () 
 });
 
 // Spec 2026-10-22: WuWa's shop pulls reset with the version and show with the cycles.
-import { routinePeriod } from "../src/client/components/redesign/TimelinePage.tsx";
+import { estimatedReset, routinePeriod } from "../src/client/components/redesign/TimelinePage.tsx";
 test("a routine that resets with the version is a cycle row, banded to its recorded end", () => {
   const now = "2026-10-22T14:30:00.000Z";
   const s = migrateLegacy({}, ["wuwa"], now, () => "account:one");
@@ -82,4 +82,28 @@ test("a routine that resets with the version is a cycle row, banded to its recor
   expect(routinePeriod(radiant, Date.parse("2026-11-20T00:00:00Z")).end).toBe(
     Date.parse("2026-12-23T10:30:00Z"),
   );
+});
+
+test("a routine that resets with the banner is a cycle row, and says banner when no end is recorded", () => {
+  const now = "2026-11-06T12:00:00.000Z";
+  const s = migrateLegacy({}, ["endfield"], now, () => "account:one");
+  s.data["account:one"]!.amounts[s.accounts["account:one"]!.clocks.at(-1)!.id] = {
+    "routine:endfield:aic-quota-permits": { "2026-11-05": { value: 2, at: now } },
+  };
+  const permits = routineRows(s, "account:one", Date.parse(now))
+    .find((r) => r.id === "routine:endfield:aic-quota-permits")!;
+  expect(permits.cadence).toBe("cycle");
+  expect(permits.status).toMatchObject({ count: 2, required: 5, periodStart: "2026-11-05" });
+  expect(routinePeriod(permits, Date.parse(now))).toEqual({
+    start: Date.parse("2026-11-05T04:00:00Z"),
+    end: Date.parse("2026-11-24T22:00:00Z"),
+    estimated: false,
+  });
+  const later = Date.parse("2026-11-25T00:00:00Z");
+  expect(routinePeriod(permits, later)).toEqual({
+    start: Date.parse("2026-11-24T22:00:00Z"),
+    end: Date.parse("2026-12-14T22:00:00Z"),
+    estimated: true,
+  });
+  expect(estimatedReset(permits, later)).toBe("resets with next banner · expected ~14 Dec");
 });

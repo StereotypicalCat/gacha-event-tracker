@@ -6,6 +6,7 @@ import {
   routinesFor,
   routineToAsk,
   mineFrom,
+  ownable,
   copyRoutineState,
   hiddenAfter,
   offered,
@@ -48,6 +49,14 @@ describe("ROUTINES", () => {
     expect(RoutineSchema.safeParse({ ...rest, period: { unit: "version" } }).success).toBe(true);
     for (const r of ROUTINES)
       if (r.period.unit === "version") expect(r.measure.kind).toBe("amount");
+  });
+
+  test("a built-in may reset with the banner, then counts an amount and stays the app's", () => {
+    const { period: _p, ...rest } = ROUTINES[0]!;
+    expect(RoutineSchema.safeParse({ ...rest, period: { unit: "banner" } }).success).toBe(true);
+    for (const r of ROUTINES)
+      if (r.period.unit === "banner") expect(r.measure.kind).toBe("amount");
+    expect(ownable({ period: { unit: "banner" } })).toBe(false);
   });
 
   test("a routine without a source is refused", () => {
@@ -96,6 +105,10 @@ describe("ROUTINES", () => {
     expect(shape("endfield")).toEqual([
       ["Weekly Routine", week, { kind: "amount", target: 10, unit: "points" }],
       ["Etchspace Salvage: Focus Commissions", week, { kind: "amount", target: 3, unit: "commissions" }],
+      ["AIC Quota Exchange: Limited-Time HH Permits", { unit: "banner" }, { kind: "amount", target: 5, unit: "permits" }],
+    ]);
+    expect(routinesFor("endfield").filter((r) => r.pulls !== undefined).map((r) => [r.id, r.pulls])).toEqual([
+      ["routine:endfield:aic-quota-permits", "premium"],
     ]);
     expect(shape("wuwa")).toEqual([
       ["Weekly Challenge", week, { kind: "amount", target: 3, unit: "claims" }],

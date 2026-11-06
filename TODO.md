@@ -150,6 +150,11 @@ note only says where to start.
   Star Rail's Nameless Honor and ZZZ's New Eridu City Fund from their Fandom history tables, and
   Infinity Nikki's Mira Journey from its version, on the owner's in-game confirmation. Genshin's
   Battle Pass and Miliastra Pass were already in the feed.
+- [ ] Each Endfield banner rotation: add the next entry to `BANNERS` in `src/shared/versions.ts`
+  from the weapon banner's in-game details, with its `start` equal to the last entry's `end`, or
+  `routine:endfield:aic-quota-permits` keeps its count and only shows an estimate. Next due by
+  2026-11-24 22:00 UTC. At that restock, also check the shop's item name against the routine's
+  title: "Limited-Time HH Permits" is Game8's wording, not read off the shop screen.
 - [ ] Endfield's *Protocol Pass* window. The wiki says the pass runs "until the end of this version",
   but on 2026-10-16 no stable page dated the current version: `/wiki/Version` stopped at
   Dreamscape (ended 2026-10-14), the main page gave only Asia's start, and the per-version page
