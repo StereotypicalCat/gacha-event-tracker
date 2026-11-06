@@ -51,6 +51,14 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "endfield-aic-quota-permits",
+    date: "2026-11-06",
+    kind: "games",
+    title: "Endfield's AIC Quota Exchange permits are in the routine library",
+    body: "Track the shop's 5 permits. The count resets when the character and weapon banners change, on dates we record from the game; until the next one is recorded, it holds and shows an estimate.",
+    ref: "327f638",
+  },
+  {
     id: "nte-lost-exchange",
     date: "2026-11-02",
     kind: "games",
