@@ -660,6 +660,10 @@ legend on the same baseline as "Next: …".
   rows within each reset band, history and Checklist pins follow Game order with the same A–Z fallback.
   The table has tick
   and click-to-edit amount cells. The library and create/edit drawers are shelves.
+  **Catch up** sits below the bands, always open: focus-bar chips (one account at a time, a plain count,
+  no heat colour), then rows with the title and type beside a 14-day strip. A ticked day is filled with
+  a mix of the game's hue, an unticked one outlined, today ringed in `ink`. The strip is 14 columns, 7 at
+  phone width, so a fortnight wraps into two whole weeks.
 - **Timeline.** Two looks (new and classic) chosen in Appearance. Dailies are not on the timeline.
 - **Settings.** About, Changelog, Data & sources (list options first), Region & time, Appearance
   (interface, theme, scheme, urgency colours, default view, game order, timeline design, focus bar,

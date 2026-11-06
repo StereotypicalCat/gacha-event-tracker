@@ -265,8 +265,8 @@ bad evening and is never trusted again. An event whose end was announced already
 its checklist draws every day of the run and past days are clickable. The two that did not are the
 ones this closes: a game's **standing chore**, which had no history surface at all and is the
 most-missed thing in these games, and an event with **`endsAt: null`**, whose checklist could draw no
-run and so offered only today. Both now show the last fortnight as a strip of days, on the dailies
-section behind a "Catch up" disclosure and in the detail sheet respectively.
+run and so offered only today. Both now show the last fortnight as a strip of days, in the Routines
+page's Catch up section and in the detail sheet respectively.
 
 Three rules hold it honest:
 
@@ -550,8 +550,12 @@ with the standing chore of the game it came from, because the reader thinks in g
 **F17 — Routines.**
 Routines is the library and management page for daily, weekly, monthly and cycle tasks. Follow each
 per server; pin independently to Checklist and Timeline. Built-ins offer Make it mine, copying only
-that account's logs; custom routines remain editable. Catch up & recorded history exposes logs on
-their original reset revisions. A built-in can also **reset with its game's version** (WuWa's
+that account's logs; custom routines remain editable. The page's **Catch up** section, below the
+routine lists and reached by a button in the Checklist's *Today's dailies* and *Routines* headings or
+the page's top bar, shows one game at a time, chosen on a named chip: real titles, a fourteen-day strip
+of weekday and date, and recent values for a routine counted in numbers. Its count covers only what is
+expected every day, from the reader's first tick of that item, because nothing records when they began
+following it. Ended or unfollowed items and logs on earlier reset revisions sit under *Older records*. A built-in can also **reset with its game's version** (WuWa's
 Oscillated Coral pulls, seven of each per version): it counts down to the end the version table
 records, or says *resets with next version (3.8) · expected ~23 Dec* when no end is recorded yet,
 and never resets on that estimate. It sits with the cycles and is not offered as Make it mine. A
