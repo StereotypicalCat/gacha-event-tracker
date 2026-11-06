@@ -186,8 +186,10 @@ export function DailyPanel({
   onAction,
   now,
   onManage,
+  onCatchUp,
 }: {
   onManage?: () => void;
+  onCatchUp?: () => void;
   rows: RoutineRow[];
   state: ReaderState;
   onAction: ActionHandler;
@@ -228,7 +230,10 @@ export function DailyPanel({
       {burst > 0 && <Fireworks key={burst} grand />}
       <div className="daily-heading">
         <h2>Today's dailies</h2>
-        {onManage && <button onClick={onManage}>Edit pins</button>}
+        <div className="heading-actions">
+          {onCatchUp && <button onClick={onCatchUp}>Catch up</button>}
+          {onManage && <button onClick={onManage}>Edit pins</button>}
+        </div>
       </div>
       <div className="daily-progress">
         <span className="daily-pips" aria-hidden="true">

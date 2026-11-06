@@ -4,8 +4,8 @@ import { formatRemaining } from "../../../shared/time.ts";
 import { useGameMeta } from "../../state/gameMeta.tsx";
 import { orderGameItems } from "../../state/gameOrder.ts";
 import type { CSSProperties } from "react";
-import { RoutineHistory } from "./RoutineHistory.tsx";
-import { useState } from "react";
+import { CatchUpSection } from "./CatchUpSection.tsx";
+import { useEffect, useRef, useState } from "react";
 
 import { routinesFor, mineFrom, ownable } from "../../../shared/routines.ts";
 
@@ -109,10 +109,15 @@ export function RoutinesPage({
   state,
   onAction,
   now,
+  catchUpRequested = false,
+  onCatchUpShown,
 }: {
   state: ReaderState;
   onAction: ActionHandler;
   now: number;
+  /** Set when a Checklist button sent the reader here for Catch up. */
+  catchUpRequested?: boolean;
+  onCatchUpShown?: () => void;
 }) {
   const meta = useGameMeta();
   const [drawer, setDrawer] = useState<DrawerPane | null>(null);
@@ -228,6 +233,20 @@ export function RoutinesPage({
       ...actionMeta(),
     });
   };
+  const catchUpHeading = useRef<HTMLHeadingElement>(null);
+  const showCatchUp = () => {
+    const heading = catchUpHeading.current;
+    if (!heading) return;
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    heading.scrollIntoView({ block: "start", behavior: still ? "auto" : "smooth" });
+    heading.focus({ preventScroll: true });
+  };
+  // One shot: a later visit to this page must open at the top as usual.
+  useEffect(() => {
+    if (!catchUpRequested) return;
+    showCatchUp();
+    onCatchUpShown?.();
+  }, [catchUpRequested]);
   const group = state.prefs.routineGroup === "game" ? "game" : "reset";
   const allRows = accounts
     .flatMap((a) => routineRows(state, a.id, now))
@@ -273,6 +292,9 @@ export function RoutinesPage({
             </button>
           ))}
         </div>
+        <button className="btn" onClick={showCatchUp}>
+          Catch up
+        </button>
         <button className="btn" onClick={() => open("library")}>
           Browse the library
         </button>
@@ -553,18 +575,13 @@ export function RoutinesPage({
           </section>
         );
       })}
-      <details className="routine-histories">
-        <summary>Catch up & recorded history</summary>
-        {accounts.map((a) => (
-          <RoutineHistory
-            key={a.id}
-            account={a}
-            state={state}
-            now={now}
-            onAction={onAction}
-          />
-        ))}
-      </details>
+      <CatchUpSection
+        accounts={accounts}
+        state={state}
+        now={now}
+        onAction={onAction}
+        headingRef={catchUpHeading}
+      />
       {!accounts.some((a) =>
         routineRows(state, a.id, now).some((r) => r.placement.followed),
       ) && (

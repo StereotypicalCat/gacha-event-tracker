@@ -280,3 +280,87 @@ test("pickAccount keeps a live selection, and falls back when it is gone", () =>
   expect(pickAccount("gone", list)).toBe("b");
   expect(pickAccount(null, list)).toBe("b");
 });
+
+// The section, as the Routines page draws it.
+import { renderToStaticMarkup as render } from "react-dom/server";
+import { RoutinesPage } from "../src/client/components/redesign/RoutinesPage.tsx";
+import { DailyPanel } from "../src/client/components/redesign/DailyPanel.tsx";
+
+const page = (state: ReaderState) =>
+  render(<RoutinesPage state={state} onAction={async () => ({ ok: true })} now={now} />);
+function twoGames() {
+  let n = 0;
+  const state = migrateLegacy({}, ["genshin", "endfield"], at, () => `account:${++n}`);
+  state.prefs.gameOrder = ["genshin", "endfield"];
+  const byGame = (game: string) => Object.values(state.accounts).find((a) => a.game === game)!;
+  byGame("genshin").routines["dailies:genshin"] = pin;
+  byGame("endfield").routines[DAILY] = pin;
+  return { state, byGame };
+}
+const chips = (html: string) =>
+  [...html.matchAll(/class="focus-pill"[^>]*>([^<]+)/g)].map((m) => m[1]);
+
+test("Routines has one Catch up heading and no nested dropdowns", () => {
+  const html = page(twoGames().state);
+  expect(html).not.toContain("recorded history");
+  expect(html.match(/<h2[^>]*>Catch up<\/h2>/g)).toHaveLength(1);
+  expect(html).not.toContain("routine-histor");
+});
+
+test("chips name the game and follow Game order", () => {
+  expect(chips(page(twoGames().state))).toEqual(["Genshin", "Endfield"]);
+});
+
+test("two servers of one game have distinct chips", () => {
+  const { state, byGame } = twoGames();
+  const first = byGame("endfield");
+  state.accounts["account:second"] = {
+    ...first,
+    id: "account:second",
+    region: first.region === "asia" ? "europe" : "asia",
+  };
+  state.data["account:second"] = structuredClone(state.data[first.id]!);
+  const names = chips(page(state));
+  expect(new Set(names).size).toBe(names.length);
+  expect(names.filter((n) => n!.startsWith("Endfield"))).toHaveLength(2);
+});
+
+test("a day cell says weekday and date, and aria-pressed tracks the tick", () => {
+  const { state, byGame } = twoGames();
+  const a = byGame("genshin");
+  (state.data[a.id]!.daily[a.clocks[0]!.id] ??= {})["dailies:genshin"] = { days: ["2026-11-03"] };
+  const html = page(state);
+  expect(html).toMatch(/aria-label="Tue, 3 Nov"[^>]*aria-pressed="true"/);
+  expect(html).toMatch(/aria-label="Wed, 4 Nov"[^>]*aria-pressed="false"/);
+});
+
+test("the first game with something behind is chosen", () => {
+  const { state, byGame } = twoGames();
+  const a = byGame("endfield");
+  (state.data[a.id]!.daily[a.clocks[0]!.id] ??= {})[DAILY] = { days: ["2026-11-03"] };
+  const html = page(state);
+  expect(html).toContain("Daily missions");
+  expect(html).toMatch(/aria-pressed="true"[^>]*>Endfield/);
+});
+
+test("the Routines top bar offers Catch up", () => {
+  expect(page(twoGames().state)).toMatch(/class="btn"[^>]*>Catch up</);
+});
+
+test("Today's dailies offers Catch up beside Edit pins", () => {
+  const { state, byGame } = twoGames();
+  const a = byGame("endfield");
+  const rows = routineRows(state, a.id, now).filter((r) => r.id === DAILY);
+  const html = render(
+    <DailyPanel
+      rows={rows}
+      state={state}
+      now={now}
+      onAction={async () => ({ ok: true })}
+      onManage={() => {}}
+      onCatchUp={() => {}}
+    />,
+  );
+  expect(html).toContain(">Catch up<");
+  expect(html).toContain(">Edit pins<");
+});

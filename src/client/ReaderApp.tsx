@@ -273,13 +273,16 @@ function ReaderContent({
   // A new tab starts at its top. Without this the window kept the last page's
   // scroll, so leaving a scrolled Settings page opened the Checklist part-way
   // down. The first render is skipped so a reload's restored scroll stands.
+  // Catch up is the exception: its button sends the reader to a place on the new
+  // page, and a child's effect runs first, so this would undo that scroll.
   const firstPage = useRef(true);
+  const [catchUpRequested, setCatchUpRequested] = useState(false);
   useEffect(() => {
     if (firstPage.current) {
       firstPage.current = false;
       return;
     }
-    window.scrollTo(0, 0);
+    if (!catchUpRequested) window.scrollTo(0, 0);
   }, [page]);
   // Everyone takes the tour once before using the app; a replay from Settings
   // is optional. A returning reader who has not taken it starts on Relaxed.
@@ -507,6 +510,10 @@ function ReaderContent({
     const patch = mainViewPatch(next);
     if (Object.keys(patch).length)
       void dispatch({ type: "prefs", patch, ...actionMeta() });
+  };
+  const goToCatchUp = () => {
+    setCatchUpRequested(true);
+    changePage("routines");
   };
   /** Ask for the newest published feed and codes; shared by the footer and Data & sources. */
   const refreshFeed = async (): Promise<RefreshOutcome> => {
@@ -807,6 +814,7 @@ function ReaderContent({
                           {separate && (
                             <DailyPanel
                               onManage={() => changePage("routines")}
+                              onCatchUp={goToCatchUp}
                               rows={pins.filter((r) => r.cadence === "day")}
                               state={state}
                               onAction={dispatch}
@@ -819,9 +827,12 @@ function ReaderContent({
                                 <h2>Routines</h2>
                                 <p className="sub">Showing only pinned</p>
                               </div>
-                              <button onClick={() => changePage("routines")}>
-                                Edit pins
-                              </button>
+                              <div className="heading-actions">
+                                <button onClick={goToCatchUp}>Catch up</button>
+                                <button onClick={() => changePage("routines")}>
+                                  Edit pins
+                                </button>
+                              </div>
                             </div>
                             {accounts
                               .filter((a) => focus === null || a.game === focus)
@@ -1009,7 +1020,13 @@ function ReaderContent({
                     </>
                   )}
                   {page === "routines" && (
-                    <RoutinesPage state={state} onAction={dispatch} now={now} />
+                    <RoutinesPage
+                      state={state}
+                      onAction={dispatch}
+                      now={now}
+                      catchUpRequested={catchUpRequested}
+                      onCatchUpShown={() => setCatchUpRequested(false)}
+                    />
                   )}
                   {page === "archive" && (
                     <ArchivePage
