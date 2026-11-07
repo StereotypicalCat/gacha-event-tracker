@@ -76,3 +76,14 @@ test("a reward shared with the code's cell, or listed with bullets, reads as tex
   ]);
   expect(codes.every((c) => c.expiresAt === null)).toBe(true);
 });
+
+test("Wuthering Waves' codes survive Game8 dropping 'All' from the heading", async () => {
+  // "Wuthering Waves All Active Codes" became "Wuthering Waves Active Codes" around
+  // 2026-10-25, and the exact match froze the list for two weeks.
+  const source = CODE_SOURCES.find((s) => s.id === "wuwa-game8-codes")!;
+  const ctx = { now: "2026-11-07T00:00:00.000Z", sourceUrl: source.url, sourceId: source.id, game: source.game };
+  const read = async (date: string) =>
+    (source.parse(await Bun.file(`fixtures/wuwa/game8-codes-${date}.html`).text(), ctx) as Array<{ code: string }>).map((c) => c.code);
+  expect(await read("2026-11-07")).toEqual(["TRAINOFSOULS", "BLOOMINGFLOWERS", "SCHOOLLIFE", "WUTHERINGGIFT"]);
+  expect(await read("2026-10-18")).toEqual(["WUTHERINGGIFT"]);
+});

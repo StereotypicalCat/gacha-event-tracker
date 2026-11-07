@@ -59,7 +59,7 @@ export const CODE_SOURCES = [
   game8Table(
     "wuwa",
     "https://game8.co/games/Wuthering-Waves/archives/453149",
-    /^Wuthering Waves All Active Codes$/i,
+    /^Wuthering Waves (?:All )?Active Codes$/i,
   ),
   game8Table(
     "endfield",
