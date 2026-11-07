@@ -1048,3 +1048,17 @@ timestamp. Several live events on `nikki-fandom-events` also end 26 Nov, which f
 is only ever taken from a version row the wiki states (`VERSION_PASSES` in
 `src/ingest/parsers/versionTable.ts`), and there is none. If 2.11's row appears, compare its End Date
 with this reading.
+
+**The 2.11 update notice is more exact than the wiki, and also shows the gap is wider than the pass.**
+Read in game by the owner the same day, it states times in UTC-7:
+
+- Events closing October 29, 12:49 UTC-7, which is 19:49 UTC. That falls inside the 2026-10-16 pass
+  reading (19:47-20:47 UTC), so version 2.10 appears to have closed about 11 minutes before the 20:00
+  UTC that `endsAfterLastDay: { clock: "asia" }` gives. Whether the pass closed with those events is
+  not established.
+- Winter Prologue world quests and Snowlit Encounters random quests earning diamonds until November
+  20, 10:29 UTC-7, which is 17:29 UTC. No row in `nikki-fandom-events` starts after 2026-09-23, so this
+  event, like the rest of 2.11, is not in the feed.
+
+The notice lives in the game, so no adapter can read it (AGENTS.md § Three constraints, and it is not
+a page we can fetch).
