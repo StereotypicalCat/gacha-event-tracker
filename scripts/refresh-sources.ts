@@ -48,10 +48,13 @@ import { appendFile } from "node:fs/promises";
 import {
   ADAPTERS,
 } from "../src/ingest/adapters/index.ts";
-import { SIX_HOURS_MS } from "../src/ingest/adapters/types.ts";
+import { SIX_HOURS_MS, type Adapter } from "../src/ingest/adapters/types.ts";
 import { CODE_SOURCES, type RefreshSource } from "../src/ingest/codes/registry.ts";
 const REFRESH_SOURCES: readonly RefreshSource[] = [...ADAPTERS, ...CODE_SOURCES];
 import { RobotsCache, type FetchLike } from "../src/ingest/robots.ts";
+import { articleTitle } from "../src/ingest/articleEnds.ts";
+import { ArticleStore } from "../src/ingest/articleStore.ts";
+import { refreshArticles } from "./refresh-articles.ts";
 import { decodeBody, SnapshotStore } from "../src/ingest/snapshots.ts";
 
 const DEFAULT_CONTACT =
@@ -92,6 +95,8 @@ export interface RefreshSummary {
   outcomes: SourceOutcome[];
   /** Sources whose stored bytes changed — the only reason to commit. */
   changed: number;
+  /** Stored articles whose bytes changed. Rebuilds the feed; never a source result. */
+  articlesChanged: number;
   /** Sources we actually sent a request to. */
   attempted: number;
   /** Sources that answered (200 or 304). */
@@ -151,6 +156,11 @@ export interface RefreshOptions {
   force: boolean;
   timeoutMs: number;
   log: (line: string) => void;
+  /**
+   * The source whose rows have articles worth reading for an exact end. Unset
+   * reads none. `--force` deliberately does not reach these (spec decision 6).
+   */
+  articleSourceId?: string;
   /** Called once when something changed. Null skips the rebuild (tests). */
   rebuildFeed: (() => Promise<void>) | null;
 }
@@ -188,6 +198,7 @@ export async function runRefresh(
   const summary: RefreshSummary = {
     outcomes: [],
     changed: 0,
+    articlesChanged: 0,
     attempted: 0,
     confirmed: 0,
     warnings: [],
@@ -288,6 +299,44 @@ export async function runRefresh(
     }
   }
 
+  // After every source had its turn, so an article can never cost a page one.
+  const articleSource = selected.find((a) => a.id === options.articleSourceId);
+  if (articleSource !== undefined) {
+    try {
+      const snapshot = await options.store.read(articleSource.id);
+      if (snapshot !== null) {
+        const articles = new ArticleStore(options.store.root);
+        // With the stored ends, as the feed build does: on a row's last day they
+        // are what keeps it listed, and an unlisted article gets deleted.
+        const rows = (articleSource.parse as Adapter["parse"])(snapshot.html, {
+          now: options.now().toISOString(),
+          sourceUrl: articleSource.url,
+          sourceId: articleSource.id,
+          game: articleSource.game,
+          articleEnds: await articles.readEnds(),
+        });
+        const titles = rows.flatMap((row) => articleTitle(row.sourceUrl) ?? []);
+        const result = await refreshArticles({
+          titles,
+          store: articles,
+          robots: options.robots,
+          fetchImpl: options.fetchImpl,
+          userAgent: options.userAgent,
+          now: options.now,
+          sleep: options.sleep,
+          dryRun: options.dryRun,
+          timeoutMs: options.timeoutMs,
+          log: options.log,
+          requestedHosts: cycle.requestedHosts,
+        });
+        summary.articlesChanged = result.changed;
+        summary.warnings.push(...result.warnings);
+      }
+    } catch (error) {
+      summary.warnings.push(`articles for ${articleSource.id}: ${String(error)}`);
+    }
+  }
+
   // Named in the summary rather than only in the per-source log, so it survives
   // into the job summary and cannot be scrolled past.
   summary.forced = [...cycle.forced].sort();
@@ -321,7 +370,10 @@ export async function runRefresh(
     return summary;
   }
 
-  if (summary.changed > 0 && options.rebuildFeed !== null) {
+  if (
+    (summary.changed > 0 || summary.articlesChanged > 0) &&
+    options.rebuildFeed !== null
+  ) {
     try {
       await options.rebuildFeed();
     } catch (error) {
@@ -977,6 +1029,7 @@ async function main(): Promise<number> {
     timeoutMs: 20_000,
     log: (line) => console.log(line),
     rebuildFeed: args.dryRun || !args.rebuild ? null : rebuildFeedViaScript,
+    articleSourceId: "genshin-fandom-events",
   });
 
   console.log(

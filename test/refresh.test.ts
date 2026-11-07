@@ -973,6 +973,7 @@ describe("what the runner reports to the runner", () => {
       },
     ],
     changed: 0,
+    articlesChanged: 0,
     attempted: 1,
     confirmed: 0,
     warnings: ["genshin-game8-events: HTTP 403 (cloudflare, cf-ray)"],

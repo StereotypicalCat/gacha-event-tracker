@@ -163,7 +163,7 @@ function decodeStored(bytes: Uint8Array, charset: string | undefined): string {
  * the next refresh — sees either the whole old file or the whole new one, and
  * a crash mid-write leaves a stray temp file rather than a truncated snapshot.
  */
-async function writeAtomic(path: string, data: Uint8Array | string): Promise<void> {
+export async function writeAtomic(path: string, data: Uint8Array | string): Promise<void> {
   const temp = `${path}.tmp-${process.pid.toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   try {
     await writeFile(temp, data);

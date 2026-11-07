@@ -20,6 +20,12 @@ interrupted run leaves a stray temp file rather than a truncated snapshot or met
 bytes that were never stored. Those temp files are gitignored: `refresh.yml` commits the whole
 directory, so otherwise a run killed mid-write would pin a half-page in git forever.
 
+`articles/genshin-fandom/` holds the lead section of each Genshin event's wiki article, as the API
+served it, for the end time its infobox states (`docs/INGESTION.md` § Article ends). `<name>.html` is
+the response and `<name>.meta.json` its read history. There is no `.state.json`: the due rule has to
+survive a fresh checkout, and a failed article read is never a source's failure streak. The refresh
+removes an article once its row leaves the table.
+
 Three reasons this is committed rather than cached:
 
 - **Re-parsing never re-fetches.** Iterating on a parser reads these files, not the wikis
