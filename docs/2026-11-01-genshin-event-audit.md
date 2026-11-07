@@ -80,3 +80,68 @@ event IDs are persisted identities: moving rows between games must preserve
 reader progress and existing IDs or supply an explicit migration. Discuss
 approaches before implementing; no lane split, date change, state migration or
 broader matching rule has been implemented or approved by this audit.
+
+## Follow-up: lane check after Version 7.2 (2026-11-07)
+
+The owner asked whether the Miliastra split held once a new version shipped: no
+Genshin event under Miliastra, no Miliastra event under Genshin. **It held. No
+row is in the wrong lane.** No code, data or date changed as a result of this
+check; the open items below have no approved design.
+
+Checked against the 2026-11-06 17:28 UTC refresh (`4bf4f01`), the first covering
+7.2. The feed built from it, the deployed feed and the running app with Miliastra
+on all agree: 15 live rows, Genshin 12, Miliastra 3. The eight other Genshin rows
+in the feed had ended and were not shown.
+
+| Lane | Rows | Evidence |
+|---|---|---|
+| Miliastra | Chronicle of Polyphony, Raiment Collection: Radiance Ablaze | Fandom type label and Fandom's `Miliastra Wonderland/Events` index; owner confirmed both in game |
+| Miliastra | Starlight Voyage: Spontaneous Composition | Fandom type label and index; not started on 2026-11-07 |
+| Genshin | Sacred Spirit Chronicle | Fandom `Battle Pass` label; owner confirmed in game |
+| Genshin | To Temper Thyself Cycle 6, Test Run, The Forge Realm's Temper: Endless Swarm, Hour of Ruin, The Grand Defense, Where Kristall Roots Run Deep, Stygian Onslaught | Fandom type labels; not on the Miliastra index |
+| Genshin | Encounter: Interlude of the Long Journey, Stress Block Smashing Project, Frames of Fierce Splendor | Labels do not settle the lane, so the articles were read: none mentions Miliastra. All three are stubs, and the last two are marked upcoming and may change |
+| Genshin | Ley Line Overflow | Plain `In-Game` label; not on the Miliastra index |
+
+The index lists exactly the three Miliastra rows above for 7.2, which is what
+rules out a Miliastra event misfiled under Genshin or missing from the feed.
+Dated rows in the Fandom snapshot history since 2026-10-15 also show no
+disagreement between type label and article path. The owner stopped the in-game
+walk here because it is slow to navigate, so the other Genshin rows have no
+in-game confirmation.
+
+### Open items, none fixed
+
+1. **Day-precision ends can be hours wrong, in both directions.** Fandom's event
+   table prints dates only, so the app resolves an end to that game-day's reset.
+   The article pages publish the exact instant:
+
+   | Row | App resolves to | Article states | Result (Europe) |
+   |---|---|---|---|
+   | Chronicle of Polyphony | 14 Dec 03:00 UTC | 14 Dec 03:59 server, 02:59:59 UTC | Correct |
+   | Raiment Collection: Radiance Ablaze | 16 Dec 03:00 UTC | 16 Dec 05:59 GMT+8 on every server, 15 Dec 21:59:59 UTC | **About 5h late** |
+   | Encounter: Interlude of the Long Journey | 15 Dec 03:00 UTC | 15 Dec 14:59 server, 13:59:59 UTC | About 11h early |
+
+   The late direction is the harmful one: a reader leaving it to the last hours
+   sees time remaining after the event has closed. The owner's in-game readings
+   (37d 2h for both passes, 38d 21h for Raiment) agree with the articles. They
+   remain rounded observations and must not be used to mint timestamps. The
+   likely fix is reading exact times from article pages, which adds requests per
+   refresh and so needs its own design and a look at § Scraping conduct.
+2. **Wonderland Treasures has no row in either lane.** In game, `Wonderland
+   Treasures - Polyphonic Harmony` appears in Genshin's event tab, 38d 13h 47m
+   remaining around 00:12 UTC on 2026-11-07. It is probably the 7.2 counterpart of
+   `Wonderland Treasures: Moonlight After the Rain`, which the owner placed under
+   Miliastra above; that link is inferred from the shared name. If tracked it
+   belongs in Miliastra despite where the game lists it. Neither source's event
+   page names it. `Frosty Court`, which the owner read as a premium pull with the
+   same time remaining, is also absent from both pages. Track or leave out: undecided.
+3. **`Across the Frozen Wilds, Honing One's Edge` (2026-11-04 – TBA) is not in the
+   feed.** The Fandom parser skips a row `parseFullRange` cannot date, and this
+   range returns `null`. It is also not in the owner's event tab, so it may have
+   been claimed already, or the wiki row may be wrong or early. Neither is
+   established, so this is not yet a confirmed missing event. Recheck on a later
+   refresh before changing the parser, which could also admit other TBA rows.
+4. **A Game8-only Miliastra event would land under Genshin.** Game8 rows carry no
+   lane label and this page mentions Miliastra only in its navigation menu. Every
+   live Game8 row is currently also on Fandom and correctly placed, so nothing is
+   affected today.
