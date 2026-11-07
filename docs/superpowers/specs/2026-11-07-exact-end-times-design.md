@@ -1,6 +1,6 @@
 # Exact end times for Genshin and Miliastra — design
 
-Date: 2026-11-07. Status: **approved** by the owner 2026-11-07; plan at `../plans/2026-11-07-exact-end-times.md`.
+Date: 2026-11-07. Status: **built** 2026-11-07; plan at `../plans/2026-11-07-exact-end-times.md`. Detail of the shipped behaviour is in `docs/INGESTION.md` § Article ends.
 
 ## Why
 

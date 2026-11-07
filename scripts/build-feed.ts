@@ -10,14 +10,18 @@
  *   bun run build:feed
  */
 import { ADAPTERS } from "../src/ingest/adapters/index.ts";
+import { applyArticleEnds } from "../src/ingest/articleEnds.ts";
+import { ArticleStore } from "../src/ingest/articleStore.ts";
 import { sourceHealth } from "../src/ingest/health.ts";
 import { mergeEvents } from "../src/ingest/merge.ts";
 import { SnapshotStore, freshnessAt, pickFixture } from "../src/ingest/snapshots.ts";
 import { EventFeed, SCHEMA_VERSION, type SourceHealth } from "../src/shared/feed.ts";
 import type { GachaEvent, GameId } from "../src/shared/schema.ts";
 
-const OUT = "public/data/events.v1.json";
+const OUT = process.env["EVENT_FEED_OUT"] ?? "public/data/events.v1.json";
 const snapshots = new SnapshotStore(process.env["SNAPSHOT_DIR"] ?? "snapshots");
+/** The one source whose rows have articles stating an exact end. */
+const ARTICLE_SOURCE_ID = "genshin-fandom-events";
 
 /**
  * Newest fixture for one *source*, not one game.
@@ -73,7 +77,10 @@ async function documentFor(adapterId: string, game: GameId) {
   };
 }
 
-const now = new Date().toISOString();
+// Overridable so a test against a pinned fixture does not expire with its events.
+const now = process.env["EVENT_FEED_NOW"] ?? new Date().toISOString();
+const articleEnds = await new ArticleStore(snapshots.root).readEnds();
+let articleRows: GachaEvent[] = [];
 const byGame = new Map<GameId, Array<{ priority: number; events: GachaEvent[] }>>();
 const sources: SourceHealth[] = [];
 
@@ -87,7 +94,9 @@ for (const adapter of ADAPTERS) {
     sourceUrl: adapter.url,
     sourceId: adapter.id,
     game: adapter.game,
+    ...(adapter.id === ARTICLE_SOURCE_ID ? { articleEnds } : {}),
   });
+  if (adapter.id === ARTICLE_SOURCE_ID) articleRows = events;
 
   // Which of the three empties this is, decided in a module a test can reach
   // rather than here — see `src/ingest/health.ts` for why that matters.
@@ -122,7 +131,13 @@ for (const [, groups] of byGame) {
     .sort((a, b) => b.priority - a.priority)
     .map((g) => g.events);
   const merged = mergeEvents(sorted);
-  events.push(...merged.events);
+  // After the merge: it keeps the higher-confidence copy, often Game8's, which
+  // would discard an end set on the Fandom row (spec decision 10).
+  events.push(
+    ...applyArticleEnds(merged.events, articleRows, articleEnds, (line) =>
+      console.log(`  ! article: ${line}`),
+    ),
+  );
   conflictCount += merged.conflicts.length;
   conflictCount += merged.classificationConflicts.length;
   for (const c of merged.classificationConflicts) console.warn(`  ! classification conflict: "${c.kept.title}" between ${c.kept.sourceId} and ${c.rejected.sourceId}; routing left unresolved`);

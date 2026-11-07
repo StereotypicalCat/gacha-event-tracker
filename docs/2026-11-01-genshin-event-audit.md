@@ -109,7 +109,9 @@ disagreement between type label and article path. The owner stopped the in-game
 walk here because it is slow to navigate, so the other Genshin rows have no
 in-game confirmation.
 
-### Open items, none fixed
+### Open items
+
+Item 1 was then built: see its note. The others are not fixed.
 
 1. **Day-precision ends can be hours wrong, in both directions.** Fandom's event
    table prints dates only, so the app resolves an end to that game-day's reset.
@@ -127,6 +129,18 @@ in-game confirmation.
    remain rounded observations and must not be used to mint timestamps. The
    likely fix is reading exact times from article pages, which adds requests per
    refresh and so needs its own design and a look at § Scraping conduct.
+
+   **Done:** `superpowers/specs/2026-11-07-exact-end-times-design.md`. Every live row
+   was then checked: 9 of 15 were correct. In-game, Test Run read 17d 16h as its article
+   implies, where the app said 17d 2h.
+
+   **One reading disagrees, and is accepted rather than special-cased.** Forge Realm's
+   Temper is not in the event tab. Its timer at The Cat's Tail read 38d 22h at about
+   00:30 UTC on 2026-11-07, implying 15 Dec about 22:30-23:30 UTC. Its article says
+   05:59 GMT+8 on 15 Dec, which is 14 Dec 21:59 UTC, about 25h earlier, and the app had
+   been about 20h earlier. The timer may cover something beyond the event, or the
+   article may be wrong: neither is established. The error is on the safe side. Recheck
+   when the next `The Forge Realm's Temper` run starts.
 2. **Wonderland Treasures has no row in either lane.** In game, `Wonderland
    Treasures - Polyphonic Harmony` appears in Genshin's event tab, 38d 13h 47m
    remaining around 00:12 UTC on 2026-11-07. It is probably the 7.2 counterpart of

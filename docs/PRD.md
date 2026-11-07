@@ -663,6 +663,9 @@ The app's entire value is that the dates are right. Therefore:
   reading retires an event up to nine hours before the game does and the reader is standing in the
   game while we say it. This is a reading of the date the source printed, not a time invented for
   it, and the detail sheet says as much.
+- **A time the source does state is used.** Genshin and Miliastra rows take the end their own wiki
+  article states, because the same printed date can mean three different times. A row whose article
+  states none, or a different date, stays on the reading above.
 
 An empty calendar is a recoverable disappointment. A confidently wrong end date is the failure this
 product exists to prevent.

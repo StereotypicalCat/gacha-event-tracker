@@ -173,6 +173,7 @@ src/shared/       schema.ts (the contract), time.ts, daily.ts, effort.ts, games.
                   custom.ts — reader-authored games and events, and their key spaces
 src/ingest/       html.ts, dates.ts (sixteen formats), merge.ts, sanitize.ts, robots.ts, snapshots.ts
                   health.ts — which of the three empties a source's zero was; pure
+                  articleEnds.ts, articleStore.ts — the end a Genshin article states, and where it is kept
   parsers/        game8.ts, wikigg.ts, akwiki.ts, fandom.ts, bawiki.ts, holodori.ts, iopwiki.ts,
                   stellasora.ts, arustats.ts, karendar.ts — keyed by SITE, not game
   adapters/       index.ts — SOURCES registry binding url+game+parser, and the sanitize seam
@@ -185,7 +186,7 @@ src/client/       ReaderApp (shared interfaces), components/redesign/, service w
                   zoom.ts — the timeline's scale ladder; pure
                   lanes.ts — how the timeline stacks: a lane per game, or one deadline queue; pure
                   theme.ts — dark or light, and what a game hue reads as on each
-scripts/          build-feed.ts, build-static.ts, parse-fixture.ts (offline), refresh-sources.ts (fetches)
+scripts/          build-feed.ts, build-static.ts, parse-fixture.ts (offline), refresh-sources.ts, refresh-articles.ts (fetch)
 serve.ts          static server + /api/health
 test/             `bun test` — one file per module or feature; no count here, it only goes stale
 fixtures/<game>/  raw HTML + .expected.json per source — pinned, kept forever
@@ -228,6 +229,12 @@ These come from how gacha games actually schedule things, and they cause most bu
   deadline they were counting down to vanish on its last day. So `latestBoundaryMs` answers the same
   question for the *last* region, and `bawiki.ts` and three branches of `fandom.ts` ask it. Nothing
   stored changes: it is one comparison, not a resolved boundary written to the feed.
+  **Genshin and Miliastra rows do better than that reading when they can.** Fandom's table prints a
+  date, and on 2026-11-07 that date meant 03:59 server time on nine live rows, 14:59 or 17:59 on four
+  and 05:59 GMT+8 on two: up to 14 hours early and 5 late. So the refresh keeps each row's article
+  and the build applies the end its infobox states, after the merge (`src/ingest/articleEnds.ts`,
+  `docs/INGESTION.md` § Article ends). The reset reading stays as the fallback, and it is still the
+  only one for every other game.
 - **Patch cycles are ~6 weeks, and a span over a year is a parse error rather than a long event.**
   `test/adapters/game8.test.ts` rejects one across every fixture. Two corrections to what this rule
   used to say, both load-bearing:
@@ -401,6 +408,10 @@ Sources are community wikis. Treat them as a guest would:
   the shape an edge network throttles, and what a burst looks like from the far end regardless of
   our intent.
 - Send `If-None-Match` / `If-Modified-Since`; treat `304` as "skip, unchanged".
+- **Genshin event articles are the one exception to one request per source**, and they are bounded
+  rather than open-ended: only rows the table lists now, only the lead section, one request per
+  article per 6 hours at most, under the same robots gate, per-host spacing and User-Agent. `--force`
+  does not reach them.
 - Cache raw snapshots so re-parsing never re-fetches. **Iterate against fixtures, not the network.**
 - Record `sourceUrl` on every event and surface attribution in the UI.
 
@@ -794,6 +805,11 @@ source CI can refresh. Four things to know about it:
 - **Run-date suffixes are stripped.** Recurring events often carry their run date in the subpage title
   (`Overflowing Abundance 2026-09-14`). The date names the run, the start date is already half the
   event ID, and keeping it would duplicate the date on the calendar.
+- **The table's date is not the event's end time; the article's infobox is.** The `Event` table is
+  still this source's one registered page, but its rows' articles are read too, at most one request
+  each per 6 hours and normally once a week: `scripts/refresh-articles.ts`, and § Article ends in
+  `docs/INGESTION.md`. Read only `data-source="time_end"`. The `Ends in` lines are derived, and the body
+  prose gives `05:59` with no zone on a row whose infobox says `GMT+8`.
 - **`latestBoundaryMs` gates currency.** Like FGO and Infinity Nikki, this source prints day-precision
   dates (`Aug. 14, 2026 – Aug. 24, 2026`), so `parseFullRange` stores UTC midnight as a placeholder.
   Currency is checked against `latestBoundaryMs` so an event is not retired prematurely on its final day

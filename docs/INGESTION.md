@@ -736,3 +736,43 @@ fetched once each and old cached bundles can continue validating the feed. A
 small, evidenced article-family resolver supports old feeds/saved snapshots;
 unknown content stays in its original category. See DATA-MODEL's source identity
 section and the 2026-11-01 content-classification design.
+
+## Article ends (2026-11-07)
+
+Fandom's Genshin `Event` table prints a date, and the same date can mean 03:59 server time, 14:59,
+17:59 or one instant worldwide. Each row's article states which, so the refresh keeps those articles
+and the build uses them. Genshin and Miliastra only: `genshin-fandom-events` is the one source wired
+up, and other games' articles are laid out differently. Reasoning and evidence are in
+`superpowers/specs/2026-11-07-exact-end-times-design.md` and `2026-11-01-genshin-event-audit.md`.
+
+**Fetch.** After the source loop, `runRefresh` lists the live rows from the stored table and calls
+`scripts/refresh-articles.ts`. It requests `action=parse&section=0`, about 8 KB, and stores the
+response under `snapshots/articles/genshin-fandom/`. An article is due when it was never read, when
+it stated no time and 6 hours have passed, or when it stated a time and 7 days have passed since a
+read that worked. The listing passes the stored ends to the parser: on a row's last day they are what
+keeps it listed, and an unlisted article is deleted.
+
+| Result of a read | Stored article | Row shows |
+|---|---|---|
+| Network error, non-200 other than 404, robots refusal, or a 200 that is not the API's answer | Kept | The last good time, if any |
+| 404 or `missingtitle` | Body deleted; metadata kept for the 6-hour floor | Fallback |
+| A real article with no usable End | Overwritten | Fallback, logged but not warned: stubs are ordinary |
+
+None of these touches a source's failure streak, health or broken count.
+
+**Parse.** `parseArticleEnd` reads only the `<td data-source="time_end">` cell, in two shapes:
+`December 15, 2026 14:59 (Server Time)` gives `regionEnds` at each server's clock, with `endsAt` the
+earliest; `December 16, 2026 05:59 GMT+8` gives one instant. Anything else is no usable time.
+
+**Apply.** `applyArticleEnds` runs in `scripts/build-feed.ts` after `mergeEvents`, because the merge
+keeps the higher-confidence copy, often Game8's, and would discard an end set on the Fandom row. It
+matches by ID or `mergedIds`, and writes only `endsAt`, `endPrecision`, `regionScoped` and
+`regionEnds`. The article's date must equal both the table's and the survivor's. If not, the row
+stays as merged and the build logs `! article:`. A survivor already at `exact` is left alone.
+
+**Currency.** `fandom.ts` retires a row on its stated end when the article agrees on the date. Without
+this, a row ending 14:59 server time would leave the feed on its last day, hours before it closes.
+The parser reads `ctx.articleEnds` for this alone and never writes one onto a row.
+
+**Known exception.** Forge Realm's Temper: the Cat's Tail timer read about a day later than its article
+on 2026-11-07. Recheck when the next run starts; see the audit doc.
