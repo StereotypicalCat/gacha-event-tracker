@@ -1030,3 +1030,21 @@ so it shows the in-game route only.
 
 **Refreshing.** These are game8 pages, so the CI caveat in AGENTS.md § Scraping conduct applies: if the
 runner is refused, they refresh by hand like the event pages.
+
+## Infinity Nikki — Mira Journey: the version table lapsed (2026-11-07)
+
+> **Outcome: kept, and recorded as lapsed.** `nikki-fandom-mira-journey` answers and parses, but the
+> wiki's `Version` table stops at 2.10, which ended 2026-10-29. The source stays registered with
+> `lapsed` set, so it recovers by itself and refresh says when to take the record out.
+
+The owner read the game on 2026-11-07: version 2.11, updated October 29. Mira Journey read 19d 15h at
+about 02:15 UTC, implying 26 Nov between about 17:15 and 18:15 UTC.
+
+**No replacement exists on this wiki.** The `Mira_Journey` page has a dated table, but its newest row
+is 2.7, and the newest `Mira Journey/<date>` subpage is 2026-06-23.
+
+**Readers see no Mira Journey for now, deliberately.** The 19d 15h is a rounded reading and mints no
+timestamp. Several live events on `nikki-fandom-events` also end 26 Nov, which fits, but the pass's end
+is only ever taken from a version row the wiki states (`VERSION_PASSES` in
+`src/ingest/parsers/versionTable.ts`), and there is none. If 2.11's row appears, compare its End Date
+with this reading.

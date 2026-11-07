@@ -260,6 +260,11 @@ const SOURCES: SourceSpec[] = [
     // `VERSION_PASSES` in `parsers/versionTable.ts`, keyed by this id.
     url: "https://infinity-nikki.fandom.com/api.php?action=parse&page=Version&prop=text&formatversion=2&format=json",
     parserId: "fandomversion",
+    // Read on 2026-11-07: the table answers and parses, but stops at 2.10, while
+    // the game is on 2.11 (owner, in game). `Mira_Journey` stops earlier still, at
+    // 2.7, so it is no replacement (docs/SOURCES.md § Infinity Nikki — Mira
+    // Journey). Kept registered so it recovers by itself.
+    lapsed: { recorded: "2026-11-07", reason: "version table stops at 2.10; game is on 2.11" },
   },
   {
     id: "nikke-fandom-events",

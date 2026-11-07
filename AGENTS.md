@@ -469,7 +469,8 @@ Three limits keep this honest:
   of the entry.
 
 Never set it from code or on a guess. hololive Dreams carries it since 2026-10-14
-(docs/SOURCES.md § 16).
+(docs/SOURCES.md § 16), and Infinity Nikki's Mira Journey since 2026-11-07 (docs/SOURCES.md § Infinity
+Nikki — Mira Journey).
 
 A source whose ToS forbids automated access does not get an adapter. Flag it and ask.
 
