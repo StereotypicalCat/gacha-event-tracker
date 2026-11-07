@@ -51,6 +51,15 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "genshin-exact-ends",
+    date: "2026-11-07",
+    kind: "fix",
+    title: "Genshin and Miliastra countdowns now use each event's real end time",
+    body: "The wiki's event list only gives dates, so we assumed the daily reset, and some events were up to 14 hours off. We now read the time from each event's own page. Events with no stated time work as before.",
+    ref: "4ee1bf2",
+    note: "genshin-exact-ends",
+  },
+  {
     id: "catch-up-section",
     date: "2026-11-06",
     kind: "feature",
@@ -707,6 +716,19 @@ export const ENTRIES: Entry[] = [
 ];
 
 export const NOTES: Note[] = [
+  {
+    id: "genshin-exact-ends",
+    date: "2026-11-07",
+    title: "Genshin countdowns you can trust to the last hour",
+    summary: [
+      "The wiki's event list prints a date, and we read that as the daily reset. For most events that was right. For six of fifteen it was not: Test Run ended 14 hours later than we said, several others 11 hours later, and Raiment Collection 5 hours earlier.",
+      "Each Genshin and Miliastra event's own wiki page states the time, so the refresh now keeps those pages and countdowns use them. Events stay listed until their stated end, and your progress is untouched.",
+      "If a page states no time yet, or a different date from the list, the event stays on the daily-reset reading. One known exception: the timer for The Forge Realm's Temper at The Cat's Tail reads about a day later than its wiki page, so check that one in game.",
+    ],
+    from: "7f086ec",
+    to: "4ee1bf2",
+    specs: ["docs/superpowers/specs/2026-11-07-exact-end-times-design.md"],
+  },
   {
     id: "catch-up-section",
     date: "2026-11-06",
