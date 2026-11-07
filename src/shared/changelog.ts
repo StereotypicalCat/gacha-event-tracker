@@ -56,7 +56,7 @@ export const ENTRIES: Entry[] = [
     kind: "fix",
     title: "Wuthering Waves redeem codes are updating again",
     body: "Our source renamed the section we read, so the list had been stuck since late October.",
-    ref: "bfa9668",
+    ref: "d290e65",
   },
   {
     id: "genshin-exact-ends",

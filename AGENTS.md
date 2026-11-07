@@ -1205,7 +1205,10 @@ to an open page). Four things hold it up:
   own hash, so the entry lands in a follow-up `chore(changelog)` commit naming the one before it. A
   feature spanning several commits also gets a release note when it lands — a few paragraphs from
   its spec, with its `from..to` range and spec paths. Run `bun run scripts/check-changelog.ts`
-  after: tests check a ref's shape only, because CI's checkout is shallow. Data refreshes and
+  after: tests check a ref's shape only, because CI's checkout is shallow. **Rebasing an unpushed
+  commit changes the hash a changelog ref names, and the check still passes** because the old object
+  stays in your local repository (2026-11-07, `bfa9668`). The refresh pushes to `main` twice a day, so
+  this is an ordinary way to get here: re-read any new ref after a rebase and before pushing. Data refreshes and
   changes invisible to readers get no entry.
 - **Zod schemas are the single source of truth for types.** Derive with `z.infer<>`; never
   hand-write an interface that duplicates a schema.
