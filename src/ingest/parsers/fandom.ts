@@ -8,6 +8,7 @@ import {
 } from "../dates.ts";
 import { decodeEntities, text } from "../html.ts";
 import type { ParseContext } from "../adapters/types.ts";
+import { articleTitle, latestStatedMs } from "../articleEnds.ts";
 import { inferType } from "./game8.ts";
 import { classifySourceLabels } from "../../shared/classification.ts";
 import type { SourceParser } from "./types.ts";
@@ -819,12 +820,19 @@ function parseGenshinEvents(
       // `Current` is maintained by hand and goes stale before anyone moves a
       // row, so currency is checked rather than taken on trust — on the clock
       // the countdown reads a day-precision end on, not on the UTC midnight
-      // placeholder stored for it.
-      if (
-        latestBoundaryMs(range.end.iso, range.end.precision, ctx.game) < nowMs
-      ) {
-        continue;
-      }
+      // placeholder stored for it. An article that states a time on that same
+      // date is the better clock: a row ending 14:59 must not vanish at 04:00.
+      const href = ARTICLE_LINK.exec(titleCell)?.[1];
+      const articleUrl =
+        href === undefined ? null : new URL(href, ctx.sourceUrl).toString();
+      const pageTitle = articleUrl === null ? null : articleTitle(articleUrl);
+      const statedEnd =
+        pageTitle === null ? undefined : ctx.articleEnds?.get(pageTitle);
+      const lastMs =
+        statedEnd !== undefined && statedEnd.day === range.end.iso.slice(0, 10)
+          ? latestStatedMs(statedEnd)
+          : latestBoundaryMs(range.end.iso, range.end.precision, ctx.game);
+      if (lastMs < nowMs) continue;
 
       const id = eventId(ctx.game, title, range.start.iso);
       if (seen.has(id)) continue;
@@ -832,7 +840,6 @@ function parseGenshinEvents(
 
       const stated =
         table.type === undefined ? "" : text(cells[table.type]?.html ?? "");
-      const href = ARTICLE_LINK.exec(titleCell)?.[1];
 
       out.push({
         id,
@@ -856,10 +863,7 @@ function parseGenshinEvents(
         // claiming a split the source never made.
         regionScoped: false,
         regionEnds: null,
-        sourceUrl:
-          href === undefined
-            ? ctx.sourceUrl
-            : new URL(href, ctx.sourceUrl).toString(),
+        sourceUrl: articleUrl ?? ctx.sourceUrl,
         sourceId: ctx.sourceId,
         status: "published",
         // Day precision on both sides, which is everything the page states.

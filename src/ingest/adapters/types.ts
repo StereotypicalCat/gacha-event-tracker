@@ -1,4 +1,5 @@
 import type { GachaEvent, GameId } from "../../shared/schema.ts";
+import type { StatedEnd } from "../articleEnds.ts";
 
 export interface ParseContext {
   /**
@@ -9,6 +10,11 @@ export interface ParseContext {
   sourceUrl: string;
   sourceId: string;
   game: GameId;
+  /**
+   * Ends stated by a row's own article, keyed by page title. Only ever decides
+   * whether a row is still live: the parser never writes one onto a row.
+   */
+  articleEnds?: ReadonlyMap<string, StatedEnd>;
 }
 
 /**
