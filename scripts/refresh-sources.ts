@@ -328,6 +328,7 @@ export async function runRefresh(
           timeoutMs: options.timeoutMs,
           log: options.log,
           requestedHosts: cycle.requestedHosts,
+          assumedRobots: cycle.assumedRobots,
         });
         summary.articlesChanged = result.changed;
         summary.warnings.push(...result.warnings);

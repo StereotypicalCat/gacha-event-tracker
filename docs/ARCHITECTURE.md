@@ -134,9 +134,11 @@ scripts/
   build-feed.ts         fixtures → public/data/events.v1.json     ✓ built
   build-static.ts       shell + worker into public/, build-stamped ✓ built
   parse-fixture.ts      run one adapter offline                   ✓ built
-  refresh-sources.ts    fetch, cache, rebuild — the only network   ✓ built
+  refresh-sources.ts    fetch, cache, rebuild                      ✓ built
+  refresh-articles.ts   Genshin event articles, for exact ends     ✓ built
 fixtures/<game>/        checked-in raw HTML + expected parse output
 snapshots/              the current page per source, rewritten by refresh
+  articles/             Genshin event articles' lead sections, rewritten by refresh
 ```
 
 ## Request paths
@@ -214,8 +216,8 @@ changing. Reads are confined to `public/` by resolving the path and checking it 
 — string-matching `..` is not enough, because encodings and URL normalisation both change what the
 string looks like.
 
-`scripts/refresh-sources.ts` (`bun run refresh`) is what fills `snapshots/`, and it is the only code
-here that touches the network. `.gitea/workflows/refresh.yml` runs it at 05:27 and 17:27 UTC and
+`scripts/refresh-sources.ts` (`bun run refresh`) is what fills `snapshots/`, and with
+`scripts/refresh-articles.ts`, which it calls, it is the only code here that touches the network. `.gitea/workflows/refresh.yml` runs it at 05:27 and 17:27 UTC and
 commits only when a page actually changed. It stands in for the unbuilt scheduler and enforces the
 same conduct in code — the 6h floor, one request, no retries, conditional headers, per-host spacing,
 robots failing closed. A source that has failed `BROKEN_AFTER_FAILURES` (3) cycles running is

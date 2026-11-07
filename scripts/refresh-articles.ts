@@ -26,6 +26,12 @@ export interface RefreshArticlesInput {
   log: (line: string) => void;
   /** Shared with the source loop, which has usually asked this host already. */
   requestedHosts: Set<string>;
+  /**
+   * Hosts fetched on a recorded robots permission, shared with the source loop.
+   * The page may have been skipped this cycle while an article is still read, and
+   * that warning must not become conditional (AGENTS.md § Scraping conduct).
+   */
+  assumedRobots: Set<string>;
 }
 
 export function articleUrl(title: string): string {
@@ -82,6 +88,7 @@ export async function refreshArticles(
       await failed(decision.reason);
       continue;
     }
+    if (decision.assumedOnForbidden === true) input.assumedRobots.add(HOST);
     if (input.requestedHosts.has(HOST)) {
       await input.sleep(decision.crawlDelayMs ?? DEFAULT_HOST_GAP_MS);
     }
@@ -102,7 +109,9 @@ export async function refreshArticles(
       continue;
     }
 
-    const answer = status === 200 ? answerOf(body) : status === 404 ? "gone" : "unusable";
+    // Only the API's own `missingtitle` means gone. It says so with a 200, so a
+    // bare 404 is an edge or an outage, and must not cost every row its time.
+    const answer = status === 200 ? answerOf(body) : "unusable";
     if (answer === "gone") {
       if (await store.markGone(title, nowIso)) changed += 1;
       warnings.push(`${label}: the wiki says it does not exist`);

@@ -754,11 +754,13 @@ keeps it listed, and an unlisted article is deleted.
 
 | Result of a read | Stored article | Row shows |
 |---|---|---|
-| Network error, non-200 other than 404, robots refusal, or a 200 that is not the API's answer | Kept | The last good time, if any |
-| 404 or `missingtitle` | Body deleted; metadata kept for the 6-hour floor | Fallback |
+| Network error, any non-200 including 404, robots refusal, or a 200 that is not the API's answer | Kept | The last good time, if any |
+| The API's `missingtitle`, which it sends with a 200 | Body deleted; metadata kept for the 6-hour floor | Fallback |
 | A real article with no usable End | Overwritten | Fallback, logged but not warned: stubs are ordinary |
 
-None of these touches a source's failure streak, health or broken count.
+None of these touches a source's failure streak, health or broken count. A read on an assumed robots
+permission names its host in the run's warning like any page does, even when the table itself was
+skipped for its interval.
 
 **Parse.** `parseArticleEnd` reads only the `<td data-source="time_end">` cell, in two shapes:
 `December 15, 2026 14:59 (Server Time)` gives `regionEnds` at each server's clock, with `endsAt` the

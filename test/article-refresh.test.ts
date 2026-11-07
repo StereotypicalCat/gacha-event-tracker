@@ -54,6 +54,7 @@ function run(
     timeoutMs: 1000,
     log: (l) => void logs.push(l),
     requestedHosts: new Set(),
+    assumedRobots: new Set(),
     ...over,
   });
   return { done, calls, naps, logs };
@@ -123,7 +124,7 @@ async function expectKept(result: { changed: number; warnings: string[] }) {
   expect(m?.lastAttemptAt).toBe(NOW.toISOString());
 }
 
-test.each([500, 403, 202])("HTTP %i keeps the body and the time, and warns", async (status) => {
+test.each([500, 403, 202, 404])("HTTP %i keeps the body and the time, and warns", async (status) => {
   await dueArticle();
   await expectKept(await run(() => new Response("nope", { status })).done);
 });
@@ -160,12 +161,9 @@ test("robots refusal makes no request, keeps the body, and warns", async () => {
   expect(calls.length).toBe(0);
 });
 
-test.each([
-  ["404", () => new Response("gone", { status: 404 })],
-  ["a missingtitle API error", () => new Response(MISSING)],
-])("%s removes the stored article and warns", async (_name, respond) => {
+test("a missingtitle API error removes the stored article and warns", async () => {
   await dueArticle();
-  const result = await run(respond).done;
+  const result = await run(() => new Response(MISSING)).done;
   expect(result.changed).toBe(1);
   expect(result.warnings.length).toBe(1);
   expect(await articles.readBody(TITLE)).toBeNull();
@@ -174,7 +172,7 @@ test.each([
 
 test("a removed article still honours the 6-hour floor", async () => {
   await dueArticle();
-  await run(() => new Response("gone", { status: 404 })).done;
+  await run(() => new Response(MISSING)).done;
   const { done, calls } = run(() => new Response(WITH_TIME));
   await done;
   expect(calls.length).toBe(0);
@@ -406,4 +404,21 @@ test("a row kept alive by its stated end stays listed, so its article is not rem
   await articles.saveRead("Old", WITH_TIME, ago(24 * HOUR));
   await runRefresh({ ...opts, fetchImpl: async () => new Response("", { status: 304 }) });
   expect(await articles.listed()).toEqual([TITLE]);
+});
+
+test("an article read on an assumed robots permission names the host, even when the page was skipped", async () => {
+  // AGENTS.md § Scraping conduct: that warning must not become conditional.
+  const page = `<row>${ROW}</row>`;
+  const robots: RobotsGate = {
+    allows: async () => ({ allowed: true, reason: "assumed", assumedOnForbidden: true }),
+  };
+  const { opts, store } = runner(page, () => new Response(WITH_TIME), { robots });
+  await store.save(FANDOM_ID, {
+    url: opts.adapters[0]!.url, body: page, etag: null, lastModified: null, at: NOW.toISOString(), eventCount: 1,
+  });
+  await store.recordCheck(FANDOM_ID, { at: NOW.toISOString(), status: 200, ok: true });
+  const summary = await runRefresh(opts);
+  expect(summary.outcomes[0]?.result).toBe("skipped_interval");
+  expect(summary.articlesChanged).toBe(1);
+  expect(summary.assumedRobots).toEqual(["genshin-impact.fandom.com"]);
 });

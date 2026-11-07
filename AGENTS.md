@@ -314,7 +314,8 @@ These come from how gacha games actually schedule things, and they cause most bu
   page and an `h4` on Wuthering Waves'. `dedupe` blends it onto the better-dated copy and never
   blends a date, so reading both shapes adds information and can never contradict any.
 - **Prefer a source that states machine-readable times.** wiki.gg emits ISO timestamps with a timer
-  per server region, which is the only reason `regionEnds` carries real data anywhere.
+  per server region. Genshin's articles are the one other place `regionEnds` carries real data, and
+  those state a server clock rather than a timer (§ Domain rules).
 - **Silent drops are the dangerous failure.** A date format the parser does not recognise makes
   events vanish with no error. Abbreviated months (`Apr. 29 - May 13, 2026`) and slash-dated open
   ends (`09/02/2026 - TBA`) are supported for exactly this reason. When adding a source, compare the

@@ -126,9 +126,9 @@ export type EndBearing = Pick<
  * precision that boundary was actually stated to.
  *
  * A `regionEnds` value is read as `exact` whatever `endPrecision` says about the
- * fallback: the map only exists because the source published a timer per server
- * (wiki.gg does; see AGENTS.md § Working on parsers), so there is a real instant
- * in it and nothing left to resolve.
+ * fallback: the map only exists because the source stated a time per server
+ * (wiki.gg's timers, Genshin's articles; see AGENTS.md § Working on parsers), so
+ * there is a real instant in it and nothing left to resolve.
  */
 function endBoundary(
   event: EndBearing,

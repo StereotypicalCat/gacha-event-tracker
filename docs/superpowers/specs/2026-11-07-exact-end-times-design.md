@@ -121,8 +121,8 @@ Approved with this document unless marked as the agent's call.
 
     | Result of a read | Stored article | Row shows |
     |---|---|---|
-    | Network error, 5xx, refused, or robots-blocked: the wiki told us nothing about the article | Kept untouched | The last good time, if any. Due again after the 6-hour floor |
-    | 404 or a missing-page API error: the article is gone or renamed | Deleted | Fallback |
+    | Network error, any non-200 including 404, refused, or robots-blocked: the wiki told us nothing about the article | Kept untouched | The last good time, if any. Due again after the 6-hour floor |
+    | The API's `missingtitle`, sent with a 200: the article is gone or renamed. Changed from "404" in final review: a bare 404 is an edge or outage, and one would wipe every row's time | Deleted | Fallback |
     | `200` whose End value is absent or unusable: the article no longer states a time | Overwritten | Fallback. Due again under the no-time rule |
 
     `.meta.json` records the last attempt separately from the last successful read, so the
