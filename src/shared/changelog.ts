@@ -51,6 +51,14 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "wuwa-codes-heading",
+    date: "2026-11-07",
+    kind: "fix",
+    title: "Wuthering Waves redeem codes are updating again",
+    body: "Our source renamed the section we read, so the list had been stuck since late October.",
+    ref: "bfa9668",
+  },
+  {
     id: "genshin-exact-ends",
     date: "2026-11-07",
     kind: "fix",
