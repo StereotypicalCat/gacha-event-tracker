@@ -51,6 +51,14 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "archive-toast-corner",
+    date: "2026-11-10",
+    kind: "fix",
+    title: "The Moved to Archive notice no longer covers your next events",
+    body: "It now sits in the bottom-right corner (at the top on phones), goes after four seconds instead of eight, and has an OK to close it sooner. Undo works as before.",
+    ref: "56e034c",
+  },
+  {
     id: "wuwa-codes-heading",
     date: "2026-11-07",
     kind: "fix",
