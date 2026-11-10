@@ -1,12 +1,12 @@
 {
   "sourceId": "hi3-arustats-events",
   "url": "https://www.arustats.com/en-us/hi3/timeline",
-  "contentHash": "909ab8b8d8083e07596c5555870a52c20dd84759bdefb6e47b7433dc9a299a15",
-  "bytes": 73390,
+  "contentHash": "b82c545e3d8a0767b6c142ede79e07ee9c8268c0b8d1f345642a59ff0fa9beb6",
+  "bytes": 73391,
   "etag": null,
   "lastModified": null,
-  "contentChangedAt": "2026-11-09T05:28:01.677Z",
-  "lastConfirmedAt": "2026-11-09T17:27:53.806Z",
+  "contentChangedAt": "2026-11-10T05:40:07.889Z",
+  "lastConfirmedAt": "2026-11-10T05:40:07.889Z",
   "eventCount": 26,
   "charset": "utf-8"
 }
