@@ -69,6 +69,7 @@ import { ENTRIES, NOTES, newestId, unseen } from "../shared/changelog.ts";
 import {
   ARCHIVE_COLLAPSE_MS,
   ARCHIVE_HOLD_MS,
+  ARCHIVE_UNDO_MS,
   ChecklistEvent,
   leavingMarks,
   LedgerColumns,
@@ -498,7 +499,7 @@ function ReaderContent({
       () => setTransition((t) => (t ? { ...t, phase: "hidden" } : null)),
       ARCHIVE_COLLAPSE_MS,
     );
-    const undo = setTimeout(() => setTransition(null), 8000);
+    const undo = setTimeout(() => setTransition(null), ARCHIVE_UNDO_MS);
     return () => {
       clearTimeout(t);
       clearTimeout(collapse);
@@ -1137,21 +1138,29 @@ function ReaderContent({
                     transition.phase === "hold" && (
                       <Fireworks key={transition.key} />
                     )}
-                  {transition.label} “{transition.title}” · Moved to Archive{" "}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void dispatch({
-                        type: "restore",
-                        accountId: transition.accountId,
-                        eventId: transition.eventId,
-                        ...actionMeta(),
-                      });
-                      setTransition(null);
-                    }}
-                  >
-                    Undo
-                  </button>
+                  <span className="archive-toast-text">
+                    {transition.label} “{transition.title}” · Moved to Archive
+                  </span>
+                  <span className="archive-toast-actions">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void dispatch({
+                          type: "restore",
+                          accountId: transition.accountId,
+                          eventId: transition.eventId,
+                          ...actionMeta(),
+                        });
+                        setTransition(null);
+                      }}
+                    >
+                      Undo
+                    </button>
+                    {/* Closes the notice only: the event stays archived. */}
+                    <button type="button" onClick={() => setTransition(null)}>
+                      OK
+                    </button>
+                  </span>
                 </aside>
               )}
               {archivedOpen && (

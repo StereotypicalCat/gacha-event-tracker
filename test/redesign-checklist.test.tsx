@@ -86,6 +86,7 @@ test("a completed event shines and greys while it holds, then fades; an ignored 
 import {
   ARCHIVE_COLLAPSE_MS,
   ARCHIVE_HOLD_MS,
+  ARCHIVE_UNDO_MS,
 } from "../src/client/components/redesign/ChecklistEvent.tsx";
 test("a completed event holds under a second, long enough for its shine, then collapses", () => {
   expect(ARCHIVE_HOLD_MS).toBe(900);
@@ -93,4 +94,9 @@ test("a completed event holds under a second, long enough for its shine, then co
   expect(ARCHIVE_HOLD_MS).toBeGreaterThan(640);
   // The collapse waits out the 250 ms max-height transition.
   expect(ARCHIVE_COLLAPSE_MS - ARCHIVE_HOLD_MS).toBe(250);
+});
+test("the Moved to Archive notice offers Undo for four seconds, outlasting the row's collapse", () => {
+  // Halved from eight on 2026-11-10: the notice sat over the next events.
+  expect(ARCHIVE_UNDO_MS).toBe(4000);
+  expect(ARCHIVE_UNDO_MS).toBeGreaterThan(ARCHIVE_COLLAPSE_MS);
 });

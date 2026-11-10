@@ -56,7 +56,13 @@ export function UrgencyLegend() {
  * when it is gone once the 250 ms collapse has run.
  */
 export const ARCHIVE_HOLD_MS = 900,
-  ARCHIVE_COLLAPSE_MS = ARCHIVE_HOLD_MS + 250;
+  ARCHIVE_COLLAPSE_MS = ARCHIVE_HOLD_MS + 250,
+  /**
+   * How long the "Moved to Archive" toast offers Undo. Eight seconds until
+   * 2026-11-10, when the owner found it sitting over the next events; OK closes
+   * it sooner, and Archive Restore stays available after it is gone.
+   */
+  ARCHIVE_UNDO_MS = 4000;
 /**
  * The marks on a checklist row on its way to the Archive. While it holds, its
  * text greys; a completed one also gets the codes' shine, an ignored one does

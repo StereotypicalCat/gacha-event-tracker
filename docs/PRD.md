@@ -193,7 +193,8 @@ the cut are still counted in the header, still on the timeline, and one tap away
 **F3 — Mark completed.**
 Done writes durable progress and a metadata snapshot immediately. A confirmation remains for about
 0.9 seconds (1.5 until 2026-10-20, which read as unresponsive) before the row fades/collapses into
-Archive. Undo is available for eight seconds; Archive Restore remains available afterwards. A failed
+Archive. Undo is offered in a toast, out of the list's way, for four seconds (eight until 2026-11-10, when it sat
+over the next events), and its OK closes it sooner; Archive Restore remains available afterwards. A failed
 write is disclosed and never presented as saved. Reduced motion removes the fade.
 
 **F4 — Settings and visibility.**

@@ -1003,25 +1003,53 @@ textarea {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+/* Bottom right, out of the reading column, so it does not sit over the next
+   events (centred until 2026-11-10). On a phone there is no side to move to,
+   and the bottom is where the list continues and an event's page ends, so it
+   spans the width at the top, over the header, instead. */
 .archive-toast {
   position: fixed;
   bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
+  right: 24px;
   width: max-content;
-  max-width: calc(100vw - 32px);
+  max-width: min(420px, calc(100vw - 32px));
   z-index: 70;
-  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-hairline);
   border-radius: 12px;
   background: var(--color-raised);
   color: var(--color-ink);
   font-size: 13px;
   box-shadow: 0 8px 30px #0003;
 }
+.archive-toast-text {
+  min-width: 0;
+}
+.archive-toast-actions {
+  display: flex;
+  flex: none;
+  gap: 4px;
+}
 .archive-toast button {
+  min-height: 32px;
+  padding: 0 8px;
+  border-radius: 8px;
   color: var(--color-near);
-  margin-left: 14px;
   text-decoration: underline;
+  text-underline-offset: 3px;
+}
+@media (max-width: 700px) {
+  .archive-toast {
+    top: calc(16px + env(safe-area-inset-top, 0px));
+    bottom: auto;
+    left: 16px;
+    right: 16px;
+    width: auto;
+    max-width: none;
+  }
 }
 .archive-confirm {
   padding: 8px 20px;

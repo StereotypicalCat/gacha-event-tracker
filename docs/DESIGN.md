@@ -496,7 +496,12 @@ text. On focus the border moves to faint. The field gets no glow, because a form
 - **Detail sheet:** `surface` fill with a hairline border and 16px corners. It rises from the bottom
   on a phone, is centred at `max-w-lg` from `sm` up, and sits over the scrim.
 - **Toast / update notice:** `raised` fill, hairline border, 12px corners and the only shadow in the
-  system. Each offers one action.
+  system. Each offers one action, and the "Moved to Archive" toast also a plain OK that only closes
+  it. That toast sits in the bottom-right corner, 24px in, at most 420px wide, so it stays off the
+  reading column and the events moving up into the gap; up to 700px wide there is no side to clear,
+  so it spans the width 16px in from each edge at the top, over the header, because at the bottom it
+  covered the end of an event's page opened while it was up. It was centred, for eight seconds,
+  until 2026-11-10, when the owner found it covering the next events.
 
 ### Daily burst
 A small spray of 3px sparks that fires once, in the row, when a reader finishes one thing: a daily
