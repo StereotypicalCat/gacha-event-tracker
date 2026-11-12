@@ -1,12 +1,12 @@
 {
   "sourceId": "wuwa-game8-events",
   "url": "https://game8.co/games/Wuthering-Waves/archives/453473",
-  "contentHash": "b74f4408fe7aae4caa9ab4b72e433ec8ede3c833aab4d1ba42e566d19f03ecb7",
-  "bytes": 736770,
-  "etag": "W/\"b74f4408fe7aae4caa9ab4b72e433ec8\"",
+  "contentHash": "ab3de609394099d19c6cee8fe9fd1ec1b9487fd08d7570c39789eace48625f36",
+  "bytes": 736443,
+  "etag": "W/\"ab3de609394099d19c6cee8fe9fd1ec1\"",
   "lastModified": null,
-  "contentChangedAt": "2026-11-11T17:34:30.183Z",
-  "lastConfirmedAt": "2026-11-11T17:34:30.183Z",
+  "contentChangedAt": "2026-11-12T05:27:13.758Z",
+  "lastConfirmedAt": "2026-11-12T05:27:13.758Z",
   "eventCount": 28,
   "charset": "utf-8"
 }

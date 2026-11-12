@@ -1,12 +1,12 @@
 {
   "sourceId": "uma-game8-events",
   "url": "https://game8.co/games/Umamusume-Pretty-Derby/archives/536311",
-  "contentHash": "c6cd0ab13fcf4f16bcd0a3027ae3404d684db7c48d347bb22bde4316e5522540",
-  "bytes": 502154,
-  "etag": "W/\"c6cd0ab13fcf4f16bcd0a3027ae3404d\"",
+  "contentHash": "75000d0ac30670077e09ae8128b769f2fd6a9db31cf482d1f7db01473cfc4343",
+  "bytes": 502049,
+  "etag": "W/\"75000d0ac30670077e09ae8128b769f2\"",
   "lastModified": null,
-  "contentChangedAt": "2026-11-11T17:35:03.985Z",
-  "lastConfirmedAt": "2026-11-11T17:35:03.985Z",
+  "contentChangedAt": "2026-11-12T05:27:42.395Z",
+  "lastConfirmedAt": "2026-11-12T05:27:42.395Z",
   "eventCount": 10,
   "charset": "utf-8"
 }
