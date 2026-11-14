@@ -23,7 +23,9 @@ permissions:
 jobs:
   check:
     name: Typecheck, test, feed
-    runs-on: ubuntu-latest
+    # st_small: the homelab's small runner, for light jobs. See docs/ci-gitea.md
+    # in the config repository.
+    runs-on: st_small
     steps:
       - uses: https://github.com/actions/checkout@v4
 
@@ -107,7 +109,9 @@ jobs:
 
   build:
     name: Build site
-    runs-on: ubuntu-latest
+    # st_small: the homelab's small runner, for light jobs. See docs/ci-gitea.md
+    # in the config repository.
+    runs-on: st_small
     needs: check
     steps:
       - uses: https://github.com/actions/checkout@v4
@@ -139,7 +143,9 @@ jobs:
 
   image:
     name: Container image
-    runs-on: ubuntu-latest
+    # st_small: the homelab's small runner, for light jobs. See docs/ci-gitea.md
+    # in the config repository.
+    runs-on: st_small
     needs: check
     # Pushing an image for every pull request fills the registry; do it where
     # the artefact could actually be deployed.

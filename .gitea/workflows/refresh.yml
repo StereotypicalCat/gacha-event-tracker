@@ -50,7 +50,9 @@ permissions:
 jobs:
   refresh:
     name: Fetch sources and rebuild the feed
-    runs-on: ubuntu-latest
+    # st_small: the homelab's small runner, for light jobs. See docs/ci-gitea.md
+    # in the config repository.
+    runs-on: st_small
     # A fork must not point this at the wikis on a schedule: off by default for
     # anyone but this repo, while a fork owner can still dispatch it by hand and
     # take responsibility.
@@ -76,7 +78,9 @@ jobs:
       # would mean a commit every cycle saying nothing changed), so it rides in
       # the actions cache instead. A cache miss only means the runner has no
       # record of the last check — the twelve-hour schedule still keeps us well
-      # inside the etiquette floor.
+      # inside the etiquette floor. Each runner keeps its own actions cache, so
+      # every job that restores this one (check, build and image in ci.yml) must
+      # use the same runs-on label as this job.
       - name: Restore refresh bookkeeping
         uses: https://github.com/actions/cache/restore@v4
         with:
