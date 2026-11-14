@@ -1,12 +1,12 @@
 {
   "sourceId": "zzz-game8-events",
   "url": "https://game8.co/games/Zenless-Zone-Zero/archives/457176",
-  "contentHash": "1f6a495becb0b5628fecc7a08995d009e6a8c122a7e5c7ccca42669d14f314a7",
-  "bytes": 484886,
-  "etag": "W/\"1f6a495becb0b5628fecc7a08995d009\"",
+  "contentHash": "86c4eb1baa499867b18426a2fa9a534398923e8039f336b3b3fb891ef7c797b5",
+  "bytes": 484885,
+  "etag": "W/\"86c4eb1baa499867b18426a2fa9a5343\"",
   "lastModified": null,
-  "contentChangedAt": "2026-11-13T17:27:31.126Z",
-  "lastConfirmedAt": "2026-11-13T17:27:31.126Z",
+  "contentChangedAt": "2026-11-14T02:34:10.710Z",
+  "lastConfirmedAt": "2026-11-14T02:34:10.710Z",
   "eventCount": 10,
   "charset": "utf-8"
 }
