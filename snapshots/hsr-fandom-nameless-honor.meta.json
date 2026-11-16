@@ -1,12 +1,12 @@
 {
   "sourceId": "hsr-fandom-nameless-honor",
   "url": "https://honkai-star-rail.fandom.com/api.php?action=parse&page=Nameless_Honor&prop=text&formatversion=2&format=json",
-  "contentHash": "3521dbbba979f40a45f3b93acd0270cbedd1d7dc1b911b3f51f1e2e425684e7d",
+  "contentHash": "652e0e9379e9c24f272d79799520689ca07196b9ef04aa992d8f51325e6bbf0e",
   "bytes": 122312,
   "etag": null,
   "lastModified": null,
-  "contentChangedAt": "2026-11-16T05:27:27.760Z",
-  "lastConfirmedAt": "2026-11-16T05:27:27.760Z",
+  "contentChangedAt": "2026-11-16T17:27:25.595Z",
+  "lastConfirmedAt": "2026-11-16T17:27:25.595Z",
   "eventCount": 1,
   "charset": "utf-8"
 }
