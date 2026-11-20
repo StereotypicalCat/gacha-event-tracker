@@ -51,6 +51,14 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "game8-livestream-codes",
+    date: "2026-11-20",
+    kind: "fix",
+    title: "Livestream and version redeem codes now appear across all Game8 sources",
+    body: "Some Game8 pages (including Zenless Zone Zero) list livestream codes in a separate version section outside the main active table. Those sections are now read too, with their stated expiry times, while expired and CN-only tables stay out.",
+    ref: "ff6b0f4",
+  },
+  {
     id: "archive-toast-corner",
     date: "2026-11-10",
     kind: "fix",
