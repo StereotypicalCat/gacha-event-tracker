@@ -681,9 +681,14 @@ beside Genshin.
   `parseGame8CodeTable` reads the section under each page's own "active codes" heading
   (`src/ingest/codes/registry.ts`), skips any table there that says its codes have expired
   (Wuthering Waves keeps one at the top), and reads the reward from the other cells, or from the
-  code's own cell when they share one (Wuthering Waves, P5X).
-- **Expiry stays null.** The pages print "Expires TBA" or a date range without a year, and a guessed
-  year would be a fabricated date.
+  code's own cell when they share one (Wuthering Waves, P5X). It also reads separate
+  version/livestream `<h2>` sections (such as ZZZ's `All ZZZ X.Y Codes` / `Version X.Y Livestream
+  Codes`, `Special Program Codes`, or Endfield's `Version X.Y Codes`), skipping any section whose
+  prose states past-tense expiry or a passed deadline, and skipping expired or CN-only subsections.
+- **Expiry.** Active tables leave expiry null (they print "Expires TBA" or a date range without a
+  year, and a guessed year would be a fabricated date). Separate livestream/version sections record
+  an exact UTC `expiresAt` when the prose states a clock with an explicit UTC/GMT offset, or
+  `expiresOn` when it states only a calendar date.
 - **Umamusume.** The page currently states "No Publicly Released Codes Yet", which is what lets its
   empty read be stored (`statesNoEvents`). A changed page still fails the gate.
 - **Spot-checked against the live pages:** Star Rail's six codes, WUTHERINGGIFT, Endfield's
