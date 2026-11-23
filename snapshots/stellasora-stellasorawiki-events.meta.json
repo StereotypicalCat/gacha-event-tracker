@@ -1,12 +1,12 @@
 {
   "sourceId": "stellasora-stellasorawiki-events",
   "url": "https://stellasora.miraheze.org/wiki/Main_Page",
-  "contentHash": "33dd668aa2162dd41604adb649accd90f77b63608fdf1e209ee09dca0d2e1f09",
+  "contentHash": "719acb0319d9c0e50f0962279c323998b8b02c041b0449c5b5da332a5972b8ca",
   "bytes": 99486,
   "etag": null,
-  "lastModified": "Sun, 22 Nov 2026 11:00:58 GMT",
-  "contentChangedAt": "2026-11-22T17:27:36.140Z",
-  "lastConfirmedAt": "2026-11-23T05:28:14.985Z",
+  "lastModified": "Mon, 23 Nov 2026 11:00:09 GMT",
+  "contentChangedAt": "2026-11-23T17:28:12.551Z",
+  "lastConfirmedAt": "2026-11-23T17:28:12.551Z",
   "eventCount": 2,
   "charset": "utf-8"
 }
