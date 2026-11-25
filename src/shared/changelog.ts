@@ -51,6 +51,14 @@ export const KIND_LABEL: Record<Entry["kind"], string> = {
 
 export const ENTRIES: Entry[] = [
   {
+    id: "archive-outcome-controls",
+    date: "2026-11-25",
+    kind: "feature",
+    title: "Mark unfinished archived events as completed",
+    body: "Unfinished rows in Archive now have a Mark completed button, and opening any archived event lets you change its outcome between Completed, Ignored, and Ended unfinished. Restore is now shown only while an event is still live.",
+    ref: "422b921",
+  },
+  {
     id: "game8-livestream-codes",
     date: "2026-11-20",
     kind: "fix",
