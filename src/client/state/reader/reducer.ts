@@ -67,7 +67,11 @@ export type ReaderAction = { at: string; opId: string } & (
 );
 export function actionFields(action: ReaderAction): string[] {
   if (action.type === "outcome" || action.type === "restore")
-    return [JSON.stringify(["archive", action.accountId, action.eventId])];
+    return [
+      JSON.stringify(["archive", action.accountId, action.eventId]),
+      JSON.stringify([action.accountId, "progress", action.eventId, "status"]),
+      JSON.stringify([action.accountId, "ignore", action.eventId]),
+    ];
   if (action.type === "prefs")
     return Object.keys(action.patch).map((k) => JSON.stringify(["prefs", k]));
   if (action.type === "progress")

@@ -3,6 +3,7 @@ import { serverSuffix } from "../../state/reader/servers.ts";
 import { useGameMeta } from "../../state/gameMeta.tsx";
 import { formatInZone } from "../../state/displayTime.ts";
 import { actionMeta } from "../../state/reader/actions.ts";
+import { canRestoreArchivedEvent } from "../../state/reader/archive.ts";
 import type { ReaderState, ArchiveRecord } from "../../state/reader/schema.ts";
 import { pairKey } from "../../state/reader/schema.ts";
 import { ArchiveStory } from "./ArchiveStory.tsx";
@@ -60,6 +61,14 @@ export function ArchivePage({
       type: "restore",
       accountId: r.accountId,
       eventId: r.event.id,
+      ...actionMeta(),
+    });
+  const markCompleted = (r: ArchiveRecord) =>
+    void onAction({
+      type: "outcome",
+      accountId: r.accountId,
+      eventId: r.event.id,
+      outcome: "done",
       ...actionMeta(),
     });
   return (
@@ -250,12 +259,24 @@ export function ArchivePage({
                               </span>
                               <span aria-hidden="true">›</span>
                             </button>
-                            <button
-                              className="archive-restore"
-                              onClick={() => restore(r)}
-                            >
-                              Restore
-                            </button>
+                            {canRestoreArchivedEvent(r, state, now) ? (
+                              <button
+                                type="button"
+                                className="archive-restore"
+                                onClick={() => restore(r)}
+                              >
+                                Restore
+                              </button>
+                            ) : r.outcome === "unfinished" ? (
+                              <button
+                                type="button"
+                                className="archive-restore"
+                                aria-label={`Mark ${r.event.title} completed`}
+                                onClick={() => markCompleted(r)}
+                              >
+                                Mark completed
+                              </button>
+                            ) : null}
                           </article>
                         ))}
                       </div>

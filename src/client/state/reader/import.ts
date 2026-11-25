@@ -256,7 +256,7 @@ export function mergeReaderData(
         else if (rt && rt >= stamp(a)) { if (b[field] === undefined) delete value[field]; else value[field] = b[field]; }
       }
       const restoreTime = String(localTimes[JSON.stringify(["archive", id, item])] ?? "");
-      if (restoreTime > stamp(b) && !current.archive[pairKey(id, item)] && a.status !== "done") delete value.status;
+      if (restoreTime > stamp(b) && (!current.archive[pairKey(id, item)] || current.archive[pairKey(id, item)]?.outcome !== "done") && a.status !== "done") delete value.status;
       resultData.progress[item] = value;
     }
     for (const item of new Set([...Object.keys(old?.ignored ?? {}), ...Object.keys(data.ignored)])) {

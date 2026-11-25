@@ -434,7 +434,10 @@ Archive with event metadata, notes, goals, logs, resolved end and clock revision
 followed events that expire unfinished also enter Archive; unknown-end events never expire by a
 guessed date. Per-game history is default, with an alternate chronological history. Story statistics
 include completion, check-ins and shortfalls where known; ignored events are excluded from success
-rates. Restore recovers saved progress without pretending an expired event is live.
+rates. Archived outcomes can be updated between completed, ignored and (once ended) ended unfinished
+while keeping the saved clock and progress snapshot; unfinished rows also offer Mark completed on the
+row. Restore returns a still-running event to live views with its saved progress and is not offered
+once an event has ended.
 
 **F10 — Works offline.**
 The reader's question is answered entirely by data already on the device, and countdowns run off the

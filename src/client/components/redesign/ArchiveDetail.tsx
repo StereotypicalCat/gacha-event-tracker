@@ -3,18 +3,27 @@ import { serverSuffix } from "../../state/reader/servers.ts";
 import { useGameMeta } from "../../state/gameMeta.tsx";
 import { formatInZone } from "../../state/displayTime.ts";
 import { actionMeta, recordOf } from "../../state/reader/actions.ts";
+import {
+  archivedEventEnded,
+  canRestoreArchivedEvent,
+} from "../../state/reader/archive.ts";
 import type { ArchiveRecord, ReaderState } from "../../state/reader/schema.ts";
 import type { ActionHandler } from "./GameSettings.tsx";
 
-/** An archive is a saved snapshot, including its clock and progress, not a live editor. */
+/**
+ * Displays a saved archive snapshot, allowing outcome corrections while keeping
+ * historical clock and progress metadata intact.
+ */
 export function ArchiveDetail({
   record,
   state,
+  now,
   onAction,
   onClose,
 }: {
   record: ArchiveRecord;
   state: ReaderState;
+  now: number;
   onAction: ActionHandler;
   onClose: () => void;
 }) {
@@ -25,6 +34,15 @@ export function ArchiveDetail({
   const progress = recordOf(record.progress);
   const zone =
     typeof state.prefs.timezone === "string" ? state.prefs.timezone : null;
+  const ended = archivedEventEnded(record, state, now);
+  const canRestore = canRestoreArchivedEvent(record, state, now);
+  const outcomeOptions: { id: ArchiveRecord["outcome"]; label: string }[] = [
+    { id: "done", label: "Completed" },
+    ...(ended
+      ? [{ id: "unfinished" as const, label: "Ended unfinished" }]
+      : []),
+    { id: "ignored", label: "Ignored" },
+  ];
   const outcome = {
     done: "Completed",
     ignored: "Ignored",
@@ -120,24 +138,52 @@ export function ArchiveDetail({
           </a>
         </p>
       )}
+      <section className="archive-outcome-controls">
+        <h3>Change outcome</h3>
+        <div className="segmented" role="group" aria-label="Change outcome">
+          {outcomeOptions.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              aria-pressed={record.outcome === option.id}
+              onClick={() => {
+                if (record.outcome === option.id) return;
+                void onAction({
+                  type: "outcome",
+                  accountId: record.accountId,
+                  eventId: record.event.id,
+                  outcome: option.id,
+                  ...actionMeta(),
+                });
+              }}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </section>
       <p className="help">
-        Saved when this event entered your archive. Restoring keeps its
-        progress; an event that has already ended remains in history.
+        {canRestore
+          ? "Saved when this event entered your archive. Restoring returns it to live views with its saved progress."
+          : "Saved when this event entered your archive. Ended events stay in your archive, where you can still update their outcome."}
       </p>
-      <button
-        className="btn"
-        onClick={async () => {
-          const result = await onAction({
-            type: "restore",
-            accountId: record.accountId,
-            eventId: record.event.id,
-            ...actionMeta(),
-          });
-          if (result.ok) onClose();
-        }}
-      >
-        Restore event
-      </button>
+      {canRestore && (
+        <button
+          type="button"
+          className="btn"
+          onClick={async () => {
+            const result = await onAction({
+              type: "restore",
+              accountId: record.accountId,
+              eventId: record.event.id,
+              ...actionMeta(),
+            });
+            if (result.ok) onClose();
+          }}
+        >
+          Restore event
+        </button>
+      )}
     </dialog>
   );
 }

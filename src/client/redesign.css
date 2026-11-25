@@ -2372,6 +2372,8 @@ textarea {
   font-size: 12px;
   padding: 12px;
   color: var(--color-near);
+  flex: none;
+  white-space: nowrap;
 }
 .archive-history-note {
   margin: 24px 0;
@@ -2438,7 +2440,7 @@ textarea {
     padding: 16px;
   }
   .archive-restore {
-    padding: 10px 6px;
+    padding: 10px;
   }
 }
 
@@ -2475,6 +2477,22 @@ dialog.archive-detail {
 .archive-note {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+.archive-outcome-controls h3 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 500;
+}
+:root[data-interface="relaxed"] .archive-detail .segmented {
+  background: transparent;
+  border: 1px solid var(--color-hairline);
+  border-radius: 8px;
+}
+:root[data-interface="relaxed"] .archive-detail .segmented button {
+  border-radius: 5px;
+}
+.archive-detail .segmented button[aria-pressed="true"] {
+  font-weight: 500;
 }
 
 .checklist-display > .help {

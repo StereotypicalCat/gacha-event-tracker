@@ -25,6 +25,43 @@ export function captureSeen(
   }
   return { ...state, seenEvents: seen };
 }
+/**
+ * Returns true when an archived event has already ended on its recorded
+ * snapshot or the account's active clock. Events with unknown end dates
+ * remain open unless explicitly recorded as unfinished.
+ */
+export function archivedEventEnded(
+  record: ArchiveRecord,
+  state: ReaderState,
+  now: number,
+): boolean {
+  if (record.outcome === "unfinished") return true;
+  if (record.resolvedEnd !== null && record.resolvedEnd <= now) return true;
+  const account = state.accounts[record.accountId];
+  if (!account) return false;
+  const clock = readerClockFor(record.event, account, now);
+  return clock.ended && clock.endsMs !== null;
+}
+
+/**
+ * Returns true when an archived event can be restored back to live Checklist
+ * and Timeline views (its account is active and the event has not ended).
+ */
+export function canRestoreArchivedEvent(
+  record: ArchiveRecord,
+  state: ReaderState,
+  now: number,
+): boolean {
+  const account = state.accounts[record.accountId];
+  if (!account || account.retiredAt) return false;
+  return !archivedEventEnded(record, state, now);
+}
+
+/**
+ * Records or updates an archived event outcome while keeping account progress
+ * and ignore records consistent and preserving any existing historical clock
+ * and pre-archive progress snapshot.
+ */
 export function archiveOutcome(
   state: ReaderState,
   accountId: string,
@@ -33,47 +70,75 @@ export function archiveOutcome(
   at: string,
 ): ReaderState {
   const key = pairKey(accountId, eventId),
+    existing = state.archive[key],
     seen = state.seenEvents[key],
     account = state.accounts[accountId],
-    data = state.data[accountId];
-  if (!seen || !account || !data) return state;
-  const clock = resolveReaderClock(account, Date.parse(at)),
-    days = new Set<string>();
-  for (const logs of Object.values(data.daily)) {
-    const raw = recordOf(logs[eventId]);
-    if (Array.isArray(raw.days))
-      for (const day of raw.days) if (typeof day === "string") days.add(day);
-  }
-  const before = recordOf(data.progress[eventId]),
-    ignored = data.ignored[eventId];
+    data = state.data[accountId],
+    event = existing?.event ?? seen?.event;
+  if (!event || !account || !data) return state;
+  const currentProgress = recordOf(data.progress[eventId]),
+    savedProgress = existing ? recordOf(existing.progress) : currentProgress,
+    baseProgress = { ...savedProgress };
+  if (baseProgress.status === "done") delete baseProgress.status;
   const progress = { ...data.progress };
   const ignores = { ...data.ignored };
-  if (outcome === "done") progress[eventId] = { ...before, status: "done", at };
-  if (outcome === "ignored") ignores[eventId] = { at };
-  const record: ArchiveRecord = {
-    accountId,
-    event: seen.event,
-    outcome,
-    outcomeAt: at,
-    resolvedEnd: readerClockFor(seen.event, account, Date.parse(at)).endsMs,
-    clockRevision: clock.revision,
-    progress: before,
-    days: [...days].sort(),
-    amounts: recordOf(data.amounts[clock.revision]?.[eventId]),
-    previousIgnore: ignored ?? null,
-    revisionDays: Object.fromEntries(
-      Object.entries(data.daily).map(([id, logs]) => [
-        id,
-        recordOf(logs[eventId]).days ?? [],
-      ]),
-    ),
-    revisionAmounts: Object.fromEntries(
-      Object.entries(data.amounts).map(([id, logs]) => [
-        id,
-        logs[eventId] ?? {},
-      ]),
-    ),
-  };
+  const hasBaseFields = Object.keys(baseProgress).some((k) => k !== "at");
+  if (outcome === "done") {
+    progress[eventId] = { ...baseProgress, status: "done", at };
+    delete ignores[eventId];
+  } else if (outcome === "ignored") {
+    ignores[eventId] = { at };
+    if (existing || currentProgress.status === "done") {
+      if (hasBaseFields) progress[eventId] = { ...baseProgress, at };
+      else delete progress[eventId];
+    }
+  } else {
+    delete ignores[eventId];
+    if (existing || currentProgress.status === "done") {
+      if (hasBaseFields) progress[eventId] = { ...baseProgress, at };
+      else delete progress[eventId];
+    }
+  }
+  const record: ArchiveRecord = existing
+    ? {
+        ...existing,
+        outcome,
+        outcomeAt: at,
+      }
+    : (() => {
+        const clock = resolveReaderClock(account, Date.parse(at)),
+          days = new Set<string>();
+        for (const logs of Object.values(data.daily)) {
+          const raw = recordOf(logs[eventId]);
+          if (Array.isArray(raw.days))
+            for (const day of raw.days)
+              if (typeof day === "string") days.add(day);
+        }
+        return {
+          accountId,
+          event,
+          outcome,
+          outcomeAt: at,
+          resolvedEnd: readerClockFor(event, account, Date.parse(at)).endsMs,
+          clockRevision: clock.revision,
+          progress: baseProgress,
+          days: [...days].sort(),
+          amounts: recordOf(data.amounts[clock.revision]?.[eventId]),
+          previousIgnore: data.ignored[eventId] ?? null,
+          revisionDays: Object.fromEntries(
+            Object.entries(data.daily).map(([id, logs]) => [
+              id,
+              recordOf(logs[eventId]).days ?? [],
+            ]),
+          ),
+          revisionAmounts: Object.fromEntries(
+            Object.entries(data.amounts).map(([id, logs]) => [
+              id,
+              logs[eventId] ?? {},
+            ]),
+          ),
+        };
+      })();
   return {
     ...state,
     archive: { ...state.archive, [key]: record },

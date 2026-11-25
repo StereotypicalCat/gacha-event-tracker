@@ -1165,8 +1165,13 @@ function ReaderContent({
               )}
               {archivedOpen && (
                 <ArchiveDetail
-                  record={archivedOpen}
+                  record={
+                    state.archive[
+                      pairKey(archivedOpen.accountId, archivedOpen.event.id)
+                    ] ?? archivedOpen
+                  }
                   state={state}
+                  now={now}
                   onAction={dispatch}
                   onClose={() => setArchivedOpen(null)}
                 />
