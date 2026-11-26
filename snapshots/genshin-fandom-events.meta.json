@@ -1,12 +1,12 @@
 {
   "sourceId": "genshin-fandom-events",
   "url": "https://genshin-impact.fandom.com/api.php?action=parse&page=Event&prop=text&formatversion=2&format=json",
-  "contentHash": "4122ab297a4f131bb9ed291e8c36e6fb5c2f88eecdb4a375bb264cfab8896af0",
-  "bytes": 62428,
+  "contentHash": "e4b45a09367fbdc725c3b52df6e57deff27aa3dfc1c9c75cc336a025067f4fa3",
+  "bytes": 61553,
   "etag": null,
   "lastModified": null,
-  "contentChangedAt": "2026-11-26T05:27:58.461Z",
-  "lastConfirmedAt": "2026-11-26T05:27:58.461Z",
-  "eventCount": 17,
+  "contentChangedAt": "2026-11-26T17:27:58.927Z",
+  "lastConfirmedAt": "2026-11-26T17:27:58.927Z",
+  "eventCount": 16,
   "charset": "utf-8"
 }
