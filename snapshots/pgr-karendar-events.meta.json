@@ -1,12 +1,12 @@
 {
   "sourceId": "pgr-karendar-events",
   "url": "https://karendar.com/",
-  "contentHash": "9c4085f256a0adfa0a95743babc23dea53838c90bfa47b1f0f7fe0e722540854",
-  "bytes": 248444,
+  "contentHash": "eda1a0e345add7bb2cef25734b306fa1a22c868337e9a9ea41ed4022419c8c17",
+  "bytes": 244608,
   "etag": null,
   "lastModified": null,
-  "contentChangedAt": "2026-11-25T17:27:55.468Z",
-  "lastConfirmedAt": "2026-11-25T17:27:55.468Z",
-  "eventCount": 49,
+  "contentChangedAt": "2026-11-26T05:28:16.898Z",
+  "lastConfirmedAt": "2026-11-26T05:28:16.898Z",
+  "eventCount": 48,
   "charset": "utf-8"
 }
